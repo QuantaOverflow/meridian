@@ -2,6 +2,8 @@ import app from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { Logger } from './lib/logger';
+import dotenv from 'dotenv';
+dotenv.config();
 
 type ArticleQueueMessage = { articles_id: number[] };
 

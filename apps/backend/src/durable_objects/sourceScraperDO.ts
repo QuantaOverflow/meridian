@@ -516,7 +516,7 @@ export class SourceScraperDO extends DurableObject<Env> {
       }
 
       try {
-        // await this.initialize(sourceData);
+        await this.initialize(sourceData);
         fetchLogger.info('Initialization successful via API');
         return new Response('Initialized');
       } catch (error) {

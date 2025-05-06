@@ -29,7 +29,7 @@
     {
       "binding": "HYPERDRIVE",
       "id": "b748bf8359b74c519d64501151cecd80",
-      "localConnectionString": "postgresql://postgres:mysecretpassword@localhost:5432/postgres",
+      "localConnectionString": "postgresql://postgres:709323@localhost:5432/shiwenjie",
     },
   ],
   /**

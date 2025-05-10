@@ -1,4 +1,32 @@
 name = "meridian-frontend"
 compatibility_date = "2025-04-30"
 compatibility_flags = ["nodejs_compat"]
+
+# 指定构建输出目录
 pages_build_output_dir = "apps/frontend/dist"
+
+# 所有环境共享的变量
+[vars]
+WORKER_API_TOKEN = "swj299792458"
+PUBLIC_WORKER_API = "https://meridian-backend.swj299792458.workers.dev"
+
+# 开发环境变量
+[env.development.vars]
+DATABASE_URL = "postgresql://localhost:5432/meridian"
+ADMIN_USERNAME = "admin@swj"
+ADMIN_PASSWORD = "Swj709323"
+SESSION_PASSWORD = "development_session_password"
+
+# 预览环境变量(部署预览分支时使用)
+[env.preview.vars]
+DATABASE_URL = "postgresql://swj:npg_r2eJPYg6nQft@ep-crimson-hat-a16d92db-pooler.ap-southeast-1.aws.neon.tech/meridian?sslmode=require"
+ADMIN_USERNAME = "admin@swj"
+ADMIN_PASSWORD = "709323"
+SESSION_PASSWORD = "Z5rI/R3X1qzW+k/XDpZJL7wOa2BwfZ4K"
+
+# 生产环境变量
+[env.production.vars]
+DATABASE_URL = "postgresql://swj:npg_r2eJPYg6nQft@ep-crimson-hat-a16d92db-pooler.ap-southeast-1.aws.neon.tech/meridian?sslmode=require"
+ADMIN_USERNAME = "admin@swj"
+ADMIN_PASSWORD = "709323"
+SESSION_PASSWORD = "Z5rI/R3X1qzW+k/XDpZJL7wOa2BwfZ4K"

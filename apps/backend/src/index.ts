@@ -2,6 +2,8 @@ import app from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { Logger } from './lib/logger';
+import { Ai } from '@cloudflare/ai';
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -14,7 +16,7 @@ export type Env = {
   SOURCE_SCRAPER: DurableObjectNamespace<SourceScraperDO>;
   PROCESS_ARTICLES: Workflow;
   HYPERDRIVE: Hyperdrive;
-
+  AI: Ai;
   // Secrets
   API_TOKEN: string;
 

@@ -75,6 +75,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
         .select({ id: $articles.id, url: $articles.url, title: $articles.title, publishedAt: $articles.publishDate })
         .from($articles)
         .where(
+
           and(
             // only process articles that haven't been processed yet
             isNull($articles.processedAt),
@@ -268,11 +269,9 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           const [embeddingResult, uploadResult] = await Promise.allSettled([
             step.do(`generate embeddings for article ${article.id}`, async () => {
               articleLogger.info('Generating embeddings');
-              const embeddings = await createEmbeddings(env, [
-                generateSearchText({ title: article.title, ...articleAnalysis }),
-              ]);
-              if (embeddings.isErr()) throw embeddings.error;
-              return embeddings.value[0];
+              const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
+              const embedding = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: searchText });
+              return embedding.data[0];
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {
               articleLogger.info('Uploading article contents to R2');

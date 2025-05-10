@@ -10,4 +10,7 @@ pages_build_output_dir = "apps/frontend/dist"
 [env.production.vars]
 DATABASE_URL = "postgresql://swj:npg_r2eJPYg6nQft@ep-crimson-hat-a16d92db-pooler.ap-southeast-1.aws.neon.tech/meridian?sslmode=require"
 ADMIN_USERNAME = "admin@swj"
-PUBLIC_WORKER_API = "https://meridian-backend.swj299792458.workers.dev"
+NUXT_PUBLIC_WORKER_API = "https://meridian-backend.swj299792458.workers.dev"
+# ADMIN_PASSWORD:"709323"
+# SESSION_PASSWORD:"Z5rI/R3X1qzW+k/XDpZJL7wOa2BwfZ4K"
+# WORKER_API_TOKEN:"swj299792458"

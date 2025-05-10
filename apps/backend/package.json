@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.19",
+    "@cloudflare/workers-types": "^4.20250509.0",
     "@types/node": "^22.14.1",
     "typescript": "^5.8.2",
     "vitest": "^3.1.2",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.13",
+    "@cloudflare/ai": "^1.2.2",
     "@cloudflare/puppeteer": "^1.0.2",
     "@hono/zod-validator": "^0.4.3",
     "@meridian/database": "workspace:*",

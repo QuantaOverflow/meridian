@@ -28,7 +28,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "b748bf8359b74c519d64501151cecd80",
+      "id": "e3bbe9cee04649a98bd5396476432de0",
       "localConnectionString": "postgresql://postgres:709323@localhost:5432/shiwenjie",
     },
   ],
@@ -66,7 +66,7 @@
       "binding": "ARTICLES_BUCKET",
       "bucket_name": "meridian-articles-prod",
       "preview_bucket_name": "meridian-articles-dev",
-      "jurisdiction": "eu",
+      // "jurisdiction": "eu",
     },
   ],
   "workflows": [
@@ -76,6 +76,15 @@
       "class_name": "ProcessArticles",
     },
   ],
+  "ai": {
+    "binding": "AI"
+
+  },
+"vars": {
+  "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
+  "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com",
+  "ML_SERVICE_URL": "https://your-production-ml-service.com"
+}
   // !!! NOTE !!! : tail workers make workers with durable objects CRASH for now - 30/04/2025
   // "tail_consumers": [
   //   {

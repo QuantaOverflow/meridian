@@ -13,6 +13,7 @@ declare namespace Cloudflare {
 		ARTICLE_PROCESSING_QUEUE: Queue;
 		HYPERDRIVE: Hyperdrive;
 		PROCESS_ARTICLES: Workflow;
+        AI:Ai
 	}
 }
 interface Env extends Cloudflare.Env {}

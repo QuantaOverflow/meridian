@@ -270,7 +270,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             step.do(`generate embeddings for article ${article.id}`, async () => {
               articleLogger.info('Generating embeddings');
               const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
-              const embedding = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: searchText });
+              const embedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', { text: searchText });
               return embedding.data[0];
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {

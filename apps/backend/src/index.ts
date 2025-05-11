@@ -1,4 +1,5 @@
-import app from './app';
+import { Hono } from 'hono';
+import importedApp from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { Logger } from './lib/logger';
@@ -35,8 +36,61 @@ export type Env = {
   MERIDIAN_ML_SERVICE_API_KEY: string;
 };
 
+
 // Create a base logger for the queue handler
 const queueLogger = new Logger({ service: 'article-queue-handler' });
+
+const app = importedApp || new Hono<{ Bindings: Env }>();
+
+// 添加测试钩子中间件 (放在其他路由之前)
+app.use('*', async (c, next) => {
+  const url = new URL(c.req.url);
+  const testMode = url.searchParams.get('_test');
+
+  // 如果启用了测试模式
+  if (testMode) {
+    console.log('触发测试模式:', testMode);
+    
+    try {
+      // 创建标准 Request 对象
+      const standardRequest = new Request(c.req.url, {
+        method: c.req.method,
+        headers: c.req.header(),
+        body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? await c.req.blob() : undefined
+      });
+      
+      switch (testMode) {
+        case 'gemini':
+          // 导入并执行 Gemini 测试
+          const { testGemini } = await import('./tests/api/gemini_test');
+          return await testGemini(standardRequest, c.env);
+          
+        case 'cfai': 
+          // 复用现有的 Cloudflare AI 测试
+          const { handleRequest } = await import('./tests/api/cfai_test');
+          return await handleRequest(standardRequest, c.env);
+          
+        default:
+          // 未知测试模式
+          return c.json({
+            error: '未知测试模式',
+            available: ['gemini', 'cfai']
+          }, 400);
+      }
+    } catch (error) {
+      // 测试执行错误
+      return c.json({
+        error: '测试执行失败',
+        message: error instanceof Error ? error.message : String(error)
+      }, 500);
+    }
+  }
+  
+  // 非测试模式，继续正常处理
+  return next();
+});
+
+// 现有路由和处理程序...
 
 export default {
   fetch: app.fetch,

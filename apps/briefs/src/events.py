@@ -94,6 +94,124 @@ def get_events(date: str = None) -> EventResponse:
     )
 
 
+def get_events_with_pagination(date: str = None, page_size: int = 100) -> EventResponse:
+    """
+    通过分页方式从API获取所有事件数据
+    
+    参数:
+        date: 可选的日期过滤 (YYYY-MM-DD)
+        page_size: 每页获取的记录数量
+        
+    返回:
+        EventResponse 对象，包含所有页面的数据合并结果
+    """
+    url = f"https://meridian-backend.swj299792458.workers.dev/events"
+    
+    # 初始化结果集
+    all_events = []
+    all_sources = []
+    current_page = 1
+    total_events = 0
+    
+    while True:
+        # 设置请求参数，包括分页参数 - 修正参数名称
+        params = {
+            "page": current_page,
+            "limit": page_size,
+            "pagination": "true"  # 显式启用分页
+        }
+        if date:
+            params["date"] = date
+        
+        print(f"正在获取第{current_page}页数据 (每页{page_size}条)...")
+        
+        # 发送请求，添加重试和错误处理机制
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                response = requests.get(
+                    url,
+                    params=params,
+                    headers={"Authorization": f"Bearer {os.environ.get('MERIDIAN_SECRET_KEY')}"},
+                    timeout=30  # 添加超时设置
+                )
+                response.raise_for_status()  # 检查HTTP错误
+                data = response.json()
+                break  # 成功获取数据，跳出重试循环
+            except Exception as e:
+                retry_count += 1
+                if retry_count >= max_retries:
+                    print(f"获取第{current_page}页数据失败: {str(e)}")
+                    # 如果已经获取了一些数据，可以继续处理
+                    if all_events:
+                        print(f"将使用已获取的{len(all_events)}条记录")
+                        break
+                    else:
+                        raise Exception(f"无法获取任何数据: {str(e)}")
+                print(f"请求失败，第{retry_count}次重试...")
+                import time
+                time.sleep(1)  # 重试前等待1秒
+                
+        # 如果重试最终失败，且没有获取到数据，跳出主循环
+        if retry_count >= max_retries and not all_events:
+            break
+        
+        # 提取当前页数据
+        page_events = data.get("events", [])
+        page_sources = data.get("sources", [])
+        total_count = data.get("total", 0)  # 总记录数
+        
+        # 获取分页信息
+        pagination = data.get("pagination", {})
+        current_page_from_response = pagination.get("page", current_page)
+        total_pages = pagination.get("pages", 1)
+        
+        print(f"获取到{len(page_events)}条记录，总记录数:{total_count}, 当前页:{current_page_from_response}, 总页数:{total_pages}")
+        
+        # 将页面数据添加到结果集，同时避免重复
+        event_ids = {e["id"] for e in all_events}
+        for event in page_events:
+            if event["id"] not in event_ids:
+                all_events.append(event)
+                event_ids.add(event["id"])
+            else:
+                print(f"警告: 发现重复事件ID: {event['id']}")
+        
+        # 只添加新的source，避免重复
+        source_ids = {s["id"] for s in all_sources}
+        for source in page_sources:
+            if source["id"] not in source_ids:
+                all_sources.append(source)
+                source_ids.add(source["id"])
+        
+        # 判断是否有下一页 - 使用更可靠的方法
+        if current_page_from_response >= total_pages:
+            print(f"已到达最后一页 ({current_page_from_response}/{total_pages})")
+            break
+            
+        # 检查获取的数据量是否达到总量
+        if len(all_events) >= total_count:
+            print(f"已获取所有数据: {len(all_events)}/{total_count}")
+            break
+            
+        # 继续获取下一页
+        current_page += 1
+    
+    print(f"分页爬取完成，共获取{len(all_events)}条记录，去重后{len(set(e['id'] for e in all_events))}条")
+    
+    # 转换数据为标准格式
+    sources = [Source(**source) for source in all_sources]
+    events = [Event(**event) for event in all_events]
+    
+    return EventResponse(
+        sources=sources,
+        events=events,
+        total=len(events)
+    )
+
+
 # 本地数据库获取函数
 def get_events_local(date: str = None) -> EventResponse:
     """从本地数据库获取文章数据，获取所有匹配的数据"""

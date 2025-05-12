@@ -2,13 +2,13 @@ import requests
 import os
 from datetime import date
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import pandas as pd
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
-
+ 
 load_dotenv()
 
 
@@ -61,44 +61,63 @@ class Event(BaseModel):
             raise ValueError(f"无法解析日期值: {value}, 类型: {type(value)}")
 
 
-def get_events(date: str = None):
-    url = f"https://meridian-production.alceos.workers.dev/events"
 
+class EventResponse(BaseModel):
+    sources: List[Source]
+    events: List[Event]
+    total: Optional[int] = None
+
+
+def get_events(date: str = None) -> EventResponse:
+    """从远程 API 获取事件数据"""
+    url = f"https://meridian-backend.swj299792458.workers.dev/events"
+    
+    params = {}
     if date:
-        url += f"?date={date}"
-
-    response = requests.get(
+        params["date"] = date
+    
+    response = requests.get( 
         url,
+        params=params,
         headers={"Authorization": f"Bearer {os.environ.get('MERIDIAN_SECRET_KEY')}"},
     )
     data = response.json()
 
+    # 转换数据为标准格式
     sources = [Source(**source) for source in data["sources"]]
     events = [Event(**event) for event in data["events"]]
+    
+    return EventResponse(
+        sources=sources,
+        events=events,
+        total=len(events)
+    )
 
-    return sources, events
 
 # 本地数据库获取函数
-def get_events_local(date: str = None):
-    """从本地数据库获取文章数据，用于本地测试"""
+def get_events_local(date: str = None) -> EventResponse:
+    """从本地数据库获取文章数据，获取所有匹配的数据"""
     from sqlalchemy import create_engine, text
     
     db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:709323@localhost:5432/shiwenjie')
     engine = create_engine(db_url)
     
     with engine.connect() as conn:
-        # 查询文章 - 注意字段名的调整
+        # 构建查询条件
+        where_clause = ""
         if date:
-            query = text(f"SELECT a.*, s.name as source_name FROM articles a JOIN sources s ON a.source_id = s.id WHERE DATE(a.publish_date) = '{date}'")
-        else:
-            query = text("SELECT a.*, s.name as source_name FROM articles a JOIN sources s ON a.source_id = s.id ORDER BY a.publish_date DESC LIMIT 100")
+            where_clause = f"WHERE DATE(a.publish_date) = '{date}'"
             
-        articles_df = pd.read_sql(query, conn)
+        # 查询文章 - 不使用分页，获取所有数据
+        query = text(f"""
+            SELECT a.*, s.name as source_name 
+            FROM articles a 
+            JOIN sources s ON a.source_id = s.id 
+            {where_clause}
+            ORDER BY a.publish_date DESC
+        """)
         
-        # 打印调试信息
-        print(f"获取到 {len(articles_df)} 篇文章")
-        if len(articles_df) > 0:
-            print(f"文章字段: {articles_df.columns.tolist()}")
+        articles_df = pd.read_sql(query, conn)
         
         # 获取源
         sources_query = text("SELECT * FROM sources")
@@ -130,43 +149,31 @@ def get_events_local(date: str = None):
                     except:
                         print(f"警告: 无法解析日期 {row['publish_date']}, 使用当前时间")
                         publish_date = datetime.now()
+                        
+            # 处理相关性字段
+            relevance = 'medium'
+            if 'content_quality' in row and pd.notna(row['content_quality']):
+                if row['content_quality'] == 'OK':
+                    relevance = 'high'
+                elif row['content_quality'] == 'LOW_QUALITY':
+                    relevance = 'low'
+            
             # 基本必填字段 - 注意字段名映射
             event_dict = {
                 "id": int(row['id']),
-                "sourceId": int(row['source_id']) if 'source_id' in row else None,  # 检查外键是否存在
+                "sourceId": int(row['source_id']) if 'source_id' in row else None,
                 "url": row['url'],
                 "title": row['title'],
-                "publishDate": publish_date,  # 注意这里与数据库字段名保持一致
+                "publishDate": publish_date,
+                "content": row['content'] if 'content' in row and pd.notna(row['content']) else "",
+                "location": row['primary_location'] if 'primary_location' in row and pd.notna(row['primary_location']) else "",
+                "relevance": relevance,
+                "completeness": str(row['completeness']).lower() if 'completeness' in row and pd.notna(row['completeness']) else "unknown",
+                "summary": ""
             }
             
-            # 处理可能存在的字段
-            # 内容处理 - 可能需要从文件中读取
-            if 'content' in row and pd.notna(row['content']):
-                event_dict["content"] = row['content']
-            elif 'content_file_key' in row and pd.notna(row['content_file_key']):
-                # 如果内容存储在文件中，这里可能需要读取文件
-                event_dict["content"] = f"[内容存储在文件: {row['content_file_key']}]"
-            else:
-                event_dict["content"] = ""
-            
-            # 位置信息
-            if 'primary_location' in row and pd.notna(row['primary_location']):
-                event_dict["location"] = row['primary_location']
-            else:
-                event_dict["location"] = ""
-            
-            # 完整性评分
-            if 'completeness' in row and pd.notna(row['completeness']):
-                event_dict["completeness"] = str(row['completeness'])
-            else:
-                event_dict["completeness"] = ""
-            
-            # 相关性 - 可能需要从其他字段映射
-            event_dict["relevance"] = ""
-            
-            # 摘要 - 可能需要从 event_summary_points 构建
+            # 处理摘要 - 尝试解析 event_summary_points
             if 'event_summary_points' in row and pd.notna(row['event_summary_points']):
-                # 如果是JSON格式的摘要点
                 try:
                     import json
                     summary_points = json.loads(row['event_summary_points'])
@@ -176,8 +183,6 @@ def get_events_local(date: str = None):
                         event_dict["summary"] = str(summary_points)
                 except:
                     event_dict["summary"] = str(row['event_summary_points'])
-            else:
-                event_dict["summary"] = ""
             
             events.append(Event(**event_dict))
         except Exception as e:
@@ -185,8 +190,31 @@ def get_events_local(date: str = None):
             print(f"问题数据行: {row.to_dict()}")
             continue
     
-    print(f"从本地数据库加载了 {len(events)} 篇文章和 {len(sources)} 个源")
-    return sources, events
+    # 创建并返回标准格式的响应
+    return EventResponse(
+        sources=sources,
+        events=events,
+        total=len(events)
+    )
+
+
+# 添加统一的获取接口，自动选择本地或远程数据源
+def fetch_events(date: str = None, use_local: bool = False) -> EventResponse:
+    """
+    统一的事件获取接口，可选择从本地或远程获取数据
+    
+    参数:
+        date: 可选的日期过滤 (YYYY-MM-DD)
+        use_local: 是否使用本地数据库, 默认为False
+    
+    返回:
+        EventResponse 对象，包含源列表、事件列表
+    """
+    if use_local:
+        return get_events_local(date)
+    else:
+        return get_events(date)
+
 
 # 添加以下调试函数
 def debug_database_connection():
@@ -277,16 +305,17 @@ def debug_database_connection():
 if __name__ == "__main__":
     debug_database_connection()
     
-    # 测试 get_events_local 函数
-    print("\n==== 测试 get_events_local 函数 ====")
-    sources, events = get_events_local()
-    print(f"获取的事件数: {len(events)}")
-    print(f"获取的源数: {len(sources)}")
+    # 测试统一接口
+    print("\n==== 测试 fetch_events 函数 ====")
+    response = fetch_events(use_local=True)
+    print(f"获取的事件数: {len(response.events)}")
+    print(f"获取的源数: {len(response.sources)}")
+    print(f"总记录数: {response.total}")
     
     # 如果有事件，打印第一个事件的详细信息
-    if events:
+    if response.events:
         print("\n第一个事件的详细信息:")
-        event = events[0]
+        event = response.events[0]
         for field_name, field_value in event.model_dump().items():
             print(f"  {field_name}: {field_value}")
     else:

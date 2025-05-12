@@ -190,8 +190,6 @@ apps/scrapers/feeds.json
 
 __pycache__
 
-apps/briefs
-
 # python stuff
 .mypy_cache
 .ruff_cache
@@ -205,3 +203,21 @@ MAIN_LIST.JSON
 NOTES.MD
 SETUP.MD
 TODO.MD
+
+# 仅忽略briefs中的敏感文件
+apps/briefs/events_data.json
+apps/briefs/*.env
+apps/briefs/__pycache__/
+apps/briefs/**/__pycache__/
+apps/briefs/.pytest_cache/
+apps/briefs/venv/
+apps/briefs/.env
+apps/briefs/*.pyc
+apps/briefs/**/*.pyc
+apps/briefs/paged_events_*.json
+apps/briefs/data/
+apps/briefs/outputs/
+apps/briefs/credentials.json
+apps/briefs/token.json
+apps/briefs/client_secrets.json
+apps/briefs/service_account.json

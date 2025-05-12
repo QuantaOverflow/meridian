@@ -25,7 +25,17 @@ const route = new Hono<HonoEnv>()
  .get('/', async (c) => {
   const date = c.req.query('date');
   
-  logger.info('获取事件数据', { date });
+  // 添加分页参数
+  const page = parseInt(c.req.query('page') || '1', 10);
+  const limit = parseInt(c.req.query('limit') || '100', 10);
+  const usePagination = c.req.query('pagination') === 'true';
+  
+  // 验证分页参数
+  const validPage = page > 0 ? page : 1;
+  const validLimit = limit > 0 && limit <= 1000 ? limit : 100;
+  const offset = (validPage - 1) * validLimit;
+  
+  logger.info('获取事件数据', { date, usePagination, page: validPage, limit: validLimit });
   
   try {
     const db = getDb(c.env.HYPERDRIVE);
@@ -41,8 +51,15 @@ const route = new Hono<HonoEnv>()
       ) as any;
     }
     
-    // 使用组合条件构建查询 - 不再使用分页
-    let articlesQuery = db.select({
+    // 首先获取总记录数
+    const countQuery = db.select({
+      count: sql`count(*)`.as('count')
+    })
+    .from($articles)
+    .where(conditions);
+    
+    // 使用组合条件构建查询
+    const baseQuery = db.select({
       id: $articles.id,
       title: $articles.title,
       url: $articles.url,
@@ -58,6 +75,11 @@ const route = new Hono<HonoEnv>()
     .where(conditions)
     .orderBy(sql`${$articles.publishDate} DESC`);
     
+    // 如果使用分页，则应用分页限制
+    let articlesQuery = usePagination 
+      ? baseQuery.limit(validLimit).offset(offset)
+      : baseQuery;
+    
     // 获取源信息
     const sourcesQuery = db.select({
       id: $sources.id,
@@ -66,10 +88,14 @@ const route = new Hono<HonoEnv>()
     .from($sources);
     
     // 并行执行查询
-    const [articles, sources] = await Promise.all([
+    const [countResult, articles, sources] = await Promise.all([
+      countQuery.execute(),
       articlesQuery.execute(),
       sourcesQuery.execute()
     ]);
+    
+    // 获取总记录数
+    const totalCount = parseInt(countResult[0]?.count?.toString() || '0', 10);
     
     // 转换为客户端所需的响应格式
     const events = await Promise.all(articles.map(async (article) => {
@@ -142,12 +168,26 @@ const route = new Hono<HonoEnv>()
       name: source.name || `Source ${source.id}`
     }));
     
-    // 返回完整响应，只包含数据和总数
-    return c.json({
+    // 计算分页信息
+    const totalPages = usePagination ? Math.ceil(totalCount / validLimit) : 1;
+    
+    // 返回完整响应，包含分页信息（如果使用分页）
+    const response: any = {
       sources: formattedSources,
       events: events,
-      total: events.length
-    });
+      total: totalCount
+    };
+    
+    // 如果使用分页，添加分页信息
+    if (usePagination) {
+      response.pagination = {
+        page: validPage,
+        limit: validLimit,
+        pages: totalPages
+      };
+    }
+    
+    return c.json(response);
     
   } catch (error) {
     logger.error('获取事件数据失败', { 

@@ -8,7 +8,8 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
- 
+import concurrent.futures
+
 load_dotenv()
 
 
@@ -18,6 +19,20 @@ class Source(BaseModel):
 
 
 class Event(BaseModel):
+    """
+    Represents an event with detailed information extracted from a source.
+    Attributes:
+        id (int): Unique identifier for the event.
+        sourceId (int): Identifier of the source from which the event was extracted.
+        url (str): URL link to the original event source.
+        title (str): Title or headline of the event.
+        publishDate (datetime): Date and time when the event was published.
+        content (str): Full text content of the event.
+        location (str): Geographic location related to the event.
+        relevance (str): Assessment of the event's relevance to the analysis context.
+        completeness (str): Indication of how complete the event information is.
+        summary (str): Concise summary of the event content.
+    """
     id: int
     sourceId: int
     url: str
@@ -202,6 +217,116 @@ def get_events_with_pagination(date: str = None, page_size: int = 100) -> EventR
     print(f"分页爬取完成，共获取{len(all_events)}条记录，去重后{len(set(e['id'] for e in all_events))}条")
     
     # 转换数据为标准格式
+    sources = [Source(**source) for source in all_sources]
+    events = [Event(**event) for event in all_events]
+    
+    return EventResponse(
+        sources=sources,
+        events=events,
+        total=len(events)
+    )
+
+
+def get_events_with_parallel_pagination(date: str = None, page_size: int = 100, max_workers: int = 3) -> EventResponse:
+    """并行分页获取所有事件数据"""
+    url = f"https://meridian-backend.swj299792458.workers.dev/events"
+    
+    # 首先获取总记录数和页数
+    params = {"page": 1, "limit": page_size, "pagination": "true"}
+    if date:
+        params["date"] = date
+    
+    print("获取第一页以确定总页数...")
+    response = requests.get(
+        url,
+        params=params,
+        headers={"Authorization": f"Bearer {os.environ.get('MERIDIAN_SECRET_KEY')}"},
+        timeout=30
+    )
+    data = response.json()
+    
+    # 提取分页信息
+    total_count = data.get("total", 0)
+    pagination = data.get("pagination", {})
+    total_pages = pagination.get("pages", 1)
+    
+    print(f"总记录数: {total_count}, 总页数: {total_pages}")
+    
+    # 已获取第一页数据
+    all_pages_data = [data]  # 存储第一页
+    
+    # 并行获取剩余页
+    if total_pages > 1:
+        print(f"并行获取剩余 {total_pages-1} 页...")
+        
+        def fetch_page(page_num):
+            """获取指定页数据的函数"""
+            page_params = {"page": page_num, "limit": page_size, "pagination": "true"}
+            if date:
+                page_params["date"] = date
+                
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    print(f"获取第 {page_num} 页...")
+                    page_response = requests.get(
+                        url,
+                        params=page_params,
+                        headers={"Authorization": f"Bearer {os.environ.get('MERIDIAN_SECRET_KEY')}"},
+                        timeout=30
+                    )
+                    page_response.raise_for_status()
+                    return page_response.json()
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        print(f"获取第 {page_num} 页失败: {str(e)}")
+                        return None
+                    print(f"第 {page_num} 页请求失败，第 {retry_count} 次重试...")
+                    time.sleep(1)
+        
+        # 创建线程池并行获取剩余页面
+        remaining_pages = list(range(2, total_pages + 1))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_page = {executor.submit(fetch_page, page_num): page_num for page_num in remaining_pages}
+            
+            for future in concurrent.futures.as_completed(future_to_page):
+                page_num = future_to_page[future]
+                try:
+                    page_data = future.result()
+                    if page_data is not None:
+                        all_pages_data.append(page_data)
+                        print(f"第 {page_num} 页获取成功")
+                except Exception as e:
+                    print(f"处理第 {page_num} 页出错: {str(e)}")
+    
+    # 合并所有页面数据
+    print("合并所有页面数据...")
+    all_events = []
+    all_sources = []
+    
+    # 去重逻辑
+    event_ids = set()
+    source_ids = set()
+    
+    for page_data in all_pages_data:
+        # 添加事件，避免重复
+        for event in page_data.get("events", []):
+            if event["id"] not in event_ids:
+                all_events.append(event)
+                event_ids.add(event["id"])
+        
+        # 添加源，避免重复
+        for source in page_data.get("sources", []):
+            if source["id"] not in source_ids:
+                all_sources.append(source)
+                source_ids.add(source["id"])
+    
+    print(f"并行分页爬取完成，共获取 {len(all_events)} 条记录")
+    
+    # 转换为标准格式
     sources = [Source(**source) for source in all_sources]
     events = [Event(**event) for event in all_events]
     

@@ -222,4 +222,4 @@ apps/briefs/token.json
 apps/briefs/client_secrets.json
 apps/briefs/service_account.json
 
-apps/backend/tests
+apps/backend/src/tests

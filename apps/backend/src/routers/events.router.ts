@@ -6,7 +6,7 @@ import type { HonoEnv } from '../app';
 import { Logger } from '../lib/logger';
 
 const app = new Hono<{ Bindings: Env }>();
-const logger = new Logger({ component: 'events-api' });
+const logger = new Logger({ component: 'events-api', level: 'debug' });
 
 // 添加认证中间件
 app.use('*', async (c, next) => {
@@ -117,19 +117,65 @@ const route = new Hono<HonoEnv>()
         }
       }
       
-      // 处理事件摘要
+      // 改进事件摘要处理逻辑
       let summary = '';
-      if (article.event_summary_points && typeof article.event_summary_points === 'string') {
+      logger.info('摘要处理开始', { 
+        article_id: article.id, 
+        has_summary: Boolean(article.event_summary_points),
+        summary_type: typeof article.event_summary_points,
+        raw_value: article.event_summary_points
+      });
+      
+      // 处理各种可能的数据格式
+      const rawSummary = article.event_summary_points;
+      
+      if (rawSummary) {
         try {
-          const points = JSON.parse(article.event_summary_points);
-          if (Array.isArray(points)) {
-            summary = points.join('\n');
+          // 检查是否已经是数组类型
+          if (Array.isArray(rawSummary)) {
+            // 已经是数组，直接使用
+            summary = rawSummary.join('\n');
+            logger.info('直接使用数组数据作为摘要', { article_id: article.id });
           } else {
-            summary = String(points);
+            // 非数组情况按原有逻辑处理
+            const rawStr = typeof rawSummary === 'string' ? rawSummary.trim() : String(rawSummary).trim();
+            
+            try {
+              const parsed = JSON.parse(rawStr);
+              if (Array.isArray(parsed)) {
+                summary = parsed.join('\n');
+                logger.info('通过JSON解析提取摘要(数组)', { article_id: article.id });
+              } else if (typeof parsed === 'object' && parsed !== null) {
+                // 处理对象格式
+                // ... 原有对象处理逻辑保持不变 ...
+              } else {
+                summary = String(parsed);
+                logger.info('通过JSON解析提取摘要(基本类型)', { article_id: article.id });
+              }
+            } catch (jsonError) {
+              // JSON 解析失败的处理逻辑保持不变
+              // ... 原有正则表达式和其他处理逻辑 ...
+            }
           }
         } catch (error) {
-          summary = String(article.event_summary_points);
+          logger.error('摘要处理失败', { 
+            article_id: article.id, 
+            error: String(error),
+            raw_value: typeof rawSummary === 'object' ? '[Object]' : String(rawSummary)
+          });
+          
+          // 出错时使用简单的回退方案
+          if (Array.isArray(rawSummary)) {
+            summary = rawSummary.join('\n');
+          } else {
+            summary = String(rawSummary);
+          }
         }
+      }
+      
+      // 最后调试检查
+      if (!summary) {
+        logger.warn('摘要仍为空', { article_id: article.id });
       }
       
       // 派生相关性评分

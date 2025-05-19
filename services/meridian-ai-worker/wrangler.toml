@@ -1,0 +1,26 @@
+name = "meridian-ai-worker"
+main = "src/index.ts"
+compatibility_date = "2025-05-20"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "dev"
+LOG_LEVEL = "info"
+
+# 绑定 Cloudflare AI
+[[ai]]
+binding = "AI"
+
+# 定义自定义域名
+[env.production]
+routes = [
+  { pattern = "ai-worker.meridian.example.com", custom_domain = true }
+]
+
+# 在实际部署时通过 wrangler secret 命令设置以下密钥
+# secrets = [
+#   "OPENAI_API_KEY",
+#   "GOOGLE_API_KEY",
+#   "ANTHROPIC_API_KEY",
+#   "API_AUTH_KEY"
+# ]

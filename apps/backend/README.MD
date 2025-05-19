@@ -16,8 +16,9 @@ It leverages several Cloudflare platform features for resilience and scalability
 
     - Provides HTTP endpoints for:
       - Managing reports (`/reports`).
-      - Managing sources (`/sources` - e.g., deletion).
+      - Managing sources (`/sources` - e.g., creation, updating, deletion).
       - Generating OpenGraph images (`/openGraph`).
+      - Retrieving events data (`/events` - formatted article content for client consumption).
       - Internal/Admin operations (DO initialization `POST /do/admin/initialize-dos`).
       - Health check (`/ping`).
     - Handles routing requests to specific `SourceScraperDO` instances (`GET /do/source/:sourceId/*`).
@@ -66,12 +67,21 @@ It leverages several Cloudflare platform features for resilience and scalability
     - `rateLimiter.ts`: Implements the `DomainRateLimiter`.
     - `tryCatchAsync.ts`: Utility for converting promise rejections to `neverthrow` Results.
     - `utils.ts`: Helper functions like `getDb` (with `prepare: false`), `hasValidAuthToken`, `generateSearchText`.
+    - `test-cloudflare.ts`: Utility script for directly testing the Cloudflare Browser Rendering API, useful for troubleshooting scraping issues.
 
-6.  **Integrations:**
+6.  **Events API (`events.router.ts`):**
+
+    - Provides formatted article data for client-side consumption
+    - Implements pagination for efficient data retrieval
+    - Formats article content by retrieving the full text from R2 storage
+    - Processes event summaries from various formats (array, JSON, string)
+    - Maps database quality indicators to client-friendly relevance scores
+
+7.  **Integrations:**
     - **Database (`@meridian/database`):** Uses Drizzle ORM and `postgres.js` to interact with the PostgreSQL database. Configured with `prepare: false` for pooler compatibility.
     - **Cloudflare Browser Rendering API:** Used as a fallback mechanism for robust scraping.
     - **Google AI (Gemini):** Used for core article analysis.
-    - **External ML Service:** Used via `ML_SERVICE_URL` for generating embeddings.
+    - **External ML Service:** Used via `MERIDIAN_ML_SERVICE_URL` for generating embeddings.
 
 ## How It Works (High-Level Flow)
 
@@ -86,6 +96,7 @@ It leverages several Cloudflare platform features for resilience and scalability
 9.  **Storage:** The Workflow uploads article text to R2.
 10. **DB Update:** The Workflow updates the articles in the database with the analysis results, R2 key, embedding, and final status.
 11. **API Access:** The Hono API server allows querying processed data or performing management actions.
+12. **Events Access:** Client applications can retrieve formatted article content through the `/events` API endpoint.
 
 ## Configuration
 
@@ -109,23 +120,122 @@ The following are required (use `.dev.vars` locally, Cloudflare Secrets in produ
 - `DATABASE_URL`: PostgreSQL connection string.
 - `API_TOKEN`: Secret Bearer token for protecting API endpoints.
 - `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID.
-- `CLOUDFLARE_BROWSER_RENDERING_API_TOKEN`: API token with Browser Rendering permissions.
+- `CLOUDFLARE_API_TOKEN`: API token with Browser Rendering permissions.
 - `GEMINI_API_KEY`: API key for Google AI (Gemini).
 - `GEMINI_BASE_URL`: (Optional) Custom base URL for Google AI API.
-- `ML_SERVICE_URL`: URL for the external embeddings service.
-- `ML_SERVICE_API_TOKEN`: API token for the external embeddings service.
+- `MERIDIAN_ML_SERVICE_URL`: URL for the external embeddings service.
+- `MERIDIAN_ML_SERVICE_API_KEY`: API token for the external embeddings service.
+
+## Development Tools
+
+1. **Testing Cloudflare Browser Rendering API**
+   - The codebase includes a direct testing utility (`test-cloudflare.ts`) for troubleshooting Cloudflare Browser Rendering API.
+   - This tool helps debug scraping issues by directly testing the API outside of the Worker context.
+   - Usage: Configure the required environment variables (`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`) and run the script.
+
+2. **API Testing Hooks**
+   - The Worker includes test mode hooks accessible via URL query parameters (`?_test=gemini` or `?_test=cfai`).
+   - These hooks allow testing specific API integrations without going through the full workflow.
+
+## API 管理端点
+
+以下是用于管理系统各组件的 API 端点，可通过 curl 命令直接访问：
+
+### 新闻源管理
+
+#### 创建新的新闻源
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/rss",
+    "name": "示例新闻源",
+    "category": "news",
+    "scrape_frequency": 2,
+    "paywall": false
+  }' \
+  http://localhost:8787/sources
+```
+
+#### 更新现有新闻源
+
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "更新的源名称",
+    "scrape_frequency": 3,
+    "category": "technology"
+  }' \
+  http://localhost:8787/sources/123
+```
+
+#### 删除新闻源
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/sources/123
+```
+
+#### 查询所有新闻源
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/sources
+```
+
+### Durable Object 管理
+
+#### 初始化特定新闻源的 Durable Object
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/do/admin/source/123/init
+```
+
+#### 初始化所有未初始化的新闻源
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/do/admin/initialize-dos
+```
+
+#### 获取新闻源状态信息
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/do/source/123/state
+```
+
+#### 手动触发新闻源抓取
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  http://localhost:8787/do/source/123/fetch
+```
+
+注意：在以上所有命令中，请将 `YOUR_API_TOKEN` 替换为您的实际 API 令牌，并将 `123` 替换为实际的新闻源 ID。
 
 ## Running Locally
 
 1.  Ensure Node.js (v22+), pnpm (v9.15+), Docker (for Postgres+pgvector), and Wrangler are installed.
 2.  Navigate to the monorepo root (`meridian/`).
 3.  Install dependencies: `pnpm install`.
-4.  Start a local PostgreSQL database with the pgvector extension (see `@meridian/database/README.MD` or use Supabase local dev).
+4.  Start a local PostgreSQL database with the pgvector extension (see README.MD or use Supabase local dev).
 5.  Configure and run database migrations:
-    - Set `DATABASE_URL` in `packages/database/.env`.
+    - Set `DATABASE_URL` in .env.
     - Run `pnpm --filter @meridian/database migrate`.
     - (Optional) Seed initial sources: `pnpm --filter @meridian/database seed`.
-6.  Create a `.dev.vars` file in `apps/backend/` and populate the required environment variables listed above.
+6.  Create a `.dev.vars` file in backend and populate the required environment variables listed above.
 7.  Start the local development server: `pnpm --filter @meridian/backend run dev`.
     - This uses `wrangler dev` with local emulation.
     - Local emulation for DOs, Queues, and Workflows has limitations.
@@ -145,7 +255,7 @@ Deployment is handled via Cloudflare Wrangler:
 
 1.  Ensure `wrangler.jsonc` is correct for the target environment.
 2.  Set production secrets using `npx wrangler secret put <SECRET_NAME>`.
-3.  Deploy using `npx wrangler deploy` from within the `apps/backend` directory or via configured CI/CD.
+3.  Deploy using `npx wrangler deploy` from within the backend directory or via configured CI/CD.
 
 ## Key Libraries & Technologies
 

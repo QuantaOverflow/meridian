@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { Anthropic } from '@anthropic-ai/sdk';
 import { Env, Provider } from '../types';
 import { AIProvider } from './providerFactory';
 import { getLogger } from '../utils/logger';

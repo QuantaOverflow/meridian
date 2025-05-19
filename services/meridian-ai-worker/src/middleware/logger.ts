@@ -8,6 +8,9 @@ import { getLogger } from '../utils/logger';
  */
 export const logger = (): MiddlewareHandler<{
   Bindings: Env;
+  Variables: {
+    requestId: string;
+  };
 }> => {
   return async (c, next) => {
     const logger = getLogger(c.env);

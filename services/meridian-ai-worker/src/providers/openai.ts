@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 import { Env, Provider } from '../types';
 import { AIProvider } from './providerFactory';
 import { getLogger } from '../utils/logger';
@@ -169,7 +169,7 @@ export class OpenAIProvider implements AIProvider {
     const startTime = Date.now();
 
     try {
-      const response = await this.client.embeddings.create({
+      const response = await this.client.createEmbedding({
         model: modelName,
         input: text,
         dimensions,

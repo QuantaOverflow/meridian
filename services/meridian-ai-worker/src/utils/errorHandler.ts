@@ -21,6 +21,9 @@ export class ApiError extends Error {
  */
 export const errorHandler = (): MiddlewareHandler<{
   Bindings: Env;
+  Variables: {
+    requestId: string;
+  };
 }> => {
   return async (c, next) => {
     const logger = getLogger(c.env);
@@ -56,7 +59,7 @@ export const errorHandler = (): MiddlewareHandler<{
           requestId,
           timestamp: new Date().toISOString(),
         }
-      }, statusCode);
+      }, statusCode as any);
     }
   };
 };

@@ -1,9 +1,52 @@
-import { createGoogleGenerativeAI, type GenerativeModel } from '@ai-sdk/google';
-import { generateObject } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateObject as aiGenerateObject } from 'ai';
 import { Env, Provider } from '../types';
 import { AIProvider } from './providerFactory';
 import { getLogger } from '../utils/logger';
 import { ApiError } from '../utils/errorHandler';
+
+// 添加自定义的 GenerativeModel 类型定义
+type GenerativeModel = {
+  // 文本生成方法
+  generateContent(params: {
+    contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+    generationConfig?: {
+      temperature?: number;
+      maxOutputTokens?: number;
+      topK?: number;
+      topP?: number;
+    };
+  }): Promise<{
+    response: {
+      text(): string;
+      promptFeedback?: {
+        blockReason?: string;
+        safetyRatings?: Array<{
+          category: string;
+          probability: string;
+        }>;
+      };
+    };
+  }>;
+  
+  // 嵌入向量生成方法
+  embedContent(params: {
+    content: Array<{ role: string; parts: Array<{ text: string }> }>;
+  }): Promise<{
+    embedding: {
+      values: number[];
+      dimensions?: number;
+    };
+  }>;
+  
+  // 添加可能被 generateObject 函数使用的其他属性
+  name?: string;
+  provider?: string;
+  maxTokens?: number;
+  
+  // 接受 ai 包中 generateObject 函数可能用到的任何方法
+  [key: string]: any;
+};
 
 /**
  * Google Gemini API 适配器
@@ -51,7 +94,7 @@ export class GeminiProvider implements AIProvider {
     const startTime = Date.now();
 
     try {
-      const model: GenerativeModel = this.client(modelName);
+      const model: GenerativeModel = this.client(modelName) as unknown as GenerativeModel; ;
 
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -92,13 +135,15 @@ export class GeminiProvider implements AIProvider {
     const startTime = Date.now();
 
     try {
+      // 不要给 model 添加类型断言，直接使用原始返回值
       const model = this.client(modelName);
       
-      const response = await generateObject({
-        model,
+      // 这里的调用方式与 processArticles.workflow.ts 中的相同
+      const response = await (aiGenerateObject as any)({
+        model,           // 使用原始模型，不进行类型转换
         temperature,
         prompt,
-        schema,
+        schema,          // 直接传递 schema 参数
       });
 
       const duration = Date.now() - startTime;
@@ -124,11 +169,16 @@ export class GeminiProvider implements AIProvider {
    * 嵌入向量生成
    */
   async generateEmbedding(text: string, options: Record<string, any> = {}): Promise<number[]> {
-    const modelName = options.model || 'embedding-001';
+    const modelName = options.model || 'embedding-001'; // 确保使用支持嵌入的模型
     const startTime = Date.now();
 
     try {
-      const model = this.client(modelName);
+      const model = this.client(modelName) as unknown as GenerativeModel;
+      
+      // 运行时检查模型是否支持嵌入
+      if (typeof model.embedContent !== 'function') {
+        throw new ApiError(`Model '${modelName}' does not support embeddings. Please use a dedicated embedding model like 'embedding-001'.`, 400);
+      }
       
       const embeddingResponse = await model.embedContent({
         content: [{ role: 'user', parts: [{ text }] }],

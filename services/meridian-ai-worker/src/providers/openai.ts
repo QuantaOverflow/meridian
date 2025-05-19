@@ -103,7 +103,7 @@ export class OpenAIProvider implements AIProvider {
       // 构建基于 Schema 的 OpenAI 工具
       const tools = [
         {
-          type: 'function',
+          type: "function" as const,
           function: {
             name: functionName,
             description: 'Generate structured data based on the provided schema',
@@ -169,7 +169,7 @@ export class OpenAIProvider implements AIProvider {
     const startTime = Date.now();
 
     try {
-      const response = await this.client.createEmbedding({
+      const response = await this.client.embeddings.create({
         model: modelName,
         input: text,
         dimensions,

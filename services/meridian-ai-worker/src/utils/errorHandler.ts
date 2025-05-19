@@ -15,6 +15,14 @@ export class ApiError extends Error {
   }
 }
 
+// 添加到 utils/errorHandler.ts
+export class UnsupportedModelFeatureError extends ApiError {
+  constructor(message: string) {
+    super(message, 400);
+    this.name = 'UnsupportedModelFeatureError';
+  }
+}
+
 /**
  * 全局错误处理中间件
  * 捕获所有未处理的异常，转换为标准格式的 JSON 响应

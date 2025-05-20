@@ -4,49 +4,9 @@ import { Env, Provider } from '../types';
 import { AIProvider } from './providerFactory';
 import { getLogger } from '../utils/logger';
 import { ApiError } from '../utils/errorHandler';
-
-// 添加自定义的 GenerativeModel 类型定义
-type GenerativeModel = {
-  // 文本生成方法
-  generateContent(params: {
-    contents: Array<{ role: string; parts: Array<{ text: string }> }>;
-    generationConfig?: {
-      temperature?: number;
-      maxOutputTokens?: number;
-      topK?: number;
-      topP?: number;
-    };
-  }): Promise<{
-    response: {
-      text(): string;
-      promptFeedback?: {
-        blockReason?: string;
-        safetyRatings?: Array<{
-          category: string;
-          probability: string;
-        }>;
-      };
-    };
-  }>;
-  
-  // 嵌入向量生成方法
-  embedContent(params: {
-    content: Array<{ role: string; parts: Array<{ text: string }> }>;
-  }): Promise<{
-    embedding: {
-      values: number[];
-      dimensions?: number;
-    };
-  }>;
-  
-  // 添加可能被 generateObject 函数使用的其他属性
-  name?: string;
-  provider?: string;
-  maxTokens?: number;
-  
-  // 接受 ai 包中 generateObject 函数可能用到的任何方法
-  [key: string]: any;
-};
+import { z } from 'zod';
+// 导入文章分析 schema
+import { articleAnalysisSchema } from '../schemas/article';
 
 /**
  * Google Gemini API 适配器
@@ -94,7 +54,7 @@ export class GeminiProvider implements AIProvider {
     const startTime = Date.now();
 
     try {
-      const model: GenerativeModel = this.client(modelName) as unknown as GenerativeModel; ;
+      const model = this.client(modelName) as unknown as any;
 
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -128,24 +88,39 @@ export class GeminiProvider implements AIProvider {
 
   /**
    * 结构化数据生成
+   * 直接使用导入的 schema 定义
    */
-  async generateObject<T>(prompt: string, schema: Record<string, any>, options: Record<string, any> = {}): Promise<T> {
+  async generateObject<T>(prompt: string, schema: any, options: Record<string, any> = {}): Promise<T> {
     const modelName = options.model || 'gemini-2.0-flash';
     const temperature = options.temperature ?? 0;
     const startTime = Date.now();
 
     try {
-      // 不要给 model 添加类型断言，直接使用原始返回值
+      // 使用 AI SDK 原生方法
       const model = this.client(modelName);
       
-      // 这里的调用方式与 processArticles.workflow.ts 中的相同
-      const response = await (aiGenerateObject as any)({
-        model,           // 使用原始模型，不进行类型转换
-        temperature,
-        prompt,
-        schema,          // 直接传递 schema 参数
+      // 直接使用提供的 schema（假设它是 Zod schema）
+      // 如果是文章分析，使用预定义的 schema
+      const zodSchema = options.analysisType === 'article' ? 
+        articleAnalysisSchema : 
+        (schema instanceof z.ZodType ? schema : articleAnalysisSchema);
+      
+      // 记录调试信息
+      this.logger.debug('Generating object with Gemini', {
+        model: modelName,
+        promptLength: prompt.length,
+        analysisType: options.analysisType || 'generic'
       });
-
+      
+      // 使用 AI SDK 的 generateObject 方法生成结构化数据
+      const response = await aiGenerateObject({
+        model,
+        prompt,
+        temperature,
+        maxTokens: options.maxTokens,
+        schema: zodSchema,
+      });
+      
       const duration = Date.now() - startTime;
       this.logger.info('Object generated with Gemini', {
         model: modelName,
@@ -169,16 +144,11 @@ export class GeminiProvider implements AIProvider {
    * 嵌入向量生成
    */
   async generateEmbedding(text: string, options: Record<string, any> = {}): Promise<number[]> {
-    const modelName = options.model || 'embedding-001'; // 确保使用支持嵌入的模型
+    const modelName = options.model || 'embedding-001';
     const startTime = Date.now();
 
     try {
-      const model = this.client(modelName) as unknown as GenerativeModel;
-      
-      // 运行时检查模型是否支持嵌入
-      if (typeof model.embedContent !== 'function') {
-        throw new ApiError(`Model '${modelName}' does not support embeddings. Please use a dedicated embedding model like 'embedding-001'.`, 400);
-      }
+      const model = this.client(modelName) as unknown as any;
       
       const embeddingResponse = await model.embedContent({
         content: [{ role: 'user', parts: [{ text }] }],

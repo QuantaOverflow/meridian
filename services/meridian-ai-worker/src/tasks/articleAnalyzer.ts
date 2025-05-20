@@ -4,6 +4,10 @@ import { MODELS, getDefaultModelForTask } from '../config/modelConfig';
 import { createProvider } from '../providers/providerFactory';
 import { getLogger } from '../utils/logger';
 import { ApiError } from '../utils/errorHandler';
+import { z } from 'zod';
+
+// 导入文章分析 schema 和提示模板
+import { articleAnalysisSchema, getArticleAnalysisPrompt } from '../schemas/article';
 
 /**
  * 文章分析处理器
@@ -53,30 +57,26 @@ export class ArticleAnalyzer implements TaskProcessor<ArticleAnalysisRequest> {
         hasCustomPrompt: Boolean(promptTemplate),
       });
 
-      // 准备提示
-      let prompt = promptTemplate || `
-Analyze the following article and extract key information:
+      // 准备提示 - 使用导入的提示模板函数或自定义模板
+      let prompt;
+      if (promptTemplate) {
+        prompt = promptTemplate
+          .replace(/{{TITLE}}/g, title)
+          .replace(/{{CONTENT}}/g, content);
+      } else {
+        // 使用预定义的文章分析提示
+        prompt = getArticleAnalysisPrompt(title, content);
+      }
 
-Title: {{TITLE}}
-
-Content:
-{{CONTENT}}
-
-Provide a structured analysis including:
-1. Main topic or theme
-2. Key entities mentioned (people, organizations, locations)
-3. Primary claims or arguments
-4. Sentiment and tone
-5. Language identification
-`;
-
-      // 替换占位符
-      prompt = prompt
-        .replace(/{{TITLE}}/g, title)
-        .replace(/{{CONTENT}}/g, content);
-
-      // 使用提供商的 generateObject 方法进行分析
-      const result = await provider.generateObject(prompt, schema || {});
+      // 确定使用哪个 schema
+      const analysisSchema = schema || articleAnalysisSchema;
+      
+      // 使用提供商的 generateObject 方法进行分析，并标记为文章分析类型
+      const result = await provider.generateObject(prompt, analysisSchema, {
+        model: selectedModel,
+        temperature: 0,
+        analysisType: 'article', // 标识为文章分析，让 provider 正确处理 schema
+      });
       
       // 记录完成信息
       this.logger.info('Article analysis completed successfully', {

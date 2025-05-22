@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { logger } from './middleware/logger';
 import { auth } from './middleware/auth';
 import { modelRouter } from './router/modelRouter';
+import { gatewayRouter } from './router/gatewayRouter';
 import { errorHandler } from './utils/errorHandler';
 import { Env } from './types';
 
@@ -56,6 +57,10 @@ app.get('/docs', (c) => {
           <li><code>POST /api/embedding</code> - 生成嵌入向量</li>
           <li><code>POST /api/summarize</code> - 生成摘要</li>
           <li><code>POST /api/chat</code> - 对话聊天</li>
+          <li><strong>AI Gateway 测试 API</strong></li>
+          <li><code>GET /api/gateway/health</code> - Gateway 健康检查</li>
+          <li><code>POST /api/gateway/analyze-article</code> - 使用 Gateway 分析文章</li>
+          <li><code>POST /api/gateway/summarize</code> - 使用 Gateway 生成摘要</li>
         </ul>
         
         <p>所有 API 请求需要使用 <code>Authorization: Bearer API_AUTH_KEY</code> 进行身份验证</p>
@@ -66,6 +71,9 @@ app.get('/docs', (c) => {
 
 // 挂载 API 路由
 app.route('/api', modelRouter);
+
+// 挂载 Gateway API 路由
+app.route('/api/gateway', gatewayRouter);
 
 // Worker 默认处理程序
 export default {

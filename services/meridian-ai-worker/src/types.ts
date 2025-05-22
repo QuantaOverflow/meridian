@@ -14,6 +14,12 @@ export interface Env {
   
   // Cloudflare AI 绑定
   AI: any;
+
+  // AI Gateway 配置
+  AI_GATEWAY_URL?: string;
+  AI_GATEWAY_TOKEN?: string;
+  AI_GATEWAY_ACCOUNT_ID?: string;
+  AI_GATEWAY_NAME?: string;
 }
 
 /**
@@ -23,7 +29,8 @@ export enum Provider {
   OPENAI = 'openai',
   ANTHROPIC = 'anthropic',
   GOOGLE = 'google',
-  CLOUDFLARE = 'cloudflare'
+  CLOUDFLARE = 'cloudflare',
+  AI_GATEWAY = 'ai_gateway'  // 添加新的提供商类型
 }
 
 /**

@@ -5,6 +5,18 @@ import { ModelConfig, Provider, TaskType } from '../types';
  * 定义每个模型的提供商、能力和默认用途
  */
 export const MODELS: Record<string, ModelConfig> = {
+  // 通过AI Gateway调用的OpenAI模型
+  'gateway-gpt-4o': {
+    provider: Provider.AI_GATEWAY,
+    capabilities: [
+      TaskType.ARTICLE_ANALYSIS, 
+      TaskType.SUMMARIZE,
+      TaskType.CHAT
+    ],
+    contextWindow: 128000,
+    defaultForTask: TaskType.CHAT,
+    costPerToken: 0.00005,
+  },
   // OpenAI 模型
   'gpt-4o': {
     provider: Provider.OPENAI,

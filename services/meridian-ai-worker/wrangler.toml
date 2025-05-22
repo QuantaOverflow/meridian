@@ -3,13 +3,23 @@ main = "src/index.ts"
 compatibility_date = "2025-05-20"
 compatibility_flags = ["nodejs_compat"]
 
+
 [vars]
 ENVIRONMENT = "dev"
 LOG_LEVEL = "info"
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/meridian-ai"
+AI_GATEWAY_TOKEN = "W-wyAUkVBh6qMzn_q5ayOurxjeQ2XYJKtQZo4AWk"
+AI_GATEWAY_ACCOUNT_ID = "c8317cfcb330d45b37b00ccd7e8a9936"
+AI_GATEWAY_NAME = "meridian-ai"
 
 # 绑定 Cloudflare A
 [ai]
 binding = "AI"
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true
+
 
 # 定义自定义域名
 [env.production]
@@ -17,10 +27,3 @@ routes = [
   { pattern = "ai-worker.meridian.example.com", custom_domain = true }
 ]
 
-# 在实际部署时通过 wrangler secret 命令设置以下密钥
-# secrets = [
-#   "OPENAI_API_KEY",
-#   "GOOGLE_API_KEY",
-#   "ANTHROPIC_API_KEY",
-#   "API_AUTH_KEY"
-# ]

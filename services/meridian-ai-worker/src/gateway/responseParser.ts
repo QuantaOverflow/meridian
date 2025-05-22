@@ -1,24 +1,29 @@
 import { TaskType } from '../types';
+import { ModelFormat } from '../config/modelRegistry';
 
 /**
- * 负责解析不同提供商的响应格式
+ * 响应解析器 - 从不同提供商的响应中提取统一格式的结果
  */
 export class ResponseParser {
   /**
-   * 解析响应内容
+   * 解析响应
    */
-  parseResponse(response: any, endpointInfo: any, taskType: TaskType): any {
+  parseResponse(
+    response: any, 
+    endpointInfo: { provider: string, endpoint: string, format: string },
+    taskType: TaskType
+  ): any {
     switch (endpointInfo.format) {
-      case 'openai-chat':
+      case ModelFormat.OPENAI_CHAT:
         return this.parseOpenAIChatResponse(response, taskType);
-      case 'openai-embedding':
+      case ModelFormat.OPENAI_EMBEDDING:
         return this.parseOpenAIEmbeddingResponse(response);
-      case 'anthropic':
+      case ModelFormat.ANTHROPIC:
         return this.parseAnthropicResponse(response, taskType);
-      case 'google':
+      case ModelFormat.GOOGLE:
         return this.parseGoogleResponse(response, taskType);
       default:
-        return response;
+        throw new Error(`未知的响应格式: ${endpointInfo.format}`);
     }
   }
   

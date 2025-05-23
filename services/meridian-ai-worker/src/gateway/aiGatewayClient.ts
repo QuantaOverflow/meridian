@@ -18,16 +18,20 @@ export class AIGatewayClient {
       'openai': env.OPENAI_API_KEY || '',
       'anthropic': env.ANTHROPIC_API_KEY || '',
       'google': env.GOOGLE_API_KEY || '',
-      'cloudflare': env.CLOUDFLARE_API_KEY || '' // 这应该是Cloudflare API Token
+      'cloudflare': env.CLOUDFLARE_API_KEY || '' // Cloudflare API Token
     };
     
     if (!this.gatewayUrl) {
       throw new Error('AI Gateway URL 必须配置');
     }
     
-    // 验证Cloudflare特定配置
+    // 验证必要配置
     if (!this.cloudflareAccountId || !this.gatewayId) {
-      console.warn('Cloudflare Account ID 或 Gateway ID 未配置，Cloudflare Workers AI功能可能不可用');
+      console.warn('Cloudflare Account ID 或 Gateway ID 未配置，可能影响功能使用');
+    }
+    
+    if (!this.gatewayToken) {
+      console.warn('AI Gateway Token 未配置，将无法使用认证网关功能');
     }
   }
 
@@ -39,8 +43,8 @@ export class AIGatewayClient {
   }
 
   /**
-   * 使用提供商API密钥发送请求
-   * 此方法同时使用Gateway Token和提供商自己的API密钥
+   * 使用双层认证发送请求
+   * 所有提供商统一使用 AI Gateway Token + 提供商 API Key 的认证方式
    */
   async requestWithProviderKey<T = any>(
     provider: string, 
@@ -48,9 +52,9 @@ export class AIGatewayClient {
     payload: any, 
     options: Record<string, any> = {}
   ): Promise<T> {
-    // 验证Gateway Token
+    // 验证 Gateway Token（双层认证必需）
     if (!this.gatewayToken) {
-      throw new Error('AI Gateway Token未配置');
+      throw new Error('AI Gateway Token 未配置，双层认证需要此 Token');
     }
     
     // 统一的提供商映射表
@@ -65,60 +69,136 @@ export class AIGatewayClient {
     const mappedProvider = providerMap[provider.toLowerCase()] || provider;
     const url = `${this.gatewayUrl}/${mappedProvider}/${endpoint}`;
     
-    // 获取API密钥
+    // 获取提供商API密钥
     const apiKey = this.getApiKey(provider);
-    
-    // 设置请求头
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    
-    // 统一使用双层验证：Gateway Token + 提供商API Key
-    headers['cf-aig-authorization'] = `Bearer ${this.gatewayToken}`;
-    
-    if (provider.toLowerCase() === 'google') {
-      // Google使用特殊的API Key头部
-      if (!apiKey) {
-        throw new Error('Google API Key未配置');
-      }
-      headers['x-goog-api-key'] = apiKey;
-    } else {
-      // 其他所有提供商（包括Cloudflare）都使用Authorization头部
-      if (!apiKey) {
-        throw new Error(`${provider} API Key未配置`);
-      }
-      headers['Authorization'] = `Bearer ${apiKey}`;
+    if (!apiKey) {
+      throw new Error(`${provider} API Key 未配置，双层认证需要提供商 API Key`);
     }
     
-    console.log('发送AI Gateway请求', {
+    // 设置通用请求头
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      // 第一层认证：AI Gateway Token
+      'cf-aig-authorization': `Bearer ${this.gatewayToken}`
+    };
+    
+    // 第二层认证：根据提供商设置不同的认证头
+    switch (provider.toLowerCase()) {
+      case 'cloudflare':
+        // Cloudflare Workers AI 使用 Authorization Bearer Token
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        break;
+        
+      case 'google':
+        // Google AI Studio 使用 x-goog-api-key
+        headers['x-goog-api-key'] = apiKey;
+        break;
+        
+      case 'anthropic':
+        // Anthropic 使用 x-api-key
+        headers['x-api-key'] = apiKey;
+        break;
+        
+      case 'openai':
+      default:
+        // OpenAI 和其他提供商使用 Authorization Bearer Token
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        break;
+    }
+    
+    console.log('发送双层认证 AI Gateway 请求', {
       provider,
+      mappedProvider,
       url,
       hasGatewayToken: !!this.gatewayToken,
       hasApiKey: !!apiKey,
+      authMethod: 'dual-layer',
       payloadPreview: JSON.stringify(payload).substring(0, 100) + '...'
     });
     
     // 发送请求
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    });
-    
-    // 检查响应状态
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI Gateway请求失败', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-        url,
-        headers: Object.keys(headers)
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
       });
       
-      throw new Error(`AI Gateway请求失败: ${response.status} ${response.statusText}\n${errorText}`);
+      // 检查响应状态
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AI Gateway 双层认证请求失败', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          url,
+          provider,
+          headers: Object.keys(headers)
+        });
+        
+        throw new Error(`AI Gateway 请求失败: ${response.status} ${response.statusText}\n${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('AI Gateway 请求成功', {
+        provider,
+        status: response.status,
+        responseType: typeof result
+      });
+      
+      return result as T;
+    } catch (error) {
+      console.error('AI Gateway 请求异常', {
+        provider,
+        url,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 验证认证配置是否完整
+   */
+  validateConfiguration(provider: string): { valid: boolean; message: string } {
+    if (!this.gatewayToken) {
+      return {
+        valid: false,
+        message: 'AI Gateway Token 未配置，双层认证需要此 Token'
+      };
     }
     
-    return await response.json();
+    const apiKey = this.getApiKey(provider);
+    if (!apiKey) {
+      return {
+        valid: false,
+        message: `${provider} API Key 未配置，双层认证需要提供商 API Key`
+      };
+    }
+    
+    if (!this.cloudflareAccountId || !this.gatewayId) {
+      return {
+        valid: false,
+        message: 'Cloudflare Account ID 或 Gateway ID 未配置'
+      };
+    }
+    
+    return {
+      valid: true,
+      message: '配置验证通过'
+    };
+  }
+
+  /**
+   * 获取网关信息
+   */
+  getGatewayInfo(): Record<string, any> {
+    return {
+      gatewayUrl: this.gatewayUrl,
+      accountId: this.cloudflareAccountId,
+      gatewayId: this.gatewayId,
+      hasGatewayToken: !!this.gatewayToken,
+      configuredProviders: Object.keys(this.apiKeys).filter(key => !!this.apiKeys[key])
+    };
   }
 }

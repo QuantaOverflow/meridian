@@ -7,6 +7,7 @@ export interface Env {
   GOOGLE_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
   API_AUTH_KEY: string;
+  CLOUDFLARE_API_KEY?: string;
   
   // 配置项
   ENVIRONMENT: string;
@@ -20,17 +21,6 @@ export interface Env {
   AI_GATEWAY_TOKEN?: string;
   AI_GATEWAY_ACCOUNT_ID?: string;
   AI_GATEWAY_NAME?: string;
-}
-
-/**
- * 支持的 AI 提供商
- */
-export enum Provider {
-  OPENAI = 'openai',
-  ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  CLOUDFLARE = 'cloudflare',
-  AI_GATEWAY = 'ai_gateway'  // 添加新的提供商类型
 }
 
 /**
@@ -57,11 +47,15 @@ export interface ApiResponse<T> {
  * 模型配置接口
  */
 export interface ModelConfig {
-  provider: Provider;
-  capabilities: TaskType[];
-  contextWindow: number;
-  defaultForTask?: TaskType;
-  costPerToken?: number;
+  name: string;                    // 模型名称
+  provider: Provider;              // 提供商
+  endpoint?: string;               // API 端点
+  format?: ModelFormat;            // 请求格式
+  supportedTasks: TaskType[];      // 支持的任务类型（同原capabilities）
+  defaultForTask?: TaskType;       // 默认用于哪个任务
+  contextWindow?: number;          // 上下文窗口大小
+  costPer1KTokens?: number;        // 每千个令牌的成本
+  capabilities?: string[];         // 特殊能力
 }
 
 /**
@@ -129,4 +123,21 @@ export interface ChatResponse {
     completionTokens: number;
     totalTokens: number;
   };
+}
+
+// 提供商枚举 - 保留所有现有提供商
+export enum Provider {
+  OPENAI = 'openai',
+  ANTHROPIC = 'anthropic',
+  GOOGLE = 'google',
+  CLOUDFLARE = 'cloudflare',
+}
+
+// 请求格式枚举
+export enum ModelFormat {
+  OPENAI_CHAT = 'openai-chat',
+  OPENAI_EMBEDDING = 'openai-embedding',
+  ANTHROPIC = 'anthropic',
+  GOOGLE = 'google',
+  CLOUDFLARE = 'cloudflare'
 }

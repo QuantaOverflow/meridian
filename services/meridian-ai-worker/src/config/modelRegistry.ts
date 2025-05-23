@@ -1,35 +1,35 @@
 // 创建文件: /Users/shiwenjie/code/github_repo/spider/meridian/services/meridian-ai-worker/src/config/modelRegistry.ts
-import { TaskType } from '../types';
+import { Provider,TaskType,ModelConfig,ModelFormat } from '../types';
 
-// 提供商枚举 - 保留所有现有提供商
-export enum Provider {
-  OPENAI = 'openai',
-  ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  CLOUDFLARE = 'cloudflare',
-}
+// // 提供商枚举 - 保留所有现有提供商
+// export enum Provider {
+//   OPENAI = 'openai',
+//   ANTHROPIC = 'anthropic',
+//   GOOGLE = 'google',
+//   CLOUDFLARE = 'cloudflare',
+// }
 
-// 请求格式枚举
-export enum ModelFormat {
-  OPENAI_CHAT = 'openai-chat',
-  OPENAI_EMBEDDING = 'openai-embedding',
-  ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  CLOUDFLARE = 'cloudflare'
-}
+// // 请求格式枚举
+// export enum ModelFormat {
+//   OPENAI_CHAT = 'openai-chat',
+//   OPENAI_EMBEDDING = 'openai-embedding',
+//   ANTHROPIC = 'anthropic',
+//   GOOGLE = 'google',
+//   CLOUDFLARE = 'cloudflare'
+// }
 
-// 综合模型配置接口 - 合并两种配置的字段
-export interface ModelConfig {
-  name: string;                    // 模型名称
-  provider: Provider;              // 提供商
-  endpoint?: string;               // API 端点
-  format?: ModelFormat;            // 请求格式
-  supportedTasks: TaskType[];      // 支持的任务类型（同原capabilities）
-  defaultForTask?: TaskType;       // 默认用于哪个任务
-  contextWindow?: number;          // 上下文窗口大小
-  costPer1KTokens?: number;        // 每千个令牌的成本
-  capabilities?: string[];         // 特殊能力
-}
+// // 综合模型配置接口 - 合并两种配置的字段
+// export interface ModelConfig {
+//   name: string;                    // 模型名称
+//   provider: Provider;              // 提供商
+//   endpoint?: string;               // API 端点
+//   format?: ModelFormat;            // 请求格式
+//   supportedTasks: TaskType[];      // 支持的任务类型（同原capabilities）
+//   defaultForTask?: TaskType;       // 默认用于哪个任务
+//   contextWindow?: number;          // 上下文窗口大小
+//   costPer1KTokens?: number;        // 每千个令牌的成本
+//   capabilities?: string[];         // 特殊能力
+// }
 
 /**
  * 模型注册表 - 集中管理所有模型配置
@@ -200,21 +200,39 @@ function initializeRegistry(): ModelRegistry {
     contextWindow: 200000
   });
   
-  // Cloudflare AI 模型
+  // Cloudflare AI 模型 - 修复endpoint配置
   registry.registerModel({
     name: '@cf/baai/bge-small-en-v1.5',
     provider: Provider.CLOUDFLARE,
-    endpoint: 'embed',
+    endpoint: '@cf/baai/bge-small-en-v1.5', // 直接使用模型名作为endpoint
     format: ModelFormat.CLOUDFLARE,
     supportedTasks: [TaskType.EMBEDDING],
     defaultForTask: TaskType.EMBEDDING,
     contextWindow: 8192
   });
-  
+
+  registry.registerModel({
+    name: '@cf/meta/llama-3.1-8b-instruct',
+    provider: Provider.CLOUDFLARE,
+    endpoint: '@cf/meta/llama-3.1-8b-instruct',
+    format: ModelFormat.CLOUDFLARE,
+    supportedTasks: [TaskType.ARTICLE_ANALYSIS, TaskType.SUMMARIZE, TaskType.CHAT],
+    contextWindow: 8192
+  });
+
+  registry.registerModel({
+    name: '@cf/mistral/mistral-7b-instruct-v0.1',
+    provider: Provider.CLOUDFLARE,
+    endpoint: '@cf/mistral/mistral-7b-instruct-v0.1',
+    format: ModelFormat.CLOUDFLARE,
+    supportedTasks: [TaskType.ARTICLE_ANALYSIS, TaskType.SUMMARIZE, TaskType.CHAT],
+    contextWindow: 8192
+  });
+
   registry.registerModel({
     name: '@cloudflare/analytics/viral-news-rank',
     provider: Provider.CLOUDFLARE,
-    endpoint: 'classify',
+    endpoint: '@cloudflare/analytics/viral-news-rank',
     format: ModelFormat.CLOUDFLARE,
     supportedTasks: [TaskType.ARTICLE_ANALYSIS],
     contextWindow: 8192

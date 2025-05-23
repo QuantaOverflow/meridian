@@ -4,9 +4,13 @@ export class AIGatewayClient {
   private gatewayUrl: string;
   private gatewayToken: string;
   private apiKeys: Record<string, string>;
+  private cloudflareAccountId: string;
+  private gatewayId: string;
 
   constructor(env: Env) {
-    this.gatewayUrl = env.AI_GATEWAY_URL || `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}`;
+    this.cloudflareAccountId = env.AI_GATEWAY_ACCOUNT_ID || '';
+    this.gatewayId = env.AI_GATEWAY_NAME || '';
+    this.gatewayUrl = env.AI_GATEWAY_URL || `https://gateway.ai.cloudflare.com/v1/${this.cloudflareAccountId}/${this.gatewayId}`;
     this.gatewayToken = env.AI_GATEWAY_TOKEN || '';
     
     // 初始化各提供商的API密钥
@@ -14,11 +18,24 @@ export class AIGatewayClient {
       'openai': env.OPENAI_API_KEY || '',
       'anthropic': env.ANTHROPIC_API_KEY || '',
       'google': env.GOOGLE_API_KEY || '',
+      'cloudflare': env.CLOUDFLARE_API_KEY || '' // 这应该是Cloudflare API Token
     };
     
     if (!this.gatewayUrl) {
       throw new Error('AI Gateway URL 必须配置');
     }
+    
+    // 验证Cloudflare特定配置
+    if (!this.cloudflareAccountId || !this.gatewayId) {
+      console.warn('Cloudflare Account ID 或 Gateway ID 未配置，Cloudflare Workers AI功能可能不可用');
+    }
+  }
+
+  /**
+   * 获取指定提供商的API密钥
+   */
+  private getApiKey(provider: string): string {
+    return this.apiKeys[provider.toLowerCase()] || '';
   }
 
   /**
@@ -36,77 +53,72 @@ export class AIGatewayClient {
       throw new Error('AI Gateway Token未配置');
     }
     
-    // 保留提供商名称映射
+    // 统一的提供商映射表
     const providerMap: Record<string, string> = {
       'google': 'google-ai-studio',
       'openai': 'openai',
       'anthropic': 'anthropic',
-      'cloudflare': 'cloudflare'
+      'cloudflare': 'workers-ai'
     };
     
-    // 使用映射后的提供商名称
+    // 构建URL - 统一格式
     const mappedProvider = providerMap[provider.toLowerCase()] || provider;
-    
-    // 使用映射后的提供商名构建URL
     const url = `${this.gatewayUrl}/${mappedProvider}/${endpoint}`;
-    console.log(`请求 Gateway(提供商密钥): ${url} (原提供商: ${provider})`);
     
-    // 获取该提供商的API密钥
-    const apiKey = options.apiKey || this.apiKeys[provider] || '';
-    if (!apiKey) {
-      throw new Error(`未找到 ${provider} 的API密钥`);
+    // 获取API密钥
+    const apiKey = this.getApiKey(provider);
+    
+    // 设置请求头
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    
+    // 统一使用双层验证：Gateway Token + 提供商API Key
+    headers['cf-aig-authorization'] = `Bearer ${this.gatewayToken}`;
+    
+    if (provider.toLowerCase() === 'google') {
+      // Google使用特殊的API Key头部
+      if (!apiKey) {
+        throw new Error('Google API Key未配置');
+      }
+      headers['x-goog-api-key'] = apiKey;
+    } else {
+      // 其他所有提供商（包括Cloudflare）都使用Authorization头部
+      if (!apiKey) {
+        throw new Error(`${provider} API Key未配置`);
+      }
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
     
-    try {
-      // 创建基本头部
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        // 添加Gateway Token认证头 - 这是关键修改
-        'cf-aig-authorization': `Bearer ${this.gatewayToken}`
-      };
-      
-      // 根据提供商设置不同的认证头
-      if (provider.toLowerCase() === 'google') {
-        // Google AI Studio 使用特殊的头格式
-        headers['x-goog-api-key'] = apiKey;
-      } else {
-        // 其他提供商使用标准的 Bearer 认证
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-      
-      // 添加自定义选项，如缓存控制
-      if (options['cf-aig-cache-ttl']) {
-        headers['cf-aig-cache-ttl'] = String(options['cf-aig-cache-ttl']);
-      }
-      
-      // 添加Debug日志
-      console.log("发送请求到AI Gateway，认证信息:", { 
-        provider, 
-        mappedProvider,
-        authHeaderType: provider.toLowerCase() === 'google' ? 'x-goog-api-key' : 'Authorization',
-        hasGatewayToken: !!this.gatewayToken,
-        hasApiKey: !!apiKey
+    console.log('发送AI Gateway请求', {
+      provider,
+      url,
+      hasGatewayToken: !!this.gatewayToken,
+      hasApiKey: !!apiKey,
+      payloadPreview: JSON.stringify(payload).substring(0, 100) + '...'
+    });
+    
+    // 发送请求
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+    
+    // 检查响应状态
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI Gateway请求失败', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        url,
+        headers: Object.keys(headers)
       });
       
-      // 发送请求
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
-      
-      // 检查响应状态
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gateway请求失败 [${response.status}]: ${errorText}`);
-      }
-      
-      return await response.json() as T;
-    } catch (error) {
-      console.error("Gateway请求异常:", error);
-      throw error;
+      throw new Error(`AI Gateway请求失败: ${response.status} ${response.statusText}\n${errorText}`);
     }
+    
+    return await response.json();
   }
-
-
 }

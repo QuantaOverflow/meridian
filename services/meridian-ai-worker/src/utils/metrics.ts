@@ -81,6 +81,75 @@ export class Metrics {
   }
 
   /**
+   * 记录请求指标
+   * 用于跟踪AI模型请求的性能和使用情况
+   */
+  recordRequest(taskType: string, provider: string, duration: number): void {
+    // 记录请求计数
+    this.incrementCounter('ai_requests_total', 1, {
+      task_type: taskType,
+      provider: provider
+    });
+    
+    // 记录请求持续时间
+    this.recordHistogram('ai_request_duration_ms', duration, {
+      task_type: taskType,
+      provider: provider
+    });
+    
+    // 记录提供商使用统计
+    this.incrementCounter('ai_provider_usage', 1, {
+      provider: provider
+    });
+    
+    // 记录任务类型统计
+    this.incrementCounter('ai_task_usage', 1, {
+      task_type: taskType
+    });
+    
+    // 可选：记录详细的性能指标
+    if (this.env.ENVIRONMENT === 'dev') {
+      this.logger.debug('Request metrics recorded', {
+        taskType,
+        provider,
+        duration,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * 记录请求错误
+   */
+  recordRequestError(taskType: string, provider: string, errorType: string): void {
+    this.incrementCounter('ai_request_errors_total', 1, {
+      task_type: taskType,
+      provider: provider,
+      error_type: errorType
+    });
+  }
+
+  /**
+   * 记录令牌使用情况
+   */
+  recordTokenUsage(provider: string, inputTokens: number, outputTokens: number): void {
+    this.incrementCounter('ai_tokens_used', inputTokens + outputTokens, {
+      provider: provider,
+      token_type: 'total'
+    });
+    
+    this.incrementCounter('ai_tokens_used', inputTokens, {
+      provider: provider,
+      token_type: 'input'
+    });
+    
+    this.incrementCounter('ai_tokens_used', outputTokens, {
+      provider: provider,
+      token_type: 'output'
+    });
+  }
+
+  /**
    * 计时器便捷方法
    * 返回一个函数，调用时会记录从创建到调用的时间
    */

@@ -1,5 +1,5 @@
 import { TaskType } from '../types';
-import { ModelFormat } from '../config/modelRegistry';
+import { ModelFormat } from '../types';
 
 /**
  * 响应解析器 - 从不同提供商的响应中提取统一格式的结果
@@ -22,6 +22,8 @@ export class ResponseParser {
         return this.parseAnthropicResponse(response, taskType);
       case ModelFormat.GOOGLE:
         return this.parseGoogleResponse(response, taskType);
+      case ModelFormat.CLOUDFLARE:
+        return this.parseCloudflareResponse(response, taskType);
       default:
         throw new Error(`未知的响应格式: ${endpointInfo.format}`);
     }
@@ -91,6 +93,25 @@ export class ResponseParser {
     }
     
     return response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  
+  /**
+   * 解析Cloudflare响应
+   * @private
+   */
+  private parseCloudflareResponse(response: any, taskType: TaskType) {
+    if (taskType === TaskType.EMBEDDING) {
+      return response.result?.data?.[0] || [];
+    }
+    
+    if (taskType === TaskType.CHAT) {
+      return {
+        role: 'assistant',
+        content: response.result?.response || response.result || ''
+      };
+    }
+    
+    return response.result?.response || response.result || '';
   }
 }
 

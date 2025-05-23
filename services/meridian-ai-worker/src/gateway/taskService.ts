@@ -1,13 +1,20 @@
-import { Env, TaskType } from '../types';
+import { Env, TaskType,ModelConfig } from '../types';
 import { AIGatewayClient } from './aiGatewayClient';
-import { responseParser } from './responseParser';
-import { modelService } from './modelService';
+import { ResponseParser } from './responseParser';  // 添加导入
+import { ModelService } from './modelService';
+import { Metrics } from '../utils/metrics';
 
 export class TaskService {
   private client: AIGatewayClient;
+  private modelService: ModelService;
+  private responseParser: ResponseParser;  // 添加字段
+  private metrics: Metrics;  // 添加字段
   
   constructor(private env: Env) {
     this.client = new AIGatewayClient(env);
+    this.modelService = new ModelService();
+    this.responseParser = new ResponseParser();  // 实例化
+    this.metrics = new Metrics(env);  // 实例化
   }
   
   /**
@@ -21,14 +28,14 @@ export class TaskService {
     
     try {
       // 1. 使用模型服务选择模型
-      const modelConfig = modelService.selectModel(TaskType.ARTICLE_ANALYSIS, options);
+      const modelConfig = this.modelService.selectModel(TaskType.ARTICLE_ANALYSIS, options);
       console.log("选择的模型配置", modelConfig);
       
       // 2. 构建请求提示
       const prompt = `分析以下文章的主要内容、主题、关键实体和情感倾向:\n\n标题: ${title}\n\n内容:\n${content}`;
       
       // 3. 使用模型服务格式化请求负载
-      const payload = modelService.formatPayload(modelConfig, prompt, {
+      const payload = this.modelService.formatPayload(modelConfig, prompt, {
         ...options,
         model: modelConfig.name
       });
@@ -55,7 +62,7 @@ export class TaskService {
       };
       
       // 7. 解析响应
-      const result = responseParser.parseResponse(response, endpointInfo, TaskType.ARTICLE_ANALYSIS);
+      const result = this.responseParser.parseResponse(response, endpointInfo, TaskType.ARTICLE_ANALYSIS);
       
       // 8. 记录指标
       this.collectMetrics(TaskType.ARTICLE_ANALYSIS, modelConfig, startTime);
@@ -75,12 +82,12 @@ export class TaskService {
     const startTime = Date.now();
     
     try {
-      const modelConfig = modelService.selectModel(TaskType.SUMMARIZE, options);
+      const modelConfig = this.modelService.selectModel(TaskType.SUMMARIZE, options);
       console.log("选择的模型配置", modelConfig);
       
       const prompt = `请为以下文本生成简洁摘要:\n\n${text}`;
       
-      const payload = modelService.formatPayload(modelConfig, prompt, {
+      const payload = this.modelService.formatPayload(modelConfig, prompt, {
         ...options,
         model: modelConfig.name
       });
@@ -104,7 +111,7 @@ export class TaskService {
         format: modelConfig.format || ''
       };
       
-      const result = responseParser.parseResponse(response, endpointInfo, TaskType.SUMMARIZE);
+      const result = this.responseParser.parseResponse(response, endpointInfo, TaskType.SUMMARIZE);
       
       this.collectMetrics(TaskType.SUMMARIZE, modelConfig, startTime);
       
@@ -123,10 +130,10 @@ export class TaskService {
     const startTime = Date.now();
     
     try {
-      const modelConfig = modelService.selectModel(TaskType.EMBEDDING, options);
+      const modelConfig = this.modelService.selectModel(TaskType.EMBEDDING, options);
       console.log("选择的嵌入模型", modelConfig);
       
-      const payload = modelService.formatPayload(modelConfig, text, {
+      const payload = this.modelService.formatPayload(modelConfig, text, {
         ...options,
         model: modelConfig.name
       });
@@ -149,7 +156,7 @@ export class TaskService {
         format: modelConfig.format || ''
       };
       
-      const result = responseParser.parseResponse(response, endpointInfo, TaskType.EMBEDDING);
+      const result = this.responseParser.parseResponse(response, endpointInfo, TaskType.EMBEDDING);
       
       this.collectMetrics(TaskType.EMBEDDING, modelConfig, startTime);
       
@@ -168,10 +175,10 @@ export class TaskService {
     const startTime = Date.now();
     
     try {
-      const modelConfig = modelService.selectModel(TaskType.CHAT, options);
+      const modelConfig = this.modelService.selectModel(TaskType.CHAT, options);
       console.log("选择的聊天模型", modelConfig);
       
-      const payload = modelService.formatPayload(modelConfig, messages, {
+      const payload = this.modelService.formatPayload(modelConfig, messages, {
         ...options,
         model: modelConfig.name
       });
@@ -194,7 +201,7 @@ export class TaskService {
         format: modelConfig.format || ''
       };
       
-      const result = responseParser.parseResponse(response, endpointInfo, TaskType.CHAT);
+      const result = this.responseParser.parseResponse(response, endpointInfo, TaskType.CHAT);
       
       this.collectMetrics(TaskType.CHAT, modelConfig, startTime);
       
@@ -246,8 +253,8 @@ export class TaskService {
   /**
    * 收集性能指标
    */
-  private collectMetrics(taskType: TaskType, modelConfig: any, startTime: number): void {
+  private collectMetrics(taskType: TaskType, modelConfig: ModelConfig, startTime: number): void {
     const duration = Date.now() - startTime;
-    console.log(`性能指标 - 任务:${taskType} 模型:${modelConfig.name} 提供商:${modelConfig.provider} 耗时:${duration}ms`);
+    this.metrics.recordRequest(taskType, modelConfig.provider, duration);
   }
 }

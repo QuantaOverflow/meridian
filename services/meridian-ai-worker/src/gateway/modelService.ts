@@ -1,6 +1,7 @@
 // 创建文件: /Users/shiwenjie/code/github_repo/spider/meridian/services/meridian-ai-worker/src/services/modelService.ts
 import { TaskType } from '../types';
-import { ModelConfig, ModelFormat, Provider, modelRegistry } from '../config/modelRegistry';
+import { ModelConfig, ModelFormat } from '../types';
+import { modelRegistry } from '../config/modelRegistry'; // 假设你有一个模型注册表
 
 /**
  * 模型服务 - 处理模型选择和请求格式化
@@ -51,6 +52,8 @@ export class ModelService {
         return this.formatAnthropicPayload(model, prompt, options);
       case ModelFormat.GOOGLE:
         return this.formatGooglePayload(model, prompt, options);
+      case ModelFormat.CLOUDFLARE:
+        return this.formatCloudflarePayload(model, prompt, options);
       default:
         throw new Error(`不支持的格式: ${model.format}`);
     }
@@ -99,6 +102,53 @@ export class ModelService {
     }
   }
   
+  // 修正 Cloudflare 格式化方法
+  private formatCloudflarePayload(model: ModelConfig, prompt: string | Array<any>, options: Record<string, any>): any {
+    // 根据模型类型判断请求格式
+    if (model.name.includes('bge-') || model.name.includes('embed')) {
+      // 嵌入向量模型使用 text 格式
+      return {
+        text: Array.isArray(prompt) ? prompt.join(' ') : prompt,
+        ...(options.dimensions && { dimensions: options.dimensions })
+      };
+    } else if (model.name.includes('viral-news-rank') || model.endpoint?.includes('analytics')) {
+      // 分类模型使用 text 格式
+      return {
+        text: Array.isArray(prompt) ? prompt.join(' ') : prompt
+      };
+    } else if (model.name.includes('llama') || model.name.includes('mistral') || model.name.includes('gemma')) {
+      // 文本生成模型使用 prompt 格式
+      if (Array.isArray(prompt)) {
+        // 如果是对话格式，转换为单个prompt
+        const formattedPrompt = prompt.map(msg => {
+          if (msg.role === 'system') return `System: ${msg.content}`;
+          if (msg.role === 'user') return `User: ${msg.content}`;
+          if (msg.role === 'assistant') return `Assistant: ${msg.content}`;
+          return msg.content;
+        }).join('\n');
+        
+        return {
+          prompt: formattedPrompt,
+          max_tokens: options.maxTokens || 1000,
+          temperature: options.temperature ?? 0.7
+        };
+      } else {
+        return {
+          prompt: prompt,
+          max_tokens: options.maxTokens || 1000,
+          temperature: options.temperature ?? 0.7
+        };
+      }
+    } else {
+      // 默认格式 - 使用 prompt 格式（符合Cloudflare Workers AI的标准格式）
+      return {
+        prompt: Array.isArray(prompt) ? prompt.join(' ') : prompt,
+        max_tokens: options.maxTokens || 1000,
+        temperature: options.temperature ?? 0.7
+      };
+    }
+  }
+  
   private formatGooglePayload(model: ModelConfig, prompt: string | Array<any>, options: Record<string, any>): any {
     let contents;
     
@@ -121,6 +171,8 @@ export class ModelService {
     };
   }
 }
+
+
 
 // 导出全局实例
 export const modelService = new ModelService();

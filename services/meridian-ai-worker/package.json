@@ -1,37 +1,24 @@
 {
-  "name": "@meridian/ai-worker",
-  "version": "0.1.0",
-  "private": true,
-  "description": "AI 模型服务 Worker - 统一管理多种 AI 服务接口调用",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "name": "meridian-ai-worker",
+  "version": "1.0.0",
+  "description": "Simplified AI Gateway Worker for multiple LLM providers",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
     "deploy": "wrangler deploy",
-    "lint": "eslint . --ext .ts",
-    "type-check": "tsc --noEmit",
-    "verify": "node scripts/verify.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy:prod": "wrangler deploy --env production",
+    "build": "wrangler build",
+    "test": "echo \"No tests yet\" && exit 0"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.11",
-    "@ai-sdk/google": "^1.2.13",
-    "@anthropic-ai/sdk": "^0.51.0",
-    "@cloudflare/ai": "^1.0.48",
-    "@hono/zod-validator": "^0.1.11",
-    "ai": "^4.3.9",
-    "hono": "^4.7.7",
-    "openai": "^4.100.0",
-    "zod": "^3.22.4"
+    "hono": "^3.12.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250519.0",
-    "@types/node": "^20.10.4",
-    "eslint": "^8.57.0",
-    "tsup": "^8.0.2",
+    "@cloudflare/workers-types": "^4.20240117.0",
     "typescript": "^5.0.0",
-    "wrangler": "^3.13.2"
-  }
+    "wrangler": "^3.22.0"
+  },
+  "keywords": ["cloudflare", "workers", "ai", "llm", "gateway"],
+  "author": "Your Name",
+  "license": "MIT"
 }

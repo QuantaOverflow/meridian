@@ -1,9 +1,131 @@
-
 // =============================================================================
 // AI Capabilities
 // =============================================================================
 
 export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision'
+
+// =============================================================================
+// Authentication Types
+// =============================================================================
+
+export interface AuthenticationConfig {
+  apiKey?: string
+  signature?: string
+  requestId?: string
+  clientId?: string
+  customHeaders?: Record<string, string>
+}
+
+// =============================================================================
+// Request Metadata Types
+// =============================================================================
+
+export interface RequestMetadata {
+  requestId: string
+  timestamp: number
+  userId?: string
+  clientId?: string
+  userAgent?: string
+  ipAddress?: string
+  region?: string
+  source?: {
+    origin?: string
+    userAgent?: string
+    ip?: string
+  }
+  cloudflare?: {
+    country?: string
+    region?: string
+    colo?: string
+    ray?: string
+    visitor?: string
+    worker?: string
+  }
+  headers?: Record<string, string>
+  performance?: {
+    tokenUsage?: {
+      promptTokens: number
+      completionTokens: number
+      totalTokens: number
+    }
+    latency?: {
+      totalLatency: number
+      providerLatency: number
+      gatewayLatency: number
+    }
+    cost?: {
+      estimatedCost: number
+      currency: string
+    }
+  }
+  processing?: {
+    provider?: string
+    model?: string
+    capability?: string
+    startTime?: number
+    duration?: number
+  }
+  customTags?: Record<string, string>
+  traceId?: string
+  spanId?: string
+  auth?: {
+    authenticated: boolean
+    userId?: string
+    apiKeyUsed?: boolean
+    apiKeyHash?: string
+    errors?: string[]
+  }
+  error?: {
+    type: string
+    message: string
+    statusCode?: number
+    retryable?: boolean
+    code?: number
+    retryAttempts?: number
+  }
+}
+
+// =============================================================================
+// Retry Configuration Types
+// =============================================================================
+
+export interface RetryConfig {
+  maxRetries: number
+  baseDelayMs: number
+  maxDelayMs: number
+  exponentialBase: number
+  retryableStatusCodes: number[]
+  retryableErrors: string[]
+  // Support alternative property names for backward compatibility
+  baseDelay?: number
+  maxDelay?: number
+  backoffFactor?: number
+  jitter?: boolean
+  maxAttempts?: number
+}
+
+export interface RetryAttempt {
+  attemptNumber: number
+  delayMs: number
+  error?: Error
+  timestamp: number
+}
+
+// =============================================================================
+// Logging Types
+// =============================================================================
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export interface LogEntry {
+  level: LogLevel
+  timestamp: number
+  requestId: string
+  message: string
+  metadata?: Record<string, any>
+  error?: Error
+  duration?: number
+}
 
 // =============================================================================
 // Unified Request Types
@@ -16,6 +138,10 @@ export interface BaseAIRequest {
   temperature?: number
   max_tokens?: number
   stream?: boolean
+  // Authentication and metadata
+  auth?: AuthenticationConfig
+  metadata?: Partial<RequestMetadata>
+  retryConfig?: Partial<RetryConfig>
 }
 
 export interface ChatRequest extends BaseAIRequest {
@@ -85,6 +211,10 @@ export interface BaseAIResponse {
     completion_tokens?: number
     total_tokens?: number
   }
+  // Added response metadata
+  metadata?: RequestMetadata
+  retryAttempts?: RetryAttempt[]
+  processingTime?: number
 }
 
 export interface ChatResponse extends BaseAIResponse {
@@ -159,7 +289,10 @@ export interface AIGatewayRequest {
   provider: string
   endpoint: string
   headers: Record<string, string>
-  body: any
+  query: any // For AI Gateway Universal Endpoint format
+  // Added for enhanced features
+  metadata?: RequestMetadata
+  retryConfig?: RetryConfig
 }
 
 // =============================================================================
@@ -195,6 +328,15 @@ export interface Env {
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY?: string
   GOOGLE_API_KEY?: string
+  // Authentication and security
+  API_SECRET_KEY?: string
+  ALLOWED_ORIGINS?: string
+  // Retry configuration
+  DEFAULT_MAX_RETRIES?: string
+  DEFAULT_RETRY_DELAY_MS?: string
+  // Logging configuration
+  LOG_LEVEL?: string
+  ENABLE_DETAILED_LOGGING?: string
 }
 
 // Cloudflare Workers environment with string index signature
@@ -205,4 +347,13 @@ export interface CloudflareEnv extends Record<string, string | undefined> {
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY?: string
   GOOGLE_API_KEY?: string
+  // Authentication and security
+  API_SECRET_KEY?: string
+  ALLOWED_ORIGINS?: string
+  // Retry configuration
+  DEFAULT_MAX_RETRIES?: string
+  DEFAULT_RETRY_DELAY_MS?: string
+  // Logging configuration
+  LOG_LEVEL?: string
+  ENABLE_DETAILED_LOGGING?: string
 }

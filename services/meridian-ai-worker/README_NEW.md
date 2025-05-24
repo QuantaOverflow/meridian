@@ -4,20 +4,6 @@
 
 > 📘 **完整文档**: 查看 [综合指南](./COMPREHENSIVE_GUIDE.md) 获取详细的架构设计、API 使用、部署和故障排除信息。
 
-## 架构设计
-
-┌─────────────────────────────────────┐
-│         HTTP 服务层 (Hono.js)        │  ← 路由处理、CORS、请求解析
-├─────────────────────────────────────┤
-│       认证与安全层 (Auth Layer)       │  ← 身份验证、权限控制
-├─────────────────────────────────────┤
-│    业务逻辑层 (AI Gateway Service)    │  ← 核心业务逻辑、能力路由
-├─────────────────────────────────────┤
-│      基础设施层 (Infrastructure)      │  ← 重试、日志、元数据
-├─────────────────────────────────────┤
-│     提供商适配层 (Provider Layer)     │  ← AI 提供商抽象与适配
-└─────────────────────────────────────┘
-
 ## 功能特性
 
 - 🚀 统一的 AI Gateway 请求格式
@@ -192,21 +178,3 @@ curl -X POST http://localhost:8787/chat \
 ## 许可证
 
 MIT License
-
-## 流程图
-
-graph TD
-    A[HTTP 请求] --> B[CORS 中间件]
-    B --> C[路由匹配 /ai]
-    C --> D[AIGatewayService.processRequestWithAuth]
-    D --> E[AuthenticationService 验证]
-    E --> F[解析 AI 请求]
-    F --> G[生成请求元数据]
-    G --> H[RetryService 包装]
-    H --> I[构建 Universal Request]
-    I --> J[AI Gateway 统一端点]
-    J --> K[Cloudflare 智能路由]
-    K --> L[提供商 API 调用]
-    L --> M[响应映射]
-    M --> N[元数据增强]
-    N --> O[返回 HTTP 响应]

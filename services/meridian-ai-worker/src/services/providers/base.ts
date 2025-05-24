@@ -89,7 +89,7 @@ export abstract class AbstractProvider implements BaseProvider {
       provider: this.name,
       endpoint,
       headers,
-      body: providerRequestBody
+      query: providerRequestBody
     }
   }
 

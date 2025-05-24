@@ -20,7 +20,16 @@ const app = new Hono<HonoEnv>()
 app.use('*', cors({
   origin: ['*'],
   allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+  allowHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-API-Key', 
+    'X-Client-ID', 
+    'X-User-ID',
+    'X-Request-Signature',
+    'X-Tag-*',
+    'X-Trace-ID'
+  ],
 }))
 
 // Health check
@@ -44,7 +53,7 @@ app.get('/providers', (c) => {
     const aiGateway = new AIGatewayService(env)
     const providers = aiGateway.getAvailableProviders()
     
-    const providerInfo = providers.map(name => ({
+    const providerInfo = providers.map((name: string) => ({
       name,
       capabilities: aiGateway.getProviderCapabilities(name),
       models: aiGateway.getModelsForProvider(name)
@@ -83,24 +92,22 @@ app.get('/capabilities/:capability/providers', (c) => {
   }
 })
 
-// Unified AI endpoint - handles all capabilities
+// Unified AI endpoint - handles all capabilities with enhanced security
 app.post('/ai', async (c) => {
   try {
-    const body: AIRequest = await c.req.json()
-    
-    // Validate request
-    if (!body.capability) {
-      return c.json({ error: 'Capability is required' }, 400)
-    }
-
     const env = c.env
     if (!env) {
       return c.json({ error: 'Environment variables not configured' }, 500)
     }
 
     const aiGateway = new AIGatewayService(env)
-    const response = await aiGateway.processRequest(body)
-    return c.json(response)
+    
+    // Use enhanced authentication and processing
+    const request = c.req.raw
+    const response = await aiGateway.processRequestWithAuth(request)
+    
+    // Return the response directly since it's already a Response object
+    return response
   } catch (error) {
     console.error('AI request error:', error)
     return c.json({ 

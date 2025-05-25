@@ -271,6 +271,14 @@ export interface ModelConfig {
     input: number
     output: number
   }
+  ai_gateway_config?: {
+    cache_ttl?: number // Time to live in seconds
+    enable_cost_tracking?: boolean
+    custom_tags?: string[] // Custom tags for cost tracking and analytics
+    cache_namespace?: string
+    enable_metrics?: boolean
+    enable_logging?: boolean
+  }
 }
 
 export interface ProviderConfig {
@@ -293,6 +301,48 @@ export interface AIGatewayRequest {
   // Added for enhanced features
   metadata?: RequestMetadata
   retryConfig?: RetryConfig
+  enhancedConfig?: AIGatewayEnhancedConfig
+}
+
+// =============================================================================
+// AI Gateway Enhanced Features
+// =============================================================================
+
+export interface AIGatewayCostConfig {
+  per_token_in?: number
+  per_token_out?: number
+  per_request?: number
+  per_image?: number
+  per_second?: number
+}
+
+export interface AIGatewayCacheConfig {
+  ttl?: number // Time to live in seconds
+  key?: string // Custom cache key
+  skipCache?: boolean
+  cacheNamespace?: string
+}
+
+export interface AIGatewayAuthConfig {
+  token?: string
+  skipAuthentication?: boolean
+  customHeaders?: Record<string, string>
+}
+
+export interface AIGatewayMetricsConfig {
+  collectMetrics?: boolean
+  customTags?: Record<string, string>
+  enableLogging?: boolean
+  logLevel?: 'debug' | 'info' | 'warn' | 'error'
+}
+
+export interface AIGatewayEnhancedConfig {
+  cost?: AIGatewayCostConfig
+  cache?: AIGatewayCacheConfig
+  auth?: AIGatewayAuthConfig
+  metrics?: AIGatewayMetricsConfig
+  fallback?: boolean
+  retryConfig?: Partial<RetryConfig>
 }
 
 // =============================================================================
@@ -350,6 +400,11 @@ export interface CloudflareEnv extends Record<string, string | undefined> {
   // Authentication and security
   API_SECRET_KEY?: string
   ALLOWED_ORIGINS?: string
+  // AI Gateway enhanced features
+  AI_GATEWAY_TOKEN?: string
+  ENABLE_AI_GATEWAY_AUTH?: string
+  DEFAULT_CACHE_TTL?: string
+  ENABLE_COST_TRACKING?: string
   // Retry configuration
   DEFAULT_MAX_RETRIES?: string
   DEFAULT_RETRY_DELAY_MS?: string

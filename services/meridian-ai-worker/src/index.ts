@@ -32,14 +32,122 @@ app.use('*', cors({
   ],
 }))
 
-// Health check
-app.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    service: 'meridian-ai-worker',
-    version: '2.0.0'
-  })
+// Health check with AI Gateway status
+app.get('/health', async (c) => {
+  try {
+    const env = c.env
+    if (!env) {
+      return c.json({ 
+        status: 'error',
+        error: 'Environment not configured' 
+      }, 500)
+    }
+
+    const aiGatewayService = new AIGatewayService(env)
+    
+    // Check AI Gateway enhanced features status
+    const enhancedStatus = {
+      authentication: !!env.AI_GATEWAY_AUTH_TOKEN,
+      cost_tracking: env.AI_GATEWAY_ENABLE_COST_TRACKING === 'true',
+      caching: env.AI_GATEWAY_ENABLE_CACHING === 'true',
+      metrics: env.AI_GATEWAY_ENABLE_METRICS === 'true',
+      logging: env.AI_GATEWAY_ENABLE_LOGGING === 'true',
+      default_cache_ttl: parseInt(env.AI_GATEWAY_DEFAULT_CACHE_TTL || '3600')
+    }
+
+    return c.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      service: 'meridian-ai-worker',
+      version: '2.0.0',
+      ai_gateway: enhancedStatus,
+      environment: env.ENVIRONMENT || 'unknown'
+    })
+  } catch (error) {
+    return c.json({ 
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+// AI Gateway configuration validation
+app.get('/ai-gateway/config', async (c) => {
+  try {
+    const env = c.env
+    if (!env) {
+      return c.json({ error: 'Environment not configured' }, 500)
+    }
+
+    const aiGatewayService = new AIGatewayService(env)
+    
+    // Validate basic configuration
+    const basicConfig = {
+      account_id: !!env.CLOUDFLARE_ACCOUNT_ID,
+      gateway_id: !!env.CLOUDFLARE_GATEWAY_ID,
+      api_token: !!env.CLOUDFLARE_API_TOKEN
+    }
+
+    // Enhanced features configuration
+    const enhancedConfig = {
+      authentication: {
+        enabled: !!env.AI_GATEWAY_TOKEN,
+        token_configured: !!env.AI_GATEWAY_TOKEN
+      },
+      cost_tracking: {
+        enabled: env.ENABLE_COST_TRACKING === 'true',
+        global_setting: env.ENABLE_COST_TRACKING
+      },
+      caching: {
+        enabled: env.ENABLE_AI_GATEWAY_CACHING === 'true',
+        default_ttl: env.DEFAULT_CACHE_TTL || '3600'
+      },
+      metrics: {
+        enabled: env.ENABLE_AI_GATEWAY_METRICS === 'true',
+        logging_enabled: env.ENABLE_AI_GATEWAY_LOGGING === 'true',
+        log_level: env.AI_GATEWAY_LOG_LEVEL || 'info'
+      },
+      features: {
+        smart_caching: true,
+        auto_fallback: true,
+        request_metadata: true,
+        performance_tracking: true
+      }
+    }
+
+    // Provider configurations
+    const providers = aiGatewayService.getAvailableProviders()
+    const providerConfigs = providers.map((name: string) => {
+      const models = aiGatewayService.getModelConfigsForProvider(name)
+      return {
+        name,
+        models_count: models.length,
+        has_ai_gateway_config: models.some(model => !!model.ai_gateway_config),
+        sample_model_config: models[0]?.ai_gateway_config || null
+      }
+    })
+
+    const configStatus = {
+      basic: basicConfig,
+      enhanced: enhancedConfig,
+      providers: providerConfigs,
+      validation: {
+        basic_complete: Object.values(basicConfig).every(Boolean),
+        has_enhanced_features: Object.values(enhancedConfig).some(config => 
+          typeof config === 'object' ? Object.values(config).some(Boolean) : Boolean(config)
+        ),
+        providers_available: providers.length > 0
+      }
+    }
+
+    return c.json(configStatus)
+  } catch (error) {
+    console.error('AI Gateway config validation error:', error)
+    return c.json({ 
+      error: 'Failed to validate AI Gateway configuration',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
 })
 
 // Get available providers and their capabilities

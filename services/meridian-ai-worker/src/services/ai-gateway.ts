@@ -11,7 +11,9 @@ import {
   RequestMetadata,
   RetryConfig,
   AuthenticationConfig,
-  RetryAttempt
+  RetryAttempt,
+  AIGatewayEnhancedConfig,
+  ModelConfig
 } from '../types'
 import { OpenAIProvider } from './providers/openai'
 import { WorkersAIProvider } from './providers/workers-ai'
@@ -22,6 +24,7 @@ import { AuthenticationService } from './auth'
 import { Logger } from './logger'
 import { RetryService, createRetryConfigFromEnv } from './retry'
 import { MetadataService } from './metadata'
+import { AIGatewayEnhancementService } from './ai-gateway-enhancement'
 
 export class AIGatewayService {
   private gatewayUrl: string
@@ -31,6 +34,7 @@ export class AIGatewayService {
   private retryService: RetryService
   private metadataService: MetadataService
   private defaultRetryConfig: RetryConfig
+  private enhancementService: AIGatewayEnhancementService
 
   constructor(private env: CloudflareEnv) {
     this.gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${env.CLOUDFLARE_ACCOUNT_ID}/${env.CLOUDFLARE_GATEWAY_ID}`
@@ -53,6 +57,9 @@ export class AIGatewayService {
     }
     
     this.retryService = new RetryService(this.logger, this.defaultRetryConfig)
+    
+    // Initialize AI Gateway enhancement service
+    this.enhancementService = new AIGatewayEnhancementService(env)
     
     // Initialize providers
     this.providers = new Map<string, BaseProvider>()
@@ -192,7 +199,7 @@ export class AIGatewayService {
     }
 
     // Build universal request for AI Gateway compliance
-    const universalRequestData = this.buildUniversalRequest(request, availableProviders)
+    const universalRequestData = await this.buildUniversalRequest(request, availableProviders)
     
     try {
       const response = await this.executeUniversalRequestWithMetadata(universalRequestData, request.metadata as RequestMetadata)
@@ -249,10 +256,24 @@ export class AIGatewayService {
       'cf-aig-cache-ttl': '3600'
     }
 
+    // Add AI Gateway authentication if available
+    if (this.env.AI_GATEWAY_TOKEN) {
+      headers['cf-aig-authorization'] = `Bearer ${this.env.AI_GATEWAY_TOKEN}`
+    }
+
     // Add metadata headers
     if (metadata) {
       const metadataHeaders = this.metadataService.createCloudflareHeaders(metadata)
       Object.assign(headers, metadataHeaders)
+    }
+
+    // Add enhanced monitoring headers
+    headers['cf-aig-collect-metrics'] = 'true'
+    headers['cf-aig-enable-logging'] = 'true'
+    
+    // Add cost tracking if enabled
+    if (this.env.ENABLE_COST_TRACKING === 'true') {
+      headers['cf-aig-collect-cost'] = 'true'
     }
 
     const response = await fetch(this.gatewayUrl, {
@@ -370,16 +391,29 @@ export class AIGatewayService {
       .map(([name, _]) => name)
   }
 
-  private buildUniversalRequest(request: AIRequest, providers: string[]): any[] {
+  private async buildUniversalRequest(request: AIRequest, providers: string[]): Promise<any[]> {
     const requests: any[] = []
+    
+    // Create enhanced configuration
+    const enhancedConfig = await this.enhancementService.createDefaultEnhancedConfig(request)
     
     if (request.provider && providers.includes(request.provider)) {
       const provider = this.providers.get(request.provider)!
       const providerRequest = provider.buildRequest(request)
+      
+      // Get model configuration for cost tracking
+      const modelConfig = provider.config.models.find(m => m.name === request.model || m.name === provider.getDefaultModel(request.capability))
+      
+      // Create enhanced headers
+      const enhancedHeaders = await this.enhancementService.createEnhancedHeaders(request, enhancedConfig, modelConfig)
+      
+      // Merge provider headers with enhanced headers
+      const finalHeaders = { ...providerRequest.headers, ...enhancedHeaders }
+      
       requests.push({
         provider: providerRequest.provider,
         endpoint: providerRequest.endpoint,
-        headers: providerRequest.headers,
+        headers: finalHeaders,
         query: providerRequest.query
       })
       
@@ -389,10 +423,14 @@ export class AIGatewayService {
           try {
             const fallbackProvider = this.providers.get(providerName)!
             const fallbackRequest = fallbackProvider.buildRequest(request)
+            const fallbackModelConfig = fallbackProvider.config.models.find(m => m.name === request.model || m.name === fallbackProvider.getDefaultModel(request.capability))
+            const fallbackEnhancedHeaders = await this.enhancementService.createEnhancedHeaders(request, enhancedConfig, fallbackModelConfig)
+            const fallbackFinalHeaders = { ...fallbackRequest.headers, ...fallbackEnhancedHeaders }
+            
             requests.push({
               provider: fallbackRequest.provider,
               endpoint: fallbackRequest.endpoint,
-              headers: fallbackRequest.headers,
+              headers: fallbackFinalHeaders,
               query: fallbackRequest.query
             })
           } catch (error) {
@@ -407,10 +445,14 @@ export class AIGatewayService {
         try {
           const provider = this.providers.get(providerName)!
           const providerRequest = provider.buildRequest(request)
+          const modelConfig = provider.config.models.find(m => m.name === request.model || m.name === provider.getDefaultModel(request.capability))
+          const enhancedHeaders = await this.enhancementService.createEnhancedHeaders(request, enhancedConfig, modelConfig)
+          const finalHeaders = { ...providerRequest.headers, ...enhancedHeaders }
+          
           requests.push({
             provider: providerRequest.provider,
             endpoint: providerRequest.endpoint,
-            headers: providerRequest.headers,
+            headers: finalHeaders,
             query: providerRequest.query
           })
           
@@ -466,6 +508,13 @@ export class AIGatewayService {
     if (!provider) return []
     
     return provider.config.models.map(model => model.name)
+  }
+
+  getModelConfigsForProvider(providerName: string): ModelConfig[] {
+    const provider = this.providers.get(providerName)
+    if (!provider) return []
+    
+    return provider.config.models
   }
 }
 

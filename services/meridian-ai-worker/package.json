@@ -11,7 +11,11 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:integration": "bash test-integration.sh",
+    "health": "curl http://localhost:8787/health | jq .",
+    "config": "curl http://localhost:8787/ai-gateway/config | jq .",
+    "providers": "curl http://localhost:8787/providers | jq ."
   },
   "dependencies": {
     "hono": "^3.12.0"

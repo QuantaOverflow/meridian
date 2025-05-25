@@ -1,6 +1,7 @@
 name = "meridian-ai-worker"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
 [env.production]
 vars = { ENVIRONMENT = "production" }
@@ -9,10 +10,21 @@ vars = { ENVIRONMENT = "production" }
 vars = { ENVIRONMENT = "development" }
 
 # Environment variables (set these using wrangler secret put)
+# Required:
 # CLOUDFLARE_ACCOUNT_ID
 # CLOUDFLARE_GATEWAY_ID  
 # CLOUDFLARE_API_TOKEN
 # OPENAI_API_KEY
-# ANTHROPIC_API_KEY (optional)
-# GOOGLE_API_KEY (optional)
+
+# Optional Provider API Keys:
+# ANTHROPIC_API_KEY
+# GOOGLE_API_KEY
+
+# AI Gateway Enhanced Features (optional):
+# AI_GATEWAY_AUTH_TOKEN - AI Gateway authentication token for enhanced security
+# AI_GATEWAY_ENABLE_COST_TRACKING - Enable automatic cost tracking (true/false)
+# AI_GATEWAY_ENABLE_CACHING - Enable intelligent caching (true/false)
+# AI_GATEWAY_DEFAULT_CACHE_TTL - Default cache TTL in seconds (default: 3600)
+# AI_GATEWAY_ENABLE_METRICS - Enable enhanced metrics collection (true/false)
+# AI_GATEWAY_ENABLE_LOGGING - Enable detailed logging (true/false)
 

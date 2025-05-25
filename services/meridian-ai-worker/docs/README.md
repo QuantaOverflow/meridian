@@ -2,17 +2,6 @@
 
 基于 Cloudflare AI Gateway 的简化多 LLM 服务调用 Worker。
 
-## 📋 部署状态
-
-| 组件 | 状态 | 说明 |
-|------|------|------|
-| 代码质量 | ✅ 就绪 | 所有编译错误已修复，类型安全 |
-| 功能测试 | ✅ 通过 | 所有端点正常响应 |
-| 配置支持 | ✅ 完整 | 环境变量和自动化脚本就绪 |
-| 部署就绪 | ⚠️ 需配置 | 需要设置 Cloudflare AI Gateway |
-
-**快速部署**: 查看 [快速部署指南](./QUICK_DEPLOY.md) 一键完成部署配置
-
 > 📘 **完整文档**: 查看 [综合指南](./COMPREHENSIVE_GUIDE.md) 获取详细的架构设计、API 使用、部署和故障排除信息。
 
 ## 架构设计
@@ -31,42 +20,13 @@
 
 ## 功能特性
 
-### 🌟 AI Gateway 增强功能
-
-基于 Cloudflare AI Gateway 官方最佳实践实现的增强功能，完全兼容官方标准头部：
-
-#### 🔐 智能认证 (`cf-aig-authorization`)
-- **AI Gateway Token**: 自动验证 AI Gateway 访问令牌
-- **自定义认证**: 支持自定义认证头部配置
-- **认证控制**: 可选的认证跳过机制，灵活控制访问权限
-- **安全管理**: 统一的认证策略和权限管理
-
-#### 💰 精确成本跟踪 (`cf-aig-custom-cost`)
-- **Token 计费**: 按输入/输出 Token 数量精确计费
-- **固定费用**: 支持按请求固定费用模式
-- **多媒体计费**: 按图像数量、音频时长等计费
-- **实时监控**: 实时成本估算和使用量跟踪
-- **成本优化**: 智能成本分析和优化建议
-
-#### ⚡ 智能缓存策略 (`cf-aig-cache-ttl`, `cf-aig-cache-key`, `cf-aig-skip-cache`)
-- **自动缓存键**: 基于请求内容的智能缓存键生成
-- **自适应 TTL**: 不同 AI 能力的智能 TTL 配置
-- **命名空间**: 可配置的缓存命名空间隔离
-- **选择性缓存**: 灵活的缓存跳过控制
-- **缓存优化**: 缓存命中率分析和性能优化
-
-#### 📊 增强元数据 (`cf-aig-metadata`)
-- **请求追踪**: 自动生成唯一请求 ID 和用户追踪
-- **自定义标签**: 支持自定义标签和属性设置
-- **性能指标**: 详细的性能指标收集和分析
-- **审计跟踪**: 完整的请求审计跟踪和日志记录
-- **数据分析**: 深入的使用模式分析和洞察
-
-### 🔧 核心功能
-
 - 🚀 **统一的 AI Gateway 请求格式** - 通过 Cloudflare AI Gateway 统一访问多个 AI 提供商
 - 🔄 **多提供商支持** - 支持 OpenAI、Workers AI、Anthropic 等主流 LLM 提供商
 - 🛡️ **自动故障转移和回退机制** - 智能故障处理，确保服务高可用性
+- ⚡ **智能缓存策略** - 基于内容的自动缓存，提升响应速度并降低成本
+- 💰 **成本跟踪** - 实时成本估算和跟踪，支持自定义标签
+- 🔐 **AI Gateway 认证** - 支持 AI Gateway 访问令牌认证
+- 📊 **增强监控** - 完整的请求日志、指标收集和分析
 - 📈 **智能重试** - 可配置的重试策略和错误处理
 - 🎯 **能力路由** - 基于 AI 能力的智能模型选择
 
@@ -91,10 +51,10 @@ wrangler secret put OPENAI_API_KEY
 wrangler secret put ANTHROPIC_API_KEY
 
 # AI Gateway 增强功能（可选）
-wrangler secret put AI_GATEWAY_TOKEN
-wrangler secret put ENABLE_COST_TRACKING
-wrangler secret put ENABLE_CACHING
-wrangler secret put ENABLE_METRICS
+wrangler secret put AI_GATEWAY_AUTH_TOKEN
+wrangler secret put AI_GATEWAY_ENABLE_COST_TRACKING
+wrangler secret put AI_GATEWAY_ENABLE_CACHING
+wrangler secret put AI_GATEWAY_ENABLE_METRICS
 ```
 
 > 📘 **配置详情**: 查看 [AI Gateway 配置指南](./docs/AI_GATEWAY_CONFIGURATION.md) 获取完整的环境变量配置说明。
@@ -113,17 +73,16 @@ npm run deploy
 
 ## API 使用
 
-### 基础聊天接口
+### 聊天接口
 
 ```http
-POST /ai
+POST /chat
 ```
 
-基础请求示例：
+请求示例：
 
 ```json
 {
-  "capability": "chat",
   "messages": [
     {
       "role": "user",
@@ -137,81 +96,6 @@ POST /ai
   "fallback": true
 }
 ```
-
-### 增强功能配置
-
-使用 AI Gateway 增强功能的完整请求示例：
-
-```json
-{
-  "capability": "chat",
-  "messages": [
-    {
-      "role": "user", 
-      "content": "Analyze this data for trends"
-    }
-  ],
-  "provider": "openai",
-  "model": "gpt-4",
-  "enhancedConfig": {
-    "authentication": {
-      "useGatewayAuth": true,
-      "customHeaders": {
-        "x-user-id": "user123"
-      }
-    },
-    "costTracking": {
-      "trackTokens": true,
-      "customCost": {
-        "inputTokens": 0.001,
-        "outputTokens": 0.002,
-        "fixedCost": 0.1
-      }
-    },
-    "cache": {
-      "ttl": 7200,
-      "skipCache": false,
-      "namespace": "analytics",
-      "customKey": "data-analysis-v1"
-    },
-    "metadata": {
-      "requestId": "req-12345",
-      "userId": "user123", 
-      "tags": {
-        "type": "analytics",
-        "priority": "high",
-        "department": "research"
-      },
-      "enableMetrics": true
-    }
-  }
-}
-```
-
-### 配置参数说明
-
-#### `enhancedConfig.authentication`
-- `useGatewayAuth`: 启用 AI Gateway 令牌认证
-- `customHeaders`: 自定义认证头部
-
-#### `enhancedConfig.costTracking`
-- `trackTokens`: 启用 Token 计费跟踪
-- `customCost`: 自定义成本配置
-  - `inputTokens`: 输入 Token 单价
-  - `outputTokens`: 输出 Token 单价  
-  - `fixedCost`: 固定费用
-
-#### `enhancedConfig.cache`
-- `ttl`: 缓存生存时间（秒）
-- `skipCache`: 跳过缓存读取
-- `namespace`: 缓存命名空间
-- `customKey`: 自定义缓存键
-
-#### `enhancedConfig.metadata`
-- `requestId`: 自定义请求 ID
-- `userId`: 用户标识
-- `tags`: 自定义标签对象
-- `enableMetrics`: 启用详细指标收集
 
 响应示例：
 
@@ -304,13 +188,12 @@ POST /ai
 
 | 变量名 | 必需 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `AI_GATEWAY_TOKEN` | ❌ | - | AI Gateway 认证令牌 |
-| `ENABLE_COST_TRACKING` | ❌ | false | 启用成本跟踪 |
-| `ENABLE_CACHING` | ❌ | true | 启用智能缓存 |
-| `DEFAULT_CACHE_TTL` | ❌ | 3600 | 默认缓存 TTL（秒） |
-| `ENABLE_METRICS` | ❌ | true | 启用增强指标收集 |
-| `ENABLE_LOGGING` | ❌ | true | 启用详细日志记录 |
-| `LOG_LEVEL` | ❌ | info | 日志级别 (debug/info/warn/error) |
+| `AI_GATEWAY_AUTH_TOKEN` | ❌ | - | AI Gateway 认证令牌 |
+| `AI_GATEWAY_ENABLE_COST_TRACKING` | ❌ | false | 启用成本跟踪 |
+| `AI_GATEWAY_ENABLE_CACHING` | ❌ | false | 启用智能缓存 |
+| `AI_GATEWAY_DEFAULT_CACHE_TTL` | ❌ | 3600 | 默认缓存 TTL（秒） |
+| `AI_GATEWAY_ENABLE_METRICS` | ❌ | false | 启用增强指标收集 |
+| `AI_GATEWAY_ENABLE_LOGGING` | ❌ | false | 启用详细日志记录 |
 
 ## 开发指南
 
@@ -360,84 +243,22 @@ npm run test:integration
 3. 在 `ai-gateway.ts` 中注册新提供商
 4. 更新类型定义和文档
 
-## 测试和验证
-
-### 运行 AI Gateway 增强功能测试
-
-项目提供了完整的测试套件来验证 AI Gateway 增强功能：
+### 本地测试
 
 ```bash
-# 运行完整的增强功能测试套件
-./scripts/test-ai-gateway-enhancements.sh
+# 启动开发服务器
+npm run dev
 
-# 或者运行 Node.js 测试脚本
-node scripts/test-ai-gateway-enhancements.js
+# 测试健康检查
+curl http://localhost:8787/health
 
-# 运行特定的集成测试
-npm run test:integration
-```
-
-### 测试覆盖范围
-
-测试套件包含以下测试场景：
-
-1. **基础增强请求测试**
-   - 验证增强配置参数正确传递
-   - 测试基础的缓存和元数据功能
-
-2. **成本跟踪测试**  
-   - Token 级别成本跟踪
-   - 自定义成本配置验证
-   - 成本计算准确性检查
-
-3. **缓存功能测试**
-   - 缓存配置验证
-   - TTL 设置测试
-   - 缓存键生成测试
-   - 缓存跳过功能测试
-
-4. **认证功能测试**
-   - AI Gateway Token 认证
-   - 自定义认证头部
-   - 认证失败处理
-
-5. **元数据和指标测试**
-   - 自定义标签设置
-   - 指标收集验证
-   - 请求追踪测试
-
-6. **性能测试**
-   - 缓存命中率测试
-   - 响应时间分析
-   - 并发请求处理
-
-### 手动测试示例
-
-```bash
-# 测试基础聊天功能
-curl -X POST http://localhost:8787/ai \
+# 测试聊天接口
+curl -X POST http://localhost:8787/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "capability": "chat",
     "messages": [{"role": "user", "content": "Hello"}],
     "provider": "openai"
   }'
-
-# 测试带增强功能的请求
-curl -X POST http://localhost:8787/ai \
-  -H "Content-Type: application/json" \
-  -d '{
-    "capability": "chat",
-    "messages": [{"role": "user", "content": "Test with enhancements"}],
-    "provider": "openai",
-    "enhancedConfig": {
-      "cache": {"ttl": 3600},
-      "metadata": {"tags": {"test": "manual"}}
-    }
-  }'
-
-# 检查 AI Gateway 配置状态
-curl http://localhost:8787/ai-gateway/config
 ```
 
 ## 文档资源

@@ -54,14 +54,22 @@ app.get('/health', async (c) => {
       logging: env.AI_GATEWAY_ENABLE_LOGGING === 'true',
       default_cache_ttl: parseInt(env.AI_GATEWAY_DEFAULT_CACHE_TTL || '3600')
     }
-
-    return c.json({ 
-      status: 'healthy', 
+    
+    return c.json({
+      status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'meridian-ai-worker',
       version: '2.0.0',
       ai_gateway: enhancedStatus,
-      environment: env.ENVIRONMENT || 'unknown'
+      environment: env.ENVIRONMENT || 'unknown',
+      providers: {
+        available: Array.from(aiGatewayService.getAvailableProviders()),
+        openai_configured: !!env.OPENAI_API_KEY,
+        workers_ai_configured: !!env.CLOUDFLARE_API_TOKEN,
+        anthropic_configured: !!env.ANTHROPIC_API_KEY,
+        account_id: env.CLOUDFLARE_ACCOUNT_ID ? 'configured' : 'missing',
+        gateway_id: env.CLOUDFLARE_GATEWAY_ID ? 'configured' : 'missing'
+      }
     })
   } catch (error) {
     return c.json({ 

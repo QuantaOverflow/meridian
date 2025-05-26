@@ -36,12 +36,14 @@
 基于 Cloudflare AI Gateway 官方最佳实践实现的增强功能，完全兼容官方标准头部：
 
 #### 🔐 智能认证 (`cf-aig-authorization`)
+
 - **AI Gateway Token**: 自动验证 AI Gateway 访问令牌
 - **自定义认证**: 支持自定义认证头部配置
 - **认证控制**: 可选的认证跳过机制，灵活控制访问权限
 - **安全管理**: 统一的认证策略和权限管理
 
 #### 💰 精确成本跟踪 (`cf-aig-custom-cost`)
+
 - **Token 计费**: 按输入/输出 Token 数量精确计费
 - **固定费用**: 支持按请求固定费用模式
 - **多媒体计费**: 按图像数量、音频时长等计费
@@ -49,6 +51,7 @@
 - **成本优化**: 智能成本分析和优化建议
 
 #### ⚡ 智能缓存策略 (`cf-aig-cache-ttl`, `cf-aig-cache-key`, `cf-aig-skip-cache`)
+
 - **自动缓存键**: 基于请求内容的智能缓存键生成
 - **自适应 TTL**: 不同 AI 能力的智能 TTL 配置
 - **命名空间**: 可配置的缓存命名空间隔离
@@ -56,6 +59,7 @@
 - **缓存优化**: 缓存命中率分析和性能优化
 
 #### 📊 增强元数据 (`cf-aig-metadata`)
+
 - **请求追踪**: 自动生成唯一请求 ID 和用户追踪
 - **自定义标签**: 支持自定义标签和属性设置
 - **性能指标**: 详细的性能指标收集和分析
@@ -191,10 +195,12 @@ POST /ai
 ### 配置参数说明
 
 #### `enhancedConfig.authentication`
+
 - `useGatewayAuth`: 启用 AI Gateway 令牌认证
 - `customHeaders`: 自定义认证头部
 
 #### `enhancedConfig.costTracking`
+
 - `trackTokens`: 启用 Token 计费跟踪
 - `customCost`: 自定义成本配置
   - `inputTokens`: 输入 Token 单价
@@ -202,12 +208,14 @@ POST /ai
   - `fixedCost`: 固定费用
 
 #### `enhancedConfig.cache`
+
 - `ttl`: 缓存生存时间（秒）
 - `skipCache`: 跳过缓存读取
 - `namespace`: 缓存命名空间
 - `customKey`: 自定义缓存键
 
 #### `enhancedConfig.metadata`
+
 - `requestId`: 自定义请求 ID
 - `userId`: 用户标识
 - `tags`: 自定义标签对象
@@ -314,7 +322,7 @@ POST /ai
 
 ## 开发指南
 
-### 快速开始
+### 本地开发与测试脚本
 
 ```bash
 # 安装依赖
@@ -471,4 +479,3 @@ graph TD
     L --> M[响应映射]
     M --> N[元数据增强]
     N --> O[返回 HTTP 响应]
-```

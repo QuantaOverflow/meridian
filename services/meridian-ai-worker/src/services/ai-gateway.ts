@@ -199,11 +199,11 @@ export class AIGatewayService {
     }
 
     // Build universal request for AI Gateway compliance
-    const universalRequestData = await this.buildUniversalRequest(request, availableProviders)
+    const { requests: universalRequestData, usedProvider } = await this.buildUniversalRequest(request, availableProviders)
     
     try {
       const response = await this.executeUniversalRequestWithMetadata(universalRequestData, request.metadata as RequestMetadata)
-      const mappedResponse = this.mapUniversalResponse(response, request, availableProviders)
+      const mappedResponse = this.mapUniversalResponse(response, request, usedProvider)
       
       // Add performance metrics with correct usage property mapping
       if (request.metadata && request.metadata.requestId) {
@@ -282,8 +282,27 @@ export class AIGatewayService {
       body: JSON.stringify(requests)
     })
 
+    // Add debug logging for Universal endpoint requests
+    this.logger.log('debug', 'Universal AI Gateway request', {
+      url: this.gatewayUrl,
+      headers,
+      requests,
+      metadata: metadata?.requestId
+    })
+
     if (!response.ok) {
       const errorText = await response.text()
+      
+      // Enhanced error logging for debugging
+      this.logger.log('error', 'Universal AI Gateway request failed', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        url: this.gatewayUrl,
+        requestCount: requests.length,
+        metadata: metadata?.requestId
+      })
+      
       throw new Error(`AI Gateway Universal request failed: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
@@ -391,13 +410,15 @@ export class AIGatewayService {
       .map(([name, _]) => name)
   }
 
-  private async buildUniversalRequest(request: AIRequest, providers: string[]): Promise<any[]> {
+  private async buildUniversalRequest(request: AIRequest, providers: string[]): Promise<{ requests: any[], usedProvider: string }> {
     const requests: any[] = []
+    let usedProvider: string
     
     // Create enhanced configuration
     const enhancedConfig = await this.enhancementService.createDefaultEnhancedConfig(request)
     
     if (request.provider && providers.includes(request.provider)) {
+      usedProvider = request.provider
       const provider = this.providers.get(request.provider)!
       const providerRequest = provider.buildRequest(request)
       
@@ -410,9 +431,12 @@ export class AIGatewayService {
       // Merge provider headers with enhanced headers
       const finalHeaders = { ...providerRequest.headers, ...enhancedHeaders }
       
+      // Transform endpoint for Universal AI Gateway
+      const universalEndpoint = this.transformEndpointForUniversal(providerRequest.provider, providerRequest.endpoint, request.model || provider.getDefaultModel(request.capability))
+      
       requests.push({
         provider: providerRequest.provider,
-        endpoint: providerRequest.endpoint,
+        endpoint: universalEndpoint,
         headers: finalHeaders,
         query: providerRequest.query
       })
@@ -427,9 +451,12 @@ export class AIGatewayService {
             const fallbackEnhancedHeaders = await this.enhancementService.createEnhancedHeaders(request, enhancedConfig, fallbackModelConfig)
             const fallbackFinalHeaders = { ...fallbackRequest.headers, ...fallbackEnhancedHeaders }
             
+            // Transform endpoint for Universal AI Gateway
+            const fallbackUniversalEndpoint = this.transformEndpointForUniversal(fallbackRequest.provider, fallbackRequest.endpoint, request.model || fallbackProvider.getDefaultModel(request.capability))
+            
             requests.push({
               provider: fallbackRequest.provider,
-              endpoint: fallbackRequest.endpoint,
+              endpoint: fallbackUniversalEndpoint,
               headers: fallbackFinalHeaders,
               query: fallbackRequest.query
             })
@@ -441,6 +468,8 @@ export class AIGatewayService {
         }
       }
     } else {
+      // Use first available provider if no specific provider requested
+      usedProvider = providers[0]
       for (const providerName of providers) {
         try {
           const provider = this.providers.get(providerName)!
@@ -449,9 +478,12 @@ export class AIGatewayService {
           const enhancedHeaders = await this.enhancementService.createEnhancedHeaders(request, enhancedConfig, modelConfig)
           const finalHeaders = { ...providerRequest.headers, ...enhancedHeaders }
           
+          // Transform endpoint for Universal AI Gateway
+          const universalEndpoint = this.transformEndpointForUniversal(providerRequest.provider, providerRequest.endpoint, request.model || provider.getDefaultModel(request.capability))
+          
           requests.push({
             provider: providerRequest.provider,
-            endpoint: providerRequest.endpoint,
+            endpoint: universalEndpoint,
             headers: finalHeaders,
             query: providerRequest.query
           })
@@ -467,11 +499,48 @@ export class AIGatewayService {
       }
     }
     
-    return requests
+    return { requests, usedProvider }
   }
 
-  private mapUniversalResponse(response: any, request: AIRequest, providers: string[]): AIResponse {
-    const usedProvider = providers[0]
+  /**
+   * Transform provider-specific endpoint to Universal AI Gateway format
+   */
+  private transformEndpointForUniversal(providerName: string, endpoint: string, modelName: string | undefined): string {
+    switch (providerName) {
+      case 'workers-ai':
+        // For Workers AI, extract model name from the full endpoint URL
+        // From: https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/run/@cf/meta/llama-2-7b-chat-int8
+        // To: @cf/meta/llama-2-7b-chat-int8
+        if (endpoint.includes('/ai/run/')) {
+          const modelMatch = endpoint.match(/\/ai\/run\/(.+)$/)
+          if (modelMatch && modelMatch[1]) {
+            return modelMatch[1]
+          }
+        }
+        // Fallback to model name if available
+        return modelName || endpoint
+      
+      case 'openai':
+        // For OpenAI, use the standard endpoint path
+        // From: https://api.openai.com/v1/chat/completions
+        // To: /chat/completions
+        if (endpoint.startsWith('https://api.openai.com/v1')) {
+          return endpoint.replace('https://api.openai.com/v1', '')
+        }
+        return endpoint
+      
+      case 'anthropic':
+        // For Anthropic, use the standard endpoint path
+        // Keep the original endpoint format
+        return endpoint
+      
+      default:
+        // For unknown providers, keep original endpoint
+        return endpoint
+    }
+  }
+
+  private mapUniversalResponse(response: any, request: AIRequest, usedProvider: string): AIResponse {
     const provider = this.providers.get(usedProvider)!
     return provider.mapResponse(response, request)
   }

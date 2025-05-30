@@ -4,6 +4,8 @@ import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { Logger } from './lib/logger';
 import { Ai } from '@cloudflare/ai';
+import { getDb } from './lib/utils';
+import { $sources, $articles, sql } from '@meridian/database';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -127,6 +129,168 @@ app.get('/test-ai-worker', async (c) => {
       healthCheck: healthData,
       analysisTest: analysisData
     });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
+// 添加完整工作流测试端点
+app.get('/test-complete-workflow', async (c) => {
+  try {
+    const db = getDb(c.env.HYPERDRIVE);
+    
+    // 1. 首先获取一些已有的RSS源
+    const sources = await db.select({
+      id: $sources.id,
+      url: $sources.url,
+      name: $sources.name,
+      scrape_frequency: $sources.scrape_frequency
+    })
+    .from($sources)
+    .limit(3); // 测试前3个源
+    
+    if (sources.length === 0) {
+      return c.json({
+        success: false,
+        error: "没有找到任何RSS源。请先添加一些RSS源。",
+        suggestion: "使用 POST /sources 添加RSS源"
+      }, 404);
+    }
+    
+    const results = [];
+    
+    // 2. 对每个源触发立即抓取
+    for (const source of sources) {
+      try {
+        // 获取对应的 Durable Object
+        const doId = c.env.SOURCE_SCRAPER.idFromName(source.url);
+        const stub = c.env.SOURCE_SCRAPER.get(doId);
+        
+        // 触发立即抓取（通过调用 trigger 方法）
+        const scrapeRequest = new Request('http://internal/trigger', {
+          method: 'GET'
+        });
+        const scrapeResponse = await stub.fetch(scrapeRequest);
+        
+        results.push({
+          source_id: source.id,
+          source_name: source.name,
+          source_url: source.url,
+          scrape_triggered: scrapeResponse.ok,
+          scrape_status: scrapeResponse.status,
+          scrape_response: scrapeResponse.ok ? 'Success' : await scrapeResponse.text()
+        });
+        
+      } catch (error) {
+        results.push({
+          source_id: source.id,
+          source_name: source.name,
+          source_url: source.url,
+          scrape_triggered: false,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+    
+    // 3. 等待一段时间让抓取完成
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // 4. 检查是否有新文章进入处理状态
+    const recentArticles = await db.select({
+      id: $articles.id,
+      title: $articles.title,
+      status: $articles.status,
+      sourceId: $articles.sourceId,
+      createdAt: $articles.createdAt
+    })
+    .from($articles)
+    .where(
+      // 查找最近5分钟内创建的文章（使用PostgreSQL语法）
+      sql`${$articles.createdAt} > NOW() - INTERVAL '5 minutes'`
+    )
+    .orderBy(sql`${$articles.createdAt} DESC`)
+    .limit(10);
+    
+    // 5. 如果有新文章，手动触发工作流（用于测试）
+    let workflowResult = null;
+    if (recentArticles.length > 0) {
+      const articleIds = recentArticles.map(a => a.id);
+      const workflow = await startProcessArticleWorkflow(c.env, { articles_id: articleIds });
+      
+      if (workflow.isOk()) {
+        workflowResult = {
+          workflow_id: workflow.value.id,
+          article_count: articleIds.length,
+          status: 'triggered'
+        };
+      } else {
+        workflowResult = {
+          error: workflow.error.message,
+          status: 'failed'
+        };
+      }
+    }
+    
+    return c.json({
+      success: true,
+      message: "完整工作流测试完成",
+      test_summary: {
+        sources_tested: sources.length,
+        scrape_results: results,
+        recent_articles_found: recentArticles.length,
+        workflow_triggered: workflowResult !== null
+      },
+      details: {
+        scrape_results: results,
+        recent_articles: recentArticles,
+        workflow_result: workflowResult
+      }
+    });
+    
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      message: "完整工作流测试失败"
+    }, 500);
+  }
+});
+
+// 添加手动触发工作流的端点（用于测试指定文章）
+app.post('/test-workflow-manual', async (c) => {
+  try {
+    const body = await c.req.json();
+    const articleIds = body.article_ids;
+    
+    if (!Array.isArray(articleIds) || articleIds.length === 0) {
+      return c.json({
+        success: false,
+        error: "请提供有效的文章ID数组",
+        example: { article_ids: [1, 2, 3] }
+      }, 400);
+    }
+    
+    // 触发工作流
+    const workflowResult = await startProcessArticleWorkflow(c.env, { articles_id: articleIds });
+    
+    if (workflowResult.isOk()) {
+      return c.json({
+        success: true,
+        message: "工作流已触发",
+        workflow_id: workflowResult.value.id,
+        article_count: articleIds.length
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: workflowResult.error.message,
+        message: "工作流触发失败"
+      }, 500);
+    }
+    
   } catch (error) {
     return c.json({
       success: false,

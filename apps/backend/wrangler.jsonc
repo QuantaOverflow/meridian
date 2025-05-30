@@ -69,13 +69,13 @@
       // "jurisdiction": "eu",
     },
   ],
-  // "workflows": [
-  //   {
-  //     "name": "meridian_process_articles",
-  //     "binding": "PROCESS_ARTICLES",
-  //     "class_name": "ProcessArticles",
-  //   },
-  // ],
+  "workflows": [
+    {
+      "name": "meridian_process_articles",
+      "binding": "PROCESS_ARTICLES",
+      "class_name": "ProcessArticles",
+    },
+  ],
   "ai": {
     "binding": "AI"
 

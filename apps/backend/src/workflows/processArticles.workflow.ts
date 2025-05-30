@@ -9,6 +9,31 @@ import { ResultAsync } from 'neverthrow';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/logger';
 
+// 添加AI Worker响应类型定义
+interface AIWorkerAnalysisResponse {
+  success: boolean;
+  data?: {
+    language: string;
+    primary_location: string;
+    completeness: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS';
+    content_quality: 'OK' | 'LOW_QUALITY' | 'JUNK';
+    event_summary_points: string[];
+    thematic_keywords: string[];
+    topic_tags: string[];
+    key_entities: string[];
+    content_focus: string[];
+  };
+  error?: string;
+  metadata?: any;
+}
+
+interface AIWorkerEmbeddingResponse {
+  success: boolean;
+  data?: number[];
+  error?: string;
+  metadata?: any;
+}
+
 const TRICKY_DOMAINS = [
   'reuters.com',
   'nytimes.com',
@@ -238,22 +263,33 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           const articleAnalysis = await step.do(
             `analyze article ${article.id}`,
             { retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }, timeout: '1 minute' },
-            async () => {
-              // Use the AI_WORKER service binding instead of direct Google AI
-              const response = await env.AI_WORKER.analyzeArticle({
-                title: article.title,
-                content: article.text,
-                options: {
-                  provider: 'google',
-                  model: 'gemini-1.5-flash'
-                }
+            async (): Promise<AIWorkerAnalysisResponse['data']> => {
+              // Use Service Binding with fetch method to call AI Worker
+              const analysisRequest = new Request('https://meridian-ai-worker/meridian/article/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: article.title,
+                  content: article.text,
+                  options: {
+                    provider: 'google-ai-studio',
+                    model: 'gemini-1.5-flash-8b-001'
+                  }
+                })
               });
+
+              const response = await env.AI_WORKER.fetch(analysisRequest);
               
-              if (!response.success) {
-                throw new Error(response.error || 'AI analysis failed');
+              if (!response.ok) {
+                throw new Error(`AI analysis failed: ${response.status} ${response.statusText}`);
               }
               
-              return response.data;
+              const analysisResult = await response.json() as AIWorkerAnalysisResponse;
+              if (!analysisResult.success) {
+                throw new Error(`AI analysis failed: ${analysisResult.error || 'Unknown error'}`);
+              }
+              
+              return analysisResult.data!;
             }
           );
 
@@ -269,24 +305,38 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
           // run embedding and upload in parallel
           const [embeddingResult, uploadResult] = await Promise.allSettled([
-            step.do(`generate embeddings for article ${article.id}`, async () => {
-              articleLogger.info('Generating embeddings');
-              const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
-              
-              // Use AI_WORKER service binding instead of direct Cloudflare AI
-              const embeddingResponse = await env.AI_WORKER.generateEmbedding({
-                text: searchText,
-                options: {
-                  provider: 'cloudflare',
-                  model: 'bge-small-en-v1.5'
-                }
-              });
-              
-              if (!embeddingResponse.success) {
-                throw new Error(embeddingResponse.error || 'Embedding generation failed');
+            step.do(`generate embedding for article ${article.id}`, async (): Promise<number[]> => {
+              if (!articleAnalysis) {
+                throw new Error('Article analysis is required for embedding generation');
               }
               
-              return embeddingResponse.data;
+              const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
+              
+              // Use Service Binding with fetch method to call AI Worker
+              const embeddingRequest = new Request('https://meridian-ai-worker/embeddings/generate', {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  text: searchText,
+                  options: {
+                    provider: 'cloudflare',
+                    model: '@cf/baai/bge-small-en-v1.5'
+                  }
+                })
+              });
+
+              const embeddingResponse = await env.AI_WORKER.fetch(embeddingRequest);
+              
+              if (!embeddingResponse.ok) {
+                throw new Error(`Embedding generation failed: ${embeddingResponse.status} ${embeddingResponse.statusText}`);
+              }
+              
+              const embeddingResult = await embeddingResponse.json() as AIWorkerEmbeddingResponse;
+              if (!embeddingResult.success) {
+                throw new Error(`Embedding generation failed: ${embeddingResult.error || 'Unknown error'}`);
+              }
+
+              return embeddingResult.data!;
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {
               articleLogger.info('Uploading article contents to R2');
@@ -353,7 +403,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 topic_tags: articleAnalysis.topic_tags,
                 key_entities: articleAnalysis.key_entities,
                 content_focus: articleAnalysis.content_focus,
-                embedding: embeddingResult.value,
+                embedding: embeddingResult,
                 status: 'PROCESSED',
               })
               .where(eq($articles.id, article.id));

@@ -21,39 +21,7 @@ export type Env = {
   
   // AI Worker Service Binding - connects to meridian-ai-worker
   AI_WORKER: {
-    analyzeArticle(params: {
-      title: string
-      content: string
-      options?: {
-        provider?: string
-        model?: string
-      }
-    }): Promise<{
-      success: boolean
-      data?: any
-      error?: string
-      metadata?: any
-    }>
-    
-    generateEmbedding(params: {
-      text: string
-      options?: {
-        provider?: string
-        model?: string
-      }
-    }): Promise<{
-      success: boolean
-      data?: number[]
-      error?: string
-      metadata?: any
-    }>
-    
-    healthCheck(): Promise<{
-      status: string
-      service: string
-      version: string
-      providers?: any
-    }>
+    fetch(request: Request): Promise<Response>
   };
   
   // Secrets
@@ -126,6 +94,45 @@ app.use('*', async (c, next) => {
   
   // 非测试模式，继续正常处理
   return next();
+});
+
+// 添加 Service Binding 测试路由
+app.get('/test-ai-worker', async (c) => {
+  try {
+    // 测试 AI_WORKER service binding 通过 fetch 方法
+    const healthRequest = new Request('https://meridian-ai-worker/health', {
+      method: 'GET'
+    });
+    const healthResponse = await c.env.AI_WORKER.fetch(healthRequest);
+    const healthData = await healthResponse.json();
+    
+    const analysisRequest = new Request('https://meridian-ai-worker/meridian/article/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: "Service Binding Test",
+        content: "Testing the connection between Backend Worker and AI Worker via Service Binding.",
+        options: {
+          provider: "google-ai-studio",
+          model: "gemini-1.5-flash-8b-001"
+        }
+      })
+    });
+    const analysisResponse = await c.env.AI_WORKER.fetch(analysisRequest);
+    const analysisData = await analysisResponse.json();
+
+    return c.json({
+      success: true,
+      message: "AI_WORKER Service Binding is working via fetch!",
+      healthCheck: healthData,
+      analysisTest: analysisData
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
 });
 
 // 现有路由和处理程序...

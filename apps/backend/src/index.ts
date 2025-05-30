@@ -5,7 +5,7 @@ import { startProcessArticleWorkflow } from './workflows/processArticles.workflo
 import { Logger } from './lib/logger';
 import { Ai } from '@cloudflare/ai';
 import { getDb } from './lib/utils';
-import { $sources, $articles, sql } from '@meridian/database';
+import { $sources, $articles, sql, inArray, and, gte } from '@meridian/database';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -295,6 +295,220 @@ app.post('/test-workflow-manual', async (c) => {
     return c.json({
       success: false,
       error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
+// 添加失败文章重试端点
+app.post('/retry-failed-articles', async (c) => {
+  try {
+    const db = getDb(c.env.HYPERDRIVE);
+    const body = await c.req.json();
+    
+    // 可选的过滤参数
+    const {
+      specific_ids,  // 指定文章ID
+      status_filter, // 状态过滤 ['FETCH_FAILED', 'RENDER_FAILED', 'AI_ANALYSIS_FAILED', 'EMBEDDING_FAILED', 'R2_UPLOAD_FAILED']
+      hours_since_failed = 24, // 多少小时内失败的文章
+      limit = 50 // 限制重试数量
+    } = body;
+
+    let query = db.select({
+      id: $articles.id,
+      title: $articles.title,
+      status: $articles.status,
+      failReason: $articles.failReason,
+      processedAt: $articles.processedAt,
+      url: $articles.url
+    }).from($articles);
+
+    // 构建查询条件
+    let conditions = [];
+
+    // 如果指定了具体ID，优先使用
+    if (specific_ids && Array.isArray(specific_ids) && specific_ids.length > 0) {
+      conditions.push(inArray($articles.id, specific_ids));
+    } else {
+      // 否则查找失败的文章
+      
+      // 状态过滤
+      if (status_filter && Array.isArray(status_filter) && status_filter.length > 0) {
+        const validStatuses = status_filter.filter(s => 
+          ['FETCH_FAILED', 'RENDER_FAILED', 'AI_ANALYSIS_FAILED', 'EMBEDDING_FAILED', 'R2_UPLOAD_FAILED'].includes(s)
+        );
+        if (validStatuses.length > 0) {
+          conditions.push(inArray($articles.status, validStatuses));
+        }
+      } else {
+        // 默认查找所有失败状态
+        conditions.push(inArray($articles.status, [
+          'FETCH_FAILED', 
+          'RENDER_FAILED', 
+          'AI_ANALYSIS_FAILED', 
+          'EMBEDDING_FAILED', 
+          'R2_UPLOAD_FAILED'
+        ]));
+      }
+
+      // 时间过滤 - 在指定小时数内失败的
+      const hoursAgo = new Date(Date.now() - hours_since_failed * 60 * 60 * 1000);
+      conditions.push(gte($articles.processedAt, hoursAgo));
+    }
+
+    // 应用所有条件
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    // 限制数量
+    query = query.limit(limit);
+
+    const failedArticles = await query;
+
+    if (failedArticles.length === 0) {
+      return c.json({
+        success: true,
+        message: "没有找到符合条件的失败文章",
+        articles_found: 0,
+        criteria: {
+          specific_ids: specific_ids || null,
+          status_filter: status_filter || "所有失败状态",
+          hours_since_failed,
+          limit
+        }
+      });
+    }
+
+    // 重置失败文章的状态，使其可以重新处理
+    const articleIds = failedArticles.map(a => a.id);
+    
+    await db
+      .update($articles)
+      .set({
+        status: 'PENDING_FETCH',
+        processedAt: null,
+        failReason: null,
+        // 清除可能的分析数据，让重新处理
+        language: null,
+        primary_location: null,
+        completeness: null,
+        content_quality: null,
+        event_summary_points: null,
+        thematic_keywords: null,
+        topic_tags: null,
+        key_entities: null,
+        content_focus: null,
+        embedding: null,
+        contentFileKey: null
+      })
+      .where(inArray($articles.id, articleIds));
+
+    // 触发工作流重新处理
+    const workflowResult = await startProcessArticleWorkflow(c.env, { articles_id: articleIds });
+
+    if (workflowResult.isOk()) {
+      return c.json({
+        success: true,
+        message: "失败文章重试已触发",
+        workflow_id: workflowResult.value.id,
+        articles_reset: failedArticles.length,
+        articles: failedArticles.map(a => ({
+          id: a.id,
+          title: a.title,
+          previous_status: a.status,
+          previous_fail_reason: a.failReason,
+          url: a.url
+        }))
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: workflowResult.error.message,
+        message: "工作流触发失败，但文章状态已重置",
+        articles_reset: failedArticles.length
+      }, 500);
+    }
+    
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      message: "重试失败文章操作失败"
+    }, 500);
+  }
+});
+
+// 添加查询失败文章状态的端点
+app.get('/failed-articles-status', async (c) => {
+  try {
+    const db = getDb(c.env.HYPERDRIVE);
+    
+    // 查询各种失败状态的统计
+    const failedStats = await db.select({
+      status: $articles.status,
+      count: sql<number>`count(*)`,
+      latest_failure: sql<Date>`max(processed_at)`
+    })
+    .from($articles)
+    .where(inArray($articles.status, [
+      'FETCH_FAILED', 
+      'RENDER_FAILED', 
+      'AI_ANALYSIS_FAILED', 
+      'EMBEDDING_FAILED', 
+      'R2_UPLOAD_FAILED'
+    ]))
+    .groupBy($articles.status);
+
+    // 查询最近24小时的失败文章详情
+    const recentFailures = await db.select({
+      id: $articles.id,
+      title: $articles.title,
+      status: $articles.status,
+      failReason: $articles.failReason,
+      processedAt: $articles.processedAt,
+      url: $articles.url,
+      sourceId: $articles.sourceId
+    })
+    .from($articles)
+    .where(
+      and(
+        inArray($articles.status, [
+          'FETCH_FAILED', 
+          'RENDER_FAILED', 
+          'AI_ANALYSIS_FAILED', 
+          'EMBEDDING_FAILED', 
+          'R2_UPLOAD_FAILED'
+        ]),
+        gte($articles.processedAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+      )
+    )
+    .orderBy(sql`${$articles.processedAt} DESC`)
+    .limit(20);
+
+    return c.json({
+      success: true,
+      summary: {
+        total_failed: failedStats.reduce((sum, stat) => sum + Number(stat.count), 0),
+        by_status: failedStats.map(stat => ({
+          status: stat.status,
+          count: Number(stat.count),
+          latest_failure: stat.latest_failure
+        }))
+      },
+      recent_failures: recentFailures,
+      retry_options: {
+        retry_all_recent: "POST /retry-failed-articles (无参数 - 重试最近24小时失败的文章)",
+        retry_specific_status: "POST /retry-failed-articles { status_filter: ['FETCH_FAILED'] }",
+        retry_specific_articles: "POST /retry-failed-articles { specific_ids: [123, 456] }",
+        retry_custom_timeframe: "POST /retry-failed-articles { hours_since_failed: 48, limit: 100 }"
+      }
+    });
+    
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      message: "查询失败文章状态失败"
     }, 500);
   }
 });

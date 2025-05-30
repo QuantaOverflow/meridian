@@ -294,8 +294,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           );
 
           articleLogger.debug('Article analysis completed', {
-            topic_tags_count: articleAnalysis.topic_tags.length,
-            entities_count: articleAnalysis.key_entities.length,
+            topic_tags_count: articleAnalysis?.topic_tags.length || 0,
+            entities_count: articleAnalysis?.key_entities.length || 0,
           });
 
           const date = article.publishedTime ? new Date(article.publishedTime) : new Date();
@@ -313,13 +313,13 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
               
               // Use Service Binding with fetch method to call AI Worker
-              const embeddingRequest = new Request('https://meridian-ai-worker/embeddings/generate', {
+              const embeddingRequest = new Request('https://meridian-ai-worker/meridian/embeddings/generate', {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   text: searchText,
                   options: {
-                    provider: 'cloudflare',
+                    provider: 'workers-ai',
                     model: '@cf/baai/bge-small-en-v1.5'
                   }
                 })
@@ -393,17 +393,17 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               .set({
                 processedAt: new Date(),
                 title: article.title,
-                language: articleAnalysis.language,
+                language: articleAnalysis?.language || 'unknown',
                 contentFileKey: uploadResult.value,
-                primary_location: articleAnalysis.primary_location,
-                completeness: articleAnalysis.completeness,
-                content_quality: articleAnalysis.content_quality,
-                event_summary_points: articleAnalysis.event_summary_points,
-                thematic_keywords: articleAnalysis.thematic_keywords,
-                topic_tags: articleAnalysis.topic_tags,
-                key_entities: articleAnalysis.key_entities,
-                content_focus: articleAnalysis.content_focus,
-                embedding: embeddingResult,
+                primary_location: articleAnalysis?.primary_location || 'unknown',
+                completeness: articleAnalysis?.completeness || 'PARTIAL_USELESS',
+                content_quality: articleAnalysis?.content_quality || 'LOW_QUALITY',
+                event_summary_points: articleAnalysis?.event_summary_points || [],
+                thematic_keywords: articleAnalysis?.thematic_keywords || [],
+                topic_tags: articleAnalysis?.topic_tags || [],
+                key_entities: articleAnalysis?.key_entities || [],
+                content_focus: articleAnalysis?.content_focus || [],
+                embedding: embeddingResult.value,
                 status: 'PROCESSED',
               })
               .where(eq($articles.id, article.id));

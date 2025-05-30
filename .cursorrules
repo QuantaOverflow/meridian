@@ -1,0 +1,201 @@
+# Meridian项目开发指南
+
+## 项目概述
+Meridian是一个AI驱动的个性化情报简报系统，基于Cloudflare生态构建。项目采用Monorepo架构，使用TypeScript、Nuxt 3、Hono、Google Gemini AI等技术栈。
+
+## 核心原则
+
+### 代码质量
+- 严格的TypeScript配置，避免any类型
+- 使用Zod进行运行时验证
+- 优先使用函数式编程和immutable数据
+- 错误处理使用neverthrow库的Result模式
+
+### 架构偏好
+- 微服务架构，每个服务职责单一
+- 数据流向清晰：RSS → 处理 → AI分析 → 聚类 → 简报
+- 使用Repository模式进行数据访问
+- API设计遵循RESTful原则
+
+### 性能优化
+- 优先使用Cloudflare Workers的edge computing优势
+- AI API调用使用批处理减少成本
+- 前端使用SSR提升SEO和首屏性能
+- 数据库查询优化，避免N+1问题
+
+## 技术栈规范
+
+### 后端开发 (apps/backend)
+- **框架**: Hono - 轻量级，适合Cloudflare Workers
+- **验证**: Zod schema validation
+- **错误处理**: neverthrow Result/Option模式
+- **数据库**: Drizzle ORM with PostgreSQL
+- **AI集成**: 主要使用Gemini 2.0 Flash (成本效益)
+
+### 前端开发 (apps/frontend)
+- **框架**: Nuxt 3 with Vue 3 Composition API
+- **样式**: Tailwind CSS v4
+- **组件**: Headless UI + 自定义组件
+- **状态管理**: 使用Pinia (如需要)
+- **类型安全**: 全面的TypeScript覆盖
+
+### Python服务 (services/meridian-ml-service)
+- **聚类算法**: UMAP + HDBSCAN
+- **数据处理**: pandas + numpy
+- **向量化**: multilingual-e5-small embeddings
+- **接口**: RESTful API或直接脚本调用
+
+## 开发模式
+
+### 文件结构约定
+```
+apps/
+  backend/src/
+    routers/          # API路由
+    workflows/        # Cloudflare Workflows
+    durable_objects/  # CF Durable Objects
+    lib/             # 共享工具
+  frontend/src/
+    pages/           # 页面组件
+    components/      # 可复用组件
+    composables/     # Vue composables
+    server/api/      # 服务端API
+```
+
+### 命名约定
+- 文件名: kebab-case (article-processor.ts)
+- 组件名: PascalCase (ArticleCard.vue)
+- 函数名: camelCase (processArticle)
+- 常量: SCREAMING_SNAKE_CASE (API_BASE_URL)
+- 类型: PascalCase (ArticleMetadata)
+
+### API设计模式
+- 使用RESTful设计
+- 统一的错误响应格式
+- 请求/响应使用Zod验证
+- API版本化 (/v1/articles)
+
+```typescript
+// 标准API响应格式
+type ApiResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: string;
+}
+```
+
+## 关键实现模式
+
+### 错误处理
+使用neverthrow的Result模式：
+```typescript
+import { Result, ok, err } from 'neverthrow';
+
+async function processArticle(id: string): Promise<Result<Article, Error>> {
+  try {
+    const article = await fetchArticle(id);
+    return ok(article);
+  } catch (error) {
+    return err(new Error(`Failed to process article: ${error.message}`));
+  }
+}
+```
+
+### AI API调用
+- 批量处理降低成本
+- 使用指数退避重试
+- 缓存分析结果
+- 选择合适的模型（Flash vs Pro）
+
+```typescript
+// AI调用的标准模式
+const aiService = {
+  analyze: async (content: string) => {
+    return await batchProcess([content], {
+      model: 'gemini-2.0-flash',
+      retries: 3,
+      cacheKey: hashContent(content)
+    });
+  }
+};
+```
+
+### 数据库操作
+使用Drizzle ORM的标准模式：
+```typescript
+// Repository模式
+class ArticleRepository {
+  async findById(id: string) {
+    return await db.select().from(articles).where(eq(articles.id, id));
+  }
+  
+  async create(data: NewArticle) {
+    return await db.insert(articles).values(data).returning();
+  }
+}
+```
+
+## 特定业务逻辑
+
+### RSS抓取流程
+1. 定时触发Cloudflare Workflows
+2. 解析RSS feeds获取文章元数据
+3. 去重检测（基于URL和hash）
+4. 存储到数据库，触发后续处理
+
+### AI分析流程
+1. 文章内容提取（Mozilla Readability + 浏览器渲染）
+2. 相关性分析（Gemini Flash快速筛选）
+3. 深度分析（Gemini Pro结构化提取）
+4. 存储分析结果
+
+### 简报生成流程（待自动化）
+1. 获取已分析文章
+2. 向量化内容（multilingual-e5-small）
+3. UMAP降维 + HDBSCAN聚类
+4. LLM分析集群并生成简报
+5. Markdown格式输出
+
+## 部署和运维
+
+### 环境配置
+- 使用.env文件管理环境变量
+- 敏感信息使用Cloudflare secrets
+- 区分开发/生产环境配置
+
+### 监控和日志
+- 结构化日志记录
+- 关键指标监控：抓取成功率、AI成本、响应时间
+- 错误告警机制
+
+### 性能优化
+- Cloudflare缓存策略
+- 数据库查询优化
+- 前端资源优化
+- AI API成本控制
+
+## 当前优先级
+
+### 立即需要解决
+1. **简报生成自动化** - 将Python notebook转换为自动化服务
+2. **监控系统** - 建立基础的错误跟踪和性能监控
+3. **测试覆盖** - 为核心功能添加单元测试
+
+### 中期改进
+1. 用户账户和偏好系统
+2. Newsletter分发功能
+3. 管理后台增强
+
+### 代码风格偏好
+- 优先使用函数式编程风格
+- 避免深层嵌套，使用early return
+- 明确的类型定义，避免隐式any
+- 有意义的变量和函数命名
+- 适当的注释，特别是复杂业务逻辑
+
+## 常见陷阱
+- Cloudflare Workers的执行时间限制（避免长时间运行任务）
+- AI API成本控制（使用批处理和缓存）
+- 数据库连接限制（使用连接池）
+- 前端SSR/CSR混合渲染的状态同步问题 

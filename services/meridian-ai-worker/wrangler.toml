@@ -9,6 +9,10 @@ vars = { ENVIRONMENT = "production" }
 [env.development]
 vars = { ENVIRONMENT = "development" }
 
+# AI Binding for Cloudflare Workers AI
+[ai]
+binding = "AI"
+
 # Environment variables (set these using wrangler secret put)
 # Required:
 # CLOUDFLARE_ACCOUNT_ID
@@ -18,7 +22,7 @@ vars = { ENVIRONMENT = "development" }
 
 # Optional Provider API Keys:
 # ANTHROPIC_API_KEY
-# GOOGLE_API_KEY
+# GOOGLE_AI_API_KEY
 
 # AI Gateway Enhanced Features (optional):
 # AI_GATEWAY_AUTH_TOKEN - AI Gateway authentication token for enhanced security

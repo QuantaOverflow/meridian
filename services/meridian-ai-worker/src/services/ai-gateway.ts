@@ -18,6 +18,7 @@ import {
 import { OpenAIProvider } from './providers/openai'
 import { WorkersAIProvider } from './providers/workers-ai'
 import { AnthropicProvider } from './providers/anthropic'
+import { GoogleAIProvider } from './providers/google-ai'
 import { MockProvider } from './providers/mock'
 import { getProvidersForCapability, getAllProviders } from '../config/providers'
 import { AuthenticationService } from './auth'
@@ -74,6 +75,10 @@ export class AIGatewayService {
     
     if (env.ANTHROPIC_API_KEY) {
       this.providers.set('anthropic', new AnthropicProvider(env.ANTHROPIC_API_KEY))
+    }
+
+    if (env.GOOGLE_AI_API_KEY) {
+      this.providers.set('google-ai-studio', new GoogleAIProvider(env.GOOGLE_AI_API_KEY))
     }
 
     // Add mock provider in development mode or when no real providers are available
@@ -531,6 +536,11 @@ export class AIGatewayService {
       
       case 'anthropic':
         // For Anthropic, use the standard endpoint path
+        // Keep the original endpoint format
+        return endpoint
+      
+      case 'google-ai-studio':
+        // For Google AI, use the standard endpoint path
         // Keep the original endpoint format
         return endpoint
       

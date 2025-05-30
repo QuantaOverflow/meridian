@@ -1,15 +1,12 @@
 import getArticleAnalysisPrompt, { articleAnalysisSchema } from '../prompts/articleAnalysis.prompt';
 import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { DomainRateLimiter } from '../lib/rateLimiter';
-import { generateObject } from 'ai';
 import { Env } from '../index';
 import { err, ok } from 'neverthrow';
 import { generateSearchText, getDb } from '../lib/utils';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/articleFetchers';
 import { ResultAsync } from 'neverthrow';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
-import { createEmbeddings } from '../lib/embeddings';
 import { Logger } from '../lib/logger';
 
 const TRICKY_DOMAINS = [
@@ -59,10 +56,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
   async run(_event: WorkflowEvent<ProcessArticlesParams>, step: WorkflowStep) {
     const env = this.env;
     const db = getDb(env.HYPERDRIVE);
-    const google = createGoogleGenerativeAI({
-      apiKey: env.GEMINI_API_KEY,
-      baseURL: env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta',
-    });
+    
     const logger = workflowLogger.child({
       workflow_id: _event.instanceId,
       initial_article_count: _event.payload.articles_id.length,
@@ -245,13 +239,21 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             `analyze article ${article.id}`,
             { retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }, timeout: '1 minute' },
             async () => {
-              const response = await generateObject({
-                model: google('gemini-1.5-flash-8b-001'),
-                temperature: 0,
-                prompt: getArticleAnalysisPrompt(article.title, article.text),
-                schema: articleAnalysisSchema,
+              // Use the AI_WORKER service binding instead of direct Google AI
+              const response = await env.AI_WORKER.analyzeArticle({
+                title: article.title,
+                content: article.text,
+                options: {
+                  provider: 'google',
+                  model: 'gemini-1.5-flash'
+                }
               });
-              return response.object;
+              
+              if (!response.success) {
+                throw new Error(response.error || 'AI analysis failed');
+              }
+              
+              return response.data;
             }
           );
 
@@ -270,8 +272,21 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             step.do(`generate embeddings for article ${article.id}`, async () => {
               articleLogger.info('Generating embeddings');
               const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
-              const embedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', { text: searchText });
-              return embedding.data[0];
+              
+              // Use AI_WORKER service binding instead of direct Cloudflare AI
+              const embeddingResponse = await env.AI_WORKER.generateEmbedding({
+                text: searchText,
+                options: {
+                  provider: 'cloudflare',
+                  model: 'bge-small-en-v1.5'
+                }
+              });
+              
+              if (!embeddingResponse.success) {
+                throw new Error(embeddingResponse.error || 'Embedding generation failed');
+              }
+              
+              return embeddingResponse.data;
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {
               articleLogger.info('Uploading article contents to R2');

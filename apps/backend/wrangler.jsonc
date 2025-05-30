@@ -84,7 +84,7 @@
   "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
   "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
   "ML_SERVICE_URL": "https://your-production-ml-service.com"
-}
+},
   // !!! NOTE !!! : tail workers make workers with durable objects CRASH for now - 30/04/2025
   // "tail_consumers": [
   //   {
@@ -111,5 +111,10 @@
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
-  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+  "services": [
+    {
+      "binding": "AI_WORKER",
+      "service": "meridian-ai-worker"
+    }
+  ]
 }

@@ -1,13 +1,16 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { AIGatewayService } from './services/ai-gateway'
+import { getArticleAnalysisPrompt, articleAnalysisSchema, ArticleAnalysisResult } from './prompts/articleAnalysis'
 import { 
   AIRequest, 
   ChatRequest, 
   EmbeddingRequest, 
   ImageRequest,
   CloudflareEnv,
-  AICapability 
+  AICapability,
+  ChatResponse,
+  EmbeddingResponse
 } from './types'
 
 type HonoEnv = {
@@ -32,45 +35,347 @@ app.use('*', cors({
   ],
 }))
 
+// =============================================================================
+// 🎯 Direct Binding Interface for Service-to-Service Communication
+// =============================================================================
+
+/**
+ * AI Worker Service Class for direct binding calls
+ * This class provides typed interfaces for other Workers to call this service
+ */
+class MeridianAIWorkerService {
+  private aiGateway: AIGatewayService
+
+  constructor(private env: CloudflareEnv) {
+    this.aiGateway = new AIGatewayService(env)
+  }
+
+  /**
+   * Analyze article content - Direct binding method
+   * Uses the same prompt and schema as the backend for consistency
+   */
+  async analyzeArticle(params: {
+    title: string
+    content: string
+    options?: {
+      provider?: string
+      model?: string
+    }
+  }): Promise<{
+    success: boolean
+    data?: ArticleAnalysisResult | string
+    error?: string
+    metadata?: any
+  }> {
+    try {
+      const { title, content, options = {} } = params
+
+      if (!title || !content) {
+        return {
+          success: false,
+          error: 'Missing required fields: title and content are required'
+        }
+      }
+
+      // Generate the specialized article analysis prompt
+      const analysisPrompt = getArticleAnalysisPrompt(title, content)
+
+      const analysisRequest: ChatRequest = {
+        capability: 'chat',
+        provider: options.provider || 'google-ai-studio',
+        model: options.model || 'gemini-1.5-flash-8b-001',
+        messages: [
+          {
+            role: 'user',
+            content: analysisPrompt
+          }
+        ],
+        temperature: 0, // Consistent results for structured extraction
+        metadata: {
+          requestId: crypto.randomUUID(),
+          timestamp: Date.now(),
+          source: {
+            origin: 'meridian-ai-worker'
+          },
+          customTags: {
+            endpoint: 'analyze-article'
+          }
+        }
+      }
+
+      const response = await this.aiGateway.processRequest(analysisRequest)
+      const chatResponse = response as ChatResponse
+      const rawAnalysisData = chatResponse.choices?.[0]?.message?.content
+
+      if (!rawAnalysisData) {
+        return {
+          success: false,
+          error: 'No analysis data received from AI provider'
+        }
+      }
+
+      // Try to parse and validate the JSON response
+      try {
+        // Extract JSON from the response (in case there's extra text)
+        let jsonStr = rawAnalysisData.trim()
+        
+        // Remove markdown code blocks
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1].trim()
+        }
+        
+        // If still no valid JSON start, try to find the JSON object
+        if (!jsonStr.startsWith('{')) {
+          const jsonMatch = jsonStr.match(/{\s*[\s\S]*\s*}/)
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0]
+          }
+        }
+        
+        // Parse the JSON
+        const parsedData = JSON.parse(jsonStr)
+        
+        // Clean and normalize data to match schema
+        const normalizedData = {
+          language: String(parsedData.language || 'en').substring(0, 2).toLowerCase(),
+          primary_location: String(parsedData.primary_location || 'N/A'),
+          completeness: parsedData.completeness === 'COMPLETE' || parsedData.completeness === 'PARTIAL_USEFUL' || parsedData.completeness === 'PARTIAL_USELESS' 
+            ? parsedData.completeness 
+            : (Number(parsedData.completeness) >= 4 ? 'COMPLETE' : Number(parsedData.completeness) >= 2 ? 'PARTIAL_USEFUL' : 'PARTIAL_USELESS'),
+          content_quality: parsedData.content_quality === 'OK' || parsedData.content_quality === 'LOW_QUALITY' || parsedData.content_quality === 'JUNK'
+            ? parsedData.content_quality
+            : (Number(parsedData.content_quality) >= 4 ? 'OK' : Number(parsedData.content_quality) >= 2 ? 'LOW_QUALITY' : 'JUNK'),
+          event_summary_points: Array.isArray(parsedData.event_summary_points) ? parsedData.event_summary_points : [],
+          thematic_keywords: Array.isArray(parsedData.thematic_keywords) ? parsedData.thematic_keywords : [],
+          topic_tags: Array.isArray(parsedData.topic_tags) ? parsedData.topic_tags : [],
+          key_entities: Array.isArray(parsedData.key_entities) ? parsedData.key_entities : [],
+          content_focus: Array.isArray(parsedData.content_focus) ? parsedData.content_focus : []
+        }
+        
+        // Validate against schema
+        const validatedData = articleAnalysisSchema.parse(normalizedData)
+        
+        return {
+          success: true,
+          data: validatedData,
+          metadata: {
+            provider: response.provider,
+            model: response.model,
+            processingTime: response.processingTime,
+            requestId: response.metadata?.requestId,
+            validated: true
+          }
+        }
+
+      } catch (parseError) {
+        console.warn('Failed to parse/validate analysis result, returning raw data:', parseError)
+        
+        // If parsing fails, return the raw string for debugging
+        return {
+          success: true,
+          data: rawAnalysisData,
+          metadata: {
+            provider: response.provider,
+            model: response.model,
+            processingTime: response.processingTime,
+            requestId: response.metadata?.requestId,
+            validated: false,
+            parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Article analysis error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Generate embeddings - Direct binding method
+   */
+  async generateEmbedding(params: {
+    text: string
+    options?: {
+      provider?: string
+      model?: string
+    }
+  }): Promise<{
+    success: boolean
+    data?: number[]
+    error?: string
+    metadata?: any
+  }> {
+    try {
+      const { text, options = {} } = params
+
+      if (!text) {
+        return {
+          success: false,
+          error: 'Missing required field: text is required'
+        }
+      }
+
+      const embeddingRequest: EmbeddingRequest = {
+        capability: 'embedding',
+        provider: options.provider || 'workers-ai',
+        model: options.model || '@cf/baai/bge-small-en-v1.5',
+        input: text,
+        metadata: {
+          requestId: crypto.randomUUID(),
+          timestamp: Date.now(),
+          source: {
+            origin: 'meridian-ai-worker'
+          },
+          customTags: {
+            endpoint: 'generate-embedding'
+          }
+        }
+      }
+
+      const response = await this.aiGateway.processRequest(embeddingRequest)
+      const embeddingResponse = response as EmbeddingResponse
+
+      return {
+        success: true,
+        data: embeddingResponse.data[0]?.embedding,
+        metadata: {
+          provider: response.provider,
+          model: response.model,
+          processingTime: response.processingTime,
+          requestId: response.metadata?.requestId
+        }
+      }
+
+    } catch (error) {
+      console.error('Embedding generation error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Health check - Direct binding method
+   */
+  async healthCheck(): Promise<{
+    status: string
+    service: string
+    version: string
+    providers?: any
+  }> {
+    try {
+      const providers = Array.from(this.aiGateway.getAvailableProviders())
+      
+      return {
+        status: 'healthy',
+        service: 'meridian-ai-worker',
+        version: '2.0.0',
+        providers: {
+          available: providers,
+          google_configured: !!this.env.GOOGLE_AI_API_KEY,
+          workers_ai_configured: !!this.env.CLOUDFLARE_API_TOKEN,
+          openai_configured: !!this.env.OPENAI_API_KEY
+        }
+      }
+    } catch (error) {
+      return {
+        status: 'error',
+        service: 'meridian-ai-worker',
+        version: '2.0.0'
+      }
+    }
+  }
+}
+
+// =============================================================================
+// 🌐 HTTP API Endpoints (for external access if needed)
+// =============================================================================
+
+// Meridian-specific article analysis endpoint
+app.post('/meridian/article/analyze', async (c) => {
+  try {
+    const body = await c.req.json()
+    const service = new MeridianAIWorkerService(c.env)
+    const result = await service.analyzeArticle(body)
+    
+    if (result.success) {
+      return c.json(result)
+    } else {
+      return c.json(result, 400)
+    }
+  } catch (error) {
+    console.error('Article analysis error:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to analyze article',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+// Meridian-specific embedding generation endpoint
+app.post('/meridian/embeddings/generate', async (c) => {
+  try {
+    const body = await c.req.json()
+    const service = new MeridianAIWorkerService(c.env)
+    const result = await service.generateEmbedding(body)
+    
+    if (result.success) {
+      return c.json(result)
+    } else {
+      return c.json(result, 400)
+    }
+  } catch (error) {
+    console.error('Embedding generation error:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to generate embeddings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+// Meridian configuration endpoint
+app.get('/meridian/config', async (c) => {
+  try {
+    const service = new MeridianAIWorkerService(c.env)
+    const healthData = await service.healthCheck()
+    
+    return c.json({
+      ...healthData,
+      endpoints: {
+        article_analysis: '/meridian/article/analyze',
+        embedding_generation: '/meridian/embeddings/generate',
+        health_check: '/health'
+      },
+      features: {
+        retry_logic: true,
+        cost_tracking: c.env.AI_GATEWAY_ENABLE_COST_TRACKING === 'true',
+        caching: c.env.AI_GATEWAY_ENABLE_CACHING === 'true',
+        metrics: c.env.AI_GATEWAY_ENABLE_METRICS === 'true'
+      }
+    })
+  } catch (error) {
+    console.error('Config error:', error)
+    return c.json({ 
+      error: 'Failed to get configuration',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
 // Health check with AI Gateway status
 app.get('/health', async (c) => {
   try {
-    const env = c.env
-    if (!env) {
-      return c.json({ 
-        status: 'error',
-        error: 'Environment not configured' 
-      }, 500)
-    }
-
-    const aiGatewayService = new AIGatewayService(env)
-    
-    // Check AI Gateway enhanced features status
-    const enhancedStatus = {
-      authentication: !!env.AI_GATEWAY_AUTH_TOKEN,
-      cost_tracking: env.AI_GATEWAY_ENABLE_COST_TRACKING === 'true',
-      caching: env.AI_GATEWAY_ENABLE_CACHING === 'true',
-      metrics: env.AI_GATEWAY_ENABLE_METRICS === 'true',
-      logging: env.AI_GATEWAY_ENABLE_LOGGING === 'true',
-      default_cache_ttl: parseInt(env.AI_GATEWAY_DEFAULT_CACHE_TTL || '3600')
-    }
-    
-    return c.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      service: 'meridian-ai-worker',
-      version: '2.0.0',
-      ai_gateway: enhancedStatus,
-      environment: env.ENVIRONMENT || 'unknown',
-      providers: {
-        available: Array.from(aiGatewayService.getAvailableProviders()),
-        openai_configured: !!env.OPENAI_API_KEY,
-        workers_ai_configured: !!env.CLOUDFLARE_API_TOKEN,
-        anthropic_configured: !!env.ANTHROPIC_API_KEY,
-        account_id: env.CLOUDFLARE_ACCOUNT_ID ? 'configured' : 'missing',
-        gateway_id: env.CLOUDFLARE_GATEWAY_ID ? 'configured' : 'missing'
-      }
-    })
+    const service = new MeridianAIWorkerService(c.env)
+    const result = await service.healthCheck()
+    return c.json(result)
   } catch (error) {
     return c.json({ 
       status: 'error',
@@ -199,161 +504,44 @@ app.get('/capabilities/:capability/providers', (c) => {
     
     return c.json({ 
       capability,
-      providers,
-      count: providers.length
+      providers: providers.map(name => ({
+        name,
+        models: aiGateway.getModelsForProvider(name).filter(model => 
+          aiGateway.getProviderCapabilities(name).includes(capability)
+        )
+      })),
+      total: providers.length
     })
   } catch (error) {
     console.error('Capability providers error:', error)
-    return c.json({ error: 'Failed to get capability providers' }, 500)
+    return c.json({ error: 'Failed to get providers for capability' }, 500)
   }
 })
 
-// Unified AI endpoint - handles all capabilities with enhanced security
-app.post('/ai', async (c) => {
+// Generic AI request endpoint (supports all capabilities)
+app.post('/ai/*', async (c) => {
   try {
     const env = c.env
     if (!env) {
-      return c.json({ error: 'Environment variables not configured' }, 500)
+      return c.json({ error: 'Environment not configured' }, 500)
     }
 
     const aiGateway = new AIGatewayService(env)
-    
-    // Use enhanced authentication and processing
-    const request = c.req.raw
-    const response = await aiGateway.processRequestWithAuth(request)
-    
-    // Return the response directly since it's already a Response object
-    return response
+    return await aiGateway.processRequestWithAuth(c.req.raw)
   } catch (error) {
     console.error('AI request error:', error)
     return c.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process AI request',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, 500)
   }
 })
 
-// Chat endpoint (backward compatibility)
-app.post('/chat', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // Validate request
-    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-      return c.json({ error: 'Messages array is required and cannot be empty' }, 400)
-    }
-
-    const env = c.env
-    if (!env) {
-      return c.json({ error: 'Environment variables not configured' }, 500)
-    }
-
-    // Convert to new format
-    const chatRequest: ChatRequest = {
-      capability: 'chat',
-      messages: body.messages,
-      model: body.model,
-      provider: body.provider,
-      temperature: body.temperature,
-      max_tokens: body.max_tokens,
-      stream: body.stream,
-      fallback: body.fallback
-    }
-
-    const aiGateway = new AIGatewayService(env)
-    const response = await aiGateway.processRequest(chatRequest)
-    return c.json(response)
-  } catch (error) {
-    console.error('Chat error:', error)
-    return c.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, 500)
-  }
-})
-
-// Embedding endpoint
-app.post('/embed', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // Validate request
-    if (!body.input) {
-      return c.json({ error: 'Input is required' }, 400)
-    }
-
-    const env = c.env
-    if (!env) {
-      return c.json({ error: 'Environment variables not configured' }, 500)
-    }
-
-    const embeddingRequest: EmbeddingRequest = {
-      capability: 'embedding',
-      input: body.input,
-      model: body.model,
-      provider: body.provider,
-      dimensions: body.dimensions,
-      fallback: body.fallback
-    }
-
-    const aiGateway = new AIGatewayService(env)
-    const response = await aiGateway.processRequest(embeddingRequest)
-    return c.json(response)
-  } catch (error) {
-    console.error('Embedding error:', error)
-    return c.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, 500)
-  }
-})
-
-// Image generation endpoint
-app.post('/images/generate', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // Validate request
-    if (!body.prompt) {
-      return c.json({ error: 'Prompt is required' }, 400)
-    }
-
-    const env = c.env
-    if (!env) {
-      return c.json({ error: 'Environment variables not configured' }, 500)
-    }
-
-    const imageRequest: ImageRequest = {
-      capability: 'image',
-      prompt: body.prompt,
-      model: body.model,
-      provider: body.provider,
-      size: body.size,
-      quality: body.quality,
-      style: body.style,
-      n: body.n,
-      fallback: body.fallback
-    }
-
-    const aiGateway = new AIGatewayService(env)
-    const response = await aiGateway.processRequest(imageRequest)
-    return c.json(response)
-  } catch (error) {
-    console.error('Image generation error:', error)
-    return c.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, 500)
-  }
-})
-
-// Streaming endpoints (future implementation)
-app.post('/chat/stream', async (c) => {
-  return c.json({ error: 'Streaming not yet implemented' }, 501)
-})
-
-app.post('/ai/stream', async (c) => {
-  return c.json({ error: 'Streaming not yet implemented' }, 501)
-})
+// =============================================================================
+// 🎯 Export for Worker Bindings
+// =============================================================================
 
 export default app
+
+// Export the service class for direct binding access
+export { MeridianAIWorkerService }

@@ -377,7 +377,7 @@ export interface Env {
   CLOUDFLARE_API_TOKEN: string
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY?: string
-  GOOGLE_API_KEY?: string
+  GOOGLE_AI_API_KEY?: string
   // Authentication and security
   API_SECRET_KEY?: string
   ALLOWED_ORIGINS?: string
@@ -396,7 +396,7 @@ export interface CloudflareEnv extends Record<string, string | undefined> {
   CLOUDFLARE_API_TOKEN: string
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY?: string
-  GOOGLE_API_KEY?: string
+  GOOGLE_AI_API_KEY?: string
   // Authentication and security
   API_SECRET_KEY?: string
   ALLOWED_ORIGINS?: string

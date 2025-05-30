@@ -18,6 +18,44 @@ export type Env = {
   PROCESS_ARTICLES: Workflow;
   HYPERDRIVE: Hyperdrive;
   AI: Ai;
+  
+  // AI Worker Service Binding - connects to meridian-ai-worker
+  AI_WORKER: {
+    analyzeArticle(params: {
+      title: string
+      content: string
+      options?: {
+        provider?: string
+        model?: string
+      }
+    }): Promise<{
+      success: boolean
+      data?: any
+      error?: string
+      metadata?: any
+    }>
+    
+    generateEmbedding(params: {
+      text: string
+      options?: {
+        provider?: string
+        model?: string
+      }
+    }): Promise<{
+      success: boolean
+      data?: number[]
+      error?: string
+      metadata?: any
+    }>
+    
+    healthCheck(): Promise<{
+      status: string
+      service: string
+      version: string
+      providers?: any
+    }>
+  };
+  
   // Secrets
   API_TOKEN: string;
 

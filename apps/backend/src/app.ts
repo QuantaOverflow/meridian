@@ -3,6 +3,7 @@ import reportsRouter from './routers/reports.router';
 import sourcesRouter from './routers/sources.router';
 import durableObjectsRouter from './routers/durableObjects.router';
 import eventsRouter from './routers/events.router'; // 导入新的路由
+import adminRouter from './routers/admin'; // 导入admin路由
 import { Env } from './index';
 import { Hono } from 'hono';
 import { trimTrailingSlash } from 'hono/trailing-slash';
@@ -17,6 +18,7 @@ const app = new Hono<HonoEnv>()
   .route('/openGraph', openGraph)
   .route('/do', durableObjectsRouter)
   .route('/events', eventsRouter) // 添加新的路由
+  .route('/admin', adminRouter) // 添加admin路由
   .get('/ping', async c => c.json({ pong: true }));
 
 export default app;

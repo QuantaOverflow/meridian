@@ -75,6 +75,11 @@
       "binding": "PROCESS_ARTICLES",
       "class_name": "ProcessArticles",
     },
+    {
+      "name": "auto_brief_generation",
+      "binding": "MY_WORKFLOW",
+      "class_name": "AutoBriefGenerationWorkflow",
+    },
   ],
   "ai": {
     "binding": "AI"

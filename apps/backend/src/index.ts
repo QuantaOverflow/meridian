@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import importedApp from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
+import { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';
 import { Logger } from './lib/logger';
 import { Ai } from '@cloudflare/ai';
 import { getDb } from './lib/utils';
@@ -18,6 +19,7 @@ export type Env = {
   ARTICLE_PROCESSING_QUEUE: Queue<ArticleQueueMessage>;
   SOURCE_SCRAPER: DurableObjectNamespace<SourceScraperDO>;
   PROCESS_ARTICLES: Workflow;
+  MY_WORKFLOW: Workflow; // 简报生成工作流
   HYPERDRIVE: Hyperdrive;
   AI: Ai;
   
@@ -101,33 +103,35 @@ app.use('*', async (c, next) => {
 // 添加 Service Binding 测试路由
 app.get('/test-ai-worker', async (c) => {
   try {
-    // 测试 AI_WORKER service binding 通过 fetch 方法
-    const healthRequest = new Request('https://meridian-ai-worker/health', {
-      method: 'GET'
-    });
+    // 测试 AI_WORKER service binding
+    const healthRequest = new Request('https://meridian-ai-worker/health');
     const healthResponse = await c.env.AI_WORKER.fetch(healthRequest);
     const healthData = await healthResponse.json();
     
-    const analysisRequest = new Request('https://meridian-ai-worker/meridian/article/analyze', {
+    // 简单的聚类测试
+    const testRequest = new Request('https://meridian-ai-worker/meridian/clustering/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: "Service Binding Test",
-        content: "Testing the connection between Backend Worker and AI Worker via Service Binding.",
-        options: {
-          provider: "google-ai-studio",
-          model: "gemini-1.5-flash-8b-001"
-        }
+        articles: [
+          { id: 1, embedding: new Array(384).fill(0.1) },
+          { id: 2, embedding: new Array(384).fill(0.2) }
+        ],
+        options: { auto_optimize: true }
       })
     });
-    const analysisResponse = await c.env.AI_WORKER.fetch(analysisRequest);
-    const analysisData = await analysisResponse.json();
+    const testResponse = await c.env.AI_WORKER.fetch(testRequest);
+    const testData = await testResponse.json();
 
     return c.json({
       success: true,
-      message: "AI_WORKER Service Binding is working via fetch!",
-      healthCheck: healthData,
-      analysisTest: analysisData
+      message: "AI Worker Service Binding测试",
+      health_check: healthData,
+      clustering_test: {
+        status: testResponse.status,
+        success: testResponse.ok,
+        result: testData
+      }
     });
   } catch (error) {
     return c.json({
@@ -299,141 +303,56 @@ app.post('/test-workflow-manual', async (c) => {
   }
 });
 
-// 添加失败文章重试端点
+// 添加失败文章重试端点（简化版）
 app.post('/retry-failed-articles', async (c) => {
   try {
     const db = getDb(c.env.HYPERDRIVE);
     const body = await c.req.json();
-    
-    // 可选的过滤参数
-    const {
-      specific_ids,  // 指定文章ID
-      status_filter, // 状态过滤 ['FETCH_FAILED', 'RENDER_FAILED', 'AI_ANALYSIS_FAILED', 'EMBEDDING_FAILED', 'R2_UPLOAD_FAILED']
-      hours_since_failed = 24, // 多少小时内失败的文章
-      limit = 50 // 限制重试数量
-    } = body;
+    const { specific_ids, limit = 10 } = body;
 
-    let query = db.select({
-      id: $articles.id,
-      title: $articles.title,
-      status: $articles.status,
-      failReason: $articles.failReason,
-      processedAt: $articles.processedAt,
-      url: $articles.url
-    }).from($articles);
+    let articlesToRetry: any[] = [];
 
-    // 构建查询条件
-    let conditions = [];
-
-    // 如果指定了具体ID，优先使用
     if (specific_ids && Array.isArray(specific_ids) && specific_ids.length > 0) {
-      conditions.push(inArray($articles.id, specific_ids));
+      // 重试指定的文章
+      articlesToRetry = await db.select().from($articles)
+        .where(inArray($articles.id, specific_ids))
+        .limit(limit);
     } else {
-      // 否则查找失败的文章
-      
-      // 状态过滤
-      if (status_filter && Array.isArray(status_filter) && status_filter.length > 0) {
-        const validStatuses = status_filter.filter(s => 
-          ['FETCH_FAILED', 'RENDER_FAILED', 'AI_ANALYSIS_FAILED', 'EMBEDDING_FAILED', 'R2_UPLOAD_FAILED'].includes(s)
-        );
-        if (validStatuses.length > 0) {
-          conditions.push(inArray($articles.status, validStatuses));
-        }
-      } else {
-        // 默认查找所有失败状态
-        conditions.push(inArray($articles.status, [
-          'FETCH_FAILED', 
-          'RENDER_FAILED', 
-          'AI_ANALYSIS_FAILED', 
-          'EMBEDDING_FAILED', 
-          'R2_UPLOAD_FAILED'
-        ]));
-      }
-
-      // 时间过滤 - 在指定小时数内失败的
-      const hoursAgo = new Date(Date.now() - hours_since_failed * 60 * 60 * 1000);
-      conditions.push(gte($articles.processedAt, hoursAgo));
+      // 重试最近失败的文章
+      articlesToRetry = await db.select().from($articles)
+        .where(sql`status IN ('FETCH_FAILED', 'RENDER_FAILED', 'AI_ANALYSIS_FAILED', 'EMBEDDING_FAILED', 'R2_UPLOAD_FAILED')`)
+        .limit(limit);
     }
 
-    // 应用所有条件
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    // 限制数量
-    query = query.limit(limit);
-
-    const failedArticles = await query;
-
-    if (failedArticles.length === 0) {
+    if (articlesToRetry.length === 0) {
       return c.json({
         success: true,
-        message: "没有找到符合条件的失败文章",
-        articles_found: 0,
-        criteria: {
-          specific_ids: specific_ids || null,
-          status_filter: status_filter || "所有失败状态",
-          hours_since_failed,
-          limit
-        }
+        message: "没有找到需要重试的文章",
+        articles_found: 0
       });
     }
 
-    // 重置失败文章的状态，使其可以重新处理
-    const articleIds = failedArticles.map(a => a.id);
-    
-    await db
-      .update($articles)
-      .set({
-        status: 'PENDING_FETCH',
-        processedAt: null,
-        failReason: null,
-        // 清除可能的分析数据，让重新处理
-        language: null,
-        primary_location: null,
-        completeness: null,
-        content_quality: null,
-        event_summary_points: null,
-        thematic_keywords: null,
-        topic_tags: null,
-        key_entities: null,
-        content_focus: null,
-        embedding: null,
-        contentFileKey: null
-      })
+    // 重置状态
+    const articleIds = articlesToRetry.map(a => a.id);
+    await db.update($articles)
+      .set({ status: 'PENDING_FETCH', processedAt: null, failReason: null })
       .where(inArray($articles.id, articleIds));
 
-    // 触发工作流重新处理
+    // 触发工作流
     const workflowResult = await startProcessArticleWorkflow(c.env, { articles_id: articleIds });
 
-    if (workflowResult.isOk()) {
-      return c.json({
-        success: true,
-        message: "失败文章重试已触发",
-        workflow_id: workflowResult.value.id,
-        articles_reset: failedArticles.length,
-        articles: failedArticles.map(a => ({
-          id: a.id,
-          title: a.title,
-          previous_status: a.status,
-          previous_fail_reason: a.failReason,
-          url: a.url
-        }))
-      });
-    } else {
-      return c.json({
-        success: false,
-        error: workflowResult.error.message,
-        message: "工作流触发失败，但文章状态已重置",
-        articles_reset: failedArticles.length
-      }, 500);
-    }
+    return c.json({
+      success: workflowResult.isOk(),
+      message: workflowResult.isOk() ? "重试已触发" : "工作流触发失败",
+      workflow_id: workflowResult.isOk() ? workflowResult.value.id : null,
+      articles_reset: articlesToRetry.length,
+      error: workflowResult.isErr() ? workflowResult.error.message : null
+    });
     
   } catch (error) {
     return c.json({
       success: false,
-      error: error instanceof Error ? error.message : String(error),
-      message: "重试失败文章操作失败"
+      error: error instanceof Error ? error.message : String(error)
     }, 500);
   }
 });
@@ -561,3 +480,4 @@ export default {
 
 export { SourceScraperDO };
 export { ProcessArticles } from './workflows/processArticles.workflow';
+export { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';

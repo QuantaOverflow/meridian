@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+.wrangler/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+.dev.vars.backup
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+coverage/
+.nyc_output/
+
+# Large test data files (should be in tests/fixtures/ or external)
+*.json.large
+real-articles*.json
+test-data-*.json
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Cache directories
+.cache/
+.parcel-cache/ 

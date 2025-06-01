@@ -1,4 +1,3 @@
-
 import { ProviderConfig } from '../types'
 
 export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
@@ -193,6 +192,19 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
           cache_ttl: 7200, // 2 hours for embeddings
           enable_cost_tracking: false,
           custom_tags: ['free', 'workers-ai', 'embedding']
+        }
+      },
+      {
+        name: '@cf/baai/bge-small-en-v1.5',
+        capabilities: ['embedding'],
+        endpoint: '/ai/run/@cf/baai/bge-small-en-v1.5',
+        max_tokens: 512,
+        supports_streaming: false,
+        cost_per_token: { input: 0, output: 0 },
+        ai_gateway_config: {
+          cache_ttl: 7200, // 2 hours for embeddings
+          enable_cost_tracking: false,
+          custom_tags: ['free', 'workers-ai', 'embedding', '384d']
         }
       },
       {

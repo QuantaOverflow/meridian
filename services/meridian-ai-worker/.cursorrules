@@ -1,0 +1,66 @@
+# Meridian AI Worker 开发指南
+
+## 项目结构原则
+
+### 已优化的目录结构
+- `src/` - 核心源码，按功能模块分层
+- `docs/` - 所有文档集中管理，不在根目录散布
+- `tests/fixtures/` - 测试数据专用目录，不放大文件在根目录
+- `scripts/` - 开发和部署脚本集中管理
+
+### 文件组织规则
+1. **文档整合**: 所有文档都放在 `docs/` 目录
+2. **测试数据**: 大型测试数据放在 `tests/fixtures/`，不在根目录
+3. **服务分层**: `src/services/` 按单一职责原则组织
+4. **能力模块**: `src/capabilities/` 按AI能力类型组织
+
+## AI Gateway 统一管理
+
+### 核心原则
+- 所有AI调用都通过 `AIGatewayService` 进行
+- 不直接调用 `c.env.AI.run` 或其他AI服务
+- 使用统一的缓存、重试和监控机制
+
+### 已废弃的服务
+- `EmbeddingService` - 已被 `AIGatewayService.embed()` 替代
+- 直接的 AI 调用 - 必须通过 AI Gateway
+
+### 服务集成模式
+```typescript
+// ✅ 正确做法
+const aiGatewayService = new AIGatewayService(env)
+const result = await aiGatewayService.chat(chatRequest)
+
+// ❌ 避免直接调用
+const result = await env.AI.run(model, data)
+```
+
+## 开发最佳实践
+
+### 新服务集成
+1. 使用 `scripts/create-new-service.js` 生成模板
+2. 确保通过 AI Gateway 调用
+3. 添加到 `docs/` 目录文档
+4. 在 `tests/` 中添加测试
+
+### 文档维护
+- API变更时更新 `docs/API_GUIDE.md`
+- 架构变更时更新 `docs/ARCHITECTURE.md`
+- 保持 `CHANGELOG.md` 同步
+
+### 性能优化
+- 利用 AI Gateway 的缓存机制
+- 使用适当的模型选择策略
+- 监控成本和性能指标
+
+## 部署和构建
+
+### 清理原则
+- 不提交大型测试数据文件到仓库
+- 使用 `.wrangler/` 缓存但不提交
+- 保持 `dist/` 目录在 `.gitignore` 中
+
+### 环境变量
+- 开发环境使用 `.dev.vars`
+- 生产环境通过 Cloudflare Workers 配置
+- 敏感信息不提交到仓库 

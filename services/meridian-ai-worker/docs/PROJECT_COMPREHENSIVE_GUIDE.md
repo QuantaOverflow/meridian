@@ -1,417 +1,163 @@
-# Meridian AI Worker - 项目综合指南
+# Meridian AI Worker - 项目指南
 
-## 🎉 项目状态概览
+## 🎉 项目概览
 
-**完成度**: ✅ **100%**  
 **版本**: v2.0.0  
-**最后更新**: 2025年5月27日
+**定位**: Meridian情报简报系统的AI服务层  
+**基础**: Cloudflare Workers + Hono框架
 
-### 核心成就
+### 核心功能
 
-- **测试通过率**:
-  - ✅ **单元测试**: 53/53 通过 (100%)
-  - ✅ **功能测试**: 13/13 通过 (100%)
-- ✅ **性能表现**: 5次请求平均响应时间 41ms (本地测试环境)
-- ✅ **代码质量**: 无编译错误，完整的TypeScript类型支持，符合Cloudflare Workers环境要求
-- ✅ **环境配置**: 119个环境变量完整配置，本地开发环境就绪
-- ✅ **部署就绪**: 所有配置文件、部署脚本和验证流程已完成
-
----
-
-## 🚀 当前产品功能特性
-
-### AI 能力支持矩阵
-
-| 能力        | OpenAI | Anthropic | Workers AI | Mock | 说明 |
-|-------------|--------|-----------|------------|------|------|
-| 💬 聊天对话   | ✅      | ✅         | ✅          | ✅    | 支持多轮对话、上下文记忆 |
-| 👁️ 视觉理解   | ✅      | ✅         | ❌          | ❌    | 图像分析、OCR、视觉问答 |
-| 📝 文本嵌入   | ✅      | ❌         | ✅          | ✅    | 语义搜索、文本相似度 |
-| 🎨 图像生成   | ✅      | ❌         | ✅          | ✅    | AI绘画、图像创作 |
-| 🎵 音频处理   | ✅      | ❌         | ❌          | ❌    | 语音转文字、音频分析 |
-
-### AI Gateway 增强功能
-
-- **💰 智能成本跟踪**: Token级别精确计费，支持自定义成本配置、预算限制和告警
-- **🚀 智能缓存系统**: 基于请求内容SHA256哈希生成缓存键，支持分层TTL策略
-- **🔐 增强认证与安全**: 支持API密钥验证、AI Gateway专用认证令牌、请求签名验证
-- **📊 全面监控与日志**: 结构化日志输出、性能指标收集、错误跟踪和报告
-- **🔄 智能重试与故障转移**: 基于错误类型的自动重试机制，自动故障转移至备用提供商
+- ✅ **文章分析**: 结构化内容分析和实体提取
+- ✅ **嵌入生成**: 384维向量生成用于语义搜索  
+- ✅ **聊天对话**: 支持多提供商的对话接口
+- ✅ **智能分析**: 故事聚合和重要性评估
+- ✅ **数据处理**: 已处理文章获取和简报保存
 
 ---
 
-## ⚙️ 技术架构
+## 🚀 技术架构
 
-### 核心服务与机制
+### AI 提供商支持
 
-- **统一接口**: 单个端点 (`POST /ai`) 支持所有AI能力，兼容旧版端点
-- **智能路由**: 根据请求能力和配置自动选择最佳或指定AI提供商
-- **模块化设计**: 清晰的项目结构，易于扩展和维护
-- **Cloudflare Workers**: 基于Cloudflare Workers构建，利用全球网络和边缘计算能力
-- **Web Crypto API**: 确保Cloudflare Workers环境兼容性
+| 提供商 | 聊天 | 嵌入 | 图像 | 状态 |
+|--------|------|------|------|------|
+| Workers AI | ✅ | ✅ | ✅ | 推荐 |
+| OpenAI | ✅ | ✅ | ✅ | 稳定 |
+| Google AI | ✅ | ❌ | ❌ | 稳定 |
+| Anthropic | ✅ | ❌ | ❌ | 可用 |
 
-### 关键性能指标 (本地测试)
+### 核心特性
 
-- **健康检查端点响应时间** (`/health`): ~1ms
-- **配置检查端点响应时间** (`/ai-gateway/config`): ~1ms
-- **提供商列表端点响应时间** (`/providers`): ~1ms
-- **高并发处理**: 设计支持高并发请求，具体限制取决于Cloudflare Workers平台
+- **智能路由**: 自动选择最佳AI提供商
+- **错误恢复**: 智能重试和故障转移  
+- **边缘计算**: 基于Cloudflare Workers的全球分发
+- **类型安全**: 完整的TypeScript支持
 
 ---
 
-## 🔧 环境配置与部署
+## ⚙️ 部署配置
 
-### 生产环境必需配置
+### 环境变量
 
-通过 `wrangler secret put <KEY>` 命令配置：
-
+**必需配置**:
 ```bash
-# Cloudflare 基础配置
-CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
-CLOUDFLARE_GATEWAY_ID=your_cloudflare_ai_gateway_id
-CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+# Cloudflare基础配置
+CLOUDFLARE_ACCOUNT_ID=your_account_id
+CLOUDFLARE_GATEWAY_ID=your_gateway_id
+CLOUDFLARE_API_TOKEN=your_api_token
 
-# AI 提供商 API 密钥 (至少配置一个)
-OPENAI_API_KEY=sk-your_openai_api_key
-ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key
-GOOGLE_API_KEY=AIzaSyYour_google_api_key
+# AI提供商密钥 (至少一个)
+OPENAI_API_KEY=sk-your_openai_key
+GOOGLE_AI_API_KEY=your_google_key
 ```
 
-### AI Gateway 增强功能配置 (可选)
-
+**可选配置**:
 ```bash
-# 认证与安全
-AI_GATEWAY_TOKEN=your_secure_gateway_auth_token
-GATEWAY_API_KEYS=prod_key_1,prod_key_2
-ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
-
-# 功能开关与参数
+# 增强功能
 ENABLE_COST_TRACKING=true
-DAILY_BUDGET_LIMIT=100
-COST_ALERT_THRESHOLD=80
-
 ENABLE_CACHING=true
-DEFAULT_CACHE_TTL=3600
-
-ENABLE_METRICS=true
-ENABLE_LOGGING=true
 LOG_LEVEL=info
 ```
 
-### 快速部署
+### 部署流程
 
 ```bash
-# 1. 克隆项目并安装依赖
-git clone <repository_url>
-cd meridian-ai-worker
+# 1. 安装依赖
 npm install
 
-# 2. 配置环境变量 (生产环境)
+# 2. 配置环境
 wrangler secret put CLOUDFLARE_ACCOUNT_ID
-wrangler secret put CLOUDFLARE_GATEWAY_ID
 wrangler secret put OPENAI_API_KEY
 
-# 3. 部署到 Cloudflare Workers
+# 3. 部署
 wrangler deploy --env production
 
-# 4. 验证部署
-curl https://your-worker-domain/health
+# 4. 验证
+curl https://your-worker.your-subdomain.workers.dev/health
 ```
 
 ---
 
-## 🛠️ 开发与维护
+## 🛠️ 开发指南
 
 ### 可用脚本
 
-- `npm run dev`: 启动本地开发服务器
-- `npm test`: 运行所有单元测试
-- `npm run build`: 构建项目
-- `./scripts/test-complete.sh`: 运行完整的本地功能测试套件
-- `./scripts/status-check.sh`: 快速检查服务状态
-- `./scripts/setup-local-env.sh`: 本地环境配置向导
+- `npm run dev` - 本地开发服务器
+- `npm test` - 运行测试套件
+- `npm run build` - 构建项目
+
+### API端点
+
+#### 核心业务接口
+```typescript
+POST /meridian/article/analyze     # 文章分析
+POST /meridian/embeddings/generate # 嵌入生成
+POST /meridian/chat               # 聊天对话
+POST /meridian/intelligence/analyze-story # 智能分析
+```
+
+#### 系统接口
+```typescript
+GET /health    # 健康检查
+GET /test      # 基础测试
+```
+
+### 本地开发
+
+1. **克隆项目**
+```bash
+git clone <repository>
+cd meridian-ai-worker
+```
+
+2. **环境配置**
+```bash
+cp .dev.vars.example .dev.vars
+# 编辑.dev.vars文件配置密钥
+```
+
+3. **启动开发**
+```bash
+npm run dev
+```
+
+---
+
+## 🔧 维护运维
+
+### 监控要点
+
+- **健康检查**: 定期访问 `/health` 端点
+- **错误日志**: 监控Cloudflare Workers日志
+- **API成本**: 跟踪AI提供商使用情况
+
+### 常见问题
+
+#### 1. 嵌入维度不匹配
+**症状**: 向量存储失败  
+**解决**: 确保使用`@cf/baai/bge-small-en-v1.5`模型（384维）
+
+#### 2. AI提供商调用失败
+**症状**: 分析/聊天功能异常  
+**解决**: 检查API密钥配置和网络连接
+
+#### 3. 部署失败
+**症状**: wrangler deploy错误  
+**解决**: 验证Cloudflare配置和权限
 
 ### 维护建议
 
-- **定期轮换API密钥和签名密钥**
-- **监控Cloudflare Dashboard**中的Worker指标和AI Gateway使用情况
-- **检查日志**: 定期检查Worker日志以发现潜在问题
-- **更新依赖**: 定期更新项目依赖并重新测试
+- **定期更新**: 每月检查依赖更新
+- **密钥轮换**: 定期更新AI提供商API密钥  
+- **性能监控**: 关注响应时间和成功率
+- **成本控制**: 监控AI调用成本
 
 ---
 
-## ✅ 已解决的关键问题
+## 📚 相关文档
 
-1. **CORS预检请求失败**: 通过修改测试脚本验证了CORS配置的有效性
-2. **Crypto模块兼容性**: 改为使用Web Crypto API实现相关功能
-3. **异步方法调用链**: 确保了所有异步方法的正确调用和类型安全
-4. **脚本执行权限**: 为所有bash脚本添加了可执行权限
-
----
-
-## 🔮 未来扩展规划
-
-### 🚀 核心功能扩展
-
-#### 1. 新AI能力支持
-
-- **🎵 音频处理增强**
-  - 多语言语音转文字
-  - 情感分析音频处理
-  - 实时语音流处理
-  - 音频降噪和增强
-
-- **📹 视频处理**
-  - 视频内容分析和理解
-  - 自动视频摘要生成
-  - 视频字幕自动生成
-  - 视频风格转换
-
-- **📄 文档处理**
-  - 智能PDF解析和提取
-  - 多格式文档转换
-  - 文档结构化分析
-  - 智能文档问答系统
-
-- **🔍 搜索增强**
-  - 向量化语义搜索
-  - RAG (检索增强生成) 系统
-  - 动态知识图谱构建
-  - 智能内容推荐
-
-#### 2. 新AI提供商集成
-
-**优先级规划**:
-- **短期**: Google Gemini, Microsoft Azure OpenAI
-- **中期**: Cohere, Hugging Face, Mistral AI
-- **长期**: Replicate, Together AI, 本地模型支持 (Ollama, LocalAI)
-
-### 🔧 架构和基础设施扩展
-
-#### 3. 流式响应支持
-- **服务器发送事件 (SSE)**: 为聊天等能力提供实时流式响应
-- **WebSocket支持**: 长连接实时通信
-- **分块传输**: 大型响应的分块处理
-
-#### 4. 高级缓存策略
-- **多层缓存架构**:
-  - L1: Worker内存缓存 (毫秒级)
-  - L2: Cloudflare KV存储 (秒级)
-  - L3: R2对象存储 (大型文件)
-- **智能缓存失效**: TTL + 内容版本控制
-- **缓存预热**: 热门内容自动预加载
-
-#### 5. 负载均衡优化
-- **智能路由策略**:
-  - 基于延迟的路由选择
-  - 成本优化的提供商选择
-  - 健康检查驱动的故障转移
-  - A/B测试框架集成
-
-### 📊 监控和分析扩展
-
-#### 6. 高级监控系统
-- **实时性能监控**:
-  - P95/P99延迟分布
-  - 按提供商的成功率统计
-  - 地理位置性能分析
-  - 用户体验监控 (UX Analytics)
-
-- **智能成本管理**:
-  - 实时成本跟踪和预测
-  - 智能预算告警系统
-  - 成本优化建议引擎
-  - 按用户/项目的成本分摊
-
-- **行为分析**:
-  - 用户使用模式分析
-  - 模型性能对比
-  - 异常行为检测
-  - 趋势预测和容量规划
-
-#### 7. 企业级日志系统
-- **结构化日志**: 统一JSON格式，支持复杂查询
-- **审计追踪**: 完整的操作审计链
-- **合规性日志**: 满足GDPR, HIPAA等标准
-- **集成分析平台**: Grafana Loki, Splunk, ELK Stack
-
-### 🔐 安全和合规扩展
-
-#### 8. 企业级安全功能
-- **多因素认证**:
-  - OAuth2/OIDC集成
-  - JWT令牌管理
-  - API密钥轮换机制
-  - 细粒度权限控制
-
-- **数据保护**:
-  - 端到端加密
-  - 数据脱敏和匿名化
-  - PII自动检测和过滤
-  - 数据生命周期管理
-
-- **安全合规**:
-  - SOC2/ISO27001合规
-  - 渗透测试集成
-  - 安全事件响应
-  - 威胁检测和防护
-
-### 🌐 集成和扩展性
-
-#### 9. API生态系统
-- **开发者体验**:
-  - 自动生成API文档 (OpenAPI/Swagger)
-  - 多语言SDK生成
-  - 交互式API测试平台
-  - 开发者社区门户
-
-- **集成能力**:
-  - Webhook事件系统
-  - GraphQL接口支持
-  - gRPC高性能接口
-  - 批量处理API
-
-#### 10. 第三方服务集成
-- **通知系统**: Slack, Discord, Teams, Email
-- **监控平台**: Prometheus, Grafana, Datadog, New Relic
-- **数据存储**: 向量数据库, 图数据库, 时序数据库
-- **CI/CD集成**: GitHub Actions, GitLab CI, Jenkins
-
-### 🎛️ 管理和运维扩展
-
-#### 11. Web管理平台
-- **可视化Dashboard**:
-  - 实时监控大屏
-  - 交互式数据分析
-  - 自定义报表生成
-  - 移动端适配
-
-- **配置管理**:
-  - 图形化配置界面
-  - 配置版本控制
-  - 一键回滚机制
-  - 配置模板管理
-
-- **运维工具**:
-  - 在线故障诊断
-  - 性能调优建议
-  - 资源使用优化
-  - 自动化运维脚本
-
-#### 12. 自动化运维体系
-- **DevOps集成**:
-  - 完善的CI/CD流水线
-  - 自动化测试框架
-  - 蓝绿部署策略
-  - 金丝雀发布
-
-- **智能运维**:
-  - 基于ML的异常检测
-  - 自动扩缩容机制
-  - 预测性维护
-  - 自愈能力
-
-### 🧪 实验性功能与创新
-
-#### 13. AI优化技术
-- **模型优化**:
-  - 动态提示工程
-  - 模型性能基准测试
-  - A/B测试模型选择
-  - 自适应模型路由
-
-- **上下文管理**:
-  - 长期对话记忆
-  - 用户偏好学习
-  - 智能上下文压缩
-  - 多模态上下文融合
-
-#### 14. 边缘计算增强
-- **地理优化**:
-  - 智能地理路由
-  - 边缘模型推理
-  - 数据本地化处理
-  - 低延迟优化
-
----
-
-## 📋 实施优先级和时间线
-
-### 🚀 短期目标 (未来1-3个月)
-
-**优先级1: 用户体验提升**
-- ✅ 流式响应支持 (显著提升交互体验)
-- ✅ Google Gemini提供商集成 (扩展模型选择)
-- ✅ 基础Web管理界面 (可视化监控)
-
-**优先级2: 稳定性增强**
-- 🔄 增强错误处理和重试机制
-- 🔄 改进缓存策略和命中率
-- 🔄 完善监控告警系统
-
-### 🎯 中期目标 (未来3-6个月)
-
-**优先级1: 功能扩展**
-- 🔄 音频处理能力 (语音转文字)
-- 🔄 文档处理能力 (PDF解析、文档问答)
-- 🔄 高级成本分析和预算管理
-
-**优先级2: 架构优化**
-- 🔄 多层缓存架构实施
-- 🔄 负载均衡和故障转移优化
-- 🔄 企业级安全功能
-
-### 🌟 长期愿景 (未来6个月以上)
-
-**平台化目标**
-- 🔄 完善的Web管理平台
-- 🔄 自动化运维体系
-- 🔄 企业级安全与合规功能
-- 🔄 开发者生态系统
-
-**创新技术**
-- 🔄 边缘AI推理能力
-- 🔄 智能模型优化
-- 🔄 多模态AI能力集成
-
----
-
-## 🎯 决策框架
-
-选择具体的扩展方向时，建议综合考虑以下因素：
-
-### 评估维度
-
-1. **业务价值** (权重: 40%)
-   - 用户需求强度
-   - 市场竞争优势
-   - 收入增长潜力
-
-2. **技术可行性** (权重: 30%)
-   - 技术复杂度
-   - 现有基础设施支持
-   - 团队技术能力
-
-3. **资源投入** (权重: 20%)
-   - 开发时间成本
-   - 运维成本
-   - 人力资源需求
-
-4. **风险评估** (权重: 10%)
-   - 技术风险
-   - 市场风险
-   - 运营风险
-
-### 建议决策流程
-
-1. **需求调研**: 收集用户反馈和市场需求
-2. **技术调研**: 评估技术方案和可行性
-3. **原型验证**: 快速原型验证核心假设
-4. **分阶段实施**: 采用MVP方式逐步迭代
-5. **效果评估**: 定期评估效果并调整策略
-
----
-
-**文档生成于**: 2025年5月27日  
-**版本**: v1.0  
-**维护者**: Meridian AI Worker 团队
+- [架构设计](./ARCHITECTURE.md) - 系统架构和设计思路
+- [API指南](./API_GUIDE.md) - 详细的API使用说明
+- [集成指南](./INTEGRATION_GUIDE.md) - 新功能集成方法
+- [快速部署](./QUICK_DEPLOY.md) - 部署配置指南

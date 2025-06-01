@@ -6,32 +6,6 @@ Meridian AI Worker 提供基于 Cloudflare AI Gateway 的统一 AI 服务接口�
 
 ## 🔌 API 接口详解
 
-### 统一 AI 接口
-
-#### 基础端点
-
-```http
-POST /ai
-Content-Type: application/json
-Authorization: Bearer your-api-key
-```
-
-#### 请求格式
-
-```typescript
-interface AIRequest {
-  capability: 'chat' | 'embedding' | 'image-generation' | 'vision' | 'audio'
-  provider?: string  // 可选，不指定则自动选择
-  data: ChatRequest | EmbeddingRequest | ImageRequest | VisionRequest | AudioRequest
-  metadata?: {
-    user_id?: string
-    session_id?: string
-    trace_id?: string
-    tags?: Record<string, string>
-  }
-}
-```
-
 ### Meridian 专用接口
 
 #### 文章分析接口
@@ -56,27 +30,23 @@ POST /meridian/article/analyze
 ```json
 {
   "success": true,
-  "data": "{
-    \"language\": \"zh-CN\",
-    \"primary_location\": \"Beijing\",
-    \"completeness\": 4,
-    \"content_quality\": 4,
-    \"event_summary_points\": [...],
-    \"thematic_keywords\": [...],
-    \"topic_tags\": [...],
-    \"key_entities\": [...],
-    \"content_focus\": \"Technology\"
-  }",
+  "data": {
+    "language": "zh-CN",
+    "primary_location": "Beijing",
+    "completeness": "COMPLETE",
+    "content_quality": "EXCELLENT",
+    "event_summary_points": [...],
+    "thematic_keywords": [...],
+    "topic_tags": [...],
+    "key_entities": [...],
+    "content_focus": "Technology"
+  },
   "metadata": {
     "provider": "google-ai-studio",
     "model": "gemini-1.5-flash-8b-001",
-    "requestId": "uuid",
+    "total_tokens": 250,
     "processingTime": 1250,
-    "tokenUsage": {
-      "input": 100,
-      "output": 150,
-      "total": 250
-    }
+    "cached": false
   }
 }
 ```
@@ -93,7 +63,7 @@ POST /meridian/embeddings/generate
   "text": "要生成嵌入的文本内容",
   "options": {
     "provider": "workers-ai",  // 推荐：workers-ai（边缘计算优化）
-    "model": "@cf/baai/bge-base-en-v1.5"  // 可选：具体模型名称
+    "model": "@cf/baai/bge-small-en-v1.5"  // 可选：具体模型名称
   }
 }
 ```
@@ -102,157 +72,63 @@ POST /meridian/embeddings/generate
 ```json
 {
   "success": true,
-  "data": [0.021270751953125, -0.0304718017578125, ...],  // 768维向量
+  "data": [0.021270751953125, -0.0304718017578125, ...],  // 384维向量
+  "model": "@cf/baai/bge-small-en-v1.5",
+  "dimensions": 384,
+  "text_length": 25,
   "metadata": {
     "provider": "workers-ai",
-    "model": "@cf/baai/bge-base-en-v1.5",
-    "requestId": "uuid",
-    "dimensions": 768
+    "model": "@cf/baai/bge-small-en-v1.5",
+    "processingTime": 150,
+    "cached": false
   }
 }
 ```
 
-#### 配置查询接口
+#### 通用聊天接口
 
 ```bash
-GET /meridian/config
+POST /meridian/chat
 ```
 
-**响应示例**：
+**请求参数**：
 ```json
 {
-  "service": "meridian-ai-worker",
-  "version": "2.0.0",
-  "endpoints": {
-    "article_analyze": "/meridian/article/analyze",
-    "embeddings_generate": "/meridian/embeddings/generate",
-    "health_check": "/health",
-    "providers_list": "/providers"
-  },
-  "default_providers": {
-    "article_analysis": "google-ai-studio",
-    "embeddings": "workers-ai"
-  },
-  "features": {
-    "cost_tracking": true,
-    "caching": true,
-    "failover": true
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好，介绍一下自己"
+    }
+  ],
+  "options": {
+    "provider": "workers-ai",
+    "model": "@cf/meta/llama-3.1-8b-instruct",
+    "temperature": 0.7,
+    "max_tokens": 1000
   }
 }
 ```
 
-### 聊天对话接口
+#### 流式聊天接口
 
-#### 基础聊天
-
-```json
-{
-  "capability": "chat",
-  "provider": "openai",
-  "data": {
-    "messages": [
-      {
-        "role": "user",
-        "content": "你好，介绍一下自己"
-      }
-    ],
-    "model": "gpt-4",
-    "max_tokens": 1000,
-    "temperature": 0.7
-  }
-}
+```bash
+POST /meridian/chat/stream
 ```
 
-#### 流式响应
+#### 智能分析接口
 
-```json
-{
-  "capability": "chat",
-  "data": {
-    "messages": [
-      {
-        "role": "user", 
-        "content": "写一首诗"
-      }
-    ],
-    "model": "gpt-4",
-    "stream": true
-  }
-}
+```bash
+POST /meridian/intelligence/analyze-story
 ```
 
-#### 视觉理解
+#### 数据获取接口
 
-```json
-{
-  "capability": "vision",
-  "provider": "openai",
-  "data": {
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "这张图片里有什么？"
-          },
-          {
-            "type": "image_url",
-            "image_url": {
-              "url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
-            }
-          }
-        ]
-      }
-    ],
-    "model": "gpt-4-vision-preview"
-  }
-}
+```bash
+POST /meridian/articles/get-processed
+POST /meridian/briefs/save
 ```
 
-### 文本嵌入接口
-
-```json
-{
-  "capability": "embedding",
-  "provider": "openai",
-  "data": {
-    "input": "这是要进行嵌入的文本",
-    "model": "text-embedding-ada-002"
-  }
-}
-```
-
-### 图像生成接口
-
-```json
-{
-  "capability": "image-generation",
-  "provider": "openai",
-  "data": {
-    "prompt": "一只可爱的猫咪坐在花园里",
-    "size": "1024x1024",
-    "quality": "standard",
-    "n": 1
-  }
-}
-```
-
-### 音频处理接口
-
-```json
-{
-  "capability": "audio",
-  "provider": "openai",
-  "data": {
-    "file": "data:audio/mp3;base64,//uQxAAA...",
-    "model": "whisper-1",
-    "language": "zh"
-  }
-}
-```
-
-### 管理端点
+### 系统接口
 
 #### 健康检查
 
@@ -260,70 +136,19 @@ GET /meridian/config
 GET /health
 ```
 
-**响应示例**：
+**响应格式**：
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2025-05-27T10:00:00.000Z",
-  "service": "meridian-ai-worker",
-  "version": "2.0.0",
-  "providers": {
-    "available": ["openai", "workers-ai", "google-ai-studio"],
-    "openai_configured": true,
-    "workers_ai_configured": true,
-    "google_ai_configured": true
-  }
+  "status": "ok",
+  "timestamp": "2025-01-31T10:00:00.000Z",
+  "service": "meridian-ai-worker"
 }
 ```
 
-#### 提供商列表
+#### 基础测试
 
 ```bash
-GET /providers
-```
-
-**响应示例**：
-```json
-{
-  "providers": [
-    {
-      "id": "google-ai-studio",
-      "name": "Google AI Studio",
-      "capabilities": ["chat"],
-      "models": {
-        "chat": [
-          "gemini-1.5-flash-8b-001",
-          "gemini-1.5-flash-001",
-          "gemini-1.5-pro-001"
-        ]
-      },
-      "status": "available"
-    },
-    {
-      "id": "workers-ai",
-      "name": "Cloudflare Workers AI",
-      "capabilities": ["chat", "embedding", "image-generation"],
-      "models": {
-        "chat": ["@cf/meta/llama-2-7b-chat-int8", "@cf/mistral/mistral-7b-instruct-v0.1"],
-        "embedding": ["@cf/baai/bge-base-en-v1.5"],
-        "image-generation": ["@cf/lykon/dreamshaper-8-lcm"]
-      },
-      "status": "available"
-    },
-    {
-      "id": "openai",
-      "name": "OpenAI",
-      "capabilities": ["chat", "embedding", "image-generation", "vision", "audio"],
-      "models": {
-        "chat": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"],
-        "embedding": ["text-embedding-3-small", "text-embedding-3-large"],
-        "image-generation": ["dall-e-3"],
-        "audio": ["tts-1"]
-      },
-      "status": "available"
-    }
-  ]
-}
+GET /test
 ```
 
 ## 📊 响应格式

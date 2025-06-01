@@ -1,7 +1,7 @@
 [project]
 name = "meridian_ml_service"
-version = "0.1.0"
-description = "Python service for ML tasks (embeddings, clustering) for Meridian."
+version = "0.3.0"
+description = "Python service for ML tasks (embeddings, clustering with parameter optimization) for Meridian."
 authors = [{ name = "Iliane Amadou", email = "mail@iliane.xyz" }]
 requires-python = ">=3.11" # Stable, well-supported, performant
 dependencies = [
@@ -13,15 +13,19 @@ dependencies = [
     "transformers>=4.51.3",
     "sentence-transformers>=4.1.0", # Often simplifies embedding tasks
     "python-dotenv>=1.1.0",
-    # Add later when needed:
-    # "umap-learn>=0.5.5",
-    # "hdbscan>=0.8.33",
+    # 聚类算法依赖
+    "umap-learn>=0.5.5",
+    "hdbscan>=0.8.33",
+    "scikit-learn>=1.5.0",  # UMAP和HDBSCAN的依赖
+    "tqdm>=4.66.0",  # 进度条
 ]
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.4.4",   # Fast linter/formatter
     "mypy>=1.10.0",  # Static type checker
+    "pytest>=8.0.0", # 测试框架
+    "pytest-asyncio>=0.23.0", # 异步测试支持
 ]
 
 # Configuration for Ruff (Linter/Formatter)
@@ -49,3 +53,8 @@ ignore_missing_imports = true # Be pragmatic initially
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  meridian-ml:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small
+      - API_TOKEN=dev-token-123
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # 开发时挂载代码，支持热重载
+      - ./src:/home/appuser/app/src
+      # 缓存目录持久化
+      - ./cache:/home/appuser/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped 

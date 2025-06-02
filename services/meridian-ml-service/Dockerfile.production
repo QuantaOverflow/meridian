@@ -1,0 +1,95 @@
+# syntax=docker/dockerfile:1
+
+# Multi-stage build for Meridian ML Service
+# 优化的生产环境构建，适合 Docker Hub 部署
+
+# --- Base Image ---
+FROM python:3.11-slim AS base
+
+# Install system dependencies and security updates
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/*
+
+# Install uv for fast dependency management
+RUN pip install --no-cache-dir uv
+
+# --- Dependencies Stage ---
+FROM base AS dependencies
+
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Install Python dependencies with optimizations
+RUN uv pip install --system --no-cache-dir \
+    --index-strategy unsafe-best-match \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    --requirement pyproject.toml
+
+# Pre-download and cache the ML model
+
+RUN mkdir -p /app/models && python3 -c "import os; from transformers import AutoTokenizer, AutoModel; from huggingface_hub import hf_hub_download; os.environ['HF_HOME'] = '/app/models'; os.environ['TRANSFORMERS_CACHE'] = '/app/models/transformers'; os.environ['HF_HUB_CACHE'] = '/app/models/hub'; model_name = 'intfloat/multilingual-e5-small'; print(f'Downloading model: {model_name}'); tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir='/app/models'); model = AutoModel.from_pretrained(model_name, cache_dir='/app/models'); print('Model download completed')"
+
+# --- Production Stage ---
+FROM base AS production
+
+# Set labels for better image management
+LABEL maintainer="Meridian Project"
+LABEL version="0.3.0"
+LABEL description="Meridian ML Service - Embeddings and Intelligent Text Clustering"
+
+# Create non-root user for security
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
+# Set working directory
+WORKDIR /home/appuser/app
+
+# Copy Python dependencies from dependencies stage
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Copy pre-downloaded model with proper ownership
+COPY --from=dependencies --chown=appuser:appuser /app/models /home/appuser/app/models
+
+# Copy application source code
+COPY --chown=appuser:appuser ./src ./src
+COPY --chown=appuser:appuser pyproject.toml ./
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/home/appuser/app:${PYTHONPATH} \
+    # Use local model cache
+    EMBEDDING_MODEL_NAME="/home/appuser/app/models" \
+    HF_HOME=/home/appuser/app/models \
+    TRANSFORMERS_CACHE=/home/appuser/app/models/transformers \
+    HF_HUB_CACHE=/home/appuser/app/models/hub \
+    # Performance optimizations
+    TOKENIZERS_PARALLELISM=false \
+    TORCH_HOME=/home/appuser/app/models/torch \
+    # Security
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Switch to non-root user
+USER appuser
+
+# Create necessary directories
+RUN mkdir -p /home/appuser/app/models/torch
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["uvicorn", "src.meridian_ml_service.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"] 

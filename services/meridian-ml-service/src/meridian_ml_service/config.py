@@ -15,6 +15,18 @@ class Settings(BaseModel):
     api_token: Optional[str] = Field(
         default=None, description="Optional API token for authentication"
     )
+    
+    # 新增：解耦架构相关配置
+    validate_embedding_dimensions: bool = True
+    expected_embedding_dimensions: int = 384
+    enable_embedding_generation: bool = True  # 控制是否启用内部嵌入生成
+    ai_worker_base_url: Optional[str] = Field(
+        default=None, description="AI Worker服务地址"
+    )
+    
+    # 性能相关配置
+    max_embedding_batch_size: int = 100
+    clustering_timeout_seconds: int = 300  # 5分钟超时
 
 
 @lru_cache  # Cache the settings object

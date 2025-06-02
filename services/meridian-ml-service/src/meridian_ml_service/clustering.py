@@ -540,13 +540,15 @@ def cluster_embeddings(
             logger.warning(f"DBCV计算失败: {e}")
     
     # 计算聚类质量指标 - 确保所有值都是Python原生类型
+    total_samples = int(len(embeddings))
+    outlier_ratio = float(n_outliers / total_samples)
     clustering_stats = {
-        'n_samples': int(len(embeddings)),
-        'n_clusters': int(n_clusters),
-        'n_outliers': int(n_outliers),
-        'outlier_ratio': float(n_outliers / len(embeddings)),
-        'cluster_sizes': cluster_sizes,
-        'dbcv_score': dbcv_score,
+        "n_samples": total_samples,
+        "n_clusters": n_clusters,
+        "n_outliers": n_outliers,
+        "outlier_ratio": outlier_ratio,
+        "cluster_sizes": convert_numpy_types(cluster_sizes),
+        "dbcv_score": dbcv_score,
     }
     
     if config.remove_outliers:

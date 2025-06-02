@@ -57,13 +57,13 @@ read -p "请选择 (1-4): " choice
 case $choice in
     1)
         echo "🌟 启动ML服务..."
-        uvicorn src.meridian_ml_service.main:app --reload --host 0.0.0.0 --port 8080
+        uvicorn src.meridian_ml_service.main:app --reload --host 0.0.0.0 --port 8081
         ;;
     2)
         echo "📦 安装聚类依赖..."
         pip install umap-learn hdbscan scikit-learn
         echo "🌟 启动ML服务..."
-        uvicorn src.meridian_ml_service.main:app --reload --host 0.0.0.0 --port 8080
+        uvicorn src.meridian_ml_service.main:app --reload --host 0.0.0.0 --port 8081
         ;;
     3)
         if [ "$CLUSTERING_AVAILABLE" = true ]; then

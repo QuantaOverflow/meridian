@@ -89,17 +89,31 @@ class MockArticleGenerator:
     async def generate_article_content(self, title: str, prompt: str) -> str:
         """使用AI Worker生成文章内容"""
         
-        # 构建文章分析请求 - 使用meridian专用端点
-        article_request = {
-            "title": title,
-            "content": f"{prompt}\n\n请为标题'{title}'生成一篇完整的新闻文章。",
+        # 构建聊天请求 - 使用/meridian/chat端点
+        chat_request = {
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"你是一位专业的记者，擅长撰写关于'{title}'主题的深度新闻报道。请确保文章内容丰富、逻辑清晰，并包含引人入胜的标题和结构，长度约800-1000字。文章应包含：具体的技术突破、研究机构、临床应用案例、专家观点、未来展望。" # 结合标题和通用指令作为系统提示
+                },
+                {
+                    "role": "user",
+                    "content": f"请为标题'{title}'生成一篇完整的新闻文章，具体要求：\n{prompt}\n\n文章应包含：具体的技术突破、研究机构、临床应用案例、专家观点、未来展望。文章长度约800-1000字，语言专业但易懂。"
+                }
+            ],
+            "options": {
+                "provider": "workers-ai",
+                "model": "@cf/mistral/mistral-7b-instruct-v0.1", # 已修改为providers.ts中支持的模型
+                "temperature": 0.7,
+                "max_tokens": 2000 # 增加最大tokens以生成更长的文章
+            }
         }
         
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=120) as client: # 增加超时时间
             try:
                 response = await client.post(
-                    f"{self.base_url}/meridian/article/analyze",
-                    json=article_request,
+                    f"{self.base_url}/meridian/chat", # 修改为chat端点
+                    json=chat_request,
                     headers=self.headers
                 )
                 
@@ -107,42 +121,12 @@ class MockArticleGenerator:
                     result = response.json()
                     print(f"   📡 API响应: {response.status_code}")
                     
-                    # 检查响应格式
-                    if result.get('success') and 'data' in result:
-                        # 从分析结果构建文章内容
-                        analysis = result['data']
-                        
-                        # 构建简单的文章内容
-                        content_parts = []
-                        content_parts.append(f"# {title}\n")
-                        
-                        if analysis.get('event_summary_points'):
-                            content_parts.append("## 核心要点")
-                            for point in analysis['event_summary_points'][:3]:
-                                content_parts.append(f"- {point}")
-                            content_parts.append("")
-                        
-                        if analysis.get('thematic_keywords'):
-                            keywords = ', '.join(analysis['thematic_keywords'][:5])
-                            content_parts.append(f"**关键词**: {keywords}\n")
-                        
-                        # 添加基础内容
-                        content_parts.append("这是一篇关于以上主题的深度分析文章。本文探讨了相关的技术发展、市场趋势和社会影响。")
-                        content_parts.append("")
-                        content_parts.append("## 详细分析")
-                        content_parts.append("随着科技的快速发展和全球化的深入推进，这一领域正在经历前所未有的变革。")
-                        content_parts.append("")
-                        content_parts.append("## 未来展望")
-                        content_parts.append("展望未来，这一趋势将继续影响相关行业的发展方向，值得持续关注。")
-                        
-                        if analysis.get('key_entities'):
-                            entities = ', '.join(analysis['key_entities'][:3])
-                            content_parts.append(f"\n**相关实体**: {entities}")
-                        
-                        generated_content = '\n'.join(content_parts)
+                    # 检查响应格式并提取生成内容
+                    if result.get('success') and 'data' in result and 'choices' in result['data']:
+                        generated_content = result['data']['choices'][0]['message']['content']
                         return generated_content
                     else:
-                        print(f"   ❌ 响应格式错误: {result}")
+                        print(f"   ❌ 响应格式错误或无内容: {result}")
                         return None
                 else:
                     print(f"   ❌ HTTP错误 {response.status_code}: {response.text}")

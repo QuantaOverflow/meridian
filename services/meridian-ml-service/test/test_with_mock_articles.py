@@ -101,7 +101,7 @@ async def test_clustering(articles: List[Dict[str, Any]]):
         
         try:
             response = await client.post(
-                f'{ML_SERVICE_BASE_URL}/clustering/optimize',
+                f'{ML_SERVICE_BASE_URL}/clustering/optimized',
                 json=payload,
                 headers=headers
             )
@@ -122,19 +122,41 @@ async def analyze_clustering_result(result: Dict[str, Any], article_info: List[D
     
     # 基础统计
     stats = result.get('clustering_stats', {})
-    clusters = result.get('clusters', [])
     
+    # 从ml服务响应中获取cluster_labels和cluster_content
+    cluster_labels = result.get('cluster_labels', [])
+    cluster_content_map = result.get('cluster_content', {}) # 这是个字典，key是cluster_id，value是文章内容列表
+    
+    # 根据cluster_labels和article_info构建符合原先测试逻辑的clusters列表
+    # original_clusters_list 用于存储每个cluster_id对应的文章索引
+    original_clusters_list = {}
+    for i, label in enumerate(cluster_labels):
+        if label not in original_clusters_list:
+            original_clusters_list[label] = []
+        original_clusters_list[label].append(i)
+
+    # 转换成测试脚本期望的格式
+    # clusters = [{'cluster_id': label, 'members': indices} for label, indices in original_clusters_list.items()]
+    # 确保噪声点（-1）排在最后
+    clusters = sorted(
+        [{'cluster_id': label, 'members': indices} for label, indices in original_clusters_list.items()],
+        key=lambda x: x['cluster_id'] if x['cluster_id'] != -1 else float('inf')
+    )
+
+
     print(f"   🔢 基础统计:")
-    print(f"      - 总文章数: {stats.get('total_items', 0)}")
-    print(f"      - 聚类数量: {stats.get('n_clusters', 0)}")
-    print(f"      - 噪声点数: {stats.get('n_noise', 0)}")
-    print(f"      - 聚类率: {stats.get('clustered_ratio', 0):.1%}")
+    print(f"      - 总文章数: {stats.get('total_items', len(article_info))}") # 使用article_info的长度作为总文章数
+    print(f"      - 聚类数量: {stats.get('n_clusters', len([k for k in original_clusters_list if k != -1]))}") # 统计非噪声点的聚类数量
+    print(f"      - 噪声点数: {stats.get('n_noise', len(original_clusters_list.get(-1, [])))}") # 统计噪声点数量
+    print(f"      - 聚类率: {stats.get('clustered_ratio', 0):.1%}") # 聚类率可能需要重新计算或从stats中获取
     
     if 'optimization_score' in result:
         print(f"      - 优化分数: {result['optimization_score']:.3f}")
+    elif result.get('optimization', {}).get('used') and result.get('optimization', {}).get('best_dbcv_score') is not None:
+        print(f"      - 优化分数 (DBCV): {result['optimization']['best_dbcv_score']:.3f}") # 从优化结果中获取DBCV分数
     
     # 聚类详情
-    if clusters:
+    if clusters: # 现在clusters会是正确的格式
         print(f"\n   📝 聚类详情:")
         
         for cluster in clusters:
@@ -165,7 +187,7 @@ async def analyze_clustering_result(result: Dict[str, Any], article_info: List[D
                 print(f"         ... 还有 {len(cluster_articles) - 3} 篇")
     
     # 聚类质量评估
-    await evaluate_clustering_quality(clusters, article_info)
+    await evaluate_clustering_quality(clusters, article_info) # 这里使用新的clusters
 
 async def evaluate_clustering_quality(clusters: List[Dict[str, Any]], article_info: List[Dict[str, Any]]):
     """评估聚类质量"""
@@ -221,7 +243,7 @@ async def main():
     print("=" * 50)
     
     # 加载模拟文章
-    articles = await load_mock_articles()
+    articles = await load_mock_articles('/Users/shiwenjie/Developer/meridian/services/meridian-ml-service/test/mock_articles.json')
     
     if not articles:
         return

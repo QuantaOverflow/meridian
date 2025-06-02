@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  meridian-ml-service:
+    image: crossovo/meridian-ml-service:0.3.0
+    container_name: meridian-ml-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 必需环境变量 - 请修改为实际值
+      - API_TOKEN=${API_TOKEN:-please-set-your-secure-token}
+      - EMBEDDING_MODEL_NAME=/home/appuser/app/models
+      - PYTHONUNBUFFERED=1
+      
+      # 可选性能调优
+      - WORKERS=1
+      - MAX_WORKERS=4
+      - TIMEOUT=300
+      
+    networks:
+      - meridian-network
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      
+    deploy:
+      resources:
+        limits:
+          memory: 3G          # 稍微增加内存限制
+          cpus: '2.0'         # 允许使用2个CPU核心
+        reservations:
+          memory: 1.5G        # 保证最少1.5G内存
+          cpus: '0.5'
+          
+    # 日志配置
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+networks:
+  meridian-network:
+    driver: bridge
+
+# 配置说明:
+# 1. 复制此文件到VPS
+# 2. 创建.env文件设置API_TOKEN
+# 3. 运行: docker-compose -f docker-compose.vps.yml up -d 

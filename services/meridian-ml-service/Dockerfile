@@ -3,26 +3,46 @@
 # --- Builder Stage ---
 FROM python:3.11-slim AS builder
 
-# Install uv (your project uses it, it's fast)
+# Install build tools first
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN pip install uv
 
 WORKDIR /app
 
-# Copy only dependency definitions first for better layer caching
-COPY pyproject.toml ./
+# Copy dependency files
+COPY pyproject.toml uv.lock* ./
 
-# Install dependencies efficiently in one step and clean up
+# Install dependencies efficiently
 RUN uv pip install --system --no-cache --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu --requirement pyproject.toml && \
     rm -rf /root/.cache /tmp/* /var/tmp/*
 
-# Pre-download the model and save it to a known location
-RUN mkdir -p /app/models && \
-    python3 -c "from transformers import AutoTokenizer, AutoModel; \
-    model_name = 'intfloat/multilingual-e5-small'; \
-    tokenizer = AutoTokenizer.from_pretrained(model_name); \
-    model = AutoModel.from_pretrained(model_name); \
-    tokenizer.save_pretrained('/app/models'); \
-    model.save_pretrained('/app/models')"
+# --- Model Download Stage ---
+FROM python:3.11-slim AS model-downloader
+
+# Copy installed dependencies from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Create user and directories
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+WORKDIR /home/appuser/app
+
+# Set environment variables for model download
+ENV PYTHONUNBUFFERED=1 \
+    EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small \
+    HF_HOME=/home/appuser/.cache/huggingface
+
+# Copy download script
+COPY --chown=appuser:appuser ./scripts ./scripts
+
+# Download the model
+RUN python scripts/download_model.py
 
 # --- Runtime Stage ---
 FROM python:3.11-slim
@@ -30,7 +50,8 @@ FROM python:3.11-slim
 # Install only runtime essentials and clean up in one layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    ca-certificates && \
+    ca-certificates \
+    curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -45,40 +66,28 @@ WORKDIR /home/appuser/app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy the pre-downloaded model
-COPY --from=builder /app/models /home/appuser/app/models
+# Copy the downloaded model from model-downloader stage
+COPY --from=model-downloader --chown=appuser:appuser /home/appuser/.cache/huggingface /home/appuser/.cache/huggingface
 
 # Copy your application code
-# Important: Ensure the path matches your project structure relative to the Dockerfile
-# Assuming Dockerfile is in 'meridian-ml-service' directory
 COPY --chown=appuser:appuser ./src ./src
-# Good practice, though likely not needed at runtime here
+COPY --chown=appuser:appuser ./scripts ./scripts
 COPY --chown=appuser:appuser pyproject.toml ./
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
-    # Add src directory to Python path so modules can be found
     PYTHONPATH=/home/appuser/app:${PYTHONPATH} \
-    # Fly.io sets PORT automatically, uvicorn will pick it up via $PORT in CMD
-    # Default model from your config. Can be overridden via fly secrets.
-    EMBEDDING_MODEL_NAME="/home/appuser/app/models" \
-    # API_TOKEN should be provided via secrets at runtime, not in the Dockerfile
-    # Set Hugging Face cache directory to somewhere writeable by appuser
+    EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small \
     HF_HOME=/home/appuser/.cache/huggingface \
     TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers \
     HF_HUB_CACHE=/home/appuser/.cache/huggingface/hub
 
-# Ensure the cache directory exists and is owned by the app user
-# This RUN command executes as root before switching back to appuser implicitly for CMD
-USER root
-RUN mkdir -p /home/appuser/.cache/huggingface && \
-    chown -R appuser:appuser /home/appuser/.cache
-USER appuser
-
-# Expose the default port. Fly will map this.
+# Expose the default port
 EXPOSE 8080
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
 # Run the application using uvicorn
-# Update the import path to match your module structure
-# Use $PORT which fly provides.
-CMD ["uvicorn", "src.meridian_ml_service.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]

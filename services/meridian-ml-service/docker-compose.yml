@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  ml-service:
+    build: .
+    image: meridian-ml-service:0.3.0
+    container_name: meridian-ml-service
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      - API_TOKEN=${API_TOKEN:-dev-token-123}
+      - EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    volumes:
+      - ml_cache:/home/appuser/.cache/huggingface
+      - ml_logs:/home/appuser/app/logs
+
+  # 可选：为生产环境添加反向代理
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # SSL证书目录
+    depends_on:
+      - ml-service
+    restart: unless-stopped
+    profiles:
+      - production  # 使用 docker-compose --profile production up 启动
+
+volumes:
+  ml_cache:
+  ml_logs: 

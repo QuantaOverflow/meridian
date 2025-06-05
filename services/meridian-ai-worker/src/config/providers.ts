@@ -221,6 +221,87 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
         }
       }
     ]
+  },
+
+  'google-ai-studio': {
+    name: 'google-ai-studio',
+    base_url: 'https://generativelanguage.googleapis.com/v1beta',
+    auth_header: 'x-goog-api-key',
+    default_model: 'gemini-1.5-flash-8b-001',
+    models: [
+      {
+        name: 'gemini-1.5-flash-8b-001',
+        capabilities: ['chat'],
+        endpoint: '/models/gemini-1.5-flash-8b-001:generateContent',
+        max_tokens: 8192,
+        supports_streaming: false,
+        cost_per_token: {
+          input: 0.000000075, // $0.075 per 1M input tokens
+          output: 0.0000003    // $0.30 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 3600, // 1 hour for standard chat
+          enable_cost_tracking: true,
+          enable_metrics: true,
+          enable_logging: true,
+          custom_tags: ['google-ai', 'gemini', 'flash', '8b']
+        }
+      },
+      {
+        name: 'gemini-1.5-flash-001',
+        capabilities: ['chat'],
+        endpoint: '/models/gemini-1.5-flash-001:generateContent',
+        max_tokens: 8192,
+        supports_streaming: false,
+        cost_per_token: {
+          input: 0.000000075,
+          output: 0.0000003
+        },
+        ai_gateway_config: {
+          cache_ttl: 3600,
+          enable_cost_tracking: true,
+          enable_metrics: true,
+          enable_logging: true,
+          custom_tags: ['google-ai', 'gemini', 'flash']
+        }
+      },
+      {
+        name: 'gemini-1.5-pro-001',
+        capabilities: ['chat'],
+        endpoint: '/models/gemini-1.5-pro-001:generateContent',
+        max_tokens: 8192,
+        supports_streaming: false,
+        cost_per_token: {
+          input: 0.00000125,  // $1.25 per 1M input tokens
+          output: 0.000005    // $5.00 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800, // 30 minutes for premium chat
+          enable_cost_tracking: true,
+          enable_metrics: true,
+          enable_logging: true,
+          custom_tags: ['google-ai', 'gemini', 'pro', 'premium']
+        }
+      },
+      {
+        name: 'gemini-1.0-pro',
+        capabilities: ['chat'],
+        endpoint: '/models/gemini-1.0-pro:generateContent',
+        max_tokens: 8192,
+        supports_streaming: false,
+        cost_per_token: {
+          input: 0.0000005,   // $0.50 per 1M input tokens
+          output: 0.0000015   // $1.50 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 3600,
+          enable_cost_tracking: true,
+          enable_metrics: true,
+          enable_logging: true,
+          custom_tags: ['google-ai', 'gemini', 'legacy']
+        }
+      }
+    ]
   }
 }
 

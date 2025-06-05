@@ -1,4 +1,3 @@
-
 import { 
   ChatRequest, 
   ChatResponse, 
@@ -20,27 +19,42 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
     }
 
     // Provider-specific formatting
-    switch (model.name.split('/')[0]) {
-      case '@cf': // Workers AI models
-        return {
-          messages: request.messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        }
-      
-      case 'claude': // Anthropic models
-        return {
-          model: model.name,
-          max_tokens: baseRequest.max_tokens,
+    if (model.name.startsWith('gemini') || model.name.includes('gemini')) {
+      // Google AI Studio / Gemini models
+      const parts = request.messages.map(msg => ({
+        text: msg.content
+      }))
+
+      return {
+        contents: [{
+          parts: parts
+        }],
+        generationConfig: {
           temperature: baseRequest.temperature,
-          messages: request.messages.filter(msg => msg.role !== 'system'),
-          system: request.messages.find(msg => msg.role === 'system')?.content,
-          stream: baseRequest.stream
+          maxOutputTokens: baseRequest.max_tokens,
         }
-      
-      default: // OpenAI and compatible
-        return baseRequest
+      }
+    } else if (model.name.split('/')[0] === '@cf') {
+      // Workers AI models
+      return {
+        messages: request.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      }
+    } else if (model.name.startsWith('claude')) {
+      // Anthropic models
+      return {
+        model: model.name,
+        max_tokens: baseRequest.max_tokens,
+        temperature: baseRequest.temperature,
+        messages: request.messages.filter(msg => msg.role !== 'system'),
+        system: request.messages.find(msg => msg.role === 'system')?.content,
+        stream: baseRequest.stream
+      }
+    } else {
+      // OpenAI and compatible
+      return baseRequest
     }
   }
 
@@ -50,7 +64,25 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
     let usage: any
     let id: string
 
-    if (model.name.startsWith('@cf')) {
+    if (model.name.startsWith('gemini') || model.name.includes('gemini')) {
+      // Google AI Studio / Gemini format
+      const candidate = response.candidates?.[0]
+      const content = candidate?.content?.parts?.[0]?.text || ''
+      
+      choices = [{
+        message: {
+          role: 'assistant' as const,
+          content: content
+        },
+        finish_reason: candidate?.finishReason || 'stop'
+      }]
+      usage = {
+        prompt_tokens: response.usageMetadata?.promptTokenCount || 0,
+        completion_tokens: response.usageMetadata?.candidatesTokenCount || 0,
+        total_tokens: response.usageMetadata?.totalTokenCount || 0
+      }
+      id = `gemini-${Date.now()}`
+    } else if (model.name.startsWith('@cf')) {
       // Workers AI format
       choices = [{
         message: {
@@ -83,11 +115,22 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       id = response.id || `chatcmpl-${Date.now()}`
     }
 
+    // Determine provider based on model name
+    let provider: string
+    if (model.name.startsWith('gemini') || model.name.includes('gemini')) {
+      provider = 'google-ai-studio'
+    } else if (model.name.split('/')[0] === '@cf') {
+      provider = 'workers-ai'
+    } else if (model.name.startsWith('claude')) {
+      provider = 'anthropic'
+    } else {
+      provider = 'openai'
+    }
+
     return {
       capability: 'chat',
       id,
-      provider: model.name.split('/')[0] === '@cf' ? 'workers-ai' : 
-                model.name.startsWith('claude') ? 'anthropic' : 'openai',
+      provider,
       model: model.name,
       choices,
       usage,

@@ -540,8 +540,13 @@ export class AIGatewayService {
         return endpoint
       
       case 'google-ai-studio':
-        // For Google AI, use the standard endpoint path
-        // Keep the original endpoint format
+        // For Google AI Studio, extract relative path for Universal AI Gateway
+        // From: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b-001:generateContent
+        // To: v1beta/models/gemini-1.5-flash-8b-001:generateContent (relative path for AI Gateway)
+        if (endpoint.startsWith('https://generativelanguage.googleapis.com/')) {
+          return endpoint.replace('https://generativelanguage.googleapis.com/', '')
+        }
+        // If already a relative path, keep it as is
         return endpoint
       
       default:

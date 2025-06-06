@@ -2,7 +2,7 @@
 // AI Capabilities
 // =============================================================================
 
-export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision'
+export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision' | 'video' | 'text-to-speech' | 'speech-to-text' | 'live-audio' | 'live-video'
 
 // =============================================================================
 // Authentication Types
@@ -177,7 +177,57 @@ export interface VisionRequest extends BaseAIRequest {
   messages: VisionMessage[]
 }
 
-export type AIRequest = ChatRequest | EmbeddingRequest | ImageRequest | AudioRequest | VisionRequest
+export interface VideoRequest extends BaseAIRequest {
+  capability: 'video'
+  prompt: string
+  duration?: number
+  resolution?: string
+  fps?: number
+  style?: string
+  image_input?: string // 可选的输入图像
+}
+
+export interface TextToSpeechRequest extends BaseAIRequest {
+  capability: 'text-to-speech'
+  input: string
+  voice?: string
+  language?: string
+  format?: string
+  speed?: number
+  pitch?: number
+}
+
+export interface SpeechToTextRequest extends BaseAIRequest {
+  capability: 'speech-to-text'
+  audio: string // base64 encoded audio
+  language?: string
+  format?: string
+}
+
+export interface LiveAudioRequest extends BaseAIRequest {
+  capability: 'live-audio'
+  audio_stream: string
+  session_id?: string
+  config?: {
+    sample_rate?: number
+    encoding?: string
+    language?: string
+  }
+}
+
+export interface LiveVideoRequest extends BaseAIRequest {
+  capability: 'live-video'
+  video_stream: string
+  audio_stream?: string
+  session_id?: string
+  config?: {
+    resolution?: string
+    fps?: number
+    language?: string
+  }
+}
+
+export type AIRequest = ChatRequest | EmbeddingRequest | ImageRequest | AudioRequest | VisionRequest | VideoRequest | TextToSpeechRequest | SpeechToTextRequest | LiveAudioRequest | LiveVideoRequest
 
 // =============================================================================
 // Message Types
@@ -255,7 +305,49 @@ export interface VisionResponse extends BaseAIResponse {
   }>
 }
 
-export type AIResponse = ChatResponse | EmbeddingResponse | ImageResponse | AudioResponse | VisionResponse
+export interface VideoResponse extends BaseAIResponse {
+  capability: 'video'
+  data: Array<{
+    url?: string
+    b64_video?: string
+    duration?: number
+    resolution?: string
+    fps?: number
+  }>
+}
+
+export interface TextToSpeechResponse extends BaseAIResponse {
+  capability: 'text-to-speech'
+  data: string // base64 encoded audio
+  format?: string
+  duration?: number
+}
+
+export interface SpeechToTextResponse extends BaseAIResponse {
+  capability: 'speech-to-text'
+  text: string
+  confidence?: number
+  language?: string
+}
+
+export interface LiveAudioResponse extends BaseAIResponse {
+  capability: 'live-audio'
+  session_id: string
+  response_audio?: string
+  text_response?: string
+  status: 'listening' | 'processing' | 'responding' | 'completed'
+}
+
+export interface LiveVideoResponse extends BaseAIResponse {
+  capability: 'live-video'
+  session_id: string
+  response_video?: string
+  response_audio?: string
+  text_response?: string
+  status: 'processing' | 'responding' | 'completed'
+}
+
+export type AIResponse = ChatResponse | EmbeddingResponse | ImageResponse | AudioResponse | VisionResponse | VideoResponse | TextToSpeechResponse | SpeechToTextResponse | LiveAudioResponse | LiveVideoResponse
 
 // =============================================================================
 // Provider Configuration

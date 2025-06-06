@@ -128,6 +128,143 @@ POST /meridian/articles/get-processed
 POST /meridian/briefs/save
 ```
 
+#### 视频生成接口
+
+```bash
+POST /meridian/video/generate
+```
+
+**请求参数**：
+```json
+{
+  "prompt": "一只可爱的小猫在花园里玩耍",
+  "duration": 5,
+  "resolution": "720p",
+  "fps": 24,
+  "style": "realistic",
+  "image_input": "data:image/jpeg;base64,...", // 可选的输入图像
+  "options": {
+    "provider": "google-ai-studio",
+    "model": "veo-2.0-generate-001"
+  }
+}
+```
+
+**响应格式**：
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "url": "https://storage.googleapis.com/video_url",
+      "duration": 5,
+      "resolution": "720p",
+      "fps": 24
+    }
+  ],
+  "metadata": {
+    "provider": "google-ai-studio",
+    "model": "veo-2.0-generate-001",
+    "processingTime": 15000
+  }
+}
+```
+
+#### 文本转语音接口
+
+```bash
+POST /meridian/tts/generate
+```
+
+**请求参数**：
+```json
+{
+  "input": "Hello, this is a test of text-to-speech functionality.",
+  "voice": "default",
+  "language": "en-US",
+  "format": "mp3",
+  "speed": 1.0,
+  "options": {
+    "provider": "google-ai-studio",
+    "model": "gemini-2.5-flash-text-to-speech"
+  }
+}
+```
+
+**响应格式**：
+```json
+{
+  "success": true,
+  "data": "base64_encoded_audio_content",
+  "format": "mp3",
+  "duration": 3.5,
+  "metadata": {
+    "provider": "google-ai-studio",
+    "model": "gemini-2.5-flash-text-to-speech",
+    "processingTime": 800
+  }
+}
+```
+
+#### 实时音频交互接口
+
+```bash
+POST /meridian/live/audio
+```
+
+**请求参数**：
+```json
+{
+  "audio_stream": "base64_encoded_audio_stream",
+  "session_id": "session_12345",
+  "config": {
+    "sample_rate": 16000,
+    "encoding": "LINEAR16",
+    "language": "en-US"
+  },
+  "options": {
+    "provider": "google-ai-studio",
+    "model": "gemini-2.0-flash-live"
+  }
+}
+```
+
+**响应格式**：
+```json
+{
+  "success": true,
+  "session_id": "session_12345",
+  "response_audio": "base64_encoded_response_audio",
+  "text_response": "I understand you said...",
+  "status": "completed",
+  "metadata": {
+    "provider": "google-ai-studio",
+    "model": "gemini-2.0-flash-live",
+    "processingTime": 200
+  }
+}
+```
+
+#### 图像生成接口（更新）
+
+```bash
+POST /meridian/images/generate
+```
+
+**请求参数**：
+```json
+{
+  "prompt": "A beautiful sunset over the mountains",
+  "size": "1024x1024",
+  "quality": "hd",
+  "style": "natural",
+  "options": {
+    "provider": "google-ai-studio",  // 新增：支持 Imagen 3.0
+    "model": "imagen-3.0-generate-002"  // 或使用 "gemini-2.0-flash-image-generation"
+  }
+}
+```
+
 ### 系统接口
 
 #### 健康检查
@@ -339,10 +476,15 @@ npm run test:benchmark
 
 ### 模型选择建议
 
-- **文章分析**: 推荐 Google Gemini 1.5 Flash 8B（成本效益最高）
-- **文本嵌入**: 推荐 Workers AI BGE（边缘计算优化）
+- **高质量文章分析**: 推荐 Gemini 2.5 Pro Preview（最强思考能力）
+- **标准文章分析**: 推荐 Gemini 2.0 Flash（多模态能力，性价比高）
+- **高频批量处理**: 推荐 Gemini 2.0 Flash Lite（最快最经济）
+- **文本嵌入**: 推荐 Workers AI BGE（边缘计算优化）或 Gemini Embedding（实验性）
+- **图像生成**: 推荐 Imagen 3.0（Google 最新）或 Gemini 2.0 Flash（原生集成）
+- **视频生成**: 推荐 Veo 2.0（高质量视频生成）
+- **文本转语音**: 推荐 Gemini 2.5 Flash TTS（多语言支持）
+- **实时交互**: 推荐 Gemini 2.0 Flash Live（低延迟双向交互）
 - **高质量对话**: 推荐 OpenAI GPT-4（准确性最高）
-- **图像生成**: 推荐 OpenAI DALL-E 3（质量最佳）
 
 ### 请求优化
 

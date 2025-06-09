@@ -168,10 +168,10 @@ async function analyzeArticle(c: any, returnFormat: 'detailed' | 'workflow' = 'd
   const chatRequest = {
     capability: 'chat' as const,
     messages: [{ role: 'user' as const, content: prompt }],
-    provider: body.options?.provider || 'workers-ai',
-    model: body.options?.model || '@cf/meta/llama-3.1-8b-instruct',
+    provider: body.options?.provider || 'google-ai-studio',
+    model: body.options?.model || 'gemini-2.0-flash',
     temperature: 0.1,
-    max_tokens: 2000,
+    max_tokens: 8000,
     // 添加基础metadata来确保性能追踪
     metadata: createRequestMetadata(c)
   }
@@ -441,106 +441,6 @@ app.post('/meridian/intelligence/analyze-story', async (c) => {
 })
 
 // =============================================================================
-// Clustering Analysis (Backend Integration)
-// =============================================================================
-
-app.post('/meridian/clustering/analyze', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { articles, options = {} } = body
-    
-    // 验证请求参数
-    if (!articles || !Array.isArray(articles) || articles.length === 0) {
-      return c.json({ 
-        success: false,
-        error: 'Invalid request: articles array is required'
-      }, 400)
-    }
-
-    // 返回简化的聚类结果，实际聚类逻辑在 meridian-ml-service 中实现
-    // 这里作为代理端点，将请求转发到 ML 服务
-    console.log(`[Clustering] 分析 ${articles.length} 篇文章`)
-    
-    // 模拟聚类分析结果，实际应该调用 meridian-ml-service
-    const clusters = [
-      {
-        id: 1,
-        articles: articles.slice(0, Math.ceil(articles.length / 2)),
-        similarity_score: 0.85
-      },
-      {
-        id: 2, 
-        articles: articles.slice(Math.ceil(articles.length / 2)),
-        similarity_score: 0.72
-      }
-    ].filter(cluster => cluster.articles.length > 0)
-
-    return c.json({
-      success: true,
-      clusters: clusters,
-      metadata: {
-        total_articles: articles.length,
-        clusters_found: clusters.length,
-        strategy: options.strategy || 'adaptive_threshold',
-        preprocessing: options.preprocessing || 'abs_normalize'
-      }
-    })
-  } catch (error: any) {
-    console.error('Clustering analysis error:', error)
-    return c.json({ 
-      success: false,
-      error: 'Failed to analyze clusters',
-      details: error.message
-    }, 500)
-  }
-})
-
-app.post('/meridian/clustering/analyze-story', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { cluster_id, articles_ids, articles_data, options = {} } = body
-    
-    // 验证请求参数
-    if (!cluster_id || !articles_data || !Array.isArray(articles_data)) {
-      return c.json({ 
-        success: false,
-        error: 'Invalid request: cluster_id and articles_data are required'
-      }, 400)
-    }
-
-    console.log(`[Story Analysis] 分析聚类 ${cluster_id}，包含 ${articles_data.length} 篇文章`)
-    
-    // 简化的故事分析逻辑
-    const importance = Math.random() * 5 + 1 // 1-6 的重要性评分
-    const minImportance = options.min_importance || 3
-    
-    return c.json({
-      success: true,
-      data: {
-        cluster_id: cluster_id,
-        answer: articles_data.length > 1 ? 'multi_story' : 'single_story',
-        importance: importance,
-        title: `聚类 ${cluster_id} 故事分析`,
-        story_type: articles_data.length > 1 ? 'developing' : 'static',
-        meets_threshold: importance >= minImportance
-      },
-      metadata: {
-        articles_count: articles_data.length,
-        importance_threshold: minImportance,
-        processing_time: Date.now()
-      }
-    })
-  } catch (error: any) {
-    console.error('Story clustering analysis error:', error)
-    return c.json({ 
-      success: false,
-      error: 'Failed to analyze story cluster',
-      details: error.message
-    }, 500)
-  }
-})
-
-// =============================================================================
 // Backend Integration Status
 // =============================================================================
 
@@ -557,8 +457,6 @@ app.get('/meridian/status', (c) => {
         article_analysis: '/meridian/article/analyze',
         embedding_generation: '/meridian/embeddings/generate', 
         intelligence_analysis: '/meridian/intelligence/analyze-story',
-        clustering_analysis: '/meridian/clustering/analyze',
-        story_clustering: '/meridian/clustering/analyze-story',
         // 通用端点
         chat: '/meridian/chat',
         chat_stream: '/meridian/chat/stream',
@@ -566,20 +464,15 @@ app.get('/meridian/status', (c) => {
         test: '/test'
       },
       integration: {
-        backend_workflows: ['processArticles', 'auto-brief-generation'],
-        ml_service: 'meridian-ml-service (clustering proxy)',
+        backend_workflows: ['processArticles'],
         ai_providers: aiGatewayService.getAvailableProviders(),
-        capabilities: ['chat', 'embedding', 'intelligence', 'clustering'],
-        version: '1.1.0'
+        capabilities: ['chat', 'embedding', 'intelligence'],
+        version: '1.3.0'
       },
       workflow_integration: {
         'processArticles.workflow.ts': {
           endpoints_used: ['/meridian/article/analyze', '/meridian/embeddings/generate'],
           description: '文章内容处理和嵌入生成'
-        },
-        'auto-brief-generation.ts': {
-          endpoints_used: ['/meridian/clustering/analyze', '/meridian/clustering/analyze-story', '/meridian/intelligence/analyze-story'],
-          description: '智能简报生成和聚类分析'
         }
       }
     })
@@ -606,6 +499,109 @@ app.get('/meridian/status', (c) => {
 // Service Testing & Monitoring
 // =============================================================================
 
+// AI Worker 核心功能测试端点
+app.get('/test-ai-capabilities', async (c) => {
+  try {
+    console.log('[AI Capabilities Test] 开始测试AI Worker核心功能')
+    
+    const aiGatewayService = new AIGatewayService(c.env)
+    
+    // 测试嵌入生成 - 直接调用服务
+    let embeddingResult: any = null
+    let embeddingError: any = null
+    try {
+      const embeddingRequest = {
+        capability: 'embedding' as const,
+        provider: 'workers-ai',
+        model: '@cf/baai/bge-small-en-v1.5',
+        input: "测试嵌入生成功能",
+        metadata: createRequestMetadata(c)
+      }
+      
+      const embeddingResponse = await aiGatewayService.embed(embeddingRequest)
+      if (embeddingResponse.capability === 'embedding') {
+        embeddingResult = {
+          status: 'success',
+          dimensions: embeddingResponse.data?.[0]?.embedding?.length || 0,
+          provider: embeddingResponse.provider
+        }
+      } else {
+        throw new Error('Unexpected response type from embedding service')
+      }
+    } catch (error: any) {
+      embeddingError = error.message
+      embeddingResult = {
+        status: 'failed',
+        error: error.message,
+        dimensions: 0
+      }
+    }
+
+    // 测试文章分析 - 直接调用AI Gateway
+    let analysisResult: any = null
+    let analysisError: any = null
+    try {
+      const analysisRequest = {
+        capability: 'chat' as const,
+        messages: [{ 
+          role: 'user' as const, 
+          content: getArticleAnalysisPrompt("AI技术发展趋势", "人工智能技术正在快速发展，在各个领域都有重要应用。")
+        }],
+        provider: 'workers-ai',
+        model: '@cf/meta/llama-2-7b-chat-int8',
+        temperature: 0.1,
+        max_tokens: 2000,
+        metadata: createRequestMetadata(c)
+      }
+      
+      const analysisResponse = await aiGatewayService.chat(analysisRequest)
+      if (analysisResponse.capability === 'chat') {
+        analysisResult = {
+          status: 'success',
+          analysis_completed: true,
+          provider: analysisResponse.provider,
+          response_length: analysisResponse.choices?.[0]?.message?.content?.length || 0
+        }
+      } else {
+        throw new Error('Unexpected response type from chat service')
+      }
+    } catch (error: any) {
+      analysisError = error.message
+      analysisResult = {
+        status: 'failed',
+        error: error.message,
+        analysis_completed: false
+      }
+    }
+
+    return c.json({
+      success: true,
+      test_name: 'AI Worker Core Capabilities Test',
+      results: {
+        embedding_generation: embeddingResult,
+        article_analysis: analysisResult
+      },
+      ai_gateway_status: {
+        providers_available: aiGatewayService.getAvailableProviders().length,
+        capabilities: ['chat', 'embedding', 'intelligence']
+      },
+      errors: {
+        embedding_error: embeddingError,
+        analysis_error: analysisError
+      },
+      timestamp: new Date().toISOString()
+    })
+  } catch (error: any) {
+    console.error('AI capabilities test error:', error)
+    return c.json({
+      success: false,
+      error: 'Failed to test AI capabilities',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    }, 500)
+  }
+})
+
 app.get('/test', async (c) => {
   try {
     // 轻量级功能测试，验证 AI Gateway 连通性
@@ -616,7 +612,7 @@ app.get('/test', async (c) => {
       service: 'meridian-ai-worker',
       message: 'AI Worker service is operational',
       providers: aiGatewayService.getAvailableProviders(),
-      capabilities: ['chat', 'embedding', 'intelligence', 'clustering'],
+      capabilities: ['chat', 'embedding', 'intelligence'],
       timestamp: new Date().toISOString()
     })
   } catch (error) {

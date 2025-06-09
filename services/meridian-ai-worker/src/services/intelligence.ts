@@ -45,10 +45,10 @@ export class IntelligenceService {
     // 通过AI Gateway Service进行分析
     const chatRequest = {
       messages: [{ role: 'user' as const, content: limitedPrompt }],
-      provider: 'workers-ai',
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      provider: 'google-ai-studio',
+      model: 'gemini-2.0-flash',
       temperature: 0.1, // 较低温度确保一致性
-      max_tokens: 4000
+      max_tokens: 8192
     };
 
     const result = await this.aiGatewayService.chat(chatRequest);

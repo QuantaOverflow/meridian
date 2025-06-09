@@ -32,3 +32,6 @@ binding = "AI"
 # AI_GATEWAY_ENABLE_METRICS - Enable enhanced metrics collection (true/false)
 # AI_GATEWAY_ENABLE_LOGGING - Enable detailed logging (true/false)
 
+# Note: ML Service integration has been decoupled from AI Worker
+# For clustering functionality, directly call meridian-ml-service endpoints
+

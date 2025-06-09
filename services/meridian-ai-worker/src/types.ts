@@ -153,6 +153,10 @@ export interface EmbeddingRequest extends BaseAIRequest {
   capability: 'embedding'
   input: string | string[]
   dimensions?: number
+  // Extended for BGE-M3 support
+  query?: string
+  contexts?: Array<{ text: string }>
+  truncate_inputs?: boolean
 }
 
 export interface ImageRequest extends BaseAIRequest {
@@ -280,6 +284,9 @@ export interface EmbeddingResponse extends BaseAIResponse {
   data: Array<{
     embedding: number[]
     index: number
+    // Extended for BGE-M3 query/context support
+    score?: number
+    context_id?: number
   }>
 }
 

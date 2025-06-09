@@ -80,7 +80,7 @@ meridian-ai-worker/
 | 提供商 | 模型数量 | 主要能力 | 成本效益 | 状态 |
 |--------|----------|----------|----------|------|
 | **Google AI Studio** | 3个 | Chat (Gemini) | 🟢 低成本 | ✅ 已配置 |
-| **Workers AI** | 4个 | Chat, Embedding, Image | 🟢 边缘计算 | ✅ 已配置 |
+| **Workers AI** | 5个 | Chat, Embedding (多语言), Image | 🟢 边缘计算 | ✅ 已配置 |
 | **OpenAI** | 7个 | Chat, Embedding, Image, Audio | 🟡 高质量 | ✅ 已配置 |
 
 ### 🛡️ 企业级功能
@@ -148,6 +148,7 @@ curl -X POST "/meridian/article/analyze" \
 #### 嵌入生成
 
 ```bash
+# 标准文本嵌入
 curl -X POST "/meridian/embeddings/generate" \
   -H "Content-Type: application/json" \
   -d '{
@@ -155,6 +156,33 @@ curl -X POST "/meridian/embeddings/generate" \
     "options": {
       "provider": "workers-ai",
       "model": "@cf/baai/bge-base-en-v1.5"
+    }
+  }'
+
+# 使用 BGE-M3 多语言嵌入
+curl -X POST "/meridian/embeddings/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": ["Hello world", "你好世界", "こんにちは"],
+    "options": {
+      "provider": "workers-ai",
+      "model": "@cf/baai/bge-m3"
+    }
+  }'
+
+# BGE-M3 查询和上下文相似度评分
+curl -X POST "/meridian/embeddings/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "AI technology",
+    "contexts": [
+      {"text": "Artificial intelligence is transforming industries"},
+      {"text": "Machine learning algorithms improve over time"},
+      {"text": "Cooking recipes vary by culture"}
+    ],
+    "options": {
+      "provider": "workers-ai", 
+      "model": "@cf/baai/bge-m3"
     }
   }'
 ```

@@ -37,7 +37,7 @@ export class AIGatewayService {
   private defaultRetryConfig: RetryConfig
   private enhancementService: AIGatewayEnhancementService
 
-  constructor(private env: CloudflareEnv) {
+  constructor(private env: CloudflareEnv, options?: { simplified?: boolean }) {
     this.gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${env.CLOUDFLARE_ACCOUNT_ID}/${env.CLOUDFLARE_GATEWAY_ID}`
     
     // Initialize services
@@ -87,14 +87,16 @@ export class AIGatewayService {
       this.providers.set('mock', new MockProvider())
       this.logger.log('info', 'Mock provider added for development/testing', {
         isDevelopment,
-        totalProviders: this.providers.size
+        totalProviders: this.providers.size,
+        simplified: options?.simplified || false
       })
     }
     
     this.logger.log('info', 'AIGatewayService initialized', {
       gatewayUrl: this.gatewayUrl,
       availableProviders: Array.from(this.providers.keys()),
-      retryConfig: this.defaultRetryConfig
+      retryConfig: this.defaultRetryConfig,
+      mode: options?.simplified ? 'simplified' : 'full'
     })
   }
 
@@ -140,8 +142,11 @@ export class AIGatewayService {
         aiRequest.retryConfig
       )
       
-      // Enrich response with metadata
-      response.metadata = requestMetadata
+      // Enrich response with metadata (保留现有的性能数据)
+      response.metadata = {
+        ...requestMetadata,
+        ...response.metadata  // 保留processRequest中添加的性能数据
+      }
       response.retryAttempts = attempts
       response.processingTime = Date.now() - startTime
       
@@ -224,6 +229,9 @@ export class AIGatewayService {
             gatewayLatency: 0
           }
         })
+        
+        // 设置处理时间
+        mappedResponse.processingTime = Date.now() - startTime
       }
       
       return mappedResponse

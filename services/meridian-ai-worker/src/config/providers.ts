@@ -208,6 +208,19 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
         }
       },
       {
+        name: '@cf/baai/bge-m3',
+        capabilities: ['embedding'],
+        endpoint: '/ai/run/@cf/baai/bge-m3',
+        max_tokens: 8192, // BGE-M3 supports longer context
+        supports_streaming: false,
+        cost_per_token: { input: 0.000012, output: 0 }, // $0.012 per M input tokens
+        ai_gateway_config: {
+          cache_ttl: 7200, // 2 hours for embeddings
+          enable_cost_tracking: true, // Enable cost tracking for paid model
+          custom_tags: ['paid', 'workers-ai', 'embedding', 'multilingual', 'bge-m3']
+        }
+      },
+      {
         name: '@cf/lykon/dreamshaper-8-lcm',
         capabilities: ['image'],
         endpoint: '/ai/run/@cf/lykon/dreamshaper-8-lcm',

@@ -79,7 +79,7 @@ app.post('/meridian/embeddings/generate', async (c) => {
     const embeddingRequest: any = {
       capability: 'embedding',
       provider: body.options?.provider || 'workers-ai',
-      model: body.options?.model || '@cf/baai/bge-m3',
+      model: body.options?.model || '@cf/baai/bge-small-en-v1.5',
       // 添加基础metadata来确保性能追踪
       metadata: createRequestMetadata(c)
     }

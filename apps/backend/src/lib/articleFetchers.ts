@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import { parseArticle } from './parsers';
-import { err, ok } from 'neverthrow';
 import { userAgents } from './utils';
 import { Env } from '../index';
-import { tryCatchAsync } from './tryCatchAsync';
 
 /**
  * Schema for validating responses from the Cloudflare Browser Rendering API
@@ -23,11 +21,13 @@ export const articleSchema = z.object({
  *
  * @param env Application environment with Cloudflare credentials
  * @param url URL of the article to fetch
- * @returns Result containing either the parsed article content or an error object
+ * @returns Object containing the parsed article content or throws an error
  */
 export async function getArticleWithBrowser(env: Env, url: string) {
-  const response = await tryCatchAsync(
-    fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/content`, {
+  let response: Response;
+  
+  try {
+    response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -130,23 +130,29 @@ export async function getArticleWithBrowser(env: Env, url: string) {
           timeout: 5000,
         },
       }),
-    })
-  );
-  if (response.isErr()) {
-    return err({ type: 'FETCH_ERROR', error: response.error });
+    });
+  } catch (error) {
+    throw new Error(`Browser fetch failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  const parsedPageContent = articleSchema.safeParse(await response.value.json());
+  let pageContent;
+  try {
+    pageContent = await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse browser response: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const parsedPageContent = articleSchema.safeParse(pageContent);
   if (parsedPageContent.success === false) {
-    return err({ type: 'VALIDATION_ERROR', error: parsedPageContent.error });
+    throw new Error(`Browser response validation failed: ${parsedPageContent.error.message}`);
   }
 
-  const articleResult = parseArticle({ html: parsedPageContent.data.result });
-  if (articleResult.isErr()) {
-    return err({ type: 'PARSE_ERROR', error: articleResult.error });
+  try {
+    const article = parseArticle({ html: parsedPageContent.data.result });
+    return article;
+  } catch (error) {
+    throw new Error(`Article parsing failed: ${error instanceof Error ? error.message : String(error)}`);
   }
-
-  return ok(articleResult.value);
 }
 
 /**
@@ -156,26 +162,34 @@ export async function getArticleWithBrowser(env: Env, url: string) {
  * simpler websites that don't rely heavily on client-side JavaScript for content.
  *
  * @param url URL of the article to fetch
- * @returns Result containing either the parsed article content or an error object
+ * @returns The parsed article content or throws an error
  */
 export async function getArticleWithFetch(url: string) {
-  const response = await tryCatchAsync(
-    fetch(url, {
+  let response: Response;
+  
+  try {
+    response = await fetch(url, {
       method: 'GET',
       headers: {
         'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
         Referer: 'https://www.google.com/',
       },
-    })
-  );
-  if (response.isErr()) {
-    return err({ type: 'FETCH_ERROR', error: response.error });
+    });
+  } catch (error) {
+    throw new Error(`Fetch failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  const articleResult = parseArticle({ html: await response.value.text() });
-  if (articleResult.isErr()) {
-    return err({ type: 'PARSE_ERROR', error: articleResult.error });
+  let html: string;
+  try {
+    html = await response.text();
+  } catch (error) {
+    throw new Error(`Failed to read response: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  return ok(articleResult.value);
+  try {
+    const article = parseArticle({ html });
+    return article;
+  } catch (error) {
+    throw new Error(`Article parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }

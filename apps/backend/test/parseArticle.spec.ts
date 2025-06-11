@@ -28,23 +28,17 @@ describe('parseArticle', () => {
     } as any);
   });
 
-  it('should return an error Result if Readability constructor or parse() throws an exception', () => {
+  it('should throw an error if Readability constructor or parse() throws an exception', () => {
     // Setup: Make Readability throw an error
     vi.mocked(Readability).mockImplementation(() => {
       throw new Error('Readability error');
     });
 
-    // Execute
-    const result = parseArticle({ html: '<html><body>Test</body></html>' });
-
-    // Verify
-    expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
-      expect(result.error.type).toBe('READABILITY_ERROR');
-    }
+    // Execute & Verify
+    expect(() => parseArticle({ html: '<html><body>Test</body></html>' })).toThrow('Article parsing error: Readability error');
   });
 
-  it('should return an error Result if Readability returns null', () => {
+  it('should throw an error if Readability returns null', () => {
     // Setup: Make Readability.parse() return null
     vi.mocked(Readability).mockImplementation(() => {
       return {
@@ -52,17 +46,11 @@ describe('parseArticle', () => {
       } as any;
     });
 
-    // Execute
-    const result = parseArticle({ html: '<html><body>Test</body></html>' });
-
-    // Verify
-    expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
-      expect(result.error.type).toBe('NO_ARTICLE_FOUND');
-    }
+    // Execute & Verify
+    expect(() => parseArticle({ html: '<html><body>Test</body></html>' })).toThrow('No article content found');
   });
 
-  it('should return an error Result if Readability result is missing title', () => {
+  it('should throw an error if Readability result is missing title', () => {
     // Setup: Make Readability.parse() return an object without a title
     vi.mocked(Readability).mockImplementation(() => {
       return {
@@ -73,17 +61,11 @@ describe('parseArticle', () => {
       } as any;
     });
 
-    // Execute
-    const result = parseArticle({ html: '<html><body>Test</body></html>' });
-
-    // Verify
-    expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
-      expect(result.error.type).toBe('NO_ARTICLE_FOUND');
-    }
+    // Execute & Verify
+    expect(() => parseArticle({ html: '<html><body>Test</body></html>' })).toThrow('No article content found');
   });
 
-  it('should return an error Result if Readability result is missing textContent', () => {
+  it('should throw an error if Readability result is missing textContent', () => {
     // Setup: Make Readability.parse() return an object without textContent
     vi.mocked(Readability).mockImplementation(() => {
       return {
@@ -94,14 +76,8 @@ describe('parseArticle', () => {
       } as any;
     });
 
-    // Execute
-    const result = parseArticle({ html: '<html><body>Test</body></html>' });
-
-    // Verify
-    expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
-      expect(result.error.type).toBe('NO_ARTICLE_FOUND');
-    }
+    // Execute & Verify
+    expect(() => parseArticle({ html: '<html><body>Test</body></html>' })).toThrow('No article content found');
   });
 
   it('should return the extracted title, cleaned textContent, and publishedTime when successful', () => {
@@ -120,14 +96,11 @@ describe('parseArticle', () => {
     const result = parseArticle({ html: '<html><body>Test</body></html>' });
 
     // Verify
-    expect(result.isOk()).toBe(true);
-    if (result.isOk()) {
-      expect(result.value).toEqual({
-        title: 'Article Title',
-        text: 'Article content here',
-        publishedTime: '2025-03-18T18:04:44-04:00',
-      });
-    }
+    expect(result).toEqual({
+      title: 'Article Title',
+      text: 'Article content here',
+      publishedTime: '2025-03-18T18:04:44-04:00',
+    });
   });
 
   it('should clean and normalize whitespace in the extracted textContent', () => {
@@ -146,10 +119,7 @@ describe('parseArticle', () => {
     const result = parseArticle({ html: '<html><body>Test</body></html>' });
 
     // Verify
-    expect(result.isOk()).toBe(true);
-    if (result.isOk()) {
-      // The text should be cleaned according to the cleanString function logic
-      expect(result.value.text).toBe('Multiple spaces\nand tabs\nand extra newlines');
-    }
+    // The text should be cleaned according to the cleanString function logic
+    expect(result.text).toBe('Multiple spaces\nand tabs\nand extra newlines');
   });
 });

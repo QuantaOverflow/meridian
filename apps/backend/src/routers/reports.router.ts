@@ -4,7 +4,6 @@ import type { HonoEnv } from '../app';
 import { $reports, desc } from '@meridian/database';
 import { hasValidAuthToken, getDb } from '../lib/utils';
 import { zValidator } from '@hono/zod-validator';
-import { tryCatchAsync } from '../lib/tryCatchAsync';
 
 const route = new Hono<HonoEnv>()
   .get('/last-report', async c => {
@@ -14,16 +13,15 @@ const route = new Hono<HonoEnv>()
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const reportResult = await tryCatchAsync(
-      getDb(c.env.HYPERDRIVE).query.$reports.findFirst({
+    let report;
+    try {
+      report = await getDb(c.env.HYPERDRIVE).query.$reports.findFirst({
         orderBy: desc($reports.createdAt),
-      })
-    );
-    if (reportResult.isErr()) {
+      });
+    } catch (error) {
       return c.json({ error: 'Failed to fetch last report' }, 500);
     }
 
-    const report = reportResult.value;
     if (report === undefined) {
       return c.json({ error: 'No report found' }, 404);
     }
@@ -64,8 +62,9 @@ const route = new Hono<HonoEnv>()
       const db = getDb(c.env.HYPERDRIVE);
       const body = c.req.valid('json');
 
-      const reportResult = await tryCatchAsync(db.insert($reports).values(body));
-      if (reportResult.isErr()) {
+      try {
+        await db.insert($reports).values(body);
+      } catch (error) {
         return c.json({ error: 'Failed to insert report' }, 500);
       }
 

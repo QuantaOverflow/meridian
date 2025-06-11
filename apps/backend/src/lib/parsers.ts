@@ -2,7 +2,6 @@ import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import { XMLParser } from 'fast-xml-parser';
 import { z } from 'zod';
-import { ok, err, Result } from 'neverthrow';
 
 const rssFeedSchema = z.object({
   title: z.string().min(1),
@@ -35,23 +34,19 @@ function cleanUrl(url: string) {
  * Extracts titles, links, and publication dates from the feed items.
  *
  * @param xml The XML content of the RSS feed as a string
- * @returns A Result containing either an array of parsed feed items or an error
+ * @returns A Promise containing either an array of parsed feed items or throws an error
  */
-export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof rssFeedSchema>[], Error>> {
-  const safeParser = Result.fromThrowable(
-    (xml: string) => new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' }).parse(xml),
-    e => (e instanceof Error ? e : new Error(String(e)))
-  );
-
-  const parsedXml = safeParser(xml);
-  if (parsedXml.isErr()) {
-    return err(new Error(`Parse error: ${parsedXml.error.message}`));
+export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedSchema>[]> {
+  let parsedXml;
+  
+  try {
+    parsedXml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' }).parse(xml);
+  } catch (error) {
+    throw new Error(`RSS Parse error: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  const result = parsedXml.value;
-
   // handle various feed structures
-  let items = result.rss?.channel?.item || result.feed?.entry || result.item || result['rdf:RDF']?.item || [];
+  let items = parsedXml.rss?.channel?.item || parsedXml.feed?.entry || parsedXml.item || parsedXml['rdf:RDF']?.item || [];
 
   // handle single item case
   items = Array.isArray(items) ? items : [items];
@@ -115,10 +110,10 @@ export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof r
   // standardize the items
   const parsedItems = z.array(rssFeedSchema).safeParse(properItems);
   if (parsedItems.success === false) {
-    return err(new Error(`Validation error: ${parsedItems.error.message}`));
+    throw new Error(`RSS Validation error: ${parsedItems.error.message}`);
   }
 
-  return ok(parsedItems.data);
+  return parsedItems.data;
 }
 
 /**
@@ -128,28 +123,25 @@ export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof r
  * from an HTML document, ignoring navigation, ads, and other non-content elements.
  *
  * @param opts Object containing the HTML content to parse
- * @returns A Result containing either the parsed article data or an error object
+ * @returns The parsed article data or throws an error
  */
 export function parseArticle(opts: { html: string }) {
-  const safeReadability = Result.fromThrowable(
-    (html: string) => new Readability(parseHTML(html).document).parse(),
-    e => (e instanceof Error ? e : new Error(String(e)))
-  );
-
-  const articleResult = safeReadability(opts.html);
-  if (articleResult.isErr()) {
-    return err({ type: 'READABILITY_ERROR', error: articleResult.error });
+  let article;
+  
+  try {
+    article = new Readability(parseHTML(opts.html).document).parse();
+  } catch (error) {
+    throw new Error(`Article parsing error: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // if we can't parse the article or there is no article, not much we can do
-  const article = articleResult.value;
   if (article === null || !article.title || !article.textContent) {
-    return err({ type: 'NO_ARTICLE_FOUND', error: new Error('No article found') });
+    throw new Error('No article content found');
   }
 
-  return ok({
+  return {
     title: article.title,
     text: cleanString(article.textContent),
     publishedTime: article.publishedTime || undefined,
-  });
+  };
 }

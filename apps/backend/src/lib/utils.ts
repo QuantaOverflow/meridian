@@ -104,3 +104,16 @@ export function generateSearchText(data: z.infer<typeof articleAnalysisSchema> &
 
   return combined;
 }
+
+/**
+ * Simple async error wrapper that returns null on error instead of throwing
+ * @param asyncFn Promise to execute
+ * @returns The result or null if error occurred
+ */
+export async function safeAsync<T>(asyncFn: Promise<T>): Promise<T | null> {
+  try {
+    return await asyncFn;
+  } catch (error) {
+    return null;
+  }
+}

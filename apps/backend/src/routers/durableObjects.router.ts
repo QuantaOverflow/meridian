@@ -4,7 +4,6 @@ import { $articles, $sources, eq, isNull } from '@meridian/database';
 import { hasValidAuthToken, getDb } from '../lib/utils';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { tryCatchAsync } from '../lib/tryCatchAsync';
 import { Logger } from '../lib/logger';
 
 const logger = new Logger({ router: 'durable-objects' });
@@ -55,19 +54,17 @@ const route = new Hono<HonoEnv>()
       const db = getDb(c.env.HYPERDRIVE);
 
       // Get the source first
-      const sourceResult = await tryCatchAsync(
-        db.query.$sources.findFirst({
+      let source;
+      try {
+        source = await db.query.$sources.findFirst({
           where: eq($sources.id, Number(sourceId)),
-        })
-      );
-
-      if (sourceResult.isErr()) {
-        const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-        initLogger.error('Failed to fetch source', { sourceId }, error);
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        initLogger.error('Failed to fetch source', { sourceId }, err);
         return c.json({ error: 'Failed to fetch source' }, 500);
       }
 
-      const source = sourceResult.value;
       if (!source) {
         return c.json({ error: 'Source not found' }, 404);
       }
@@ -76,16 +73,15 @@ const route = new Hono<HonoEnv>()
       const doId = c.env.SOURCE_SCRAPER.idFromName(source.url);
       const stub = c.env.SOURCE_SCRAPER.get(doId);
 
-      const initResult = await tryCatchAsync(
-        stub.initialize({
+      try {
+        await stub.initialize({
           id: source.id,
           url: source.url,
           scrape_frequency: source.scrape_frequency,
-        })
-      );
-      if (initResult.isErr()) {
-        const error = initResult.error instanceof Error ? initResult.error : new Error(String(initResult.error));
-        initLogger.error('Failed to initialize source DO', { sourceId, url: source.url }, error);
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        initLogger.error('Failed to initialize source DO', { sourceId, url: source.url }, err);
         return c.json({ error: 'Failed to initialize source DO' }, 500);
       }
 
@@ -108,24 +104,22 @@ const route = new Hono<HonoEnv>()
     const batchSize = Number(c.req.query('batchSize')) || 100;
     initLogger.info('Using batch size', { batchSize });
 
-    const allSourcesResult = await tryCatchAsync(
-      db
+    let allSources;
+    try {
+      allSources = await db
         .select({
           id: $sources.id,
           url: $sources.url,
           scrape_frequency: $sources.scrape_frequency,
         })
         .from($sources)
-        .where(isNull($sources.do_initialized_at))
-    );
-    if (allSourcesResult.isErr()) {
-      const error =
-        allSourcesResult.error instanceof Error ? allSourcesResult.error : new Error(String(allSourcesResult.error));
-      initLogger.error('Failed to fetch sources from database', undefined, error);
+        .where(isNull($sources.do_initialized_at));
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      initLogger.error('Failed to fetch sources from database', undefined, err);
       return c.json({ error: 'Failed to fetch sources from database' }, 500);
     }
 
-    const allSources = allSourcesResult.value;
     initLogger.info('Sources fetched from database', { source_count: allSources.length });
 
     // Process sources in batches
@@ -150,15 +144,15 @@ const route = new Hono<HonoEnv>()
           const stub = c.env.SOURCE_SCRAPER.get(doId);
 
           sourceLogger.debug('Initializing DO');
-          const result = await tryCatchAsync(stub.initialize(source));
-          if (result.isErr()) {
-            const error = result.error instanceof Error ? result.error : new Error(String(result.error));
-            sourceLogger.error('Failed to initialize DO', undefined, error);
+          try {
+            await stub.initialize(source);
+            sourceLogger.debug('Successfully initialized DO');
+            return true;
+          } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            sourceLogger.error('Failed to initialize DO', undefined, err);
             return false;
           }
-
-          sourceLogger.debug('Successfully initialized DO');
-          return true;
         })
       );
 
@@ -196,57 +190,51 @@ const route = new Hono<HonoEnv>()
       const db = getDb(c.env.HYPERDRIVE);
 
       // Get the source first to get its URL
-      const sourceResult = await tryCatchAsync(
-        db.query.$sources.findFirst({
+      let source;
+      try {
+        source = await db.query.$sources.findFirst({
           where: eq($sources.id, Number(sourceId)),
-        })
-      );
-
-      if (sourceResult.isErr()) {
-        const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-        deleteLogger.error('Failed to fetch source', { sourceId }, error);
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        deleteLogger.error('Failed to fetch source', { sourceId }, err);
         return c.json({ error: 'Failed to fetch source' }, 500);
       }
 
-      const source = sourceResult.value;
       if (!source) {
         return c.json({ error: 'Source not found' }, 404);
       }
 
-      // Delete the durable object first
       const doId = c.env.SOURCE_SCRAPER.idFromName(source.url);
       const stub = c.env.SOURCE_SCRAPER.get(doId);
 
-      const deleteResult = await tryCatchAsync(
-        stub.fetch('http://do/delete', {
-          method: 'DELETE',
-        })
-      );
-      if (deleteResult.isErr()) {
-        const error = deleteResult.error instanceof Error ? deleteResult.error : new Error(String(deleteResult.error));
-        deleteLogger.error('Failed to delete source DO', { sourceId, url: source.url }, error);
-        return c.json({ error: 'Failed to delete source DO' }, 500);
+      try {
+        await stub.destroy();
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        deleteLogger.error('Failed to destroy DO', { sourceId }, err);
+        return c.json({ error: 'Failed to destroy DO' }, 500);
       }
 
-      // Then delete from database
-      // delete the articles first
-      const articlesResult = await tryCatchAsync(db.delete($articles).where(eq($articles.sourceId, Number(sourceId))));
-      if (articlesResult.isErr()) {
-        const error =
-          articlesResult.error instanceof Error ? articlesResult.error : new Error(String(articlesResult.error));
-        deleteLogger.error('Failed to delete articles', { sourceId }, error);
+      // Delete articles associated with this source
+      try {
+        await db.delete($articles).where(eq($articles.sourceId, Number(sourceId)));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        deleteLogger.error('Failed to delete articles', { sourceId }, err);
         return c.json({ error: 'Failed to delete articles' }, 500);
       }
 
-      const dbDeleteResult = await tryCatchAsync(db.delete($sources).where(eq($sources.id, Number(sourceId))));
-      if (dbDeleteResult.isErr()) {
-        const error =
-          dbDeleteResult.error instanceof Error ? dbDeleteResult.error : new Error(String(dbDeleteResult.error));
-        deleteLogger.error('Failed to delete source from database', { sourceId }, error);
+      // Delete the source from the database
+      try {
+        await db.delete($sources).where(eq($sources.id, Number(sourceId)));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        deleteLogger.error('Failed to delete source from database', { sourceId }, err);
         return c.json({ error: 'Failed to delete source from database' }, 500);
       }
 
-      deleteLogger.info('Successfully deleted source', { sourceId, url: source.url });
+      deleteLogger.info('Successfully deleted source and associated resources', { sourceId });
       return c.json({ success: true });
     }
   );

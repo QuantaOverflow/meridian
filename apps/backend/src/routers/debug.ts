@@ -83,227 +83,24 @@ app.get('/check-articles', async (c) => {
   }
 });
 
-// 简报生成调试端点
-app.post('/debug-brief-generation', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { 
-      dryRun = true,
-      articleLimit = 10,
-      useSimulatedEmbeddings = false
-    } = body;
 
-    console.log('[BriefDebug] 开始简报生成调试');
-
-    const db = getDb(c.env.HYPERDRIVE);
-    
-    // 获取测试文章
-    const articlesQuery = await db
-      .select({
-        id: $articles.id,
-        title: $articles.title,
-        embedding: $articles.embedding,
-      })
-      .from($articles)
-      .where(
-        and(
-          eq($articles.status, 'PROCESSED'),
-          isNotNull($articles.embedding),
-          isNotNull($articles.contentFileKey)
-        )
-      )
-      .orderBy(desc($articles.processedAt))
-      .limit(articleLimit);
-
-    if (articlesQuery.length < 2) {
-      return c.json({
-        success: false,
-        error: `文章数量不足：需要至少2篇，实际${articlesQuery.length}篇`
-      });
-    }
-
-    // 准备测试数据
-    let testArticles = articlesQuery;
-    
-    if (useSimulatedEmbeddings) {
-      // 使用模拟嵌入向量
-      testArticles = articlesQuery.map(article => ({
-        ...article,
-        embedding: new Array(384).fill(0).map(() => Math.random() * 0.1)
-      }));
-    }
-
-    // 验证嵌入向量质量
-    const embeddingAnalysis = testArticles.map(article => {
-      const embedding = article.embedding;
-      return {
-        id: article.id,
-        title: article.title,
-        embeddingInfo: {
-          isValid: Array.isArray(embedding) && embedding.length === 384,
-          length: Array.isArray(embedding) ? embedding.length : 'N/A',
-          hasValidNumbers: Array.isArray(embedding) ? 
-            embedding.every(val => typeof val === 'number' && !isNaN(val)) : false,
-          sampleValues: Array.isArray(embedding) ? embedding.slice(0, 3) : []
-        }
-      };
-    });
-
-    const validArticles = embeddingAnalysis.filter(a => a.embeddingInfo.isValid);
-
-    if (dryRun) {
-      return c.json({
-        success: true,
-        dryRun: true,
-        analysis: {
-          totalArticles: testArticles.length,
-          validEmbeddings: validArticles.length,
-          readyForClustering: validArticles.length >= 2,
-          embeddingAnalysis: embeddingAnalysis
-        }
-      });
-    }
-
-    // 实际执行聚类测试
-    const articlesForClustering = validArticles.map(a => ({
-      id: a.id,
-      embedding: testArticles.find(t => t.id === a.id)?.embedding
-    }));
-
-    console.log('[BriefDebug] 执行聚类测试...');
-    
-    const clusterRequest = new Request('https://meridian-ai-worker/meridian/clustering/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        articles: articlesForClustering,
-        options: {
-          umap: {
-            n_neighbors: Math.min(15, Math.max(2, validArticles.length - 1)),
-            n_components: Math.min(10, Math.max(2, validArticles.length - 1)),
-            min_dist: 0.0,
-            metric: 'cosine'
-          },
-          hdbscan: {
-            min_cluster_size: Math.max(2, Math.floor(validArticles.length / 5)),
-            min_samples: Math.max(2, Math.floor(validArticles.length / 10)),
-            cluster_selection_epsilon: 0.3,
-            metric: 'euclidean'
-          },
-          preprocessing: 'abs_normalize',
-          strategy: 'adaptive_threshold',
-          enable_quality_check: true,
-          min_quality_score: 0.2,
-          enable_fallback: true
-        }
-      })
-    });
-
-    const response = await c.env.AI_WORKER.fetch(clusterRequest);
-    const clusterResult = await response.json();
-
-    return c.json({
-      success: true,
-      dryRun: false,
-      clusteringTest: {
-        requestStatus: response.status,
-        responseOk: response.ok,
-        result: clusterResult,
-        articlesUsed: validArticles.length
-      }
-    });
-
-  } catch (error) {
-    console.error('简报生成调试失败:', error);
-    return c.json({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    }, 500);
-  }
-});
-
-// 检查嵌入向量的实际内容
-app.post('/analyze-embeddings', async (c) => {
-  try {
-    const db = getDb(c.env.HYPERDRIVE);
-    
-    // 获取一篇有嵌入向量的文章
-    const articlesWithEmbeddings = await db
-      .select({
-        id: $articles.id,
-        title: $articles.title,
-        embedding: $articles.embedding,
-      })
-      .from($articles)
-      .where(
-        and(
-          eq($articles.status, 'PROCESSED'),
-          isNotNull($articles.embedding)
-        )
-      )
-      .limit(5);
-
-    if (articlesWithEmbeddings.length === 0) {
-      return c.json({
-        success: false,
-        error: '没有找到带嵌入向量的文章'
-      });
-    }
-
-    const embeddingAnalysis = articlesWithEmbeddings.map(article => {
-      const embedding = article.embedding;
-      
-      return {
-        id: article.id,
-        title: article.title,
-        embeddingInfo: {
-          type: Array.isArray(embedding) ? 'array' : typeof embedding,
-          length: Array.isArray(embedding) ? embedding.length : 'N/A',
-          isEmptyArray: Array.isArray(embedding) && embedding.length === 0,
-          firstFewValues: Array.isArray(embedding) ? embedding.slice(0, 5) : 'N/A',
-          hasValidNumbers: Array.isArray(embedding) ? 
-            embedding.every(val => typeof val === 'number' && !isNaN(val)) : false,
-          vectorStats: Array.isArray(embedding) ? {
-            min: Math.min(...embedding),
-            max: Math.max(...embedding),
-            mean: embedding.reduce((sum, val) => sum + val, 0) / embedding.length,
-            sparsity: embedding.filter(val => val === 0).length / embedding.length
-          } : null
-        }
-      };
-    });
-
-    return c.json({
-      success: true,
-      articlesAnalyzed: articlesWithEmbeddings.length,
-      embeddingAnalysis: embeddingAnalysis
-    });
-
-  } catch (error) {
-    console.error('检查嵌入向量失败:', error);
-    return c.json({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    }, 500);
-  }
-});
-
-// AI Worker聚类服务诊断端点
+// ML Service 聚类服务诊断端点
 app.post('/diagnose-clustering-service', async (c) => {
   try {
     const db = getDb(c.env.HYPERDRIVE);
     
-    console.log('[ClusterDiag] 开始诊断AI Worker聚类服务...');
+    console.log('[ClusterDiag] 开始诊断ML Service聚类服务...');
     
-    // 步骤1: AI Worker健康检查
-    const healthRequest = new Request('https://meridian-ai-worker/health', {
-      method: 'GET'
+    // 步骤1: ML Service健康检查
+    const healthResponse = await fetch('https://meridian-ml.pathsoflight.org/health', {
+      method: 'GET',
+      headers: {
+        'X-API-Token': 'f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336'
+      }
     });
-    
-    const healthResponse = await c.env.AI_WORKER.fetch(healthRequest);
     const healthData = await healthResponse.json();
     
-    console.log('[ClusterDiag] AI Worker健康检查:', healthResponse.status, healthData);
+    console.log('[ClusterDiag] ML Service健康检查:', healthResponse.status, healthData);
 
     // 步骤2: 获取少量真实文章数据
     const articlesQuery = await db
@@ -347,14 +144,26 @@ app.post('/diagnose-clustering-service', async (c) => {
     const realEmbeddings = validArticles.slice(0, 3).map(a => ({
       id: a.id,
       embedding: a.embedding,
-      title: a.title
+      metadata: {
+        title: a.title,
+        url: 'test-url',
+        content: '',
+        source: 'debug',
+        publishDate: new Date().toISOString()
+      }
     }));
 
     // 生成模拟嵌入向量 (已知能工作的)
     const mockEmbeddings = validArticles.slice(0, 3).map(a => ({
       id: a.id,
       embedding: new Array(384).fill(0).map(() => Math.random() * 0.1),
-      title: a.title
+      metadata: {
+        title: a.title,
+        url: 'test-url',
+        content: '',
+        source: 'mock',
+        publishDate: new Date().toISOString()
+      }
     }));
 
     // 步骤3: 测试聚类功能
@@ -369,46 +178,42 @@ app.post('/diagnose-clustering-service', async (c) => {
       if (testCase.data.length < 2) continue;
 
       try {
-        const clusterRequest = new Request('https://meridian-ai-worker/meridian/clustering/analyze', {
+        const clusterRequest = await fetch('https://meridian-ml.pathsoflight.org/clustering/auto', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-API-Token': 'f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336'
+          },
           body: JSON.stringify({
-            articles: testCase.data,
-            options: {
-              umap: {
-                n_neighbors: Math.min(15, testCase.data.length - 1),
-                n_components: Math.min(10, testCase.data.length - 1),
-                min_dist: 0.0,
-                metric: 'cosine'
-              },
-              hdbscan: {
-                min_cluster_size: 2,
-                min_samples: 2,
-                cluster_selection_epsilon: 0.3,
-                metric: 'euclidean'
-              },
-              preprocessing: 'abs_normalize',
-              strategy: 'adaptive_threshold',
-              enable_quality_check: true,
-              min_quality_score: 0.2,
-              enable_fallback: true
+            items: testCase.data,
+            config: {
+              umap_n_neighbors: Math.min(15, Math.max(3, testCase.data.length - 1)),
+              umap_n_components: Math.min(10, testCase.data.length - 1),
+              hdbscan_min_cluster_size: 2,
+              hdbscan_min_samples: 2,
+              normalize_embeddings: true
+            },
+            content_analysis: {
+              enabled: true,
+              top_n_per_cluster: 3,
+              generate_themes: true,
+              generate_summary: true
             }
           })
         });
 
-        const response = await c.env.AI_WORKER.fetch(clusterRequest);
-        const result = await response.json() as any;
+        const result = await clusterRequest.json() as any;
         
         testResults.push({
           testCase: testCase.name,
-          requestStatus: response.status,
-          responseOk: response.ok,
-          success: response.ok && result && !result.error,
+          requestStatus: clusterRequest.status,
+          responseOk: clusterRequest.ok,
+          success: clusterRequest.ok && result && !result.error,
           result: result,
           articlesCount: testCase.data.length
         });
 
-        console.log(`[ClusterDiag] ${testCase.name}测试完成:`, response.status);
+        console.log(`[ClusterDiag] ${testCase.name}测试完成:`, clusterRequest.status);
         
       } catch (error) {
         testResults.push({
@@ -422,7 +227,7 @@ app.post('/diagnose-clustering-service', async (c) => {
     return c.json({
       success: true,
       diagnosis: {
-        aiWorkerHealth: {
+        mlServiceHealth: {
           status: healthResponse.status,
           ok: healthResponse.ok,
           data: healthData
@@ -434,13 +239,13 @@ app.post('/diagnose-clustering-service', async (c) => {
         },
         clusteringTests: testResults,
         recommendation: testResults.some(t => t.success) ? 
-          "聚类服务正常工作" : 
-          "聚类服务存在问题，需要检查配置"
+          "ML Service聚类服务正常工作" : 
+          "ML Service聚类服务存在问题，需要检查配置"
       }
     });
 
   } catch (error) {
-    console.error('聚类服务诊断失败:', error);
+    console.error('ML Service聚类服务诊断失败:', error);
     return c.json({
       success: false,
       error: error instanceof Error ? error.message : String(error)

@@ -2,12 +2,11 @@ import getArticleAnalysisPrompt, { articleAnalysisSchema } from '../prompts/arti
 import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
 import { DomainRateLimiter } from '../lib/rateLimiter';
 import { Env } from '../index';
-import { err, ok } from 'neverthrow';
 import { generateSearchText, getDb } from '../lib/utils';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/articleFetchers';
-import { ResultAsync } from 'neverthrow';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/logger';
+import { createAIServices, handleServiceResponse } from '../lib/ai-services';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {
@@ -82,6 +81,9 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
     const env = this.env;
     const db = getDb(env.HYPERDRIVE);
     
+    // 创建AI服务实例
+    const aiServices = createAIServices(env);
+    
     const logger = workflowLogger.child({
       workflow_id: _event.instanceId,
       initial_article_count: _event.payload.articles_id.length,
@@ -155,24 +157,21 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             if (TRICKY_DOMAINS.includes(domain)) {
               scrapeLogger.info('Using browser to fetch article (tricky domain)');
               const browserResult = await getArticleWithBrowser(env, article.url);
-              if (browserResult.isErr()) throw browserResult.error.error;
-              return { id: article.id, success: true, html: browserResult.value, used_browser: true };
+              return { id: article.id, success: true, html: browserResult, used_browser: true };
             } else {
               scrapeLogger.info('Attempting fetch-first approach');
-              const fetchResult = await getArticleWithFetch(article.url);
-              if (!fetchResult.isErr()) {
-                return { id: article.id, success: true, html: fetchResult.value, used_browser: false };
+              try {
+                const fetchResult = await getArticleWithFetch(article.url);
+                return { id: article.id, success: true, html: fetchResult, used_browser: false };
+              } catch (fetchError) {
+                // Fetch failed, try browser with jitter
+                scrapeLogger.info('Fetch failed, falling back to browser');
+                const jitterTime = Math.random() * 2500 + 500;
+                await step.sleep(`jitter`, jitterTime);
+
+                const browserResult = await getArticleWithBrowser(env, article.url);
+                return { id: article.id, success: true, html: browserResult, used_browser: true };
               }
-
-              // Fetch failed, try browser with jitter
-              scrapeLogger.info('Fetch failed, falling back to browser');
-              const jitterTime = Math.random() * 2500 + 500;
-              await step.sleep(`jitter`, jitterTime);
-
-              const browserResult = await getArticleWithBrowser(env, article.url);
-              if (browserResult.isErr()) throw browserResult.error.error;
-
-              return { id: article.id, success: true, html: browserResult.value, used_browser: true };
             }
           }
         );
@@ -264,32 +263,19 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             `analyze article ${article.id}`,
             { retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }, timeout: '1 minute' },
             async (): Promise<AIWorkerAnalysisResponse['data']> => {
-              // Use Service Binding with fetch method to call AI Worker
-              const analysisRequest = new Request('https://meridian-ai-worker/meridian/article/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: article.title,
-                  content: article.text,
-                  options: {
-                    provider: 'google-ai-studio',
-                    model: 'gemini-1.5-flash-8b-001'
-                  }
-                })
-              });
+              // 使用轻量级AI服务进行文章分析
+              const response = await aiServices.aiWorker.analyzeArticle(
+                article.title,
+                article.text
+              );
 
-              const response = await env.AI_WORKER.fetch(analysisRequest);
+              const result = await handleServiceResponse<AIWorkerAnalysisResponse>(response, 'AI article analysis');
               
-              if (!response.ok) {
-                throw new Error(`AI analysis failed: ${response.status} ${response.statusText}`);
+              if (!result.success || !result.data?.success) {
+                throw new Error(`AI analysis failed: ${result.error || result.data?.error || 'Unknown error'}`);
               }
               
-              const analysisResult = await response.json() as AIWorkerAnalysisResponse;
-              if (!analysisResult.success) {
-                throw new Error(`AI analysis failed: ${analysisResult.error || 'Unknown error'}`);
-              }
-              
-              return analysisResult.data!;
+              return result.data.data!;
             }
           );
 
@@ -312,31 +298,22 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               
               const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
               
-              // Use Service Binding with fetch method to call AI Worker
-              const embeddingRequest = new Request('https://meridian-ai-worker/meridian/embeddings/generate', {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  text: searchText,
-                  options: {
-                    provider: 'workers-ai',
-                    model: '@cf/baai/bge-small-en-v1.5'
-                  }
-                })
-              });
-
-              const embeddingResponse = await env.AI_WORKER.fetch(embeddingRequest);
+              // 使用轻量级AI服务生成嵌入向量
+              const response = await aiServices.aiWorker.generateEmbedding(searchText);
               
-              if (!embeddingResponse.ok) {
-                throw new Error(`Embedding generation failed: ${embeddingResponse.status} ${embeddingResponse.statusText}`);
-              }
+              const result = await handleServiceResponse<{success: boolean; data: Array<{embedding: number[]}>; error?: string}>(response, 'AI embedding generation');
               
-              const embeddingResult = await embeddingResponse.json() as AIWorkerEmbeddingResponse;
-              if (!embeddingResult.success) {
-                throw new Error(`Embedding generation failed: ${embeddingResult.error || 'Unknown error'}`);
+              if (!result.success || !result.data?.success || !result.data.data?.[0]?.embedding) {
+                throw new Error(`Embedding generation failed: ${result.error || result.data?.error || 'Unknown error'}`);
               }
 
-              return embeddingResult.data!;
+              // 验证嵌入向量维度
+              const embeddingData = result.data.data[0].embedding;
+              if (!Array.isArray(embeddingData) || embeddingData.length !== 384) {
+                throw new Error(`Invalid embedding dimensions: expected 384, got ${Array.isArray(embeddingData) ? embeddingData.length : 'non-array'}`);
+              }
+
+              return embeddingData;
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {
               articleLogger.info('Uploading article contents to R2');
@@ -459,9 +436,13 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
  * @returns Result containing either the created workflow or an error
  */
 export async function startProcessArticleWorkflow(env: Env, params: ProcessArticlesParams) {
-  const workflow = await ResultAsync.fromPromise(env.PROCESS_ARTICLES.create({ id: crypto.randomUUID(), params }), e =>
-    e instanceof Error ? e : new Error(String(e))
-  );
-  if (workflow.isErr()) return err(workflow.error);
-  return ok(workflow.value);
+  try {
+    const workflow = await env.PROCESS_ARTICLES.create({ id: crypto.randomUUID(), params });
+    return { success: true, data: workflow };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : String(error) 
+    };
+  }
 }

@@ -106,30 +106,81 @@ ${article.content}
   }
 
   /**
-   * 构建情报分析提示词（简化版本）
+   * 构建情报分析提示词（基于notebook中的final_process_story逻辑）
    */
   private buildIntelligencePrompt(storyArticleMd: string): string {
-    return `
-You are an intelligence analyst. Analyze the following articles and extract structured information.
+    const pre_prompt = `
+You are a highly skilled intelligence analyst working for a prestigious agency. Your task is to analyze a cluster of related news articles and extract structured information for an executive intelligence report. The quality, accuracy, precision, and **consistency** of your analysis are crucial, as this report will directly inform a high-level daily brief and potentially decision-making.
 
-Articles:
-${storyArticleMd}
+First, assess if the articles provided contain sufficient content for analysis:
 
-Please analyze these articles and return a JSON object with the following structure:
+Here is the cluster of related news articles you need to analyze:
+
+<articles>
+`.trim();
+
+    const post_prompt = `
+</articles>
+
+BEGIN ARTICLE QUALITY CHECK:
+Before proceeding with analysis, verify if the articles contain sufficient information:
+1. Check if articles appear empty or contain minimal text (fewer than ~50 words each)
+2. Check for paywall indicators ("subscribe to continue", "premium content", etc.)
+3. Check if articles only contain headlines/URLs but no actual content
+4. Check if articles appear truncated or cut off mid-sentence
+
+If ANY of these conditions are true, return ONLY this JSON structure inside <final_json> tags:
+<final_json>
 {
-  "status": "complete",
-  "title": "Brief story title",
-  "executiveSummary": "2-4 sentence summary",
-  "storyStatus": "Developing|Escalating|De-escalating|Concluding|Static",
-  "significance": {
-    "assessment": "Critical|High|Moderate|Low",
-    "reasoning": "Why this story matters",
-    "score": 5
-  }
+    "status": "incomplete",
+    "reason": "Brief explanation of why analysis couldn't be completed (empty articles, paywalled content, etc.)",
+    "availableInfo": "Brief summary of any information that was available"
 }
+</final_json>
 
-Return only valid JSON.
-`;
+ONLY IF the articles contain sufficient information for analysis, proceed with the full analysis below:
+
+Your goal is to extract and synthesize information from these articles into a structured format suitable for generating a daily intelligence brief.
+
+Before addressing the main categories, conduct a preliminary analysis:
+a) List key themes across all articles
+b) Note any recurring names, places, or events
+c) Identify potential biases or conflicting information
+It's okay for this section to be quite long as it helps structure your thinking.
+
+Then, after your preliminary analysis, present your final analysis in a structured JSON format inside <final_json> tags. This must be valid, parseable JSON that follows this **exact refined structure**:
+
+**Detailed Instructions for JSON Fields:**
+*   **\`status\`**: 'complete' or 'incomplete'
+*   **\`title\`**: Terse, neutral title of the story
+*   **\`executiveSummary\`**: Provide a 2-4 sentence concise summary highlighting the most critical developments, key conflicts, and overall assessment from the articles. This should be suitable for a quick read in a daily brief.
+*   **\`storyStatus\`**: Assess the current state of the story's development based *only* on the information in the articles. Use one of: 'Developing', 'Escalating', 'De-escalating', 'Concluding', 'Static'.
+*   **\`timeline\`**: List key events in chronological order.
+    *   \`description\`: Keep descriptions brief and factual.
+    *   \`importance\`: Assess the event's importance to understanding the overall narrative (High/Medium/Low). High importance implies the event is central to the story's development or outcome.
+*   **\`signalStrength\`**: Assess the overall reliability of the reporting *in this cluster*.
+    *   \`assessment\`: High/Medium/Low/Mixed
+    *   \`reasoning\`: 1-2 sentences explaining why you assigned this assessment based on source reliability patterns observed across the articles.
+*   **\`significance\`**: Evaluate the global importance and impact of the story.
+    *   \`assessment\`: Critical/High/Moderate/Low
+    *   \`reasoning\`: Explain why this story matters at this level of significance (2-3 sentences)
+    *   \`score\`: Numeric score from 1-10 representing global significance (1=minor local event, 10=major global impact)
+*   **\`keyEntities\`**: Identify and categorize the most important actors in this story.
+    *   \`list\`: Array of entities with name, type (Person/Organization/Country/etc.), and brief description of their involvement
+*   **\`contradictions\`**: Note any conflicting information or differing perspectives presented across the articles.
+*   **\`informationGaps\`**: List what critical information seems missing or unclear from the available reporting.
+
+**Final Requirements:**
+*   **Thoroughness:** Ensure all fields, especially descriptions, reasoning, context, and summaries, are detailed and specific. Avoid superficial or overly brief entries. Your analysis must reflect deep engagement with the provided texts.
+*   **Grounding:** Base your entire analysis **SOLELY** on the content within the provided \`<articles>\` tags. Do not introduce outside information, assumptions, or knowledge.
+*   **No Brevity Over Clarity:** Do **NOT** provide one-sentence descriptions or reasoning where detailed analysis is required by the field definition.
+*   **Scrutinize Sources:** Pay close attention to the reliability assessment of sources when evaluating claims, especially in the \`contradictions\` section. Note when a claim originates primarily or solely from a low-reliability source.
+*   **Validity:** Your JSON inside \`<final_json></final_json>\` tags MUST be 100% fully valid with no trailing commas, properly quoted strings and escaped characters where needed, and follow the exact refined structure provided. Ensure keys are in the specified order. Your entire JSON output should be directly extractable and parseable without human intervention.
+
+Return your complete response, including your preliminary analysis/thinking in any format you prefer, followed by the **full** valid JSON inside \`<final_json></final_json>\` tags.
+`.trim();
+
+    return pre_prompt + '\n\n' + storyArticleMd + '\n\n' + post_prompt;
   }
 
   /**
@@ -148,34 +199,85 @@ Return only valid JSON.
   }
 
   /**
-   * 解析情报分析响应
+   * 解析情报分析响应 - 支持完整的notebook格式
    */
   private parseIntelligenceResponse(response: string): any {
-    let text = response;
+    let text = response.trim();
 
-    // 提取JSON部分
-    if (text.includes('```json')) {
-      text = text.split('```json')[1];
-      if (text.endsWith('```')) {
-        text = text.slice(0, -3);
+    // 首先尝试提取<final_json>标签内的内容（优先级最高）
+    if (text.includes('<final_json>')) {
+      const jsonStart = text.indexOf('<final_json>') + 12;
+      const jsonEnd = text.indexOf('</final_json>');
+      if (jsonEnd !== -1) {
+        text = text.substring(jsonStart, jsonEnd).trim();
+      } else {
+        text = text.substring(jsonStart).trim();
       }
-      text = text.trim();
+    }
+    // 然后尝试提取```json代码块
+    else if (text.includes('```json')) {
+      const jsonStart = text.indexOf('```json') + 7;
+      const jsonEnd = text.indexOf('```', jsonStart);
+      if (jsonEnd !== -1) {
+        text = text.substring(jsonStart, jsonEnd).trim();
+      } else {
+        text = text.substring(jsonStart).trim();
+      }
+    }
+    // 最后尝试找到JSON对象的开始和结束
+    else {
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        text = text.substring(jsonStart, jsonEnd + 1);
+      }
     }
 
-    // 寻找JSON对象
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      text = jsonMatch[0];
-    }
+    // 清理文本
+    text = text
+      .replace(/\n+/g, ' ') // 替换换行符
+      .replace(/\s+/g, ' ') // 合并多个空格
+      .trim();
 
+    // 尝试解析JSON
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      console.log('[Intelligence] JSON解析成功，状态:', parsed.status);
+      
+      // 验证必要字段是否存在
+      if (parsed.status === 'complete') {
+        const requiredFields = ['title', 'executiveSummary', 'storyStatus', 'significance'];
+        const missingFields = requiredFields.filter(field => !parsed[field]);
+        
+        if (missingFields.length > 0) {
+          console.warn('[Intelligence] 缺少必要字段:', missingFields);
+        }
+      }
+      
+      return parsed;
     } catch (error) {
       console.error('解析情报分析结果失败:', error);
+      console.log('原始响应长度:', response.length);
+      console.log('处理后文本长度:', text.length);
+      console.log('处理后文本预览:', text.substring(0, 300) + '...');
+      
+      // 返回fallback结构，保持与notebook格式一致
       return {
         status: 'incomplete',
-        reason: '解析失败',
-        raw_response: response
+        reason: '响应格式解析失败',
+        availableInfo: '技术错误：无法解析AI响应格式',
+        executiveSummary: '分析处理中遇到技术问题，请稍后重试',
+        storyStatus: 'Static',
+        significance: {
+          assessment: 'Low',
+          reasoning: '由于技术问题无法完成分析',
+          score: 1
+        },
+        signalStrength: {
+          assessment: 'Low',
+          reasoning: '解析失败，无法评估信号强度'
+        }
       };
     }
   }

@@ -134,13 +134,19 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         try {
           const db = getDb(this.env.HYPERDRIVE);
           
-          // 构建时间范围查询条件
+          // 构建时间范围查询条件 - 修复日期类型转换问题
           const timeConditions = [];
           if (dateFrom) {
-            timeConditions.push(gte($articles.publishDate, dateFrom));
+            // 确保dateFrom是Date对象
+            const fromDate = dateFrom instanceof Date ? dateFrom : new Date(dateFrom);
+            timeConditions.push(gte($articles.publishDate, fromDate));
+            console.log(`[AutoBrief] 设置开始时间过滤: ${fromDate.toISOString()}`);
           }
           if (dateTo) {
-            timeConditions.push(lte($articles.publishDate, dateTo));
+            // 确保dateTo是Date对象
+            const toDate = dateTo instanceof Date ? dateTo : new Date(dateTo);
+            timeConditions.push(lte($articles.publishDate, toDate));
+            console.log(`[AutoBrief] 设置结束时间过滤: ${toDate.toISOString()}`);
           }
           
           // 只有在明确指定timeRangeDays时才添加默认时间限制
@@ -275,7 +281,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 title: a.title,
                 url: a.url,
                 source: 'meridian',
-                publishDate: a.publish_date?.toISOString() || new Date().toISOString()
+                publishDate: a.publish_date ? (a.publish_date instanceof Date ? a.publish_date.toISOString() : new Date(a.publish_date).toISOString()) : new Date().toISOString()
               }
             }));
 
@@ -730,7 +736,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                   title: article.title || '无标题',
                   url: article.url || '',
                   content: content,
-                  publishDate: article.publish_date?.toISOString() || new Date().toISOString()
+                  publishDate: article.publish_date ? (article.publish_date instanceof Date ? article.publish_date.toISOString() : new Date(article.publish_date).toISOString()) : new Date().toISOString()
                 };
               }));
 
@@ -923,7 +929,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 previousBrief = {
                   title: lastReport[0].title,
                   tldr: lastReport[0].tldr,
-                  date: lastReportDate.toISOString().split('T')[0]
+                  date: (lastReportDate instanceof Date ? lastReportDate : new Date(lastReportDate)).toISOString().split('T')[0]
                 };
               }
             }

@@ -1,0 +1,1396 @@
+openapi: 3.0.3
+info:
+  title: Meridian Backend API
+  description: |
+    Meridian是一个AI驱动的个性化情报简报系统API。
+    
+    该API提供以下主要功能：
+    - RSS源管理和文章抓取
+    - AI驱动的文章分析和处理
+    - 智能简报生成
+    - 系统监控和可观测性
+    - Durable Objects分布式管理
+    
+    ## 认证
+    
+    大部分管理端点需要Bearer Token认证。在请求头中包含：
+    ```
+    Authorization: Bearer {API_TOKEN}
+    ```
+    
+    ## 响应格式
+    
+    API使用统一的响应格式：
+    ```json
+    {
+      "success": boolean,
+      "data": any,
+      "message": string,
+      "timestamp": string,
+      "pagination": object  // 可选，仅分页查询
+    }
+    ```
+    
+    ## 错误处理
+    
+    错误响应格式：
+    ```json
+    {
+      "success": false,
+      "error": string,
+      "timestamp": string
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Meridian API Support
+    url: https://github.com/your-org/meridian
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8787
+    description: 开发环境
+  - url: https://api.meridian.example.com
+    description: 生产环境
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================================================
+  # 健康检查
+  # ============================================================================
+  /ping:
+    get:
+      summary: 健康检查
+      description: 检查API服务是否正常运行
+      tags:
+        - 健康检查
+      security: []
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pong:
+                    type: boolean
+                    example: true
+
+  # ============================================================================
+  # 管理端点 (/admin)
+  # ============================================================================
+  /admin/sources:
+    get:
+      summary: 获取RSS源列表
+      description: 获取所有配置的RSS源
+      tags:
+        - RSS源管理
+      responses:
+        '200':
+          description: 成功获取RSS源列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    url: "https://news.ycombinator.com/rss"
+                    name: "Hacker News"
+                    category: "tech"
+                    scrape_frequency: 4
+                    paywall: false
+                    lastChecked: "2025-01-01T12:00:00Z"
+                message: "获取了3个RSS源"
+                timestamp: "2025-01-01T12:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: 创建新的RSS源
+      description: 添加一个新的RSS源到系统
+      tags:
+        - RSS源管理
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSourceRequest'
+      responses:
+        '201':
+          description: RSS源创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  id: 4
+                  url: "https://example.com/feed.xml"
+                  name: "Example Feed"
+                  category: "news"
+                  scrape_frequency: 4
+                message: "RSS源添加成功"
+                timestamp: "2025-01-01T12:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/sources/{id}:
+    put:
+      summary: 更新RSS源
+      description: 更新指定RSS源的信息
+      tags:
+        - RSS源管理
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: RSS源ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSourceRequest'
+      responses:
+        '200':
+          description: RSS源更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: 删除RSS源
+      description: 删除指定的RSS源（基础删除，不包含DO清理）
+      tags:
+        - RSS源管理
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: RSS源ID
+      responses:
+        '200':
+          description: RSS源删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/articles:
+    get:
+      summary: 获取文章列表
+      description: 获取文章列表，支持分页和状态过滤
+      tags:
+        - 文章管理
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: 每页数量
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ArticleStatus'
+          description: 文章状态过滤
+      responses:
+        '200':
+          description: 成功获取文章列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  - id: 452
+                    title: "Twenty years strong: a love letter to TechCrunch"
+                    url: "https://techcrunch.com/example-article"
+                    status: "PROCESSED"
+                    publishDate: "2025-01-01T10:00:00Z"
+                    processedAt: "2025-01-01T11:00:00Z"
+                    sourceId: 2
+                    contentFileKey: "articles/452.txt"
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 209
+                message: "获取了20篇文章"
+                timestamp: "2025-01-01T12:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/overview:
+    get:
+      summary: 系统概览
+      description: 获取系统运行状态的概览信息
+      tags:
+        - 系统管理
+      responses:
+        '200':
+          description: 成功获取系统概览
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  sources:
+                    total: 3
+                    active: 3
+                  articles:
+                    total: 209
+                    processed: 141
+                    pending: 50
+                    failed: 18
+                  briefs:
+                    last30Days: 16
+                  lastUpdated: "2025-01-01T12:00:00Z"
+                message: "系统概览获取成功"
+                timestamp: "2025-01-01T12:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/briefs/generate:
+    post:
+      summary: 生成简报
+      description: 触发简报生成工作流
+      tags:
+        - 简报管理
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateBriefRequest'
+      responses:
+        '202':
+          description: 简报生成工作流已启动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  workflowId: "workflow_12345"
+                message: "简报生成工作流已启动"
+                timestamp: "2025-01-01T12:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # 简报端点 (/reports)
+  # ============================================================================
+  /reports/last-report:
+    get:
+      summary: 获取最新简报
+      description: 获取最近生成的简报
+      tags:
+        - 简报查询
+      responses:
+        '200':
+          description: 成功获取最新简报
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /reports/report:
+    post:
+      summary: 创建新简报
+      description: 创建一个新的简报记录
+      tags:
+        - 简报管理
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReportRequest'
+      responses:
+        '200':
+          description: 简报创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # 可观测性端点 (/observability)
+  # ============================================================================
+  /observability/workflows:
+    get:
+      summary: 工作流监控
+      description: 获取工作流执行状态和历史记录
+      tags:
+        - 可观测性
+      security: []
+      responses:
+        '200':
+          description: 成功获取工作流信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  workflows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkflowInfo'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /observability/workflows/{key}:
+    get:
+      summary: 获取工作流详情
+      description: 获取特定工作流的详细指标和性能分析
+      tags:
+        - 可观测性
+      security: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 工作流标识符（URL编码）
+      responses:
+        '200':
+          description: 成功获取工作流详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  summary:
+                    type: object
+                    description: 工作流概览信息
+                  performance:
+                    type: object
+                    description: 性能分析数据
+                  detailedMetrics:
+                    type: array
+                    description: 详细指标列表
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+                    description: 性能优化建议
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /observability/briefs/stats:
+    get:
+      summary: 简报统计
+      description: 获取简报生成的统计信息
+      tags:
+        - 可观测性
+      security: []
+      responses:
+        '200':
+          description: 成功获取简报统计
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  stats:
+                    $ref: '#/components/schemas/BriefStats'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /observability/dashboard:
+    get:
+      summary: 实时监控面板
+      description: 获取系统实时状态和最近活动信息
+      tags:
+        - 可观测性
+      security: []
+      responses:
+        '200':
+          description: 成功获取监控面板数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  systemHealth:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [healthy, warning, error]
+                        description: 系统健康状态
+                      lastBriefGenerated:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 最后生成简报时间
+                      briefsLast24h:
+                        type: integer
+                        description: 过去24小时生成的简报数
+                      avgProcessingTime:
+                        type: string
+                        description: 平均处理时间
+                      errorRate:
+                        type: number
+                        description: 错误率
+                      observabilityDataPoints:
+                        type: integer
+                        description: 可观测性数据点数量
+                  recentActivity:
+                    type: array
+                    description: 最近活动列表
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        totalArticles:
+                          type: integer
+                        usedArticles:
+                          type: integer
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+                    description: 系统优化建议
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /observability/quality/analysis:
+    get:
+      summary: 数据质量分析
+      description: 获取文章质量、聚类质量等数据质量分析结果
+      tags:
+        - 可观测性
+      security: []
+      responses:
+        '200':
+          description: 成功获取数据质量分析
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  placeholder:
+                    type: object
+                    properties:
+                      articleQualityDistribution:
+                        type: object
+                        properties:
+                          high:
+                            type: integer
+                          medium:
+                            type: integer
+                          low:
+                            type: integer
+                      clusteringQuality:
+                        type: object
+                        properties:
+                          avgCoherence:
+                            type: number
+                          avgClusterSize:
+                            type: number
+                      storyQuality:
+                        type: object
+                        properties:
+                          avgImportance:
+                            type: number
+                          selectionRate:
+                            type: number
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # Durable Objects管理 (/do)
+  # ============================================================================
+  /do/admin/source/{sourceId}/init:
+    post:
+      summary: 初始化特定源DO
+      description: 初始化指定RSS源的Durable Object
+      tags:
+        - Durable Objects
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: RSS源ID
+      responses:
+        '200':
+          description: DO初始化成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /do/admin/initialize-dos:
+    post:
+      summary: 批量初始化Durable Objects
+      description: 批量初始化所有RSS源的Durable Objects
+      tags:
+        - Durable Objects
+      parameters:
+        - name: batchSize
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: 批处理大小
+      responses:
+        '200':
+          description: 初始化完成
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  initialized:
+                    type: integer
+                    description: 成功初始化的DO数量
+                    example: 3
+                  total:
+                    type: integer
+                    description: 总DO数量
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /do/admin/source/{sourceId}:
+    delete:
+      summary: 删除源DO（高级）
+      description: 删除指定RSS源的Durable Object及相关数据
+      tags:
+        - Durable Objects
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: RSS源ID
+      responses:
+        '200':
+          description: DO删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /do/source/{sourceId}/status:
+    get:
+      summary: 获取源DO状态
+      description: 获取指定RSS源的Durable Object状态
+      tags:
+        - Durable Objects
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: RSS源ID
+      responses:
+        '200':
+          description: 成功获取DO状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # 事件数据端点 (/events)
+  # ============================================================================
+  /events:
+    get:
+      summary: 获取事件数据
+      description: 获取已处理的文章事件数据，支持日期过滤和分页
+      tags:
+        - 事件数据
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 按日期过滤 (YYYY-MM-DD)
+          example: "2025-01-01"
+        - name: pagination
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: 是否启用分页
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码（当pagination=true时有效）
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: 每页数量（当pagination=true时有效）
+      responses:
+        '200':
+          description: 成功获取事件数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # OpenGraph图像生成 (/openGraph)
+  # ============================================================================
+  /openGraph/default:
+    get:
+      summary: 默认OpenGraph图像
+      description: 生成Meridian的默认OpenGraph图像
+      tags:
+        - OpenGraph
+      security: []
+      responses:
+        '200':
+          description: 成功生成图像
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "public, max-age=86400"
+
+  /openGraph/brief:
+    get:
+      summary: 简报OpenGraph图像
+      description: 为特定简报生成OpenGraph图像
+      tags:
+        - OpenGraph
+      security: []
+      parameters:
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 简报标题
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 时间戳
+        - name: articles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 文章数量
+        - name: sources
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 源数量
+      responses:
+        '200':
+          description: 成功生成图像
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "public, max-age=86400, stale-while-revalidate=43200"
+
+  # ============================================================================
+  # 高级源管理 (/sources)
+  # ============================================================================
+  /sources/{id}:
+    delete:
+      summary: 删除RSS源（高级）
+      description: 删除RSS源并清理相关的Durable Objects
+      tags:
+        - 高级源管理
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: RSS源ID
+      responses:
+        '200':
+          description: RSS源删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+# ============================================================================
+# 组件定义
+# ============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "使用API Token进行认证，格式：Bearer {API_TOKEN}"
+
+  schemas:
+    # 通用响应格式
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 请求是否成功
+        data:
+          description: 响应数据
+        message:
+          type: string
+          description: 响应消息
+        timestamp:
+          type: string
+          format: date-time
+          description: 响应时间戳
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      required:
+        - success
+        - timestamp
+
+    # 分页信息
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: 当前页码
+        limit:
+          type: integer
+          description: 每页数量
+        total:
+          type: integer
+          description: 总记录数
+        hasMore:
+          type: boolean
+          description: 是否还有更多数据
+
+    # RSS源相关
+    Source:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 源ID
+        url:
+          type: string
+          format: uri
+          description: RSS源URL
+        name:
+          type: string
+          description: 源名称
+        category:
+          type: string
+          nullable: true
+          description: 分类
+        scrape_frequency:
+          type: integer
+          description: 抓取频率 (1=hourly, 2=4hrs, 3=6hrs, 4=daily)
+          minimum: 1
+          maximum: 4
+        paywall:
+          type: boolean
+          description: 是否付费墙
+        lastChecked:
+          type: string
+          format: date-time
+          nullable: true
+          description: 最后检查时间
+      required:
+        - id
+        - url
+        - name
+        - scrape_frequency
+        - paywall
+
+    CreateSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 源名称
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          description: RSS源URL
+        category:
+          type: string
+          nullable: true
+          description: 分类
+        scrape_frequency:
+          type: integer
+          description: 抓取频率
+          minimum: 1
+          maximum: 4
+          default: 4
+      required:
+        - name
+        - url
+
+    UpdateSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 源名称
+        url:
+          type: string
+          format: uri
+          description: RSS源URL
+        category:
+          type: string
+          nullable: true
+          description: 分类
+        scrape_frequency:
+          type: integer
+          description: 抓取频率
+          minimum: 1
+          maximum: 4
+
+    # 文章相关
+    ArticleStatus:
+      type: string
+      enum:
+        - PENDING_FETCH
+        - CONTENT_FETCHED
+        - PROCESSED
+        - SKIPPED_PDF
+        - FETCH_FAILED
+        - RENDER_FAILED
+        - AI_ANALYSIS_FAILED
+        - EMBEDDING_FAILED
+        - R2_UPLOAD_FAILED
+        - SKIPPED_TOO_OLD
+      description: 文章处理状态
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 文章ID
+        title:
+          type: string
+          description: 文章标题
+        url:
+          type: string
+          format: uri
+          description: 文章URL
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+        publishDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: 发布时间
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 处理时间
+        sourceId:
+          type: integer
+          description: 来源ID
+        contentFileKey:
+          type: string
+          nullable: true
+          description: 内容文件键
+      required:
+        - id
+        - title
+        - url
+        - sourceId
+
+    # 简报相关
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 简报ID
+        title:
+          type: string
+          description: 简报标题
+        content:
+          type: string
+          description: 简报内容
+        totalArticles:
+          type: integer
+          description: 总文章数
+        totalSources:
+          type: integer
+          description: 总源数
+        usedArticles:
+          type: integer
+          description: 使用的文章数
+        usedSources:
+          type: integer
+          description: 使用的源数
+        tldr:
+          type: string
+          nullable: true
+          description: 简报摘要
+        model_author:
+          type: string
+          nullable: true
+          description: 生成模型
+        clustering_params:
+          type: object
+          nullable: true
+          description: 聚类参数
+        createdAt:
+          type: string
+          format: date-time
+          description: 创建时间
+      required:
+        - id
+        - title
+        - content
+        - totalArticles
+        - totalSources
+        - usedArticles
+        - usedSources
+        - createdAt
+
+    CreateReportRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: 简报标题
+        content:
+          type: string
+          description: 简报内容
+        totalArticles:
+          type: integer
+          description: 总文章数
+        totalSources:
+          type: integer
+          description: 总源数
+        usedArticles:
+          type: integer
+          description: 使用的文章数
+        usedSources:
+          type: integer
+          description: 使用的源数
+        tldr:
+          type: string
+          description: 简报摘要
+        createdAt:
+          type: string
+          format: date-time
+          description: 创建时间
+        model_author:
+          type: string
+          description: 生成模型
+        clustering_params:
+          type: object
+          description: 聚类参数
+          properties:
+            umap:
+              type: object
+              properties:
+                n_neighbors:
+                  type: number
+            hdbscan:
+              type: object
+              properties:
+                min_cluster_size:
+                  type: number
+                min_samples:
+                  type: number
+                epsilon:
+                  type: number
+      required:
+        - title
+        - content
+        - totalArticles
+        - totalSources
+        - usedArticles
+        - usedSources
+        - tldr
+        - createdAt
+        - model_author
+        - clustering_params
+
+    GenerateBriefRequest:
+      type: object
+      properties:
+        dateFrom:
+          type: string
+          format: date-time
+          description: 开始日期
+        dateTo:
+          type: string
+          format: date-time
+          description: 结束日期
+        minImportance:
+          type: integer
+          description: 最小重要性分数
+          minimum: 1
+          maximum: 10
+          default: 5
+        triggeredBy:
+          type: string
+          description: 触发方式
+          default: "manual"
+      required:
+        - dateFrom
+        - dateTo
+
+    # 可观测性相关
+    WorkflowInfo:
+      type: object
+      properties:
+        key:
+          type: string
+          description: 工作流标识符
+        status:
+          type: string
+          description: 工作流状态
+        created:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    BriefStats:
+      type: object
+      properties:
+        totalBriefs:
+          type: integer
+          description: 总简报数
+        avgArticlesPerBrief:
+          type: number
+          description: 平均每份简报的文章数
+        avgUsageRate:
+          type: number
+          description: 平均使用率
+          minimum: 0
+          maximum: 1
+        modelDistribution:
+          type: object
+          description: 模型使用分布
+
+    # 事件数据相关
+    EventsResponse:
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        totalCount:
+          type: integer
+          description: 总事件数（分页时有效）
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 事件ID
+        sourceId:
+          type: integer
+          description: 来源ID
+        url:
+          type: string
+          format: uri
+          description: 文章URL
+        title:
+          type: string
+          description: 文章标题
+        publishDate:
+          type: string
+          format: date-time
+          description: 发布时间
+        summary:
+          type: string
+          description: 事件摘要
+        content:
+          type: string
+          description: 文章内容
+        relevance:
+          type: string
+          enum: [low, medium, high]
+          description: 相关性级别
+        primary_location:
+          type: string
+          nullable: true
+          description: 主要地点
+        completeness:
+          type: string
+          enum: [COMPLETE, PARTIAL_USEFUL, PARTIAL_USELESS]
+          nullable: true
+          description: 内容完整性
+        content_quality:
+          type: string
+          enum: [OK, LOW_QUALITY, JUNK]
+          nullable: true
+          description: 内容质量
+
+  responses:
+    # 通用错误响应
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "缺少必需的字段: name, url"
+              timestamp:
+                type: string
+                format: date-time
+
+    Unauthorized:
+      description: 未授权访问
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Unauthorized"
+
+    NotFound:
+      description: 资源未找到
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "未找到指定的RSS源"
+              timestamp:
+                type: string
+                format: date-time
+
+    Conflict:
+      description: 资源冲突
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "该URL已存在"
+              timestamp:
+                type: string
+                format: date-time
+
+    InternalServerError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Internal server error"
+              timestamp:
+                type: string
+                format: date-time
+
+tags:
+  - name: 健康检查
+    description: 服务健康状态检查
+  - name: RSS源管理
+    description: RSS源的增删改查操作
+  - name: 文章管理
+    description: 文章数据的查询和管理
+  - name: 系统管理
+    description: 系统状态和概览信息
+  - name: 简报管理
+    description: 简报的生成和管理
+  - name: 简报查询
+    description: 简报数据的查询
+  - name: 可观测性
+    description: 系统监控和统计信息
+  - name: Durable Objects
+    description: 分布式对象管理
+  - name: 事件数据
+    description: 文章事件数据查询
+  - name: OpenGraph
+    description: OpenGraph图像生成
+  - name: 高级源管理
+    description: 高级RSS源管理功能 

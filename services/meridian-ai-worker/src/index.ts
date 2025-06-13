@@ -2,6 +2,9 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { AIGatewayService } from './services/ai-gateway'
 import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
+import { getStoryValidationPrompt } from './prompts/storyValidation'
+import { getBriefGenerationSystemPrompt, getBriefGenerationPrompt, getBriefTitlePrompt } from './prompts/briefGeneration'
+import { getTldrGenerationPrompt } from './prompts/tldrGeneration'
 import { IntelligenceService } from './services/intelligence'
 import { CloudflareEnv, ChatResponse } from './types'
 
@@ -37,6 +40,7 @@ function createRequestMetadata(c: any) {
     ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown'
   }
 }
+
 
 // =============================================================================
 // Health Check
@@ -548,6 +552,10 @@ app.get('/meridian/status', (c) => {
         article_analysis: '/meridian/article/analyze',
         embedding_generation: '/meridian/embeddings/generate', 
         intelligence_analysis: '/meridian/intelligence/analyze-story',
+        // 智能简报流程端点 (基于 reportV5.md)
+        story_validation: '/meridian/story/validate',
+        brief_generation: '/meridian/generate-final-brief',
+        brief_tldr: '/meridian/generate-brief-tldr',
         // 通用端点
         chat: '/meridian/chat',
         chat_stream: '/meridian/chat/stream',
@@ -557,8 +565,8 @@ app.get('/meridian/status', (c) => {
       integration: {
         backend_workflows: ['processArticles'],
         ai_providers: aiGatewayService.getAvailableProviders(),
-        capabilities: ['chat', 'embedding', 'intelligence'],
-        version: '1.3.0'
+        capabilities: ['chat', 'embedding', 'intelligence', 'story_validation', 'brief_generation'],
+        version: '1.4.0'
       },
       workflow_integration: {
         'processArticles.workflow.ts': {
@@ -740,101 +748,8 @@ app.post('/meridian/story/validate', async (c) => {
       .map((a: any) => `- (#${a.id}) [${a.title}](${a.url})`)
       .join('\n')
 
-    // 🆕 增强的故事验证提示词 - 提供完整的透明度信息
-    const validationPrompt = `
-# Task
-Determine if the following collection of news articles is:
-1) A single story - A cohesive narrative where all articles relate to the same central event/situation and its direct consequences
-2) A collection of stories - Distinct narratives that should be analyzed separately
-3) Pure noise - Random articles with no meaningful pattern
-4) No stories - Distinct narratives but none of them have more than 3 articles
-
-# Important clarification
-A "single story" can still have multiple aspects or angles. What matters is whether the articles collectively tell one broader narrative where understanding each part enhances understanding of the whole.
-
-# Handling outliers
-- For single stories: You can exclude true outliers in an "outliers" array
-- For collections: Focus **only** on substantive stories (2+ articles). Ignore one-off articles or noise.
-
-# Title guidelines
-- Titles should be purely factual, descriptive and neutral
-- Include necessary context (region, countries, institutions involved)
-- No editorialization, opinion, or emotional language
-- Format: "[Subject] [action/event] in/with [location/context]"
-
-# Transparency Requirements (NEW)
-For each story identified, you must provide:
-1. **Importance Factors**: Detailed breakdown of why this story got its importance score
-2. **Quality Metrics**: Assess coherence, relevance, uniqueness, and timeliness
-3. **Reasoning**: Clear explanation of your decision-making process
-4. **Confidence**: How confident you are in this assessment (0.0-1.0)
-5. **Key Topics**: Main themes and subjects covered in the story
-
-# Input data
-Articles (format is (#id) [title](url)):
-${articleList}
-
-# Output format
-Return your final answer in JSON format with enhanced transparency:
-\`\`\`json
-{
-    "answer": "single_story" | "collection_of_stories" | "pure_noise" | "no_stories",
-    "reasoning_process": "Detailed explanation of how you analyzed these articles and reached your conclusion",
-    // single_story_start: if answer is "single_story", include the following fields:
-    "title": "title of the story",
-    "importance": 1-10,
-    "importance_factors": {
-        "global_significance": 1-10,
-        "affected_population": 1-10,
-        "economic_impact": 1-10,
-        "geopolitical_relevance": 1-10,
-        "innovation_factor": 1-10
-    },
-    "quality_metrics": {
-        "coherence": 0.0-1.0,
-        "relevance": 0.0-1.0,
-        "uniqueness": 0.0-1.0,
-        "timeliness": 0.0-1.0
-    },
-    "reasoning": "Why this story matters and how you determined its importance",
-    "confidence": 0.0-1.0,
-    "key_topics": ["topic1", "topic2", "topic3"],
-    "outliers": []
-    // single_story_end
-    // collection_of_stories_start: if answer is "collection_of_stories", include the following fields:
-    "stories": [
-        {
-            "title": "title of the story",
-            "importance": 1-10,
-            "importance_factors": {
-                "global_significance": 1-10,
-                "affected_population": 1-10,
-                "economic_impact": 1-10,
-                "geopolitical_relevance": 1-10,
-                "innovation_factor": 1-10
-            },
-            "quality_metrics": {
-                "coherence": 0.0-1.0,
-                "relevance": 0.0-1.0,
-                "uniqueness": 0.0-1.0,
-                "timeliness": 0.0-1.0
-            },
-            "reasoning": "Why this story matters and how you determined its importance",
-            "confidence": 0.0-1.0,
-            "key_topics": ["topic1", "topic2", "topic3"],
-            "articles": []
-        }
-    ]
-    // collection_of_stories_end
-}
-\`\`\`
-
-Note:
-- Always include articles IDs (outliers, articles, etc...) as integers, not strings and never include the # symbol.
-- Be thorough in your reasoning - this will help improve the system's transparency.
-- Rate importance factors on individual 1-10 scales, then derive overall importance.
-- Quality metrics should be precise decimal values reflecting your assessment.
-    `.trim()
+    // 使用提取的故事验证提示词
+    const validationPrompt = getStoryValidationPrompt(articleList)
 
     // 创建AI Gateway Service
     const aiGatewayService = new AIGatewayService(c.env)
@@ -874,56 +789,36 @@ Note:
     try {
       const validation = JSON.parse(responseText.trim())
       
-      // 🆕 根据验证结果生成清理后的故事 - 包含完整透明度信息
+      // 根据验证结果生成清理后的故事（基于reportV5.md的cleaned_clusters处理逻辑）
       const cleanedStories = []
       
-             if (validation.answer === 'single_story') {
-         // 单一故事：过滤异常点
-         const validArticleIds = cluster.articles
-           .map((a: any) => a.id)
-           .filter((id: any) => !validation.outliers?.includes(id))
+      if (validation.answer === 'single_story') {
+        // 单一故事：过滤异常点
+        const validArticleIds = cluster.articles
+          .map((a: any) => a.id)
+          .filter((id: any) => !validation.outliers?.includes(id))
         
         if (validArticleIds.length >= 2) { // 至少需要2篇文章
           cleanedStories.push({
             id: cluster.id,
             title: validation.title,
             importance: validation.importance,
-            // 🆕 增加透明度字段
-            importance_factors: validation.importance_factors || {},
-            quality_metrics: validation.quality_metrics || {},
-            reasoning: validation.reasoning || '未提供详细推理',
-            confidence: validation.confidence || 0,
-            key_topics: validation.key_topics || [],
-            coherence_score: validation.quality_metrics?.coherence || 0,
-            relevance_score: validation.quality_metrics?.relevance || 0,
-            uniqueness_score: validation.quality_metrics?.uniqueness || 0,
-            timeliness_score: validation.quality_metrics?.timeliness || 0,
             articles: validArticleIds
           })
         }
-             } else if (validation.answer === 'collection_of_stories') {
-         // 故事集合：分解为多个独立故事
-         validation.stories?.forEach((story: any, index: number) => {
-           if (story.articles.length >= 2) { // 只保留有足够文章的故事
-             cleanedStories.push({
-               id: cluster.id * 1000 + index, // 生成唯一ID
-               title: story.title,
-               importance: story.importance,
-               // 🆕 增加透明度字段
-               importance_factors: story.importance_factors || {},
-               quality_metrics: story.quality_metrics || {},
-               reasoning: story.reasoning || '未提供详细推理',
-               confidence: story.confidence || 0,
-               key_topics: story.key_topics || [],
-               coherence_score: story.quality_metrics?.coherence || 0,
-               relevance_score: story.quality_metrics?.relevance || 0,
-               uniqueness_score: story.quality_metrics?.uniqueness || 0,
-               timeliness_score: story.quality_metrics?.timeliness || 0,
-               articles: story.articles
-             })
-           }
-         })
-       }
+      } else if (validation.answer === 'collection_of_stories') {
+        // 故事集合：分解为多个独立故事（只保留3+文章的故事，与notebook一致）
+        validation.stories?.forEach((story: any, index: number) => {
+          if (story.articles.length >= 3) { // 与reportV5.md一致，要求3+文章
+            cleanedStories.push({
+              id: cluster.id * 1000 + index, // 生成唯一ID
+              title: story.title,
+              importance: story.importance,
+              articles: story.articles
+            })
+          }
+        })
+      }
       // pure_noise 和 no_stories 情况下不添加任何故事
       
       console.log(`[Story Validation] 聚类 ${cluster.id} 解析成功，生成 ${cleanedStories.length} 个清理后的故事`)
@@ -934,9 +829,7 @@ Note:
           validation_result: validation.answer,
           cleaned_stories: cleanedStories,
           original_cluster_id: cluster.id,
-          processed_articles: cluster.articles.length,
-          // 🆕 增加AI推理过程透明度
-          reasoning_process: validation.reasoning_process || '未提供详细推理过程'
+          processed_articles: cluster.articles.length
         },
         metadata: {
           provider: chatResult.provider,
@@ -1017,7 +910,7 @@ app.post('/meridian/generate-final-brief', async (c) => {
     // 创建AI Gateway Service
     const aiGatewayService = new AIGatewayService(c.env)
 
-    // 构建聚合分析数据为markdown格式（类似reportV5.md中的json_to_markdown_refined函数）
+    // 基于reportV5.md的json_to_markdown_refined函数转换分析数据
     const convertAnalysisToMarkdown = (analysisData: any[]) => {
       let markdown = ''
       
@@ -1031,20 +924,20 @@ app.post('/meridian/generate-final-brief', async (c) => {
         }
 
         // 标题和执行摘要
-        const summary = data.executiveSummary || data.overview || 'No summary available.'
+        const summary = data.executiveSummary || 'No summary available.'
         const status = data.storyStatus || 'Status Unknown'
         markdown += `# Key Development Summary: ${summary}\n`
         markdown += `**(Story Status: ${status})**\n\n`
 
-        // 关键时间线事件
+        // 关键时间线事件（高重要性）
         if (data.timeline && Array.isArray(data.timeline)) {
           markdown += "## Key Timeline Events (High Importance)\n"
-                     const highImportanceEvents = data.timeline.filter((event: any) => event.importance === 'High').slice(0, 5)
-                     if (highImportanceEvents.length > 0) {
-             highImportanceEvents.forEach((event: any) => {
-               markdown += `*   **${event.date || 'N/A'}:** ${event.description || 'N/A'}\n`
-             })
-           } else {
+          const highImportanceEvents = data.timeline.filter((event: any) => event.importance === 'High')
+          const limit = 5
+          for (const event of highImportanceEvents.slice(0, limit)) {
+            markdown += `*   **${event.date || 'N/A'}:** ${event.description || 'N/A'}\n`
+          }
+          if (highImportanceEvents.length === 0) {
             markdown += "*   *No high-importance events identified in timeline.*\n"
           }
           markdown += "\n"
@@ -1059,43 +952,64 @@ app.post('/meridian/generate-final-brief', async (c) => {
           markdown += `*   **Reasoning:** ${reasoning}\n\n`
         }
 
-        // 核心事实基础
+        // 核心事实基础（已证实）
         if (data.undisputedKeyFacts && Array.isArray(data.undisputedKeyFacts)) {
           markdown += "## Core Factual Basis (Corroborated)\n"
-                     data.undisputedKeyFacts.slice(0, 5).forEach((fact: any) => {
-             markdown += `*   ${fact}\n`
-           })
-          if (data.undisputedKeyFacts.length > 5) {
+          const limit = 5
+          for (const fact of data.undisputedKeyFacts.slice(0, limit)) {
+            markdown += `*   ${fact}\n`
+          }
+          if (data.undisputedKeyFacts.length > limit) {
             markdown += `*   *(Additional facts available)*\n`
           }
           markdown += "\n"
         }
 
-        // 关键实体
+        // 关键争议/争论问题
+        if (data.keySources?.contradictions && Array.isArray(data.keySources.contradictions)) {
+          markdown += "## Key Contradictions / Contested Issues\n"
+          const limit = 3
+          const contradictions = data.keySources.contradictions
+          for (const contradiction of contradictions.slice(0, limit)) {
+            const issue = contradiction.issue || 'Unspecified Issue'
+            markdown += `*   **Issue:** ${issue}\n`
+          }
+          if (contradictions.length === 0) {
+            markdown += "*   *No major contradictions identified.*\n"
+          }
+          if (contradictions.length > limit) {
+            markdown += `*   *(Additional contested issues identified)*\n`
+          }
+          markdown += "\n"
+        }
+
+        // 关键实体参与者
         if (data.keyEntities?.list && Array.isArray(data.keyEntities.list)) {
           markdown += "## Key Entities Involved\n"
-                     data.keyEntities.list.slice(0, 4).forEach((entity: any) => {
-             markdown += `*   **${entity.name || 'N/A'} (${entity.type || 'N/A'}):** ${entity.involvement || entity.description || 'N/A'}\n`
-           })
-          if (data.keyEntities.list.length > 4) {
+          const limit = 4
+          for (const entity of data.keyEntities.list.slice(0, limit)) {
+            markdown += `*   **${entity.name || 'N/A'} (${entity.type || 'N/A'}):** ${entity.involvement || 'N/A'}\n`
+          }
+          if (data.keyEntities.list.length > limit) {
             markdown += `*   *(Additional entities involved)*\n`
           }
           markdown += "\n"
         }
 
-        // 信息缺口
+        // 关键信息缺口
         if (data.informationGaps && Array.isArray(data.informationGaps)) {
           markdown += "## Critical Information Gaps\n"
-                     data.informationGaps.slice(0, 4).forEach((gap: any) => {
-             markdown += `*   ${gap}\n`
-           })
-          if (data.informationGaps.length > 4) {
+          const limit = 4
+          for (const gap of data.informationGaps.slice(0, limit)) {
+            markdown += `*   ${gap}\n`
+          }
+          if (data.informationGaps.length > limit) {
             markdown += `*   *(Additional gaps identified)*\n`
           }
           markdown += "\n"
         }
 
-        // 评估摘要
+        // 评估摘要（信号强度与可靠性）
         markdown += "## Assessment Summary\n"
         if (data.signalStrength) {
           const assessment = data.signalStrength.assessment || 'N/A'
@@ -1103,7 +1017,7 @@ app.post('/meridian/generate-final-brief', async (c) => {
         } else {
           markdown += "*   Signal Strength: Not Assessed\n"
         }
-        markdown += "*   **Note:** Analysis based on sources of varying reliability. Claims from low-reliability sources require caution.\n"
+        markdown += "*   **Note:** Analysis based on sources of varying reliability (see full JSON for details). Claims from low-reliability sources require caution.\n"
       })
       
       return markdown
@@ -1124,122 +1038,9 @@ ${body.previousBrief.tldr || 'No previous context available'}
 `
     }
 
-    // 构建简报生成提示词（基于reportV5.md的get_brief_prompt函数）
-    const briefPrompt = `
-hey, i have a bunch of news reports (in random order) derived from detailed analyses of news clusters from the last 30h. could you give me my personalized daily intelligence brief? aim for something comprehensive yet engaging, roughly a 20-30 minute read.
-
-my interests are: significant world news (geopolitics, politics, finance, economics), us news, france news (i'm french/live in france), china news (especially policy, economy, tech - seeking insights often missed in western media), and technology/science (ai/llms, biomed, space, real breakthroughs). also include a section for noteworthy items that don't fit neatly elsewhere.
-
-some context: i built a system that collects/analyzes/compiles news because i was tired of mainstream news that either overwhelms with useless info or misses what actually matters. you're really good at information analysis/writing/etc so i figure by just asking you this i'd get something even better than what presidents get - a focused brief that tells me what's happening, why it matters, and what connections exist that others miss. i value **informed, analytical takes** – even if i don't agree with them, they're intellectually stimulating. i want analysis grounded in the facts provided, free from generic hedging or forced political correctness.
-
-your job: go through all the curated news data i've gathered below. analyze **everything** first to identify what *actually* matters before writing. look for:
-- actual significance (not just noise/volume)
-- hidden patterns and connections between stories
-- important developments flying under the radar
-- how separate events might be related
-- genuinely interesting or impactful stories
-
-**--- CONTEXT FROM PREVIOUS DAY (IF AVAILABLE) ---**
-*   You *may* receive a section at the beginning of the curated data titled \`## Previous Day's Coverage Context (YYYY-MM-DD)\`.
-*   This section provides a highly condensed list of major stories covered yesterday, using the format: \`[Story Identifier] | [Last Status] | [Key Entities] | [Core Issue Snippet]\`.
-*   **How to Use This Context:** Use this list **only** to understand which topics are ongoing and their last known status/theme. This helps ensure continuity and avoid repeating information already covered.
-*   **Focus on Today:** Your primary task is to synthesize and analyze **today's developments** based on the main \`<curated_news_data>\`. When discussing a story listed in the previous context, focus on **what is new or has changed today**. Briefly reference the past context *only if essential* for understanding the update (e.g., "Following yesterday's agreement...", "The situation escalated further today when...").
-*   **Do NOT simply rewrite or extensively quote the Previous Day's Coverage Context.** Treat it as background memory.
-**--- END CONTEXT INSTRUCTIONS ---**
-
-here's the curated data (each section represents an analyzed news cluster; you might need to synthesize across sections):
-
-${previousContext}
-
-<curated_news_data>
-
-${storiesMarkdown}
-
-</curated_news_data>
-
-structure the brief using the sections below, making it feel conversational – complete sentences, natural flow, occasional wry commentary where appropriate.
-<final_brief>
-## what matters now
-cover the *up to* 7-8 most significant stories with real insight. for each:
-<u>**title that captures the essence**</u>
-weave together what happened, why it matters (significance, implications), key context, and your analytical take in natural, flowing paragraphs.
-separate paragraphs with linebreaks for readability, but ensure smooth transitions.
-blend facts and analysis naturally. **if there isn't much significant development or analysis for a story, keep it brief – don't force length.** prioritize depth and insight where warranted.
-use **bold** for key specifics (names, places, numbers, orgs), *italics* for important context or secondary details.
-offer your **analytical take**: based on the provided facts and context, what are the likely motivations, potential second-order effects, overlooked angles, or inconsistencies? ground this analysis in the data.
-
-## france focus
-(i'm french/live in france - ONLY include if there are actual french developments worth reporting)
-significant french developments: policy details, key players, economic data, political shifts.
-
-## global landscape
-### power & politics
-key geopolitical moves, focusing on outcomes and strategic implications, including subtle shifts.
-
-### china monitor
-(seeking insights often missed in western media - ONLY include if there are meaningful developments)
-meaningful policy shifts, leadership dynamics, economic indicators (with numbers if available), tech developments, social trends.
-
-### economic currents
-(ONLY include if there are significant economic developments)
-market movements signaling underlying trends, impactful policy decisions, trade/resource developments (with data), potential economic risks or opportunities.
-
-## tech & science developments
-(focus on ai/llms, space, biomed, real breakthroughs - ONLY include if there are actual breakthroughs, not minor product updates)
-actual breakthroughs, notable ai/llm advancements, significant space news, key scientific progress. separate signal from noise.
-
-## noteworthy & under-reported
-(combine under-reported significance and carte blanche - ONLY include if there are genuinely interesting items)
-important stories flying under the radar, emerging patterns with specific indicators, slow-burning developments, or other interesting items you think i should see (up to 5 items max).
-
-## positive developments
-(ONLY include if there are genuinely positive developments with measurable outcomes - do NOT force content here)
-actual progress with measurable outcomes, effective solutions, verifiable improvements.
-</final_brief>
-
-use the:
-\`\`\`
-
-<u>**title that captures the essence**</u>
-paragraph
-
-paragraph
-
-...
-
-\`\`\`
-for all sections.
-
-make sure everything inside the <final_brief></final_brief> tags is the actual brief content itself. any/all "hey, here is the brief" or "hope you enjoyed today's brief" should either not be included or be before/after the <final_brief></final_brief> tags.
-
-**final instructions:**
-*   always enclose the brief inside <final_brief></final_brief> tags.
-*   use lowercase by default like i do. complete sentences please.
-*   this is for my eyes only - be direct and analytical.
-*   **source reliability:** the input data is derived from analyses that assessed source reliability. use this implicit understanding – give more weight to information from reliable sources and treat claims originating solely from known low-reliability/propaganda sources with appropriate caution in your analysis and 'take'. explicitly mentioning source reliability isn't necessary unless a major contradiction hinges on it.
-*   **writing style:** aim for the tone of an extremely well-informed, analytical friend with a dry wit and access to incredible information processing. be insightful, engaging, and respect my time. make complex topics clear without oversimplifying. integrate facts, significance, and your take naturally.
-*   **leverage your strengths:** process all the info, spot cross-domain patterns, draw on relevant background knowledge (history, economics, etc.), explain clearly, and provide that grounded-yet-insightful analytical layer.
-
-give me the brief i couldn't get before ai - one that combines human-like insight with superhuman information processing.
-    `.trim()
-
-    // 系统提示词（基于reportV5.md）
-    const systemPrompt = `
-Adopt the persona of an exceptionally well-informed, highly analytical, and slightly irreverent intelligence briefer. Imagine you have near-instant access to and processing power for vast amounts of global information, combined with a sharp, insightful perspective and a dry wit. You're communicating directly and informally with a smart, curious individual who values grounded analysis but dislikes corporate speak, hedging, and forced neutrality.
-
-**Your core stylistic goals are:**
-
-1.  **Tone:** Conversational, direct, and engaging. Use lowercase naturally, as if speaking or writing informally to a trusted peer. Avoid stiff formality, bureaucratic language, or excessive caution. Be chill, but maintain intellectual rigor.
-2.  **Analytical Voice:** Prioritize insightful analysis over mere summarization. Go beyond stating facts to explain *why* they matter, connect disparate events, identify underlying patterns, assess motivations, and explore potential implications (second-order effects). Offer a clear, grounded "take" on developments. Don't be afraid to call out inconsistencies or highlight underappreciated angles, always backing it up with the logic derived from the provided information.
-3.  **Wit & Personality:** Embrace a dry, clever wit. Humor, sarcasm, or irony should arise *naturally* from the situation or the absurdity of events. Pointing out the obvious when it's funny is fine. **Crucially: Do not force humor, be cringe, or undermine the gravity of serious topics like human suffering.** Wit should enhance insight, not detract from it.
-4.  **Language:** Use clear, concise language. Vary sentence structure for natural flow. Occasional relevant slang or shorthand is acceptable if it fits the informal tone naturally, but prioritize clarity. Ensure analysis is sharp and commentary is insightful, not just filler.
-
-**Think of yourself as:** The user's personal "Q" (from James Bond) combined with a sharp geopolitical analyst – someone with unparalleled information access who can cut through the noise, connect the dots, and deliver the essential insights with a bit of personality and zero tolerance for BS.
-
-**Relationship to Main Prompt:** This system prompt defines *how* you should write and analyze. Follow the specific content structure, formatting, and topic instructions provided in the main user prompt separately. Your analysis and 'take' should always be grounded in the information provided in the main prompt's \`<curated_news_data>\` section.
-
-Your ultimate goal is to deliver the kind of insightful, personalized, and engaging intelligence brief that wasn't possible before AI – combining superhuman data processing with a distinct, analytical, and trustworthy (even if slightly cynical) voice.
-    `.trim()
+    // 使用提取的简报生成提示词
+    const briefPrompt = getBriefGenerationPrompt(storiesMarkdown, previousContext)
+    const systemPrompt = getBriefGenerationSystemPrompt()
 
     // 构建聊天请求
     const chatRequest = {
@@ -1280,23 +1081,11 @@ Your ultimate goal is to deliver the kind of insightful, personalized, and engag
     
     briefText = briefText.trim()
 
+
     console.log(`[Brief Generation] 简报生成成功，长度: ${briefText.length} 字符`)
 
-    // 同时生成简报标题（基于reportV5.md的brief_title_prompt）
-    const titlePrompt = `
-<brief>
-${briefText}
-</brief>
-
-create a title for the brief. construct it using the main topics. it should be short/punchy/not clickbaity etc. make sure to not use "short text: longer text here for some reason" i HATE it, under no circumstance should there be colons in the title. make sure it's not too vague/generic either bc there might be many stories. maybe don't focus on like restituting what happened in the title, just do like the major entities/actors/things that happened. like "[person A], [thing 1], [org B] & [person O]" etc. try not to use verbs. state topics instead of stating topics + adding "shakes world order". always use lowercase.
-
-return exclusively a JSON object with the following format:
-\`\`\`json
-{
-    "title": "string"
-}
-\`\`\`
-    `.trim()
+    // 同时生成简报标题（使用提取的标题生成提示词）
+    const titlePrompt = getBriefTitlePrompt(briefText)
 
     const titleRequest = {
       capability: 'chat' as const,
@@ -1359,6 +1148,94 @@ return exclusively a JSON object with the following format:
     return c.json({ 
       success: false,
       error: 'Failed to generate final brief',
+      details: error.message
+    }, 500)
+  }
+})
+
+// =============================================================================
+// Brief TLDR Generation (基于 reportV5.md 的 tldr_prompt)
+// =============================================================================
+
+app.post('/meridian/generate-brief-tldr', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    // 验证请求参数
+    if (!body.briefTitle || !body.briefContent) {
+      return c.json({ 
+        success: false,
+        error: 'Invalid request: briefTitle and briefContent are required'
+      }, 400)
+    }
+
+    console.log(`[TLDR Generation] 为简报"${body.briefTitle}"生成TLDR`)
+
+    // 创建AI Gateway Service
+    const aiGatewayService = new AIGatewayService(c.env)
+
+    // 使用提取的TLDR生成提示词
+    const tldrPrompt = getTldrGenerationPrompt(body.briefTitle, body.briefContent)
+
+    // 构建聊天请求
+    const chatRequest = {
+      capability: 'chat' as const,
+      messages: [{ role: 'user' as const, content: tldrPrompt }],
+      provider: body.options?.provider || 'google-ai-studio',
+      model: body.options?.model || 'gemini-2.0-flash',
+      temperature: 0.0,
+      max_tokens: 2000,
+      metadata: createRequestMetadata(c)
+    }
+
+    console.log(`[TLDR Generation] 调用LLM生成TLDR，使用模型: ${chatRequest.model}`)
+
+    // 通过AI Gateway处理TLDR生成请求
+    const result = await aiGatewayService.chat(chatRequest)
+    
+    // 确保结果是聊天响应类型
+    if (result.capability !== 'chat') {
+      throw new Error('Unexpected response type from chat service')
+    }
+    
+    const chatResult = result as ChatResponse
+    
+    // 提取TLDR内容
+    let tldrText = chatResult.choices?.[0]?.message?.content || ''
+    
+    // 清理可能的markdown代码块标记
+    if (tldrText.startsWith('```')) {
+      tldrText = tldrText.split('```')[1]
+    }
+    if (tldrText.endsWith('```')) {
+      tldrText = tldrText.split('```')[0]
+    }
+    tldrText = tldrText.trim()
+
+    console.log(`[TLDR Generation] TLDR生成成功，包含 ${tldrText.split('\n').length} 个故事项目`)
+
+    return c.json({
+      success: true,
+      data: {
+        tldr: tldrText,
+        story_count: tldrText.split('\n').filter(line => line.trim()).length,
+        metadata: {
+          brief_title: body.briefTitle,
+          brief_length: body.briefContent.length,
+          model_used: chatResult.model,
+          provider: chatResult.provider,
+          generation_time: chatResult.processingTime,
+          total_tokens: chatResult.usage?.total_tokens || 0
+        }
+      },
+      usage: chatResult.usage
+    })
+
+  } catch (error: any) {
+    console.error('TLDR generation error:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to generate brief TLDR',
       details: error.message
     }, 500)
   }

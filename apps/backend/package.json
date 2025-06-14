@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "vitest run",
+    "test:safe": "./scripts/run-tests.sh",
+    "generate-fixtures": "node scripts/generate-fixtures.js",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit"
   },

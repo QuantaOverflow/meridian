@@ -1,0 +1,57 @@
+/**
+ * 测试专用的 Wrangler 配置
+ * 简化版本，避免复杂绑定冲突
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meridian-backend-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-17",
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // Durable Objects migrations 配置
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["SourceScraperDO"]
+    }
+  ],
+  
+  // 基本的 Durable Objects 配置
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "SourceScraperDO",
+        "name": "SOURCE_SCRAPER"
+      }
+    ]
+  },
+  
+  // 禁用观测性以减少复杂性
+  "observability": {
+    "enabled": false
+  },
+  
+  // 基本的 R2 配置
+  "r2_buckets": [
+    {
+      "binding": "ARTICLES_BUCKET",
+      "bucket_name": "meridian-articles-test"
+    }
+  ],
+  
+  // 简化的队列配置 - 只保留 producers
+  "queues": {
+    "producers": [
+      {
+        "queue": "meridian-article-processing-queue-test",
+        "binding": "ARTICLE_PROCESSING_QUEUE"
+      }
+    ]
+  },
+  
+  // 基本环境变量
+  "vars": {
+    "ENVIRONMENT": "test"
+  }
+} 

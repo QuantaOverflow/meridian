@@ -370,6 +370,45 @@ export class MLService {
   }
 
   /**
+   * 自动检测聚类分析
+   */
+  async autoCluster(request: any): Promise<Response> {
+    const mlRequest = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/clustering/auto`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
+      },
+      body: JSON.stringify(request)
+    });
+
+    return await fetch(mlRequest);
+  }
+
+  /**
+   * 生成嵌入向量
+   */
+  async generateEmbeddings(texts: string[], options?: {
+    model_name?: string;
+    normalize?: boolean;
+  }): Promise<Response> {
+    const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
+      },
+      body: JSON.stringify({
+        texts,
+        model_name: options?.model_name,
+        normalize: options?.normalize
+      })
+    });
+
+    return await fetch(request);
+  }
+
+  /**
    * 健康检查
    */
   async healthCheck(): Promise<Response> {

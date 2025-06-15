@@ -101,140 +101,17 @@ export class AIWorkerService {
   }
 }
 
-// ML服务协调器
-export class MLService {
-  constructor(private env: AIWorkerEnv) {}
 
-  /**
-   * 聚类分析 - 委托给clustering-service.ts处理
-   * 保持接口兼容性
-   */
-  async analyzeClusters(dataset: {
-    articles: Array<{
-      id: number;
-      title: string;
-      content: string;
-      publishDate: string;
-      url: string;
-      summary: string;
-    }>;
-    embeddings: Array<{
-      articleId: number;
-      embedding: number[];
-    }>;
-  }): Promise<Response> {
-    // 动态导入clustering-service以避免循环依赖
-    const { MLService: ClusteringMLService } = await import('./clustering-service');
-    const clusteringService = new ClusteringMLService(this.env);
-    return await clusteringService.analyzeClusters(dataset);
-  }
-
-  /**
-   * AI Worker格式聚类分析
-   */
-  async aiWorkerClustering(items: any[], options?: {
-    config?: any;
-    optimization?: any;
-    content_analysis?: any;
-    return_embeddings?: boolean;
-    return_reduced_embeddings?: boolean;
-  }): Promise<Response> {
-    const url = new URL(`${this.env.MERIDIAN_ML_SERVICE_URL}/ai-worker/clustering`);
-    
-    if (options?.return_embeddings !== undefined) {
-      url.searchParams.set('return_embeddings', String(options.return_embeddings));
-    }
-    if (options?.return_reduced_embeddings !== undefined) {
-      url.searchParams.set('return_reduced_embeddings', String(options.return_reduced_embeddings));
-    }
-
-    const request = new Request(url.toString(), {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-      },
-      body: JSON.stringify({
-        items,
-        config: options?.config,
-        optimization: options?.optimization,
-        content_analysis: options?.content_analysis
-      })
-    });
-
-    return await fetch(request);
-  }
-
-  /**
-   * 自动检测聚类分析
-   */
-  async autoCluster(request: any): Promise<Response> {
-    const mlRequest = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/clustering/auto`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-      },
-      body: JSON.stringify(request)
-    });
-
-    return await fetch(mlRequest);
-  }
-
-  /**
-   * 生成嵌入向量
-   */
-  async generateEmbeddings(texts: string[], options?: {
-    model_name?: string;
-    normalize?: boolean;
-  }): Promise<Response> {
-    const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-      },
-      body: JSON.stringify({
-        texts,
-        model_name: options?.model_name,
-        normalize: options?.normalize
-      })
-    });
-
-    return await fetch(request);
-  }
-
-  /**
-   * 健康检查
-   */
-  async healthCheck(): Promise<Response> {
-    const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/health`, {
-      headers: { 
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-      }
-    });
-
-    return await fetch(request);
-  }
-}
 
 /**
  * 创建AI服务实例的工厂函数
  */
 export function createAIServices(env: AIWorkerEnv) {
   return {
-    aiWorker: new AIWorkerService(env),
-    mlService: new MLService(env)
+    aiWorker: new AIWorkerService(env)
   };
 }
 
 
 
-// 从clustering-service.ts重新导出聚类相关功能，保持测试兼容性
-export { 
-  analyzeArticleClusters, 
-  handleServiceResponse,
-  type ArticleDataset,
-  type ClusteringResult,
-  type ClusteringServiceResponse
-} from './clustering-service'; 
+ 

@@ -4,7 +4,8 @@
  */
 
 import { describe, test, expect, beforeAll } from 'vitest';
-import { MLService, AIWorkerEnv, analyzeArticleClusters, handleServiceResponse } from '../../src/lib/ai-services';
+import { MLService, analyzeArticleClusters, handleServiceResponse } from '../../src/lib/clustering-service';
+import type { AIWorkerEnv } from '../../src/lib/ai-services';
 
 // 模拟环境配置（从wrangler.jsonc获取）
 const mockEnv: AIWorkerEnv = {

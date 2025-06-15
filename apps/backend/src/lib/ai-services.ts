@@ -106,8 +106,8 @@ export class MLService {
   constructor(private env: AIWorkerEnv) {}
 
   /**
-   * 聚类分析 - 兼容intelligence-pipeline.test.ts数据契约
-   * 接受ArticleDataset格式，返回ClusteringResult格式
+   * 聚类分析 - 委托给clustering-service.ts处理
+   * 保持接口兼容性
    */
   async analyzeClusters(dataset: {
     articles: Array<{
@@ -123,120 +123,10 @@ export class MLService {
       embedding: number[];
     }>;
   }): Promise<Response> {
-    // 验证输入数据
-    if (!dataset.articles.length || !dataset.embeddings.length) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "Dataset is empty"
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 转换为ML服务期望的AI Worker格式
-    const items = dataset.articles.map(article => {
-      const embedding = dataset.embeddings.find(e => e.articleId === article.id);
-      if (!embedding) {
-        throw new Error(`Missing embedding for article ${article.id}`);
-      }
-      
-      return {
-        id: article.id,
-        title: article.title,
-        content: article.content,
-        url: article.url,
-        embedding: embedding.embedding,
-        publishDate: article.publishDate
-      };
-    });
-
-    // 调用ML服务的AI Worker聚类端点
-    const mlResponse = await this.aiWorkerClustering(items, {
-      config: {
-        umap_n_components: 10,
-        umap_n_neighbors: 15,
-        umap_min_dist: 0.0,
-        umap_metric: 'cosine',
-        hdbscan_min_cluster_size: 5,
-        hdbscan_min_samples: 3,
-        hdbscan_cluster_selection_epsilon: 0.2
-      },
-      return_embeddings: false,
-      return_reduced_embeddings: false
-    });
-
-    if (!mlResponse.ok) {
-      return mlResponse; // 直接返回错误响应
-    }
-
-    try {
-      const mlResult = await mlResponse.json() as {
-        clusters: Array<{
-          cluster_id: number;
-          size: number;
-          items: Array<{ id: number; [key: string]: any }>;
-        }>;
-        config_used?: {
-          umap_n_neighbors?: number;
-          umap_n_components?: number;
-          umap_min_dist?: number;
-          umap_metric?: string;
-          hdbscan_min_cluster_size?: number;
-          hdbscan_min_samples?: number;
-          hdbscan_cluster_selection_epsilon?: number;
-        };
-        clustering_stats?: {
-          n_clusters?: number;
-          n_outliers?: number;
-          n_samples?: number;
-        };
-      };
-      
-      // 转换ML服务响应为intelligence-pipeline.test.ts期望的格式
-      const clusteringResult = {
-        clusters: mlResult.clusters.map((cluster) => ({
-          clusterId: cluster.cluster_id,
-          articleIds: cluster.items.map((item) => item.id),
-          size: cluster.size
-        })),
-        parameters: {
-          umapParams: {
-            n_neighbors: mlResult.config_used?.umap_n_neighbors || 15,
-            n_components: mlResult.config_used?.umap_n_components || 10,
-            min_dist: mlResult.config_used?.umap_min_dist || 0.0,
-            metric: mlResult.config_used?.umap_metric || "cosine"
-          },
-          hdbscanParams: {
-            min_cluster_size: mlResult.config_used?.hdbscan_min_cluster_size || 5,
-            min_samples: mlResult.config_used?.hdbscan_min_samples || 3,
-            epsilon: mlResult.config_used?.hdbscan_cluster_selection_epsilon || 0.2
-          }
-        },
-        statistics: {
-          totalClusters: mlResult.clustering_stats?.n_clusters || 0,
-          noisePoints: mlResult.clustering_stats?.n_outliers || 0,
-          totalArticles: mlResult.clustering_stats?.n_samples || dataset.articles.length
-        }
-      };
-
-      return new Response(JSON.stringify({
-        success: true,
-        data: clusteringResult
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-    } catch (error) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Failed to parse ML service response: ${error instanceof Error ? error.message : String(error)}`
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // 动态导入clustering-service以避免循环依赖
+    const { MLService: ClusteringMLService } = await import('./clustering-service');
+    const clusteringService = new ClusteringMLService(this.env);
+    return await clusteringService.analyzeClusters(dataset);
   }
 
   /**
@@ -338,60 +228,13 @@ export function createAIServices(env: AIWorkerEnv) {
   };
 }
 
-/**
- * 响应处理工具函数
- */
-export async function handleServiceResponse<T>(
-  response: Response,
-  context?: string
-): Promise<{ success: boolean; data?: T; error?: string }> {
-  try {
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: `${context || 'Service'} failed: ${response.status} - ${errorText}`
-      };
-    }
 
-    const data = await response.json() as T;
-    return {
-      success: true,
-      data
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `${context || 'Service'} response parsing failed: ${error instanceof Error ? error.message : String(error)}`
-    };
-  }
-}
 
-/**
- * 聚类分析便捷函数 - 兼容intelligence-pipeline.test.ts数据契约
- * 
- * @param env 环境配置
- * @param dataset ArticleDataset格式的输入数据
- * @returns Promise<{ success: boolean; data?: ClusteringResult; error?: string }>
- */
-export async function analyzeArticleClusters(
-  env: AIWorkerEnv,
-  dataset: {
-    articles: Array<{
-      id: number;
-      title: string;
-      content: string;
-      publishDate: string;
-      url: string;
-      summary: string;
-    }>;
-    embeddings: Array<{
-      articleId: number;
-      embedding: number[];
-    }>;
-  }
-): Promise<{ success: boolean; data?: any; error?: string }> {
-  const mlService = new MLService(env);
-  const response = await mlService.analyzeClusters(dataset);
-  return await handleServiceResponse(response, 'Clustering analysis');
-} 
+// 从clustering-service.ts重新导出聚类相关功能，保持测试兼容性
+export { 
+  analyzeArticleClusters, 
+  handleServiceResponse,
+  type ArticleDataset,
+  type ClusteringResult,
+  type ClusteringServiceResponse
+} from './clustering-service'; 

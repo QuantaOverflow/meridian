@@ -177,11 +177,32 @@ app.get('/briefs/stats', async (c) => {
 
     // 分析质量趋势
     stats.qualityTrends = recentBriefs.map(brief => {
-             let clusteringParams: any = {};
-       try {
-         clusteringParams = brief.clustering_params ? JSON.parse(brief.clustering_params as string) : {};
+      let clusteringParams: any = {};
+      let isAiWorkerGenerated = false;
+      
+      try {
+        if (brief.clustering_params) {
+          // 由于clustering_params是jsonb字段，Drizzle会自动解析JSON
+          const parsedParams = brief.clustering_params as any;
+          
+          // 检查是否是AI Worker生成的简报（新格式）
+          if (parsedParams.aiWorkerGenerated || parsedParams.workflowId) {
+            isAiWorkerGenerated = true;
+            clusteringParams = {
+              strategy: 'ai_worker_generated',
+              min_quality_score: 0.5 // AI Worker默认质量标准
+            };
+          } else {
+            // 旧格式的聚类参数
+            clusteringParams = parsedParams;
+          }
+        }
       } catch (e) {
-        console.warn('无法解析聚类参数:', brief.clustering_params);
+        // 处理解析错误的极端情况
+        clusteringParams = {
+          strategy: 'parse_error',
+          min_quality_score: 0.3
+        };
       }
 
       return {
@@ -192,7 +213,8 @@ app.get('/briefs/stats', async (c) => {
         totalArticles: brief.totalArticles,
         usedArticles: brief.usedArticles,
         clusteringStrategy: clusteringParams.strategy || 'unknown',
-        qualityScore: clusteringParams.min_quality_score || 0.3
+        qualityScore: clusteringParams.min_quality_score || 0.3,
+        isAiWorkerGenerated
       };
     });
 

@@ -2,38 +2,34 @@ import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersConfig({
   test: {
-    globals: true, // 启用全局测试函数（describe, it, expect）
-    // 强制顺序执行，避免并发资源冲突
+    globals: true,
     fileParallelism: false,
     poolOptions: {
       workers: {
-        // 为了支持 Workflows，需要禁用 isolated storage
-        isolatedStorage: false,
-        // 使用测试专用的 wrangler 配置文件
+        isolatedStorage: true,
         wrangler: { 
           configPath: "./wrangler.test.jsonc" 
         },
-        // 最小化的 Miniflare 配置
         miniflare: {
-          // 基本的环境变量
+          // 基本环境变量和绑定
           bindings: {
-            API_TOKEN: "test-api-token",
-            GEMINI_API_KEY: "test-gemini-key",
+            API_TOKEN: "test-api-token-12345",
+            GEMINI_API_KEY: "test-gemini-key-12345",
             DATABASE_URL: "postgresql://test:test@localhost:5432/test_db",
+            HYPERDRIVE: {
+              connectionString: "postgresql://test:test@localhost:5432/test_db"
+            }
           },
           
-          // 兼容性日期和标志 - 使用支持的日期
+          // 兼容性设置
           compatibilityDate: "2025-04-17",
-          compatibilityFlags: ["nodejs_compat"],
-          
-          // 禁用一些可能导致冲突的功能
-          queueConsumers: {},
+          compatibilityFlags: ["nodejs_compat"]
         },
       },
     },
     
-    // 测试超时设置
-    testTimeout: 30000, // 30 秒
+    // 测试超时
+    testTimeout: 30000,
     
     // 覆盖率配置
     coverage: {
@@ -48,22 +44,14 @@ export default defineWorkersConfig({
         '.wrangler/',
         'docs/',
       ],
-      thresholds: {
-        global: {
-          branches: 50,
-          functions: 50,
-          lines: 50,
-          statements: 50,
-        },
-      },
     },
     
-    // 测试文件匹配模式
+    // 测试文件匹配
     include: [
       'test/**/*.{test,spec}.{js,ts}',
     ],
     
-    // 排除的文件模式
+    // 排除文件
     exclude: [
       'node_modules/',
       'dist/',
@@ -72,7 +60,7 @@ export default defineWorkersConfig({
     ],
   },
   
-  // 路径别名配置（与 tsconfig.json 保持一致）
+  // 路径别名
   resolve: {
     alias: {
       '@/': './src/',

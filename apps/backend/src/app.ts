@@ -5,6 +5,7 @@ import durableObjectsRouter from './routers/durableObjects.router';
 import eventsRouter from './routers/events.router'; // 导入新的路由
 import adminRouter from './routers/admin'; // 导入admin路由
 import observabilityRouter from './routers/observability'; // 导入可观测性路由
+import debugRouter from './routers/debug'; // 导入debug路由
 import { Env } from './index';
 import { Hono } from 'hono';
 import { trimTrailingSlash } from 'hono/trailing-slash';
@@ -22,5 +23,10 @@ const app = new Hono<HonoEnv>()
   .route('/admin', adminRouter) // 添加admin路由
   .route('/observability', observabilityRouter) // 添加可观测性路由
   .get('/ping', async c => c.json({ pong: true }));
+
+// Only mount the debug router in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  app.route('/debug', debugRouter);
+}
 
 export default app;

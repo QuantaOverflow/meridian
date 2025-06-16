@@ -304,6 +304,14 @@ interface ValidatedStories {
   rejectedClusters: RejectedCluster[]
 }
 
+// 新增：最小文章信息接口，用于故事验证
+interface MinimalArticleInfo {
+  id: number
+  title: string
+  url: string
+  event_summary_points?: string[]
+}
+
 app.post('/meridian/story/validate', async (c) => {
   try {
     const body = await c.req.json()
@@ -316,9 +324,18 @@ app.post('/meridian/story/validate', async (c) => {
       }, 400)
     }
 
+    // 验证文章数据数组
+    if (!body.articlesData || !Array.isArray(body.articlesData)) {
+      return c.json<APIResponse<null>>({ 
+        success: false,
+        error: 'articlesData array is required'
+      }, 400)
+    }
+
     const clusteringResult: ClusteringResult = body.clusteringResult
+    const articlesData: MinimalArticleInfo[] = body.articlesData
     
-    console.log(`[Story Validation] 验证 ${clusteringResult.clusters.length} 个聚类`)
+    console.log(`[Story Validation] 验证 ${clusteringResult.clusters.length} 个聚类，包含 ${articlesData.length} 个文章数据`)
 
     if (!clusteringResult.clusters.length) {
       return c.json<APIResponse<null>>({ 
@@ -347,10 +364,24 @@ app.post('/meridian/story/validate', async (c) => {
 
         // 对于足够大的聚类，使用AI进行深度验证
         if (body.useAI !== false && cluster.size >= 3) {
-          // 构建文章摘要用于AI分析
+          // 从 articlesData 中查找文章信息，构建详细的文章列表
           const articleList = cluster.articleIds
-            .map(id => `- Article ID: ${id}`)
-            .join('\n')
+            .map(id => {
+              const article = articlesData.find(a => a.id === id)
+              if (!article) {
+                return `- Article ID: ${id} (无文章信息)`
+              }
+              
+              let articleInfo = `- ID: ${article.id}\n  标题: ${article.title}\n  URL: ${article.url}`
+              
+              // 添加摘要要点（如果存在）
+              if (Array.isArray(article.event_summary_points) && article.event_summary_points.length > 0) {
+                articleInfo += `\n  摘要要点: ${article.event_summary_points.join('; ')}`
+              }
+              
+              return articleInfo
+            })
+            .join('\n\n')
 
           const validationPrompt = getStoryValidationPrompt(articleList)
           
@@ -440,6 +471,7 @@ app.post('/meridian/story/validate', async (c) => {
       data: result,
       metadata: {
         totalClusters: clusteringResult.clusters.length,
+        totalArticlesProvided: articlesData.length,
         validatedStories: stories.length,
         rejectedClusters: rejectedClusters.length,
         processingStatistics: clusteringResult.statistics
@@ -878,7 +910,7 @@ app.get('/meridian/status', (c) => {
           description: '聚类分析 → 故事验证 → 情报分析 → 简报生成',
           data_flow: 'ClusteringResult → ValidatedStories → IntelligenceReports → FinalBrief',
           input_formats: {
-            story_validation: 'ClusteringResult with clusters[], parameters, statistics',
+            story_validation: 'ClusteringResult + articlesData (MinimalArticleInfo[]) → ValidatedStories',
             intelligence_batch_analysis: 'ValidatedStories + ArticleDataset → IntelligenceReports',
             intelligence_single_analysis: 'Story + Article[] → IntelligenceReport',
             intelligence_legacy: 'Legacy format for backward compatibility',

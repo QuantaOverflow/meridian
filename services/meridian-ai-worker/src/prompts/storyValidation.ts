@@ -26,7 +26,7 @@ A "single story" can still have multiple aspects or angles. What matters is whet
 - Format: "[Subject] [action/event] in/with [location/context]"
 
 # Input data
-Articles (format is (#id) [title](url)):
+Articles with detailed information (including titles, URLs, and summary points when available):
 ${articleList}
 
 # Output format

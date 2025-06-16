@@ -45,6 +45,13 @@ interface ClusteringResult {
   }
 }
 
+interface MinimalArticleInfo {
+  id: number
+  title: string
+  url: string
+  event_summary_points?: string[]
+}
+
 describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,6 +71,16 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     }
   });
 
+  // 创建测试用的 MinimalArticleInfo 数据
+  const createMinimalArticlesData = (articleIds: number[]): MinimalArticleInfo[] => {
+    return articleIds.map(id => ({
+      id,
+      title: `测试文章标题 ${id}`,
+      url: `https://example.com/article/${id}`,
+      event_summary_points: [`文章 ${id} 的重要事件摘要`, `文章 ${id} 的关键发展`]
+    }));
+  };
+
   // --- 输入验证测试 ---
   it('应该在缺少 clusteringResult.clusters 时返回 400 错误', async () => {
     const res = await app.request('/meridian/story/validate', {
@@ -78,13 +95,34 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     expect(data.error).toBe('clusteringResult.clusters array is required');
   });
 
-  it('应该在空聚类数组时返回 400 错误', async () => {
-    const emptyClusteringResult = createClusteringResult([]);
+  it('应该在缺少 articlesData 时返回 400 错误', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 1, articleIds: [1, 2, 3], size: 3 }
+    ]);
     
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult: emptyClusteringResult }),
+      body: JSON.stringify({ clusteringResult }), // articlesData 缺失
+    });
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toBe('articlesData array is required');
+  });
+
+  it('应该在空聚类数组时返回 400 错误', async () => {
+    const emptyClusteringResult = createClusteringResult([]);
+    const emptyArticlesData = createMinimalArticlesData([]);
+    
+    const res = await app.request('/meridian/story/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        clusteringResult: emptyClusteringResult,
+        articlesData: emptyArticlesData 
+      }),
     });
     const data = await res.json();
 
@@ -99,11 +137,12 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
       { clusterId: 1, articleIds: [1, 2], size: 2 }, // 小于3，应被拒绝
       { clusterId: 2, articleIds: [3], size: 1 }      // 小于3，应被拒绝
     ]);
+    const articlesData = createMinimalArticlesData([1, 2, 3]);
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: false }), // 禁用AI验证
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: false }), // 禁用AI验证
     });
     const data = await res.json();
 
@@ -120,6 +159,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const clusteringResult = createClusteringResult([
       { clusterId: 100, articleIds: [1, 2, 3, 4], size: 4 }
     ]);
+    const articlesData = createMinimalArticlesData([1, 2, 3, 4]);
     
     const mockPrompt = '模拟的故事验证提示词。';
     const mockLlmResponse = {
@@ -143,7 +183,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 
@@ -164,6 +204,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const clusteringResult = createClusteringResult([
       { clusterId: 200, articleIds: [10, 11, 12, 13, 14, 15], size: 6 }
     ]);
+    const articlesData = createMinimalArticlesData([10, 11, 12, 13, 14, 15]);
 
     const mockLlmResponse = {
       capability: 'chat',
@@ -186,7 +227,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 
@@ -209,6 +250,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const clusteringResult = createClusteringResult([
       { clusterId: 300, articleIds: [20, 21, 22], size: 3 }
     ]);
+    const articlesData = createMinimalArticlesData([20, 21, 22]);
 
     const mockLlmResponse = {
       capability: 'chat',
@@ -231,7 +273,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 
@@ -249,6 +291,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const clusteringResult = createClusteringResult([
       { clusterId: 400, articleIds: [30, 31, 32], size: 3 }
     ]);
+    const articlesData = createMinimalArticlesData([30, 31, 32]);
 
     const mockLlmResponse = {
       capability: 'chat',
@@ -271,7 +314,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 
@@ -289,6 +332,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
       { clusterId: 2, articleIds: [3, 4, 5], size: 3 },       // AI验证为单一故事
       { clusterId: 3, articleIds: [6, 7, 8, 9], size: 4 }     // AI验证为纯噪声
     ]);
+    const articlesData = createMinimalArticlesData([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     const mockResponses = [
       // 第一个AI调用（clusterId: 2）
@@ -323,7 +367,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 
@@ -352,6 +396,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const clusteringResult = createClusteringResult([
       { clusterId: 500, articleIds: [50, 51, 52], size: 3 }
     ]);
+    const articlesData = createMinimalArticlesData([50, 51, 52]);
 
     (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
     (AIGatewayService as Mock).mockImplementation(() => ({
@@ -361,7 +406,7 @@ describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () =>
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clusteringResult, useAI: true }),
+      body: JSON.stringify({ clusteringResult, articlesData, useAI: true }),
     });
     const data = await res.json();
 

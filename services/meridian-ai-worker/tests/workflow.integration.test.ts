@@ -155,6 +155,13 @@ interface ArticleDataset {
   }>;
 }
 
+interface MinimalArticleInfo {
+  id: number;
+  title: string;
+  url: string;
+  event_summary_points?: string[];
+}
+
 interface ClusteringResult {
   clusters: Array<{
     clusterId: number;
@@ -179,6 +186,28 @@ interface ClusteringResult {
     noisePoints: number;
     totalArticles: number;
   };
+}
+
+// ============================================================================
+// 数据转换工具函数
+// ============================================================================
+
+/**
+ * 将 ArticleDataset 转换为 MinimalArticleInfo 数组
+ * 用于故事验证端点
+ */
+function convertArticleDatasetToMinimalArticleInfo(dataset: ArticleDataset): MinimalArticleInfo[] {
+  if (!dataset || !dataset.articles) {
+    return [];
+  }
+
+  return dataset.articles.map(article => ({
+    id: article.id,
+    title: article.title,
+    url: article.url,
+    // 如果 article.summary 存在且不是空字符串，则将其放入数组
+    event_summary_points: (article.summary && article.summary.trim() !== '') ? [article.summary] : undefined,
+  }));
 }
 
 describe('End-to-End Workflow Integration Test', () => {
@@ -351,16 +380,21 @@ describe('End-to-End Workflow Integration Test', () => {
 
     // =====================================================================
     // 步骤 1: 故事验证 (Story Validation)
-    // 输入: ClusteringResult → 输出: ValidatedStories
+    // 输入: ClusteringResult + articlesData → 输出: ValidatedStories
     // =====================================================================
     console.log('📝 步骤 1: 执行故事验证...');
+    
+    // 转换文章数据集为最小文章信息格式
+    const minimalArticlesData = convertArticleDatasetToMinimalArticleInfo(sampleArticleDataset);
+    console.log(`   转换了 ${minimalArticlesData.length} 个文章数据用于故事验证`);
     
     const storyValidationResponse = await httpClient.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         clusteringResult: mockClusteringResult,
-        useAI: false, // 禁用AI验证，因为当前实现只发送文章ID而非内容
+        articlesData: minimalArticlesData, // 新增：传递文章数据
+        useAI: INTEGRATION_TEST_MODE, // 集成测试时启用AI验证，单元测试时禁用
         options: INTEGRATION_TEST_MODE ? {
           provider: 'google',
           model: 'gemini-2.0-flash-exp'
@@ -381,8 +415,13 @@ describe('End-to-End Workflow Integration Test', () => {
     expect(Array.isArray(validationData.data.stories)).toBe(true);
     expect(Array.isArray(validationData.data.rejectedClusters)).toBe(true);
 
+    // 验证新的元数据字段
+    expect(validationData.metadata).toHaveProperty('totalArticlesProvided');
+    expect(validationData.metadata.totalArticlesProvided).toBe(minimalArticlesData.length);
+
     const validatedStories = validationData.data;
     console.log(`✅ 故事验证完成: ${validatedStories.stories.length} 个有效故事, ${validatedStories.rejectedClusters.length} 个拒绝聚类`);
+    console.log(`   提供了 ${validationData.metadata.totalArticlesProvided} 个文章数据用于AI分析`);
 
     // 验证故事数据结构
     if (validatedStories.stories.length > 0) {

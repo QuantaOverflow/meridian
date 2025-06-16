@@ -253,3 +253,72 @@ npm run test:integration
 **当前部署地址**: `https://meridian-ai-worker.swj299792458.workers.dev`
 
 如需技术支持或反馈问题，请查看相关文档或提交 Issue。
+
+## Story Validation API
+
+### POST /meridian/story/validate
+
+基于 `intelligence-pipeline.test.ts` 契约的故事验证端点。
+
+**输入格式:**
+```typescript
+{
+  clusteringResult: {
+    clusters: Array<{
+      clusterId: number
+      articleIds: number[]
+      size: number
+    }>,
+    parameters: {
+      umapParams: { n_neighbors, n_components, min_dist, metric },
+      hdbscanParams: { min_cluster_size, min_samples, epsilon }
+    },
+    statistics: {
+      totalClusters: number
+      noisePoints: number
+      totalArticles: number
+    }
+  },
+  useAI?: boolean,  // 是否使用AI进行深度验证，默认 true
+  options?: {
+    provider?: string
+    model?: string
+  }
+}
+```
+
+**输出格式:**
+```typescript
+{
+  success: boolean,
+  data: {
+    stories: Array<{
+      title: string
+      importance: number  // 1-10
+      articleIds: number[]
+      storyType: "SINGLE_STORY" | "COLLECTION_OF_STORIES"
+    }>,
+    rejectedClusters: Array<{
+      clusterId: number
+      rejectionReason: "PURE_NOISE" | "NO_STORIES" | "INSUFFICIENT_ARTICLES"
+      originalArticleIds: number[]
+    }>
+  },
+  metadata: {
+    totalClusters: number
+    validatedStories: number
+    rejectedClusters: number
+    processingStatistics: object
+  }
+}
+```
+
+**验证逻辑:**
+1. 聚类尺寸 < 3：标记为 "INSUFFICIENT_ARTICLES"
+2. 聚类尺寸 >= 3：使用AI进行深度分析
+   - single_story：创建单一故事，移除异常点
+   - collection_of_stories：分解为多个独立故事
+   - pure_noise：标记为 "PURE_NOISE"
+   - no_stories：标记为 "NO_STORIES"
+3. 重要性评分限制在1-10范围内
+4. 故事至少需要2篇文章才能被接受

@@ -1,5 +1,5 @@
 // services/meridian-ai-worker/tests/storyValidate.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import app from '../src/index'; // 导入 Hono 应用程序实例
 
 // 模拟 AIGatewayService 及其 chat 方法
@@ -18,257 +18,371 @@ vi.mock('../src/prompts/storyValidation', () => ({
 import { AIGatewayService } from '../src/services/ai-gateway';
 import { getStoryValidationPrompt } from '../src/prompts/storyValidation';
 
-describe('POST /meridian/story/validate Endpoint', () => {
+// 定义测试所需的数据类型
+interface ClusteringResult {
+  clusters: Array<{
+    clusterId: number
+    articleIds: number[]
+    size: number
+  }>
+  parameters: {
+    umapParams: {
+      n_neighbors: number
+      n_components: number
+      min_dist: number
+      metric: string
+    }
+    hdbscanParams: {
+      min_cluster_size: number
+      min_samples: number
+      epsilon: number
+    }
+  }
+  statistics: {
+    totalClusters: number
+    noisePoints: number
+    totalArticles: number
+  }
+}
+
+describe('POST /meridian/story/validate Endpoint - 基于新数据契约', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // 创建标准的 ClusteringResult 测试数据
+  const createClusteringResult = (clusters: Array<{ clusterId: number, articleIds: number[], size: number }>): ClusteringResult => ({
+    clusters,
+    parameters: {
+      umapParams: { n_neighbors: 15, n_components: 10, min_dist: 0.0, metric: "cosine" },
+      hdbscanParams: { min_cluster_size: 5, min_samples: 3, epsilon: 0.2 }
+    },
+    statistics: {
+      totalClusters: clusters.length,
+      noisePoints: 0,
+      totalArticles: clusters.reduce((sum, c) => sum + c.size, 0)
+    }
+  });
+
   // --- 输入验证测试 ---
-  it('应该在缺少 cluster.articles 时返回 400 错误', async () => {
+  it('应该在缺少 clusteringResult.clusters 时返回 400 错误', async () => {
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: {} }), // cluster.articles 缺失
+      body: JSON.stringify({ invalidInput: {} }), // clusteringResult.clusters 缺失
     });
     const data = await res.json();
 
     expect(res.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.error).toBe('Invalid request: cluster with articles array is required');
+    expect(data.error).toBe('clusteringResult.clusters array is required');
   });
 
-  // --- 成功场景测试：单一故事 ---
-  it('应该成功验证为单一故事并过滤异常点', async () => {
-    const mockClusterInput = {
-      id: 100,
-      articles: [
-        { id: 1, title: '文章1', url: 'http://url1.com' },
-        { id: 2, title: '文章2', url: 'http://url2.com' },
-        { id: 3, title: '异常点文章', url: 'http://url3.com' },
-      ],
-    };
+  it('应该在空聚类数组时返回 400 错误', async () => {
+    const emptyClusteringResult = createClusteringResult([]);
+    
+    const res = await app.request('/meridian/story/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clusteringResult: emptyClusteringResult }),
+    });
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toBe('No clusters to validate');
+  });
+
+  // --- 尺寸过滤测试 ---
+  it('应该将小聚类标记为 INSUFFICIENT_ARTICLES', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 1, articleIds: [1, 2], size: 2 }, // 小于3，应被拒绝
+      { clusterId: 2, articleIds: [3], size: 1 }      // 小于3，应被拒绝
+    ]);
+
+    const res = await app.request('/meridian/story/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clusteringResult, useAI: false }), // 禁用AI验证
+    });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.stories).toHaveLength(0);
+    expect(data.data.rejectedClusters).toHaveLength(2);
+    expect(data.data.rejectedClusters[0].rejectionReason).toBe('INSUFFICIENT_ARTICLES');
+    expect(data.data.rejectedClusters[1].rejectionReason).toBe('INSUFFICIENT_ARTICLES');
+  });
+
+  // --- AI验证测试：单一故事 ---
+  it('应该成功验证为单一故事并移除异常点', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 100, articleIds: [1, 2, 3, 4], size: 4 }
+    ]);
+    
     const mockPrompt = '模拟的故事验证提示词。';
     const mockLlmResponse = {
       capability: 'chat',
-      choices: [{ message: { content: '```json\n{"answer": "single_story", "title": "单一故事标题", "importance": 8, "outliers": [3]}\n```' } }],
+      choices: [{ 
+        message: { 
+          content: '```json\n{"answer": "single_story", "title": "重要政治发展", "importance": 8, "outliers": [3]}\n```' 
+        } 
+      }],
       model: 'gemini-2.0-flash',
       provider: 'google-ai-studio',
       processingTime: 100,
       cached: false
     };
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue(mockPrompt);
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
+    (getStoryValidationPrompt as Mock).mockReturnValue(mockPrompt);
+    (AIGatewayService as Mock).mockImplementation(() => ({
       chat: vi.fn().mockResolvedValue(mockLlmResponse),
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.data.validation_result).toBe('single_story');
-    expect(data.data.cleaned_stories).toHaveLength(1);
-    expect(data.data.cleaned_stories[0]).toEqual({
-      id: mockClusterInput.id, // 单一故事使用原始cluster ID
-      title: '单一故事标题',
-      importance: 8,
-      articles: [1, 2], // 文章3被过滤掉了
-    });
-    expect(data.metadata.model).toBe('gemini-2.0-flash');
-    expect(data.metadata.provider).toBe('google-ai-studio');
-    expect(getStoryValidationPrompt).toHaveBeenCalledWith(
-      expect.stringContaining('- (#1) [文章1](http://url1.com)') // 验证提示词内容
-    );
+    expect(data.data.stories).toHaveLength(1);
+    expect(data.data.rejectedClusters).toHaveLength(0);
+    
+    const story = data.data.stories[0];
+    expect(story.title).toBe('重要政治发展');
+    expect(story.importance).toBe(8);
+    expect(story.articleIds).toEqual([1, 2, 4]); // 文章3被移除
+    expect(story.storyType).toBe('SINGLE_STORY');
   });
 
-  // --- 成功场景测试：故事集合 ---
-  it('应该成功验证为故事集合并过滤小故事', async () => {
-    const mockClusterInput = {
-      id: 200,
-      articles: [
-        { id: 10, title: '大故事1', url: 'http://url10.com' },
-        { id: 11, title: '大故事2', url: 'http://url11.com' },
-        { id: 12, title: '大故事3', url: 'http://url12.com' },
-        { id: 13, title: '小故事1', url: 'http://url13.com' },
-        { id: 14, title: '小故事2', url: 'http://url14.com' }, // 只有2篇文章，会被过滤
-      ],
-    };
+  // --- AI验证测试：故事集合 ---
+  it('应该成功验证为故事集合并分解为多个故事', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 200, articleIds: [10, 11, 12, 13, 14, 15], size: 6 }
+    ]);
+
     const mockLlmResponse = {
       capability: 'chat',
-      choices: [{ message: { content: '```json\n{"answer": "collection_of_stories", "stories": [{"title": "大故事集A", "importance": 7, "articles": [10, 11, 12]}, {"title": "小故事集B", "importance": 3, "articles": [13, 14]}]}\n```' } }],
+      choices: [{ 
+        message: { 
+          content: '```json\n{"answer": "collection_of_stories", "stories": [{"title": "科技突破", "importance": 7, "articles": [10, 11, 12]}, {"title": "市场动态", "importance": 5, "articles": [13, 14]}]}\n```' 
+        } 
+      }],
       model: 'gemini-2.0-flash',
       provider: 'google-ai-studio',
       processingTime: 120,
       cached: false
     };
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue('mock prompt');
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
+    (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
+    (AIGatewayService as Mock).mockImplementation(() => ({
       chat: vi.fn().mockResolvedValue(mockLlmResponse),
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.data.validation_result).toBe('collection_of_stories');
-    expect(data.data.cleaned_stories).toHaveLength(1); // 只有大故事集A被包含
-    expect(data.data.cleaned_stories[0].title).toBe('大故事集A');
-    expect(data.data.cleaned_stories[0].articles).toEqual([10, 11, 12]);
-    expect(data.metadata.model).toBe('gemini-2.0-flash');
-    expect(data.metadata.provider).toBe('google-ai-studio');
+    expect(data.data.stories).toHaveLength(2);
+    expect(data.data.rejectedClusters).toHaveLength(0);
+    
+    expect(data.data.stories[0].title).toBe('科技突破');
+    expect(data.data.stories[0].articleIds).toEqual([10, 11, 12]);
+    expect(data.data.stories[0].storyType).toBe('SINGLE_STORY');
+    
+    expect(data.data.stories[1].title).toBe('市场动态');
+    expect(data.data.stories[1].articleIds).toEqual([13, 14]);
+    expect(data.data.stories[1].storyType).toBe('SINGLE_STORY');
   });
 
-  // --- 成功场景测试：纯噪声 ---
-  it('应该成功验证为纯噪声并返回空列表', async () => {
-    const mockClusterInput = {
-      id: 300,
-      articles: [
-        { id: 20, title: '噪音1', url: 'http://noise1.com' },
-        { id: 21, title: '噪音2', url: 'http://noise2.com' },
-      ],
-    };
+  // --- AI验证测试：纯噪声 ---
+  it('应该成功验证为纯噪声并拒绝聚类', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 300, articleIds: [20, 21, 22], size: 3 }
+    ]);
+
     const mockLlmResponse = {
       capability: 'chat',
-      choices: [{ message: { content: '```json\n{"answer": "pure_noise"}\n```' } }],
+      choices: [{ 
+        message: { 
+          content: '```json\n{"answer": "pure_noise"}\n```' 
+        } 
+      }],
       model: 'gemini-2.0-flash',
       provider: 'google-ai-studio',
       processingTime: 80,
       cached: false
     };
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue('mock prompt');
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
+    (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
+    (AIGatewayService as Mock).mockImplementation(() => ({
       chat: vi.fn().mockResolvedValue(mockLlmResponse),
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.data.validation_result).toBe('pure_noise');
-    expect(data.data.cleaned_stories).toHaveLength(0);
-    expect(data.metadata.model).toBe('gemini-2.0-flash');
-    expect(data.metadata.provider).toBe('google-ai-studio');
+    expect(data.data.stories).toHaveLength(0);
+    expect(data.data.rejectedClusters).toHaveLength(1);
+    expect(data.data.rejectedClusters[0].clusterId).toBe(300);
+    expect(data.data.rejectedClusters[0].rejectionReason).toBe('PURE_NOISE');
+    expect(data.data.rejectedClusters[0].originalArticleIds).toEqual([20, 21, 22]);
   });
 
-  // --- 成功场景测试：无故事（文章数太少，隐式过滤） ---
-  it('应该在所有故事文章数不足时返回空列表 (no_stories或collection_of_stories)', async () => {
-    const mockClusterInput = {
-      id: 400,
-      articles: [
-        { id: 30, title: '文章A', url: 'http://a.com' },
-        { id: 31, title: '文章B', url: 'http://b.com' },
-      ],
-    };
-    // 模拟 LLM 返回 no_stories
-    const mockLlmNoStoriesResponse = {
+  // --- AI验证测试：无故事 ---
+  it('应该在无故事时拒绝聚类', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 400, articleIds: [30, 31, 32], size: 3 }
+    ]);
+
+    const mockLlmResponse = {
       capability: 'chat',
-      choices: [{ message: { content: '```json\n{"answer": "no_stories"}\n```' } }],
+      choices: [{ 
+        message: { 
+          content: '```json\n{"answer": "no_stories"}\n```' 
+        } 
+      }],
       model: 'gemini-2.0-flash',
       provider: 'google-ai-studio',
       processingTime: 70,
       cached: false
     };
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue('mock prompt');
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
-      chat: vi.fn().mockResolvedValue(mockLlmNoStoriesResponse),
+    (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
+    (AIGatewayService as Mock).mockImplementation(() => ({
+      chat: vi.fn().mockResolvedValue(mockLlmResponse),
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.data.validation_result).toBe('no_stories');
-    expect(data.data.cleaned_stories).toHaveLength(0);
+    expect(data.data.stories).toHaveLength(0);
+    expect(data.data.rejectedClusters).toHaveLength(1);
+    expect(data.data.rejectedClusters[0].rejectionReason).toBe('NO_STORIES');
   });
 
-  // --- 错误处理测试：LLM 响应解析失败 ---
-  it('应该在LLM返回无效JSON时使用回退逻辑', async () => {
-    const mockClusterInput = {
-      id: 500,
-      articles: [
-        { id: 40, title: '文章X', url: 'http://x.com' },
-        { id: 41, title: '文章Y', url: 'http://y.com' },
-      ],
-    };
-    const mockLlmInvalidJsonResponse = {
-      capability: 'chat',
-      choices: [{ message: { content: '这是一个无效的JSON响应，只是文本。' } }],
-      model: 'gemini-2.0-flash',
-      provider: 'google-ai-studio',
-      processingTime: 90,
-      cached: false
-    };
+  // --- 混合场景测试 ---
+  it('应该正确处理多个聚类的混合场景', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 1, articleIds: [1, 2], size: 2 },           // 太小，拒绝
+      { clusterId: 2, articleIds: [3, 4, 5], size: 3 },       // AI验证为单一故事
+      { clusterId: 3, articleIds: [6, 7, 8, 9], size: 4 }     // AI验证为纯噪声
+    ]);
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue('mock prompt');
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
-      chat: vi.fn().mockResolvedValue(mockLlmInvalidJsonResponse),
+    const mockResponses = [
+      // 第一个AI调用（clusterId: 2）
+      {
+        capability: 'chat',
+        choices: [{ message: { content: '```json\n{"answer": "single_story", "title": "新闻故事", "importance": 6}\n```' } }],
+        model: 'gemini-2.0-flash',
+        provider: 'google-ai-studio',
+        processingTime: 100,
+        cached: false
+      },
+      // 第二个AI调用（clusterId: 3）
+      {
+        capability: 'chat',
+        choices: [{ message: { content: '```json\n{"answer": "pure_noise"}\n```' } }],
+        model: 'gemini-2.0-flash',
+        provider: 'google-ai-studio',
+        processingTime: 80,
+        cached: false
+      }
+    ];
+
+    (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
+    const mockChat = vi.fn()
+      .mockResolvedValueOnce(mockResponses[0])
+      .mockResolvedValueOnce(mockResponses[1]);
+    
+    (AIGatewayService as Mock).mockImplementation(() => ({
+      chat: mockChat,
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.data.validation_result).toBe('fallback_processing');
-    expect(data.data.cleaned_stories).toHaveLength(1); // 至少2篇文章，所以会有一个回退故事
-    expect(data.data.cleaned_stories[0].title).toBe('文章X'); // 使用第一篇文章的标题作为回退标题
-    expect(data.data.cleaned_stories[0].importance).toBe(5);
-    expect(data.data.cleaned_stories[0].articles).toEqual([40, 41]);
-    expect(data.data.fallback_used).toBe(true);
-    expect(data.metadata.fallback_applied).toBe(true);
+    expect(data.data.stories).toHaveLength(1);
+    expect(data.data.rejectedClusters).toHaveLength(2);
+    
+    // 验证成功的故事
+    expect(data.data.stories[0].title).toBe('新闻故事');
+    expect(data.data.stories[0].articleIds).toEqual([3, 4, 5]);
+    
+    // 验证拒绝的聚类
+    const rejectedReasons = data.data.rejectedClusters.map(r => r.rejectionReason);
+    expect(rejectedReasons).toContain('INSUFFICIENT_ARTICLES');
+    expect(rejectedReasons).toContain('PURE_NOISE');
+    
+    // 验证元数据
+    expect(data.metadata.totalClusters).toBe(3);
+    expect(data.metadata.validatedStories).toBe(1);
+    expect(data.metadata.rejectedClusters).toBe(2);
   });
 
-  // --- 错误处理测试：LLM 服务调用失败 ---
-  it('应该在LLM服务调用失败时返回 500 错误', async () => {
-    const mockClusterInput = {
-      id: 600,
-      articles: [
-        { id: 50, title: '错误文章', url: 'http://error.com' },
-      ],
-    };
+  // --- 错误处理测试 ---
+  it('应该在个别聚类AI验证失败时将其标记为拒绝聚类', async () => {
+    const clusteringResult = createClusteringResult([
+      { clusterId: 500, articleIds: [50, 51, 52], size: 3 }
+    ]);
 
-    (getStoryValidationPrompt as vi.Mock).mockReturnValue('mock prompt');
-    (AIGatewayService as vi.Mock).mockImplementation(() => ({
-      chat: vi.fn().mockRejectedValue(new Error('AI Gateway chat error')), // 模拟LLM服务调用失败
+    (getStoryValidationPrompt as Mock).mockReturnValue('mock prompt');
+    (AIGatewayService as Mock).mockImplementation(() => ({
+      chat: vi.fn().mockRejectedValue(new Error('AI Gateway service error')),
     }));
 
     const res = await app.request('/meridian/story/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cluster: mockClusterInput }),
+      body: JSON.stringify({ clusteringResult, useAI: true }),
     });
     const data = await res.json();
+
+    // 个别聚类失败应该被处理，而不是导致整个请求失败
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.stories).toHaveLength(0);
+    expect(data.data.rejectedClusters).toHaveLength(1);
+    expect(data.data.rejectedClusters[0].clusterId).toBe(500);
+    expect(data.data.rejectedClusters[0].rejectionReason).toBe('NO_STORIES');
+    expect(data.data.rejectedClusters[0].originalArticleIds).toEqual([50, 51, 52]);
+  });
+
+  it('应该在整个请求无效时返回 500 错误', async () => {
+    // 模拟环境缺失等导致的整体失败
+    const res = await app.request('/meridian/story/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(null), // 无效JSON
+    });
 
     expect(res.status).toBe(500);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('Failed to validate story');
-    expect(data.details).toBe('AI Gateway chat error');
   });
 });

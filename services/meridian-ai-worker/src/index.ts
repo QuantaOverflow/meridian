@@ -1,57 +1,14 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { AIGatewayService } from './services/ai-gateway'
-import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
-import { getStoryValidationPrompt } from './prompts/storyValidation'
-import { getBriefGenerationSystemPrompt, getBriefGenerationPrompt, getBriefTitlePrompt } from './prompts/briefGeneration'
-import { getTldrGenerationPrompt } from './prompts/tldrGeneration'
+import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
+import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
-
-// ============================================================================
-// 核心数据类型定义 - 与ML Service兼容
-// ============================================================================
-
-interface ArticleItem {
-  id: number
-  title: string
-  content: string
-  url: string
-  embedding: number[]
-  publish_date: string
-  status: string
-}
-
-interface ClusterItem {
-  id: number
-  size: number
-  articles: ArticleItem[]
-}
-
-// 移除旧的 ValidatedStory 接口，已在故事验证部分重新定义
-
-interface StoryAnalysis {
-  overview: string
-  key_developments: string[]
-  stakeholders: string[]
-  implications: string[]
-  outlook: string
-}
-
-interface BriefContent {
-  title: string
-  content: string
-  tldr?: string
-}
-
-// 标准化响应格式
-interface APIResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-  metadata?: Record<string, any>
-}
+import { APIResponse, ArticleItem, StoryAnalysis, BriefContent } from './types/api'
+import { ValidatedStories } from './types/story-validation'
+import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
 type HonoEnv = {
   Bindings: CloudflareEnv & {
@@ -70,15 +27,6 @@ app.use('*', cors({
 // ============================================================================
 // 通用工具函数
 // ============================================================================
-
-function createRequestMetadata(c: any) {
-  return {
-    requestId: `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    timestamp: Date.now(),
-    userAgent: c.req.header('user-agent') || 'unknown',
-    ipAddress: c.req.header('cf-connecting-ip') || 'unknown'
-  }
-}
 
 async function callAI(
   aiGateway: AIGatewayService, 
@@ -109,21 +57,6 @@ async function callAI(
   }
 
   return (result as ChatResponse).choices?.[0]?.message?.content || ''
-}
-
-function parseJSONFromResponse(response: string): any {
-  try {
-    // 尝试提取 JSON 代码块
-    const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[1])
-    }
-    // 尝试直接解析
-    return JSON.parse(response)
-  } catch (error) {
-    console.warn('JSON解析失败:', error)
-    return null
-  }
 }
 
 // ============================================================================
@@ -250,67 +183,8 @@ app.post('/meridian/article/analyze', async (c) => {
 })
 
 // ============================================================================
-// Story Validation - 基于 intelligence-pipeline.test.ts 契约
+// Story Validation - 使用重构后的服务
 // ============================================================================
-
-// 定义接口类型以匹配测试契约
-interface ClusteringParameters {
-  umapParams: {
-    n_neighbors: number
-    n_components: number
-    min_dist: number
-    metric: string
-  }
-  hdbscanParams: {
-    min_cluster_size: number
-    min_samples: number
-    epsilon: number
-  }
-}
-
-interface ClusteringStatistics {
-  totalClusters: number
-  noisePoints: number
-  totalArticles: number
-}
-
-interface ClusterItem {
-  clusterId: number
-  articleIds: number[]
-  size: number
-}
-
-interface ClusteringResult {
-  clusters: ClusterItem[]
-  parameters: ClusteringParameters
-  statistics: ClusteringStatistics
-}
-
-interface Story {
-  title: string
-  importance: number
-  articleIds: number[]
-  storyType: "SINGLE_STORY" | "COLLECTION_OF_STORIES"
-}
-
-interface RejectedCluster {
-  clusterId: number
-  rejectionReason: "PURE_NOISE" | "NO_STORIES" | "INSUFFICIENT_ARTICLES"
-  originalArticleIds: number[]
-}
-
-interface ValidatedStories {
-  stories: Story[]
-  rejectedClusters: RejectedCluster[]
-}
-
-// 新增：最小文章信息接口，用于故事验证
-interface MinimalArticleInfo {
-  id: number
-  title: string
-  url: string
-  event_summary_points?: string[]
-}
 
 app.post('/meridian/story/validate', async (c) => {
   try {
@@ -332,150 +206,29 @@ app.post('/meridian/story/validate', async (c) => {
       }, 400)
     }
 
-    const clusteringResult: ClusteringResult = body.clusteringResult
-    const articlesData: MinimalArticleInfo[] = body.articlesData
-    
-    console.log(`[Story Validation] 验证 ${clusteringResult.clusters.length} 个聚类，包含 ${articlesData.length} 个文章数据`)
+    console.log(`[Story Validation] 验证 ${body.clusteringResult.clusters.length} 个聚类，包含 ${body.articlesData.length} 个文章数据`)
 
-    if (!clusteringResult.clusters.length) {
+    // 验证空聚类情况 - 保持原有的400错误响应
+    if (!body.clusteringResult.clusters.length) {
       return c.json<APIResponse<null>>({ 
         success: false,
         error: 'No clusters to validate'
       }, 400)
     }
 
-    const stories: Story[] = []
-    const rejectedClusters: RejectedCluster[] = []
-
-    // 使用AI进行智能故事验证
-    const aiGatewayService = new AIGatewayService(c.env)
-
-    for (const cluster of clusteringResult.clusters) {
-      try {
-        // 基本尺寸过滤
-        if (cluster.size < 3) {
-          rejectedClusters.push({
-            clusterId: cluster.clusterId,
-            rejectionReason: "INSUFFICIENT_ARTICLES",
-            originalArticleIds: cluster.articleIds
-          })
-          continue
-        }
-
-        // 对于足够大的聚类，使用AI进行深度验证
-        if (body.useAI !== false && cluster.size >= 3) {
-          // 从 articlesData 中查找文章信息，构建详细的文章列表
-          const articleList = cluster.articleIds
-            .map(id => {
-              const article = articlesData.find(a => a.id === id)
-              if (!article) {
-                return `- Article ID: ${id} (无文章信息)`
-              }
-              
-              let articleInfo = `- ID: ${article.id}\n  标题: ${article.title}\n  URL: ${article.url}`
-              
-              // 添加摘要要点（如果存在）
-              if (Array.isArray(article.event_summary_points) && article.event_summary_points.length > 0) {
-                articleInfo += `\n  摘要要点: ${article.event_summary_points.join('; ')}`
-              }
-              
-              return articleInfo
-            })
-            .join('\n\n')
-
-          const validationPrompt = getStoryValidationPrompt(articleList)
-          
-          const response = await callAI(aiGatewayService, validationPrompt, undefined, {
-            provider: body.options?.provider,
-            model: body.options?.model,
-            temperature: 0
-          })
-          
-          const validation = parseJSONFromResponse(response)
-          
-          if (validation?.answer === 'single_story') {
-            // 单一故事
-            const validArticleIds = cluster.articleIds.filter(
-              (id: number) => !validation.outliers?.includes(id)
-            )
-            
-            if (validArticleIds.length >= 2) {
-              stories.push({
-                title: validation.title || `Story ${cluster.clusterId}`,
-                importance: Math.min(Math.max(validation.importance || 5, 1), 10),
-                articleIds: validArticleIds,
-                storyType: "SINGLE_STORY"
-              })
-            } else {
-              rejectedClusters.push({
-                clusterId: cluster.clusterId,
-                rejectionReason: "INSUFFICIENT_ARTICLES",
-                originalArticleIds: cluster.articleIds
-              })
-            }
-          } else if (validation?.answer === 'collection_of_stories') {
-            // 故事集合：分解为多个独立故事
-            validation.stories?.forEach((story: any, index: number) => {
-              if (story.articles?.length >= 2) {
-                stories.push({
-                  title: story.title || `Story ${cluster.clusterId}-${index + 1}`,
-                  importance: Math.min(Math.max(story.importance || 5, 1), 10),
-                  articleIds: story.articles,
-                  storyType: "SINGLE_STORY" // 分解后的每个故事都是单一故事
-                })
-              }
-            })
-          } else if (validation?.answer === 'pure_noise') {
-            rejectedClusters.push({
-              clusterId: cluster.clusterId,
-              rejectionReason: "PURE_NOISE",
-              originalArticleIds: cluster.articleIds
-            })
-          } else {
-            // no_stories 或其他情况
-            rejectedClusters.push({
-              clusterId: cluster.clusterId,
-              rejectionReason: "NO_STORIES",
-              originalArticleIds: cluster.articleIds
-            })
-          }
-        } else {
-          // 简单验证：按尺寸分类
-          stories.push({
-            title: `Story ${cluster.clusterId}`,
-            importance: Math.floor(Math.random() * 10) + 1,
-            articleIds: cluster.articleIds,
-            storyType: "SINGLE_STORY"
-          })
-        }
-      } catch (error) {
-        console.warn(`[Story Validation] 聚类 ${cluster.clusterId} 验证失败:`, error)
-        // 验证失败的聚类标记为拒绝
-        rejectedClusters.push({
-          clusterId: cluster.clusterId,
-          rejectionReason: "NO_STORIES",
-          originalArticleIds: cluster.articleIds
-        })
-      }
-    }
-    
-    const result: ValidatedStories = {
-      stories,
-      rejectedClusters
-    }
-    
-    console.log(`[Story Validation] 验证完成: ${stories.length} 个有效故事, ${rejectedClusters.length} 个拒绝聚类`)
+    // 使用重构后的故事验证服务
+    const storyValidationService = new StoryValidationService(c.env)
+    const result = await storyValidationService.validateStories({
+      clusteringResult: body.clusteringResult,
+      articlesData: body.articlesData,
+      useAI: body.useAI,
+      options: body.options
+    })
     
     return c.json<APIResponse<ValidatedStories>>({
       success: true,
       data: result,
-      metadata: {
-        totalClusters: clusteringResult.clusters.length,
-        totalArticlesProvided: articlesData.length,
-        validatedStories: stories.length,
-        rejectedClusters: rejectedClusters.length,
-        processingStatistics: clusteringResult.statistics
-      }
+      metadata: result.metadata
     })
     
   } catch (error: any) {
@@ -909,6 +662,7 @@ app.get('/meridian/status', (c) => {
         workflow: {
           description: '聚类分析 → 故事验证 → 情报分析 → 简报生成',
           data_flow: 'ClusteringResult → ValidatedStories → IntelligenceReports → FinalBrief',
+          architecture: 'Clean Architecture - 服务职责分离，代码简洁易读',
           input_formats: {
             story_validation: 'ClusteringResult + articlesData (MinimalArticleInfo[]) → ValidatedStories',
             intelligence_batch_analysis: 'ValidatedStories + ArticleDataset → IntelligenceReports',
@@ -916,14 +670,15 @@ app.get('/meridian/status', (c) => {
             intelligence_legacy: 'Legacy format for backward compatibility',
             brief_generation: 'Array of StoryAnalysis objects'
           },
-          new_contract_compliance: {
-            description: '完全符合 intelligence-pipeline.test.ts 数据契约',
+          refactored_services: {
+            description: '重构后的服务架构',
             features: [
-              '批量故事分析 (analyzeStories)',
-              '单故事深度分析 (analyzeSingleStory)', 
-              '标准化IntelligenceReport结构',
-              '完整的ProcessingStatus追踪',
-              '向后兼容性支持'
+              'StoryValidationService - 故事验证服务',
+              'IntelligenceService - 情报分析服务',
+              'BriefGenerationService - 简报生成服务',
+              '统一类型管理 - types/ 目录统一管理',
+              '通用工具函数 - utils/ 目录分离',
+              '简洁端点实现 - 只保留端点定义'
             ]
           }
         },

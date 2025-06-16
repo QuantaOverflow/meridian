@@ -248,64 +248,67 @@ describe('End-to-End Workflow Integration Test', () => {
       httpClient = mockClient;
     }
 
-    // 准备符合 intelligence-pipeline.test.ts 契约的模拟数据
+    // 准备符合 intelligence-pipeline.test.ts 契约的模拟数据 - 使用更具故事性的连贯事件
     sampleArticleDataset = {
       articles: [
+        // 突发事件：乌克兰冲突最新发展（更真实的事件序列）
         {
           id: 101,
-          title: 'AI技术突破：新一代语言模型发布',
-          content: '人工智能领域迎来重大突破，新一代大型语言模型在多项基准测试中表现优异，展现出前所未有的理解和生成能力。该模型在自然语言处理、代码生成、数学推理等方面都有显著提升。研究团队表示，这一突破将推动人工智能在更多领域的应用，包括医疗诊断、科学研究、教育辅导等。',
-          publishDate: '2024-01-15T10:00:00Z',
-          url: 'https://example.com/ai-breakthrough',
-          summary: 'AI技术突破相关报道，新模型性能显著提升'
+          title: '乌克兰东部前线激战持续，俄军发动新一轮攻势',
+          content: '据乌克兰军方消息，俄罗斯军队在顿涅茨克地区发动了新一轮大规模攻势，试图突破乌军防线。战斗主要集中在巴赫穆特和阿夫迪夫卡附近，双方都投入了大量装甲部队。乌军方面表示，俄军使用了包括坦克、装甲车和火炮在内的重型武器，战况异常激烈。国际观察员称，这是自去年10月以来最大规模的地面攻势。',
+          publishDate: '2024-01-15T06:00:00Z',
+          url: 'https://example.com/ukraine-frontline-battle',
+          summary: '乌克兰东部前线爆发激烈战斗，俄军发动大规模地面攻势'
         },
         {
           id: 102,
-          title: '科技巨头投资AI基础设施建设',
-          content: '多家科技公司宣布大规模投资人工智能基础设施，包括数据中心、专用芯片和云计算平台。这些投资旨在支持日益增长的AI计算需求，推动人工智能技术的普及应用。投资总额预计将达到数百亿美元，涵盖硬件设备、软件平台、人才培养等多个方面。',
-          publishDate: '2024-01-15T11:30:00Z',
-          url: 'https://example.com/ai-investment',
-          summary: 'AI基础设施投资报道，规模达数百亿美元'
+          title: '北约紧急会议商讨对乌援助升级，考虑提供远程打击武器',
+          content: '针对乌克兰战场最新态势，北约秘书长斯托尔滕贝格召集紧急会议，各成员国外长讨论进一步军事援助方案。多个消息源透露，会议重点讨论了向乌克兰提供射程更远的精确制导武器，包括ATACMS导弹和"风暴阴影"巡航导弹。德国和法国表示支持升级援助，但美国对此仍持谨慎态度，担心可能导致冲突进一步升级。',
+          publishDate: '2024-01-15T10:30:00Z',
+          url: 'https://example.com/nato-emergency-meeting',
+          summary: 'NATO紧急会议讨论向乌克兰提供远程武器，援助升级引发关注'
         },
         {
           id: 103,
-          title: 'AI监管政策新进展：欧盟发布指导原则',
-          content: '欧盟发布了人工智能监管的最新指导原则，旨在平衡技术创新与风险管控。新政策涵盖了AI系统的透明度、问责制和数据保护等关键领域。政策制定者强调，这些规则将确保AI技术的安全、可靠和负责任的发展，同时不阻碍创新进程。',
-          publishDate: '2024-01-15T14:20:00Z',
-          url: 'https://example.com/ai-regulation',
-          summary: 'AI监管政策相关报道，欧盟发布新指导原则'
+          title: '俄罗斯警告西方不要"越过红线"，威胁报复措施',
+          content: '俄罗斯外交部发言人扎哈罗娃在新闻发布会上警告西方国家，不要向乌克兰提供能够打击俄领土的远程武器，称这将是"越过红线"的行为。俄方表示，如果西方继续升级军事援助，俄罗斯将采取"相应的报复措施"。与此同时，俄总统普京签署了新的军事动员令，计划在今年春季前增加30万兵力。分析人士认为，这表明冲突可能进入新的升级阶段。',
+          publishDate: '2024-01-15T14:45:00Z',
+          url: 'https://example.com/russia-red-line-warning',
+          summary: '俄罗斯警告西方援助升级将越过红线，威胁采取报复措施'
         },
         {
           id: 104,
-          title: '全球经济形势分析：通胀压力持续',
-          content: '最新经济数据显示，全球通胀压力仍然存在，各国央行面临货币政策调整的挑战。专家分析认为，供应链问题和能源价格波动是主要推动因素。多个国家的通胀率仍高于目标水平，央行官员表示将继续密切监控经济指标，适时调整政策工具。',
-          publishDate: '2024-01-15T09:15:00Z',
-          url: 'https://example.com/economic-analysis',
-          summary: '全球经济形势分析，通胀压力持续存在'
+          title: '乌克兰总统泽连斯基呼吁国际社会加大制裁力度',
+          content: '乌克兰总统泽连斯基通过视频连线向欧洲议会发表讲话，呼吁国际社会对俄罗斯实施更严厉的制裁。他特别要求切断俄罗斯的石油和天然气出口，并冻结更多俄罗斯官员和寡头的海外资产。泽连斯基表示，只有通过全面的经济制裁和军事援助，才能迫使俄罗斯停止侵略行为。欧盟委员会主席冯德莱恩回应称，欧盟正在考虑新一轮制裁措施。',
+          publishDate: '2024-01-15T16:20:00Z',
+          url: 'https://example.com/zelensky-sanctions-appeal',
+          summary: '泽连斯基呼吁加大对俄制裁，要求切断能源出口和冻结资产'
         },
+        
+        // 第二个故事：全球能源危机
         {
           id: 105,
-          title: '数字化转型加速：企业云计算部署激增',
-          content: '疫情后企业数字化转型需求持续强劲，云计算服务部署量同比增长45%。企业纷纷将传统业务迁移到云平台，以提高运营效率和降低成本。主要云服务提供商表示，中小企业的云采用率增长最为显著，推动了整个行业的快速发展。',
-          publishDate: '2024-01-15T13:45:00Z',
-          url: 'https://example.com/digital-transformation',
-          summary: '企业数字化转型推动云计算快速发展'
+          title: '国际油价飙升至每桶95美元，创两年来新高',
+          content: '受地缘政治紧张局势影响，国际原油价格大幅上涨，布伦特原油期货价格突破每桶95美元，创下自2022年以来的最高水平。WTI原油也上涨至每桶91美元。能源分析师指出，乌克兰冲突升级和中东地区的不稳定是推动油价上涨的主要因素。沙特阿拉伯和俄罗斯等主要产油国暂未表示将增产来平抑价格。',
+          publishDate: '2024-01-15T08:15:00Z',
+          url: 'https://example.com/oil-price-surge',
+          summary: '地缘政治紧张推动国际油价飙升至两年来新高'
         },
         {
           id: 106,
-          title: '5G网络建设进展：覆盖率达到新里程碑',
-          content: '全球5G网络部署取得重大进展，城市覆盖率已达到85%。运营商加大基础设施投资，重点改善农村和偏远地区的网络连接。5G技术的推广促进了物联网、自动驾驶和远程医疗等新兴应用的发展，为数字经济注入新活力。',
-          publishDate: '2024-01-15T16:30:00Z',
-          url: 'https://example.com/5g-deployment',
-          summary: '5G网络覆盖率达到新高，推动数字经济发展'
+          title: '欧洲天然气库存告急，多国启动能源紧急预案',
+          content: '欧洲天然气库存水平降至危险低位，多个成员国启动能源紧急预案。德国宣布重启部分燃煤电厂，法国延长核电站运行时间，意大利和西班牙开始从北非增加天然气进口。欧盟能源专员表示，如果今冬出现极端严寒天气，欧洲可能面临能源供应短缺的严重挑战。工业界警告，持续的能源危机可能导致制造业大规模停产。',
+          publishDate: '2024-01-15T12:30:00Z',
+          url: 'https://example.com/europe-gas-crisis',
+          summary: '欧洲天然气库存告急，各国启动紧急预案应对能源危机'
         },
         {
           id: 107,
-          title: '网络安全威胁升级：企业加强防护措施',
-          content: '随着数字化进程加速，网络安全威胁日益复杂化。企业面临的勒索软件攻击增长30%，促使组织加大网络安全投资。安全专家建议采用零信任架构和AI驱动的威胁检测系统，以应对不断演变的网络威胁环境。',
-          publishDate: '2024-01-15T15:10:00Z',
-          url: 'https://example.com/cybersecurity-threats',
-          summary: '网络安全威胁升级，企业加强防护投资'
+          title: '美国宣布释放战略石油储备，试图稳定全球能源市场',
+          content: '为应对国际油价暴涨，美国总统拜登宣布从战略石油储备中释放5000万桶原油，这是继去年11月后的又一次大规模释放行动。白宫表示，此举旨在稳定全球能源市场，缓解消费者面临的能源价格压力。同时，美国还协调其他国际能源署成员国同时释放石油储备。然而，市场分析师认为，这种短期措施难以根本解决能源供应问题。',
+          publishDate: '2024-01-15T18:00:00Z',
+          url: 'https://example.com/us-oil-reserve-release',
+          summary: '美国释放战略石油储备试图稳定市场，但专家质疑效果'
         }
       ],
       embeddings: [
@@ -396,8 +399,8 @@ describe('End-to-End Workflow Integration Test', () => {
         articlesData: minimalArticlesData, // 新增：传递文章数据
         useAI: INTEGRATION_TEST_MODE, // 集成测试时启用AI验证，单元测试时禁用
         options: INTEGRATION_TEST_MODE ? {
-          provider: 'google',
-          model: 'gemini-2.0-flash-exp'
+          provider: 'google-ai-studio',
+          model: 'gemini-2.0-flash'
         } : { 
           provider: 'mock', 
           model: 'mock-chat'
@@ -455,8 +458,8 @@ describe('End-to-End Workflow Integration Test', () => {
         stories: validatedStories,
         dataset: sampleArticleDataset,
         options: INTEGRATION_TEST_MODE ? {
-          provider: 'google',
-          model: 'gemini-2.0-flash-exp'
+          provider: 'google-ai-studio',
+          model: 'gemini-2.0-flash'
         } : undefined
       }),
     });
@@ -513,8 +516,8 @@ describe('End-to-End Workflow Integration Test', () => {
           coveredTopics: ['技术发展', '市场动态', '政策变化']
         },
         options: INTEGRATION_TEST_MODE ? {
-          provider: 'google',
-          model: 'gemini-2.0-flash-exp'
+          provider: 'google-ai-studio',
+          model: 'gemini-2.0-flash'
         } : {
           provider: 'mock',
           model: 'mock-chat'
@@ -554,8 +557,8 @@ describe('End-to-End Workflow Integration Test', () => {
         briefTitle: briefData.data.title, 
         briefContent: briefData.data.content,
         options: INTEGRATION_TEST_MODE ? {
-          provider: 'google',
-          model: 'gemini-2.0-flash-exp'
+          provider: 'google-ai-studio',
+          model: 'gemini-2.0-flash'
         } : undefined
       }),
     });

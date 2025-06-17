@@ -21,6 +21,65 @@ export default defineWorkersConfig({
             }
           },
           
+          // 服务绑定 - 模拟AI Worker
+          serviceBindings: {
+            AI_WORKER(request: Request) {
+              const url = new URL(request.url);
+              const path = url.pathname;
+              
+              // 模拟 AI Worker 的不同端点
+              if (path === '/meridian/article/analyze' && request.method === 'POST') {
+                return new Response(JSON.stringify({
+                  success: true,
+                  data: {
+                    language: 'en',
+                    primary_location: 'global',
+                    completeness: 'COMPLETE',
+                    content_quality: 'OK',
+                    event_summary_points: ['Major event occurred', 'Impact assessment'],
+                    thematic_keywords: ['event', 'analysis', 'impact'],
+                    topic_tags: ['politics', 'international'],
+                    key_entities: ['Organization A', 'Person B'],
+                    content_focus: ['policy', 'analysis'],
+                  },
+                }), {
+                  status: 200,
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              }
+              
+              if (path === '/meridian/embeddings/generate' && request.method === 'POST') {
+                return new Response(JSON.stringify({
+                  success: true,
+                  data: [{ embedding: new Array(384).fill(0.123) }],
+                }), {
+                  status: 200,
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              }
+              
+              // 健康检查端点
+              if (path === '/health') {
+                return new Response(JSON.stringify({
+                  success: true,
+                  status: 'healthy'
+                }), {
+                  status: 200,
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              }
+              
+              // 默认响应
+              return new Response(JSON.stringify({
+                success: false,
+                error: `Path ${path} not found in mock AI Worker`
+              }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          },
+          
           // 兼容性设置
           compatibilityDate: "2025-04-17",
           compatibilityFlags: ["nodejs_compat"]

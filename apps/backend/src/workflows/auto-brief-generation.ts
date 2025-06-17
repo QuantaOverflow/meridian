@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/utils';
-import { $articles, $reports, gte, lte, isNotNull, and, eq, desc } from '@meridian/database';
+import { $articles, $reports, $sources, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/dataflow-observability';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/clustering-service';
@@ -618,15 +618,44 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         try {
           const db = getDb(this.env.HYPERDRIVE);
           
+          // 计算source统计
+          // 1. 获取所有RSS源数量
+          const totalSourcesResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from($sources);
+          const totalSources = totalSourcesResult[0]?.count || 0;
+          
+          // 2. 计算使用的source数量（基于参与简报的文章）
+          const usedArticleIds = dataset.articles
+            .filter((article: any) => 
+              validatedStories && 
+              validatedStories.stories && 
+              Array.isArray(validatedStories.stories) && 
+              validatedStories.stories.some((story: any) => 
+                story.articles && Array.isArray(story.articles) && 
+                story.articles.some((storyArticle: any) => storyArticle.id === article.id)
+              )
+            )
+            .map(article => article.id);
+          
+          let usedSources = 0;
+          if (usedArticleIds.length > 0) {
+            const usedSourcesResult = await db
+              .selectDistinct({ count: sql<number>`count(distinct ${$articles.sourceId})` })
+              .from($articles)
+              .where(inArray($articles.id, usedArticleIds));
+            usedSources = usedSourcesResult[0]?.count || 0;
+          }
+          
           const insertResult = await db
             .insert($reports)
             .values({
               title: briefResult.title,
               content: briefResult.content,
               totalArticles: briefResult.stats.total_articles,
-              totalSources: 0, // 暂时不统计来源数量
+              totalSources: totalSources,
               usedArticles: briefResult.stats.used_articles,
-              usedSources: 0, // 暂时不统计来源数量
+              usedSources: usedSources,
               tldr: briefResult.tldr,
               clustering_params: {
                 workflowId,

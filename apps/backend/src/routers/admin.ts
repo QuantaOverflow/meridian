@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getDb } from '../lib/utils';
 import { $sources, $articles, $reports, eq, and, desc, isNotNull, gte, sql } from '@meridian/database';
-import { AutoBriefGenerationWorkflow } from '../workflows/auto-brief-generation';
+import { AutoBriefGenerationWorkflow, type BriefGenerationParams } from '../workflows/auto-brief-generation';
 import { createAIServices } from '../lib/ai-services';
 import { handleServiceResponse } from '../lib/clustering-service';
 import { 
@@ -184,40 +184,105 @@ app.get('/articles', async (c) => {
 // ========== 简报管理 ==========
 app.post('/briefs/generate', async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json().catch(() => ({})); // 支持空请求体
     const { 
+      // 文章选择参数
+      article_ids,
       dateFrom, 
       dateTo, 
-      minImportance = 5,
+      timeRangeDays = 1, // 默认最近1天内的文章
+      articleLimit = 100, // 默认限制100篇文章
+      
+      // 业务参数
+      minImportance = 3, // 降低默认重要性阈值，增加故事识别率
+      maxStoriesToGenerate = 15,
+      storyMinImportance = 0.1,
+      
+      // 高级参数（可选）
+      clusteringOptions,
+      
+      // 元数据
       triggeredBy = 'admin'
     } = body;
 
     const routeLogger = logger.child({ operation: 'generate-brief' });
 
-    // 验证日期范围
-    const { from: parsedDateFrom, to: parsedDateTo } = validateDateRange(dateFrom, dateTo);
+    // 验证日期范围（如果提供）
+    let parsedDateFrom, parsedDateTo;
+    if (dateFrom || dateTo) {
+      const dateRange = validateDateRange(dateFrom, dateTo);
+      parsedDateFrom = dateRange.from;
+      parsedDateTo = dateRange.to;
+    }
+
+    // 构建完整的工作流参数
+    const workflowParams = {
+      // 文章数据源
+      article_ids: Array.isArray(article_ids) ? article_ids : undefined,
+      dateFrom: parsedDateFrom?.toISOString(),
+      dateTo: parsedDateTo?.toISOString(), 
+      timeRangeDays, // 如果未指定日期范围，使用时间范围
+      articleLimit,
+      
+      // 业务控制参数
+      minImportance,
+      maxStoriesToGenerate,
+      storyMinImportance,
+      
+      // 聚类参数（如果提供）
+      clusteringOptions: clusteringOptions || {
+        umapParams: {
+          n_neighbors: 15,
+          n_components: 5,
+          min_dist: 0.1,
+          metric: 'cosine'
+        },
+        hdbscanParams: {
+          min_cluster_size: 3,
+          min_samples: 1,
+          epsilon: 0.5
+        }
+      },
+      
+      // 元数据
+      triggeredBy
+    };
 
     routeLogger.info('开始生成简报', { 
       dateFrom: parsedDateFrom?.toISOString(), 
-      dateTo: parsedDateTo?.toISOString(), 
-      minImportance 
+      dateTo: parsedDateTo?.toISOString(),
+      timeRangeDays: parsedDateFrom || parsedDateTo ? undefined : timeRangeDays,
+      articleLimit,
+      minImportance,
+      article_ids_provided: Array.isArray(article_ids) ? article_ids.length : 0
     });
 
     // 创建并启动简报生成工作流
     const workflowInstance = await c.env.MY_WORKFLOW.create({
-      params: {
-        dateFrom: parsedDateFrom?.toISOString(),
-        dateTo: parsedDateTo?.toISOString(),
-        minImportance,
-        triggeredBy
-      }
+      id: `admin-brief-${Date.now()}`,
+      params: workflowParams
     });
 
-    routeLogger.info('简报生成工作流已启动', { workflow_id: workflowInstance.id });
+    routeLogger.info('简报生成工作流已启动', { 
+      workflow_id: workflowInstance.id,
+      expectedDataRange: parsedDateFrom || parsedDateTo 
+        ? `${parsedDateFrom?.toISOString()} - ${parsedDateTo?.toISOString()}`
+        : `最近${timeRangeDays}天内的文章`
+    });
     
     return c.json(createSuccessResponse(
-      { workflowId: workflowInstance.id },
-      '简报生成工作流已启动'
+      { 
+        workflowId: workflowInstance.id,
+        parameters: {
+          dataRange: parsedDateFrom || parsedDateTo 
+            ? `从 ${parsedDateFrom?.toLocaleDateString()} 到 ${parsedDateTo?.toLocaleDateString()}`
+            : `最近${timeRangeDays}天内的文章`,
+          articleLimit,
+          expectedStories: `最多${maxStoriesToGenerate}个故事`,
+          minImportance
+        }
+      },
+      '简报生成工作流已启动，预计需要1-2分钟完成'
     ), 202 as any);
   } catch (error) {
     const { error: errorMsg, statusCode } = handleDatabaseError(

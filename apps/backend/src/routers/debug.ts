@@ -606,4 +606,43 @@ debugRouter.get('/check-article-data-types', async (c) => {
     }
 });
 
+/**
+ * 查看最新的简报记录（直接从数据库）
+ */
+debugRouter.get('/recent-reports', async (c) => {
+    try {
+        const { getDb } = await import('../lib/utils');
+        const { $reports, desc } = await import('@meridian/database');
+        
+        const db = getDb(c.env.HYPERDRIVE);
+        
+        const reports = await db
+            .select({
+                id: $reports.id,
+                title: $reports.title,
+                totalArticles: $reports.totalArticles,
+                totalSources: $reports.totalSources,
+                usedArticles: $reports.usedArticles,
+                usedSources: $reports.usedSources,
+                createdAt: $reports.createdAt,
+                clustering_params: $reports.clustering_params
+            })
+            .from($reports)
+            .orderBy(desc($reports.createdAt))
+            .limit(5);
+        
+        return c.json({
+            success: true,
+            data: reports,
+            note: `找到 ${reports.length} 条简报记录`
+        });
+    } catch (error) {
+        console.error('[Debug] 查看简报记录失败:', error);
+        return c.json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : String(error)
+        }, 500);
+    }
+});
+
 export default debugRouter; 

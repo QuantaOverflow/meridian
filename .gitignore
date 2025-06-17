@@ -223,3 +223,6 @@ apps/briefs/client_secrets.json
 apps/briefs/service_account.json
 
 apps/backend/src/tests
+
+# backups
+.backup/

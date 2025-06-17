@@ -32,6 +32,15 @@
     "enabled": false
   },
   
+  // Hyperdrive 数据库连接（测试环境）
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "e3bbe9cee04649a98bd5396476432de0",
+      "localConnectionString": "postgresql://postgres:709323@localhost:5432/shiwenjie"
+    }
+  ],
+  
   // 基本的 R2 配置
   "r2_buckets": [
     {
@@ -39,6 +48,28 @@
       "bucket_name": "meridian-articles-test"
     }
   ],
+  
+  // 工作流绑定配置
+  "workflows": [
+    {
+      "name": "meridian_process_articles_test",
+      "binding": "PROCESS_ARTICLES",
+      "class_name": "ProcessArticles"
+    },
+    {
+      "name": "auto_brief_generation_test",
+      "binding": "MY_WORKFLOW",
+      "class_name": "AutoBriefGenerationWorkflow"
+    }
+  ],
+  
+  // AI Worker 服务绑定 - 测试环境中暂时禁用外部服务
+  // "services": [
+  //   {
+  //     "binding": "AI_WORKER",
+  //     "service": "meridian-ai-worker"
+  //   }
+  // ],
   
   // 简化的队列配置 - 只保留 producers
   "queues": {
@@ -50,8 +81,14 @@
     ]
   },
   
-  // 基本环境变量
+  // 测试环境变量
   "vars": {
-    "ENVIRONMENT": "test"
+    "ENVIRONMENT": "test",
+    "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
+    "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
+    "MERIDIAN_ML_SERVICE_URL": "https://meridian-ml.pathsoflight.org",
+    "MERIDIAN_ML_SERVICE_API_KEY": "f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336",
+    "API_TOKEN": "test-api-token",
+    "GEMINI_API_KEY": "test-gemini-key"
   }
 } 

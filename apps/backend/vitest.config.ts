@@ -6,7 +6,7 @@ export default defineWorkersConfig({
     fileParallelism: false,
     poolOptions: {
       workers: {
-        isolatedStorage: true,
+        isolatedStorage: false,  // 工作流测试需要设置为 false
         wrangler: { 
           configPath: "./wrangler.test.jsonc" 
         },

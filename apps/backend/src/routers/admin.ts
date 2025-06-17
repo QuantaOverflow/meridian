@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { getDb } from '../lib/utils';
 import { $sources, $articles, $reports, eq, and, desc, isNotNull, gte, sql } from '@meridian/database';
 import { AutoBriefGenerationWorkflow } from '../workflows/auto-brief-generation';
-import { createAIServices, handleServiceResponse } from '../lib/ai-services';
+import { createAIServices } from '../lib/ai-services';
+import { handleServiceResponse } from '../lib/clustering-service';
 import { 
   createSuccessResponse, 
   createErrorResponse, 

@@ -6,7 +6,8 @@ import { generateSearchText, getDb } from '../lib/utils';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/articleFetchers';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/logger';
-import { createAIServices, handleServiceResponse } from '../lib/ai-services';
+import { createAIServices } from '../lib/ai-services';
+import { handleServiceResponse } from '../lib/clustering-service';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {

@@ -130,7 +130,7 @@ export class ClusteringService {
         };
       });
 
-      // 调用ML服务的AI Worker聚类端点
+              // 调用ML服务的AI Worker聚类端点
       const mlResponse = await this.aiWorkerClustering(items, {
         config: {
           umap_n_components: options?.umapParams?.n_components || 10,
@@ -176,11 +176,13 @@ export class ClusteringService {
           };
         };
         
+
+        
         // 转换ML服务响应为ClusteringResult格式
         const clusteringResult: ClusteringResult = {
           clusters: mlResult.clusters.map((cluster) => ({
             clusterId: cluster.cluster_id,
-            articleIds: cluster.items.map((item) => item.id),
+            articleIds: cluster.items.map((item: any) => item.metadata?.id || item.id),
             size: cluster.size
           })),
           parameters: {

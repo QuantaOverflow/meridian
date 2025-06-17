@@ -57,15 +57,17 @@ export class AIWorkerService {
   }
 
   /**
-   * 验证故事 (第一阶段LLM分析)
+   * 验证故事 (第一阶段LLM分析) - 符合新数据契约
    */
-  async validateStory(cluster: any, options?: any): Promise<Response> {
+  async validateStory(clusteringResult: any, articlesData: any, options?: any): Promise<Response> {
     const request = new Request(`${this.baseUrl}/meridian/story/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cluster,
-        options: options || {
+        clusteringResult,
+        articlesData,
+        useAI: options?.useAI ?? true,
+        options: options?.aiOptions || {
           provider: 'google-ai-studio',
           model: 'gemini-2.0-flash'
         }

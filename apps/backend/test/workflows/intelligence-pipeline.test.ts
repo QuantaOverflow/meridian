@@ -2,10 +2,24 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { z } from "zod";
 
 /**
- * 数据结构定义 - 基于 news-intelligence-pipeline.feature
+ * 导入故事验证相关的类型定义
+ */
+import type { 
+  ClusteringResult as AIWorkerClusteringResult, 
+  ValidatedStories as AIWorkerValidatedStories, 
+  Story as AIWorkerStory, 
+  RejectedCluster as AIWorkerRejectedCluster,
+  ClusterItem as AIWorkerClusterItem,
+  ClusteringParameters as AIWorkerClusteringParameters,
+  ClusteringStatistics as AIWorkerClusteringStatistics,
+  MinimalArticleInfo as AIWorkerMinimalArticleInfo
+} from "../../../../services/meridian-ai-worker/src/types/story-validation";
+
+/**
+ * 数据结构定义 - 基于 news-intelligence-pipeline.feature 和新的故事验证契约
  */
 
-// 文章数据结构
+// 文章数据结构             
 const ArticleSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -25,8 +39,8 @@ const ArticleDatasetSchema = z.object({
   embeddings: z.array(VectorSchema),
 });
 
-// 聚类结果数据结构
-const ClusterSchema = z.object({
+// 聚类结果数据结构 - 使用新的接口契约
+const ClusterItemSchema = z.object({
   clusterId: z.number(),
   articleIds: z.array(z.number()),
   size: z.number(),
@@ -53,12 +67,12 @@ const ClusteringStatisticsSchema = z.object({
 });
 
 const ClusteringResultSchema = z.object({
-  clusters: z.array(ClusterSchema),
+  clusters: z.array(ClusterItemSchema),
   parameters: ClusteringParametersSchema,
   statistics: ClusteringStatisticsSchema,
 });
 
-// 故事验证数据结构
+// 故事验证数据结构 - 使用新的接口契约
 const StorySchema = z.object({
   title: z.string(),
   importance: z.number().min(1).max(10),
@@ -75,6 +89,14 @@ const RejectedClusterSchema = z.object({
 const ValidatedStoriesSchema = z.object({
   stories: z.array(StorySchema),
   rejectedClusters: z.array(RejectedClusterSchema),
+});
+
+// 最小文章信息数据结构 - 新增
+const MinimalArticleInfoSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  url: z.string(),
+  event_summary_points: z.array(z.string()).optional(),
 });
 
 // 情报分析数据结构
@@ -231,9 +253,13 @@ class MockClusteringService {
 }
 
 class MockStoryValidationService {
-  async validateStories(clusteringResult: ClusteringResult): Promise<{ success: boolean; data?: ValidatedStories; error?: string }> {
+  async validateStories(clusteringResult: ClusteringResult, articlesData: AIWorkerMinimalArticleInfo[]): Promise<{ success: boolean; data?: ValidatedStories; error?: string }> {
     if (!clusteringResult.clusters.length) {
       return { success: false, error: "No clusters to validate" };
+    }
+
+    if (!articlesData.length) {
+      return { success: false, error: "No articles data provided" };
     }
 
     const stories = clusteringResult.clusters
@@ -368,6 +394,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
   let briefGenerationService: MockBriefGenerationService;
 
   let sampleArticleDataset: ArticleDataset;
+  let sampleArticlesData: AIWorkerMinimalArticleInfo[];
 
   beforeEach(() => {
     clusteringService = new MockClusteringService();
@@ -406,6 +433,14 @@ describe("Feature: 新闻情报分析数据流管道", () => {
         },
       ],
     };
+
+    // 准备最小文章信息数据
+    sampleArticlesData = sampleArticleDataset.articles.map(article => ({
+      id: article.id,
+      title: article.title,
+      url: article.url,
+      event_summary_points: [`Summary point for article ${article.id}`],
+    }));
   });
 
   describe("Scenario: 聚类分析阶段", () => {
@@ -501,7 +536,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
 
     describe("When 执行故事验证处理", () => {
       it("should validate stories and filter clusters", async () => {
-        const response = await storyValidationService.validateStories(clusteringResult);
+        const response = await storyValidationService.validateStories(clusteringResult, sampleArticlesData);
         
         expect(response.success).toBe(true);
         expect(response.data).toBeDefined();
@@ -519,14 +554,14 @@ describe("Feature: 新闻情报分析数据流管道", () => {
           statistics: { totalClusters: 0, noisePoints: 0, totalArticles: 0 },
         };
         
-        const response = await storyValidationService.validateStories(emptyClustering);
+        const response = await storyValidationService.validateStories(emptyClustering, sampleArticlesData);
         expect(response.success).toBe(false);
       });
     });
 
     describe("Then 输出数据结构为ValidatedStories", () => {
       it("should have stories with importance scores", async () => {
-        const response = await storyValidationService.validateStories(clusteringResult);
+        const response = await storyValidationService.validateStories(clusteringResult, sampleArticlesData);
         
         expect(response.success).toBe(true);
         if (response.data) {
@@ -540,7 +575,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
       });
 
       it("should categorize rejected clusters with reasons", async () => {
-        const response = await storyValidationService.validateStories(clusteringResult);
+        const response = await storyValidationService.validateStories(clusteringResult, sampleArticlesData);
         
         expect(response.success).toBe(true);
         if (response.data) {
@@ -558,7 +593,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
 
     beforeEach(async () => {
       const clusteringResponse = await clusteringService.analyzeClusters(sampleArticleDataset);
-      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!);
+      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!, sampleArticlesData);
       validatedStories = validationResponse.data!;
     });
 
@@ -628,7 +663,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
 
     beforeEach(async () => {
       const clusteringResponse = await clusteringService.analyzeClusters(sampleArticleDataset);
-      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!);
+      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!, sampleArticlesData);
       const analysisResponse = await intelligenceAnalysisService.analyzeStories(validationResponse.data!, sampleArticleDataset);
       intelligenceReports = analysisResponse.data!;
 
@@ -724,7 +759,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
       const stage1 = await clusteringService.analyzeClusters(sampleArticleDataset);
       expect(stage1.success).toBe(true);
 
-      const stage2 = await storyValidationService.validateStories(stage1.data!);
+      const stage2 = await storyValidationService.validateStories(stage1.data!, sampleArticlesData);
       expect(stage2.success).toBe(true);
 
       const stage3 = await intelligenceAnalysisService.analyzeStories(stage2.data!, sampleArticleDataset);
@@ -768,7 +803,7 @@ describe("Feature: 新闻情报分析数据流管道", () => {
   describe("Rule: 错误处理接口", () => {
     it("should include processing status in outputs", async () => {
       const clusteringResponse = await clusteringService.analyzeClusters(sampleArticleDataset);
-      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!);
+      const validationResponse = await storyValidationService.validateStories(clusteringResponse.data!, sampleArticlesData);
       const analysisResponse = await intelligenceAnalysisService.analyzeStories(validationResponse.data!, sampleArticleDataset);
       
       expect(analysisResponse.data!.processingStatus).toBeDefined();

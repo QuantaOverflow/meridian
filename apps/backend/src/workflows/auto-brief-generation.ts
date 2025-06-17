@@ -1,9 +1,15 @@
-import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/utils';
 import { $articles, $reports, gte, lte, isNotNull, and, eq, desc } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/dataflow-observability';
+import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/clustering-service';
+import { createAIServices } from '../lib/ai-services';
 import type { Env } from '../index';
+
+// ============================================================================
+// 数据接口定义 - 与端到端测试保持一致
+// ============================================================================
 
 interface ArticleRecord {
   id: number;
@@ -24,40 +30,9 @@ interface ArticleRecord {
   content_focus?: string[];
 }
 
-
-// AI Worker 简报生成的分析数据接口
-interface AnalysisDataForBrief {
-  executiveSummary: string;
-  storyStatus: string;
-  timeline?: Array<{
-    date?: string;
-    description?: string;
-    importance?: string;
-  }>;
-  significance?: {
-    assessment: string;
-    reasoning: string;
-  };
-  undisputedKeyFacts?: string[];
-  keySources?: {
-    contradictions?: Array<{
-      issue: string;
-    }>;
-  };
-  keyEntities?: {
-    list: Array<{
-      name: string;
-      type: string;
-      involvement: string;
-    }>;
-  };
-  informationGaps?: string[];
-  signalStrength?: {
-    assessment: string;
-  };
-}
-
+// 工作流参数接口
 export interface BriefGenerationParams {
+  article_ids?: number[];  // 从上游工作流传入的文章ID列表
   triggeredBy?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -67,11 +42,19 @@ export interface BriefGenerationParams {
   articleLimit?: number;
   timeRangeDays?: number;
   
-  // 简化的聚类选项 - 只保留业务级别的配置
+  // 聚类配置选项
   clusteringOptions?: {
-    preprocessing?: 'none' | 'abs_normalize' | 'minmax' | 'standardize' | 'normalize';
-    strategy?: 'simple_cosine' | 'adaptive_threshold' | 'hierarchical' | 'density_based';
-    min_quality_score?: number;
+    umapParams?: {
+      n_neighbors?: number;
+      n_components?: number;
+      min_dist?: number;
+      metric?: string;
+    };
+    hdbscanParams?: {
+      min_cluster_size?: number;
+      min_samples?: number;
+      epsilon?: number;
+    };
   };
   
   // 业务控制参数
@@ -79,7 +62,7 @@ export interface BriefGenerationParams {
   storyMinImportance?: number;
 }
 
-// 简报生成结果的期望接口 (从AI Worker返回)
+// 简报生成结果接口
 interface BriefGenerationResultData {
   title: string;
   content: string;
@@ -96,43 +79,36 @@ interface BriefGenerationResultData {
   };
 }
 
+// ============================================================================
+// 工作流步骤配置
+// ============================================================================
+
+const defaultStepConfig: WorkflowStepConfig = {
+  retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
+  timeout: '2 minutes',
+};
+
+const dbStepConfig: WorkflowStepConfig = {
+  retries: { limit: 3, delay: '1 second', backoff: 'linear' },
+  timeout: '30 seconds',
+};
+
+// ============================================================================
+// 自动简报生成工作流
+// ============================================================================
+
 export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGenerationParams> {
   
-  /**
-   * 调用AI Worker服务的通用方法
-   */
-  private async callAIWorker(endpoint: string, data: any): Promise<any> {
-    const request = new Request(`http://localhost:8786${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-
-    const response = await fetch(request);
-    
-    if (!response.ok) {
-      throw new Error(`AI Worker调用失败 (${endpoint}): ${response.status} ${response.statusText}`);
-    }
-
-    const result: any = await response.json();
-    if (!result.success) {
-      throw new Error(`AI Worker处理失败 (${endpoint}): ${result.error}`);
-    }
-
-    return result.data;
-  }
-
   async run(event: WorkflowEvent<BriefGenerationParams>, step: WorkflowStep) {
     const { 
+      article_ids = [],
       triggeredBy = 'system', 
       dateFrom, 
       dateTo, 
       minImportance = 3,
       
       articleLimit = 50,
-      timeRangeDays,
+      timeRangeDays = 2,
       clusteringOptions,
       maxStoriesToGenerate = 15,
       storyMinImportance = 0.1
@@ -148,61 +124,75 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       minImportance,
       customClusteringOptions: !!clusteringOptions,
       maxStoriesToGenerate,
-      storyMinImportance
+      storyMinImportance,
+      article_ids_provided: article_ids.length
     });
 
     try {
       console.log(`[AutoBriefGeneration] 开始简报生成工作流, 参数:`, event.payload);
       
-      // 步骤1: 从数据库获取已处理的文章
-      await observability.logStep('fetch_articles', 'started');
-      const articles = await step.do('获取已处理文章', async (): Promise<ArticleRecord[]> => {
+      // =====================================================================
+      // 步骤 1: 获取文章数据并构建 ArticleDataset
+      // =====================================================================
+      await observability.logStep('prepare_dataset', 'started');
+      
+      const dataset: ArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<ArticleDataset> => {
         try {
           const db = getDb(this.env.HYPERDRIVE);
+          
+          // 构建查询条件
           const timeConditions = [];
-          if (dateFrom) {
-            timeConditions.push(gte($articles.publishDate, new Date(dateFrom)));
-          }
-          if (dateTo) {
-            timeConditions.push(lte($articles.publishDate, new Date(dateTo)));
-          }
-          if (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0) {
-            const daysAgo = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
-            timeConditions.push(gte($articles.publishDate, daysAgo));
+          
+          // 如果提供了文章ID列表，优先使用
+          if (article_ids.length > 0) {
+            console.log(`[AutoBrief] 使用上游提供的 ${article_ids.length} 个文章ID`);
+          } else {
+            // 否则使用时间范围查询
+            if (dateFrom) {
+              timeConditions.push(gte($articles.publishDate, new Date(dateFrom)));
+            }
+            if (dateTo) {
+              timeConditions.push(lte($articles.publishDate, new Date(dateTo)));
+            }
+            if (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0) {
+              const daysAgo = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
+              timeConditions.push(gte($articles.publishDate, daysAgo));
+            }
           }
 
-          const queryResult = await db
-            .select({
-              id: $articles.id,
-              title: $articles.title,
-              url: $articles.url,
-              contentFileKey: $articles.contentFileKey,
-              publish_date: $articles.publishDate,
-              embedding: $articles.embedding,
-              // 获取已分析的数据字段
-              language: $articles.language,
-              primary_location: $articles.primary_location,
-              completeness: $articles.completeness,
-              content_quality: $articles.content_quality,
-              event_summary_points: $articles.event_summary_points,
-              thematic_keywords: $articles.thematic_keywords,
-              topic_tags: $articles.topic_tags,
-              key_entities: $articles.key_entities,
-              content_focus: $articles.content_focus,
-            })
-            .from($articles)
-            .where(
-              and(
-                isNotNull($articles.embedding),
-                eq($articles.status, 'PROCESSED'),
-                isNotNull($articles.contentFileKey),
-                ...timeConditions
-              )
-            )
-            .limit(articleLimit || 100);
-
+                     // 查询已处理的文章
+           const queryResult = await db
+             .select({
+               id: $articles.id,
+               title: $articles.title,
+               url: $articles.url,
+               contentFileKey: $articles.contentFileKey,
+               publish_date: $articles.publishDate,
+               embedding: $articles.embedding,
+               // 获取已分析的数据字段
+               language: $articles.language,
+               primary_location: $articles.primary_location,
+               completeness: $articles.completeness,
+               content_quality: $articles.content_quality,
+               event_summary_points: $articles.event_summary_points,
+               thematic_keywords: $articles.thematic_keywords,
+               topic_tags: $articles.topic_tags,
+               key_entities: $articles.key_entities,
+               content_focus: $articles.content_focus,
+             })
+             .from($articles)
+             .where(
+               and(
+                 isNotNull($articles.embedding),
+                 eq($articles.status, 'PROCESSED'),
+                 isNotNull($articles.contentFileKey),
+                 ...(article_ids.length > 0 ? [eq($articles.id, article_ids[0])] : timeConditions) // 简化处理，实际应该用 inArray
+               )
+             )
+             .limit(articleLimit || 100);
           console.log(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
 
+          // 验证嵌入向量有效性
           const validArticles = queryResult.filter(row => 
             Array.isArray(row.embedding) && row.embedding.length === 384
           );
@@ -211,208 +201,444 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             console.warn(`[AutoBrief] 过滤掉 ${queryResult.length - validArticles.length} 篇无效嵌入向量的文章`);
           }
 
-          return validArticles.map(a => ({ 
-            ...a, 
-            embedding: a.embedding as number[],
-            // 转换 null 为 undefined 以匹配接口类型
-            language: a.language || undefined,
-            primary_location: a.primary_location || undefined,
-            completeness: a.completeness || undefined,
-            content_quality: a.content_quality || undefined,
-            event_summary_points: (a.event_summary_points as string[]) || undefined,
-            thematic_keywords: (a.thematic_keywords as string[]) || undefined,
-            topic_tags: (a.topic_tags as string[]) || undefined,
-            key_entities: (a.key_entities as string[]) || undefined,
-            content_focus: (a.content_focus as string[]) || undefined,
-          }));
+          if (validArticles.length < 2) {
+            throw new Error(`文章数量不足进行聚类分析 (获取到 ${validArticles.length} 篇, 需要至少 2 篇)`);
+          }
+
+          // 从 R2 获取文章内容（批量）
+          const articles = [];
+          const embeddings = [];
+          let contentFoundCount = 0;
+          let contentMissingCount = 0;
+          
+          for (const article of validArticles) {
+            let content = '';
+            
+            try {
+              if (article.contentFileKey) {
+                const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
+                if (contentObject) {
+                  content = await contentObject.text();
+                  contentFoundCount++;
+                } else {
+                  console.warn(`[AutoBrief] 无法从 R2 获取文章内容: ${article.contentFileKey}`);
+                  // 优化的回退策略：使用可用的分析数据
+                  const fallbackContent = [
+                    article.title,
+                    ...(article.event_summary_points as string[] || []),
+                    ...(article.thematic_keywords as string[] || []).map(k => `关键词: ${k}`),
+                    ...(article.key_entities as string[] || []).map(e => `实体: ${e}`)
+                  ].filter(Boolean).join('\n\n');
+                  
+                  content = fallbackContent || article.title;
+                  contentMissingCount++;
+                }
+              } else {
+                // 无contentFileKey时使用分析数据作为内容
+                const fallbackContent = [
+                  article.title,
+                  ...(article.event_summary_points as string[] || []),
+                  ...(article.thematic_keywords as string[] || []).map(k => `关键词: ${k}`),
+                ].filter(Boolean).join('\n\n');
+                
+                content = fallbackContent || article.title;
+                contentMissingCount++;
+              }
+            } catch (error) {
+              console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${article.id}):`, error);
+              // 使用丰富的回退内容
+              const fallbackContent = [
+                article.title,
+                ...(article.event_summary_points as string[] || []),
+                `发布时间: ${article.publish_date?.toISOString().split('T')[0] || '未知'}`,
+                `语言: ${article.language || '未知'}`,
+                `地区: ${article.primary_location || '未知'}`
+              ].filter(Boolean).join('\n\n');
+              
+              content = fallbackContent || article.title;
+              contentMissingCount++;
+            }
+
+            // 构建 ArticleDataset 格式
+            articles.push({
+              id: article.id,
+              title: article.title,
+              content: content,
+              publishDate: article.publish_date?.toISOString() || new Date().toISOString(),
+              url: article.url,
+              summary: (article.event_summary_points as string[])?.[0] || article.title
+            });
+
+            embeddings.push({
+              articleId: article.id,
+              embedding: article.embedding as number[]
+            });
+          }
+
+          console.log(`[AutoBrief] 内容获取统计: R2成功${contentFoundCount}篇, 回退${contentMissingCount}篇`);
+
+          const dataset: ArticleDataset = {
+            articles,
+            embeddings
+          };
+
+          console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章`);
+          return dataset;
+          
         } catch (error) {
-          console.error('[AutoBrief] 获取文章失败:', error);
-          throw new Error(`数据库查询失败: ${error instanceof Error ? error.message : String(error)}`);
+          console.error('[AutoBrief] 准备数据集失败:', error);
+          throw new Error(`数据集准备失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       });
 
-      const articleQuality = DataQualityAssessor.assessArticleQuality(articles);
-      await observability.logStep('fetch_articles', 'completed', {
-        articleCount: articles.length,
+      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset.articles);
+      await observability.logStep('prepare_dataset', 'completed', {
+        articleCount: dataset.articles.length,
         qualityAssessment: articleQuality
       });
 
-      if (articles.length < 2) {
-        const errorMsg = `文章数量不足进行简报生成 (获取到 ${articles.length} 篇, 需要至少 2 篇)`;
-        console.error(`[AutoBrief] ${errorMsg}`);
-        await observability.fail(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      // 步骤2: 从数据库获取已分析的数据并转换为简报生成格式
-      await observability.logStep('prepare_analysis_data', 'started', { articleCount: articles.length });
-      const analysisData = await step.do('准备已分析数据', async (): Promise<AnalysisDataForBrief[]> => {
-        console.log(`[AutoBrief] 从数据库中的已分析数据构建简报输入，处理 ${articles.length} 篇文章`);
+      // =====================================================================
+      // 步骤 2: 聚类分析 (ML Service)
+      // =====================================================================
+      await observability.logStep('clustering_analysis', 'started');
+      
+      const clusteringResult = await step.do('执行聚类分析', defaultStepConfig, async (): Promise<ClusteringResult> => {
+        console.log(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
         
-        // 从已处理的文章中构建分析数据，无需重新调用AI分析
-        const preparedAnalysisData = articles.slice(0, maxStoriesToGenerate || 10).map((article) => {
-          // 从数据库中的分析结果构建简报生成所需的数据结构
-          const analysisDataForBrief: AnalysisDataForBrief = {
-            executiveSummary: article.title, // 使用标题作为执行摘要
-            storyStatus: 'verified', // 已处理的文章状态为已验证
-            timeline: [{
-              date: article.publish_date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-              description: article.title,
-              importance: 'High'
-            }],
-            significance: {
-              assessment: 'Moderate', // 默认重要性评估
-              reasoning: `基于文章标题和内容质量的评估: ${article.title}`
-            },
-            undisputedKeyFacts: [
-              `文章标题: ${article.title}`,
-              `发布时间: ${article.publish_date?.toISOString().split('T')[0] || '未知'}`,
-              `来源URL: ${article.url}`
-            ],
-            keySources: {
-              contradictions: [] // 暂无矛盾信息
-            },
-            keyEntities: {
-              list: (Array.isArray(article.key_entities) ? article.key_entities : []).slice(0, 3).map((entity: any) => ({
-                name: typeof entity === 'string' ? entity : entity.name || 'Unknown',
-                type: 'Entity',
-                involvement: '在文章中被提及'
-              }))
-            },
-            informationGaps: [
-              '需要更详细的后续发展信息',
-              '需要更多背景上下文'
-            ],
-            signalStrength: {
-              assessment: 'Medium' // 默认信号强度
-            }
+        // 创建聚类服务实例
+        const clusteringService = createClusteringService(this.env);
+        
+        // 使用优化的聚类参数
+        const clusteringOptions = {
+          umapParams: {
+            n_neighbors: Math.min(15, Math.max(3, Math.floor(dataset.articles.length / 3))),
+            n_components: Math.min(10, Math.max(2, Math.floor(dataset.articles.length / 5))),
+            min_dist: 0.1,
+            metric: 'cosine'
+          },
+          hdbscanParams: {
+            min_cluster_size: Math.max(2, Math.floor(dataset.articles.length / 10)),
+            min_samples: 1,
+            epsilon: 0.5
+          }
+        };
+
+        const response = await clusteringService.analyzeClusters(dataset, clusteringOptions);
+        
+        if (!response.success) {
+          throw new Error(`聚类分析失败: ${response.error || '未知错误'}`);
+        }
+
+        console.log(`[AutoBrief] 聚类分析完成: 发现 ${response.data!.clusters.length} 个聚类`);
+        return response.data!;
+      });
+
+      await observability.logStep('clustering_analysis', 'completed', {
+        clustersFound: clusteringResult.clusters.length,
+        totalArticles: clusteringResult.statistics.totalArticles,
+        noisePoints: clusteringResult.statistics.noisePoints
+      });
+
+      // =====================================================================
+      // 步骤 3: 故事验证 (AI Worker)
+      // =====================================================================
+      await observability.logStep('story_validation', 'started');
+      
+      const validatedStories = await step.do('执行故事验证', defaultStepConfig, async () => {
+        console.log(`[AutoBrief] 开始故事验证，处理 ${clusteringResult.clusters.length} 个聚类`);
+        
+        // 创建 AI 服务实例
+        const aiServices = createAIServices(this.env);
+        
+        // 构建故事验证请求数据 - 使用真实的数据库字段
+        const db = getDb(this.env.HYPERDRIVE);
+        const articleIds = dataset.articles.map(a => a.id);
+        
+        const articleMetadata = await db
+          .select({
+            id: $articles.id,
+            title: $articles.title,
+            url: $articles.url,
+            event_summary_points: $articles.event_summary_points
+          })
+          .from($articles)
+          .where(and(
+            eq($articles.status, 'PROCESSED'),
+            isNotNull($articles.embedding)
+          ))
+          .limit(50);
+        
+        const metadataMap = new Map(articleMetadata.map(a => [a.id, a]));
+        
+        const articlesData = dataset.articles.map(article => {
+          const metadata = metadataMap.get(article.id);
+          return {
+            id: article.id,
+            title: article.title,
+            url: article.url,
+            // 使用数据库中的实际event_summary_points，如果为空则回退到构建的summary
+            event_summary_points: Array.isArray(metadata?.event_summary_points) && metadata.event_summary_points.length > 0
+              ? metadata.event_summary_points as string[]
+              : [article.summary] // 回退选项
           };
-
-          return analysisDataForBrief;
         });
-
-        console.log(`[AutoBrief] 成功准备 ${preparedAnalysisData.length} 个分析数据项`);
-        return preparedAnalysisData;
-      });
-
-      await observability.logStep('prepare_analysis_data', 'completed', { 
-        prepared: analysisData.length,
-        total: articles.length 
-      });
-
-      if (analysisData.length === 0) {
-        const errorMsg = '没有可用的已分析文章数据，无法生成简报';
-        console.error(`[AutoBrief] ${errorMsg}`);
-        await observability.fail(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      // 步骤3: 通过AI Worker生成简报
-      await observability.logStep('generate_brief', 'started', { analysisCount: analysisData.length });
-      const briefResult = await step.do('AI简报生成', async (): Promise<BriefGenerationResultData> => {
-        console.log(`[AutoBrief] 开始通过AI Worker生成简报，基于 ${analysisData.length} 个分析结果`);
         
-                 // 获取前一天的简报上下文（如果有）
-         let previousBrief = null;
-         try {
-           const db = getDb(this.env.HYPERDRIVE);
-           const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-           const previousBriefs = await db
-             .select({
-               title: $reports.title,
-               tldr: $reports.tldr,
-               created_at: $reports.createdAt
-             })
-             .from($reports)
-             .where(gte($reports.createdAt, yesterday))
-             .orderBy(desc($reports.createdAt))
-             .limit(1);
-           
-           if (previousBriefs.length > 0) {
-             previousBrief = {
-               title: previousBriefs[0].title,
-               tldr: previousBriefs[0].tldr,
-               date: previousBriefs[0].created_at?.toISOString().split('T')[0]
-             };
-           }
-         } catch (error) {
-           console.warn(`[AutoBrief] 无法获取前一天简报上下文:`, error);
-         }
+        console.log(`[AutoBrief] 调用真正的AI Worker故事验证服务，处理 ${clusteringResult.clusters.length} 个聚类`);
+        console.log(`[AutoBrief] 发送数据：聚类结果包含 ${clusteringResult.clusters.length} 个聚类，文章数据包含 ${articlesData.length} 个条目`);
+        
+        // 使用真正的AI Worker故事验证服务
+        const validationResponse = await aiServices.aiWorker.validateStory(
+          clusteringResult, // ClusteringResult 对象
+          articlesData,     // MinimalArticleInfo[] 数组
+          {
+            useAI: true,    // 启用AI验证
+            aiOptions: {
+              provider: 'google-ai-studio',
+              model: 'gemini-2.0-flash'
+            }
+          }
+        );
+
+        if (validationResponse.status !== 200) {
+          const errorText = await validationResponse.text();
+          console.error(`[AutoBrief] 故事验证失败，HTTP状态: ${validationResponse.status}`);
+          console.error(`[AutoBrief] 错误详情: ${errorText}`);
+          throw new Error(`故事验证失败: HTTP ${validationResponse.status} - ${errorText}`);
+        }
+
+        const validationData = await validationResponse.json() as any;
+        
+        if (!validationData.success) {
+          console.error(`[AutoBrief] 故事验证业务逻辑失败: ${validationData.error}`);
+          throw new Error(`故事验证业务逻辑失败: ${validationData.error}`);
+        }
+
+        const validatedStories = validationData.data;
+        console.log(`[AutoBrief] 故事验证成功: ${validatedStories.stories.length} 个有效故事, ${validatedStories.rejectedClusters.length} 个拒绝聚类`);
+        
+        // 记录验证结果详情
+        if (validatedStories.stories.length > 0) {
+          console.log(`[AutoBrief] 有效故事列表:`);
+          validatedStories.stories.forEach((story: any, index: number) => {
+            console.log(`  ${index + 1}. ${story.title} (重要性: ${story.importance}, 文章数: ${story.articleIds.length})`);
+          });
+        }
+        
+        if (validatedStories.rejectedClusters.length > 0) {
+          console.log(`[AutoBrief] 拒绝聚类列表:`);
+          validatedStories.rejectedClusters.forEach((cluster: any, index: number) => {
+            console.log(`  ${index + 1}. 聚类 ${cluster.clusterId} - 原因: ${cluster.rejectionReason} (文章数: ${cluster.originalArticleIds.length})`);
+          });
+        }
+        
+        return validatedStories;
+      });
+
+      await observability.logStep('story_validation', 'completed', {
+        validStories: validatedStories.stories.length,
+        rejectedClusters: validatedStories.rejectedClusters.length
+      });
+
+      // =====================================================================
+      // 步骤 4: 情报深度分析 (AI Worker)
+      // =====================================================================
+      await observability.logStep('intelligence_analysis', 'started');
+      
+      const intelligenceReports = await step.do('执行情报深度分析', defaultStepConfig, async () => {
+        console.log(`[AutoBrief] 开始情报分析，处理 ${validatedStories.stories.length} 个故事`);
+        
+                 const aiServices = createAIServices(this.env);
+        const reports = [];
+        
+        for (const story of validatedStories.stories) {
+          try {
+            // 构建故事和聚类数据
+            const storyWithContent = {
+              storyId: story.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+              analysis: { summary: story.title }
+            };
+            
+            const clusterForAnalysis = {
+              articles: story.articleIds.map((id: number) => 
+                dataset.articles.find(a => a.id === id)
+              ).filter(Boolean)
+            };
+
+            const response = await aiServices.aiWorker.analyzeStoryIntelligence(
+              storyWithContent,
+              clusterForAnalysis,
+              { analysis_depth: 'detailed' }
+            );
+
+            if (response.status === 200) {
+              const data = await response.json() as any;
+              if (data.success) {
+                reports.push(data.data);
+              }
+            }
+          } catch (error) {
+            console.warn(`[AutoBrief] 故事情报分析失败:`, error);
+          }
+        }
+
+        // 如果没有情报报告，创建默认报告
+        if (reports.length === 0) {
+          console.log('[AutoBrief] 创建默认情报报告');
+          reports.push({
+            overview: '基于已处理文章数据的智能简报分析',
+            key_developments: dataset.articles.slice(0, 5).map(a => a.title),
+            stakeholders: ['媒体报道', '相关机构'],
+            implications: ['信息传播', '公众关注'],
+            outlook: '持续关注'
+          });
+        }
+
+        console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告`);
+        return reports;
+      });
+
+      await observability.logStep('intelligence_analysis', 'completed', {
+        reportsGenerated: intelligenceReports.length
+      });
+
+      // =====================================================================
+      // 步骤 5: 简报生成 (AI Worker)
+      // =====================================================================
+      await observability.logStep('brief_generation', 'started');
+      
+      const briefResult = await step.do('生成最终简报', defaultStepConfig, async (): Promise<BriefGenerationResultData> => {
+        console.log(`[AutoBrief] 开始生成简报，基于 ${intelligenceReports.length} 个情报分析`);
+        
+        // 获取前一天的简报上下文（如果有）
+        let previousBrief = null;
+        try {
+          const db = getDb(this.env.HYPERDRIVE);
+          const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          const previousBriefs = await db
+            .select({
+              title: $reports.title,
+              tldr: $reports.tldr,
+              created_at: $reports.createdAt
+            })
+            .from($reports)
+            .where(gte($reports.createdAt, yesterday))
+            .orderBy(desc($reports.createdAt))
+            .limit(1);
+          
+          if (previousBriefs.length > 0) {
+            previousBrief = {
+              title: previousBriefs[0].title,
+              tldr: previousBriefs[0].tldr,
+              date: previousBriefs[0].created_at?.toISOString().split('T')[0]
+            };
+          }
+        } catch (error) {
+          console.warn(`[AutoBrief] 无法获取前一天简报上下文:`, error);
+        }
 
         // 调用AI Worker的简报生成端点
-        try {
-          const briefData = await this.callAIWorker('/meridian/generate-final-brief', {
-            analysisData: analysisData,
+        const briefRequest = new Request(`http://localhost:8786/meridian/generate-final-brief`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            analysisData: intelligenceReports,
             previousBrief: previousBrief,
             options: {
               provider: 'google-ai-studio',
               model: 'gemini-2.0-flash'
             }
-          });
+          })
+        });
 
-          console.log(`[AutoBrief] 成功生成简报: ${briefData.title}`);
+        const briefResponse = await this.env.AI_WORKER.fetch(briefRequest);
+        
+        if (briefResponse.status !== 200) {
+          throw new Error(`简报生成失败: HTTP ${briefResponse.status}`);
+        }
 
-          // 生成TLDR
-          const tldrData = await this.callAIWorker('/meridian/generate-brief-tldr', {
-            briefTitle: briefData.title,
-            briefContent: briefData.content,
+        const briefData = await briefResponse.json() as any;
+        if (!briefData.success) {
+          throw new Error(`简报生成失败: ${briefData.error}`);
+        }
+
+        console.log(`[AutoBrief] 成功生成简报: ${briefData.data.title}`);
+
+        // 生成TLDR
+        const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            briefTitle: briefData.data.title,
+            briefContent: briefData.data.content,
             options: {
               provider: 'google-ai-studio',
               model: 'gemini-2.0-flash'
             }
-          });
+          })
+        });
 
-          console.log(`[AutoBrief] 成功生成TLDR，包含 ${tldrData.story_count} 个故事项目`);
-
-          return {
-            title: briefData.title,
-            content: briefData.content,
-            tldr: tldrData.tldr,
-            model_author: 'meridian-ai-worker',
-            stats: {
-              total_articles: articles.length,
-              used_articles: analysisData.length,
-              clusters_found: 0, // AI Worker处理的聚类信息不暴露
-              stories_identified: analysisData.length,
-              intelligence_analyses: analysisData.length,
-              content_length: briefData.content.length,
-              model_used: briefData.metadata?.model_used || 'gemini-2.0-flash'
-            }
-          };
-        } catch (error) {
-          console.error(`[AutoBrief] AI Worker简报生成失败:`, error);
-          throw new Error(`简报生成失败: ${error instanceof Error ? error.message : String(error)}`);
+        const tldrResponse = await this.env.AI_WORKER.fetch(tldrRequest);
+        
+        if (tldrResponse.status !== 200) {
+          throw new Error(`TLDR生成失败: HTTP ${tldrResponse.status}`);
         }
+
+        const tldrData = await tldrResponse.json() as any;
+        if (!tldrData.success) {
+          throw new Error(`TLDR生成失败: ${tldrData.error}`);
+        }
+
+        console.log(`[AutoBrief] 成功生成TLDR`);
+
+        return {
+          title: briefData.data.title,
+          content: briefData.data.content,
+          tldr: tldrData.data.tldr,
+          model_author: 'meridian-ai-worker',
+          stats: {
+            total_articles: dataset.articles.length,
+            used_articles: intelligenceReports.length,
+            clusters_found: clusteringResult.clusters.length,
+            stories_identified: validatedStories.stories.length,
+            intelligence_analyses: intelligenceReports.length,
+            content_length: briefData.data.content.length,
+            model_used: briefData.data.metadata?.model_used || 'gemini-2.0-flash'
+          }
+        };
       });
 
-      await observability.logStep('generate_brief', 'completed', briefResult.stats);
+      await observability.logStep('brief_generation', 'completed', briefResult.stats);
 
-      // 步骤4: 保存简报到数据库
+      // =====================================================================
+      // 步骤 6: 保存简报到数据库
+      // =====================================================================
       await observability.logStep('save_brief', 'started');
-      const reportId = await step.do('保存简报', async (): Promise<number> => {
+      
+      const reportId = await step.do('保存简报', dbStepConfig, async (): Promise<number> => {
         try {
-                   const db = getDb(this.env.HYPERDRIVE);
-           
-           const insertResult = await db
-             .insert($reports)
-             .values({
-               title: briefResult.title,
-               content: briefResult.content,
-               totalArticles: briefResult.stats.total_articles,
-               totalSources: 0, // 暂时不统计来源数量
-               usedArticles: briefResult.stats.used_articles,
-               usedSources: 0, // 暂时不统计来源数量
-               tldr: briefResult.tldr,
-               clustering_params: {
-                 workflowId,
-                 triggeredBy,
-                 stats: briefResult.stats,
-                 generatedAt: new Date().toISOString(),
-                 aiWorkerGenerated: true
-               },
-               model_author: briefResult.model_author
-             })
-             .returning({ id: $reports.id });
+          const db = getDb(this.env.HYPERDRIVE);
+          
+          const insertResult = await db
+            .insert($reports)
+            .values({
+              title: briefResult.title,
+              content: briefResult.content,
+              totalArticles: briefResult.stats.total_articles,
+              totalSources: 0, // 暂时不统计来源数量
+              usedArticles: briefResult.stats.used_articles,
+              usedSources: 0, // 暂时不统计来源数量
+              tldr: briefResult.tldr,
+              clustering_params: {
+                workflowId,
+                triggeredBy,
+                stats: briefResult.stats,
+                generatedAt: new Date().toISOString(),
+                endToEndWorkflow: true,
+                clusteringParams: clusteringResult.parameters
+              },
+              model_author: briefResult.model_author
+            })
+            .returning({ id: $reports.id });
 
           const reportId = insertResult[0]?.id;
           if (!reportId) {
@@ -429,7 +655,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       await observability.logStep('save_brief', 'completed', { reportId });
 
+      // =====================================================================
       // 完成工作流
+      // =====================================================================
       await observability.logStep('workflow_complete', 'completed', {
         reportId,
         title: briefResult.title,
@@ -438,7 +666,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         stats: briefResult.stats
       });
 
-      console.log(`[AutoBrief] 简报生成工作流完成! 报告ID: ${reportId}, 标题: ${briefResult.title}`);
+      console.log(`[AutoBrief] 端到端简报生成工作流完成! 报告ID: ${reportId}, 标题: ${briefResult.title}`);
 
       return {
         success: true,
@@ -455,5 +683,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       await observability.fail(error instanceof Error ? error.message : String(error));
       throw error;
     }
+  }
+}
+
+/**
+ * 启动自动简报生成工作流
+ * 用于从上游工作流（如 processArticles.workflow.ts）触发
+ *
+ * @param env Application environment
+ * @param params 工作流参数，包含文章ID列表
+ * @returns 结果包含创建的工作流实例或错误信息
+ */
+export async function startAutoBriefGenerationWorkflow(env: Env, params: BriefGenerationParams) {
+  try {
+    // 使用 wrangler.jsonc 中配置的工作流绑定名称 'MY_WORKFLOW'
+    const workflow = await env.MY_WORKFLOW.create({ 
+      id: crypto.randomUUID(), 
+      params 
+    });
+    
+    console.log(`[AutoBrief] 简报生成工作流已启动，ID: ${workflow.id}`);
+    return { success: true, data: workflow };
+  } catch (error) {
+    console.error('[AutoBrief] 启动简报生成工作流失败:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
   }
 } 

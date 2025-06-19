@@ -292,7 +292,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset.articles);
+      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
         qualityAssessment: articleQuality

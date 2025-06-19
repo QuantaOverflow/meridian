@@ -85,6 +85,14 @@
     "binding": "AI"
 
   },
+  // 移除生产环境的自定义域名路由配置，避免本地开发冲突
+  // "routes": [
+  //   {
+  //     "pattern": "api.pathsoflight.org/*",
+  //     "custom_domain": true
+  //   }
+  // ],
+  
 "vars": {
   "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
   "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",

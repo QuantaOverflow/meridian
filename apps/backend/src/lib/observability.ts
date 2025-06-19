@@ -340,15 +340,31 @@ export function createWorkflowObservability(workflowId: string, env: Env): Workf
 
 // 数据质量评估工具
 export class DataQualityAssessor {
-  static assessArticleQuality(articles: any[]): any {
-    const assessments = articles.map(article => {
+  // 修改方法签名以接受完整的ArticleDataset而不仅仅是articles数组
+  static assessArticleQuality(dataset: any): any {
+    const articles = dataset.articles || dataset; // 向后兼容，如果传入的是数组就使用数组
+    const embeddings = dataset.embeddings || []; // 嵌入向量数组
+    
+    // 创建嵌入向量查找映射
+    const embeddingMap = new Map();
+    embeddings.forEach((embed: any) => {
+      embeddingMap.set(embed.articleId, embed.embedding);
+    });
+    
+    const assessments = articles.map((article: any) => {
+      // 从嵌入映射中获取对应的嵌入向量
+      const articleEmbedding = embeddingMap.get(article.id);
+      
       const quality: any = {
-        hasTitle: !!article.title,
-        hasContent: !!article.contentFileKey,
-        hasEmbedding: Array.isArray(article.embedding) && article.embedding.length > 0,
-        hasValidDate: !!article.publish_date,
-        embeddingLength: Array.isArray(article.embedding) ? article.embedding.length : 0,
-        titleLength: article.title ? article.title.length : 0
+        hasTitle: !!article.title && article.title.trim().length > 0,
+        hasContent: !!article.content && article.content.trim().length > 0,
+        // 修复：从嵌入映射中检查嵌入向量
+        hasEmbedding: !!articleEmbedding && Array.isArray(articleEmbedding) && articleEmbedding.length === 384,
+        // 修复：检查publishDate字段，它在ArticleDataset中是字符串格式
+        hasValidDate: !!article.publishDate && new Date(article.publishDate).getTime() > 0,
+        embeddingLength: articleEmbedding && Array.isArray(articleEmbedding) ? articleEmbedding.length : 0,
+        titleLength: article.title ? article.title.length : 0,
+        contentLength: article.content ? article.content.length : 0
       };
       
       quality.score = [
@@ -363,15 +379,26 @@ export class DataQualityAssessor {
 
     return {
       totalArticles: articles.length,
-      avgQuality: assessments.reduce((sum, a) => sum + a.quality.score, 0) / assessments.length,
-      highQuality: assessments.filter(a => a.quality.score >= 0.8).length,
-      mediumQuality: assessments.filter(a => a.quality.score >= 0.5 && a.quality.score < 0.8).length,
-      lowQuality: assessments.filter(a => a.quality.score < 0.5).length,
+      avgQuality: assessments.length > 0 ? assessments.reduce((sum: number, a: any) => sum + a.quality.score, 0) / assessments.length : 0,
+      highQuality: assessments.filter((a: any) => a.quality.score >= 0.8).length,
+      mediumQuality: assessments.filter((a: any) => a.quality.score >= 0.5 && a.quality.score < 0.8).length,
+      lowQuality: assessments.filter((a: any) => a.quality.score < 0.5).length,
       issues: {
-        missingTitles: assessments.filter(a => !a.quality.hasTitle).length,
-        missingContent: assessments.filter(a => !a.quality.hasContent).length,
-        missingEmbeddings: assessments.filter(a => !a.quality.hasEmbedding).length,
-        invalidDates: assessments.filter(a => !a.quality.hasValidDate).length
+        missingTitles: assessments.filter((a: any) => !a.quality.hasTitle).length,
+        missingContent: assessments.filter((a: any) => !a.quality.hasContent).length,
+        missingEmbeddings: assessments.filter((a: any) => !a.quality.hasEmbedding).length,
+        invalidDates: assessments.filter((a: any) => !a.quality.hasValidDate).length
+      },
+      contentStats: {
+        avgContentLength: assessments.length > 0 ? assessments.reduce((sum: number, a: any) => sum + a.quality.contentLength, 0) / assessments.length : 0,
+        minContentLength: assessments.length > 0 ? Math.min(...assessments.map((a: any) => a.quality.contentLength)) : 0,
+        maxContentLength: assessments.length > 0 ? Math.max(...assessments.map((a: any) => a.quality.contentLength)) : 0,
+        emptyContent: assessments.filter((a: any) => a.quality.contentLength === 0).length
+      },
+      embeddingStats: {
+        totalEmbeddings: embeddings.length,
+        embeddingCoverage: articles.length > 0 ? (embeddingMap.size / articles.length * 100).toFixed(1) + '%' : '0%',
+        avgEmbeddingLength: embeddings.length > 0 ? embeddings.reduce((sum: number, e: any) => sum + (e.embedding?.length || 0), 0) / embeddings.length : 0
       }
     };
   }

@@ -132,52 +132,133 @@ app.post('/meridian/embeddings/generate', async (c) => {
 // ============================================================================
 
 app.post('/meridian/article/analyze', async (c) => {
+  const aiGateway = new AIGatewayService(c.env)
+  const requestMetadata = createRequestMetadata(c)
+  
   try {
-    const body = await c.req.json()
+    const { title, content, url } = await c.req.json()
     
-    if (!body.title || !body.content) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'title and content are required'
-      }, 400)
+    if (!title || !content) {
+      return c.json({ success: false, error: '缺少必需字段：title 和 content' }, 400)
     }
 
-    const aiGatewayService = new AIGatewayService(c.env)
-    const prompt = getArticleAnalysisPrompt(body.title, body.content)
+    // 输入长度验证 - 限制内容长度以避免上下文窗口超限
+    const maxContentLength = 5000 // 约5000字符，避免超过8192 token限制
+    const truncatedContent = content.length > maxContentLength 
+      ? content.substring(0, maxContentLength) + '...[内容已截断]'
+      : content
+
+    console.log(`[Article Analysis] 原始内容长度: ${content.length}, 处理后长度: ${truncatedContent.length}`)
+
+    const analysisPrompt = getArticleAnalysisPrompt(title, truncatedContent)
+
+    // 分级重试策略，优先使用性能较好的模型
+    const analysisStrategies = [
+      { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0.1 },
+      { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0 },
+      { provider: 'google-ai-studio', model: 'gemini-2.0-flash', temperature: 0 },
+      { provider: 'google-ai-studio', model: 'gemini-2.0-flash', temperature: 0 }
+    ]
+
+    let lastError: Error | null = null
     
-    const response = await callAI(aiGatewayService, prompt, undefined, {
-      provider: body.options?.provider,
-      model: body.options?.model,
-      temperature: 0.1,
-      maxTokens: 8000
-    })
-    
-    const analysisResult = parseJSONFromResponse(response) || {
-      language: 'unknown',
-      primary_location: 'unknown',
-      completeness: 'PARTIAL_USEFUL',
-      content_quality: 'OK',
-      event_summary_points: [],
-      thematic_keywords: [],
-      topic_tags: [],
-      key_entities: [],
-      content_focus: []
-    }
-    
-    return c.json<APIResponse<any>>({
-      success: true,
-      data: analysisResult,
-      metadata: {
-        provider: 'google-ai-studio',
-        model: 'gemini-2.0-flash'
+    for (let attempt = 1; attempt <= analysisStrategies.length; attempt++) {
+      const strategy = analysisStrategies[attempt - 1]
+      
+      console.log(`[Article Analysis] 尝试分析 (${attempt}/${analysisStrategies.length}): ${title.substring(0, 50)}...`)
+      console.log(`[Article Analysis] 使用模型: ${strategy.model} (提供商: ${strategy.provider}), 温度: ${strategy.temperature}`)
+      
+      try {
+        const aiResult = await aiGateway.chat({
+          messages: [
+            { role: 'user', content: analysisPrompt }
+          ],
+          provider: strategy.provider,
+          model: strategy.model,
+          temperature: strategy.temperature,
+          max_tokens: Math.min(2000, 2048), // 限制输出token数量
+          metadata: requestMetadata
+        })
+
+        if (aiResult.capability !== 'chat') {
+          throw new Error('Unexpected response type from chat service')
+        }
+
+        const aiResponse = (aiResult as ChatResponse).choices?.[0]?.message?.content
+        if (!aiResponse) {
+          throw new Error('AI 服务返回空响应')
+        }
+
+        console.log(`[Article Analysis] AI 响应长度: ${aiResponse.length}`)
+        console.log(`[Article Analysis] 响应开头: ${aiResponse.substring(0, 100)}`)
+
+        // 解析AI响应为JSON
+        const analysisResult = parseJSONFromResponse(aiResponse)
+        
+        if (!analysisResult || typeof analysisResult !== 'object') {
+          console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: JSON 解析失败或返回非对象`)
+          console.log(`[Article Analysis] JSON 解析错误 - AI 响应格式可能不正确`)
+          lastError = new Error('JSON 解析失败或返回非对象')
+          continue
+        }
+
+        console.log(`[Article Analysis] 第 ${attempt} 次尝试成功解析 JSON`)
+        console.log(`[Article Analysis] 成功完成分析: ${JSON.stringify(analysisResult).substring(0, 200)}...`)
+
+        return c.json({
+          success: true,
+          data: analysisResult,
+          metadata: {
+            provider: strategy.provider,
+            model: strategy.model,
+            attempts: attempt,
+            lastError: null
+          }
+        })
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: ${errorMessage}`)
+        
+        // 检查是否是配额或限制相关错误
+        if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || 
+            errorMessage.includes('resource exhausted') || errorMessage.includes('429') ||
+            errorMessage.includes('exceeded') || errorMessage.includes('context window')) {
+          console.log(`[Article Analysis] API 配额或限制错误`)
+          lastError = new Error(`API 配额或限制错误: ${errorMessage}`)
+        } else {
+          lastError = error instanceof Error ? error : new Error(errorMessage)
+        }
       }
-    })
-  } catch (error: any) {
-    console.error('Analysis error:', error)
-    return c.json<APIResponse<null>>({ 
+    }
+
+    console.log(`[Article Analysis] 所有重试都失败了`)
+    console.log(`[Article Analysis] 最终错误: ${lastError?.message}`)
+    
+    return c.json({
       success: false,
-      error: 'Failed to analyze article',
-      metadata: { details: error.message }
+      error: `文章分析失败: ${lastError?.message || '未知错误'}`,
+      metadata: {
+        provider: 'workers-ai',
+        model: '@cf/meta/llama-2-7b-chat-int8',
+        attempts: analysisStrategies.length,
+        lastError: lastError?.message
+      }
+    }, 500)
+
+  } catch (error) {
+    console.error('[Article Analysis] 请求处理失败:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    
+    return c.json({
+      success: false,
+      error: `文章分析失败: ${errorMessage}`,
+      metadata: {
+        provider: 'workers-ai',
+        model: '@cf/meta/llama-2-7b-chat-int8',
+        attempts: 0,
+        lastError: errorMessage
+      }
     }, 500)
   }
 })

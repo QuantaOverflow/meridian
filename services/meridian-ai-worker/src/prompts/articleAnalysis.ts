@@ -9,9 +9,17 @@ function getArticleAnalysisPrompt(title: string, content: string) {
 ${content.trim()}
 </scraped_news_article>
 
+**CRITICAL: YOUR RESPONSE MUST BE VALID JSON ONLY. NO EXPLANATORY TEXT BEFORE OR AFTER THE JSON.**
+
 **Goal:** Extract structured, semantically dense information from this article. This data will be used primarily for matching articles to diverse user interests via semantic similarity search and keyword filtering. Focus on extracting core facts and concepts; human readability is secondary to informational density.
 
-**Output Format:** Return only the JSON object below. Follow the examples provided.
+**IMPORTANT FORMAT REQUIREMENT:**
+- Start your response immediately with the opening brace {
+- End your response with the closing brace }
+- NO text before or after the JSON object
+- Use the <final_json></final_json> tags to wrap your JSON response for reliable parsing
+
+**Output Format:** Return ONLY the JSON object below. Follow the examples provided.
 
 **--- Start Examples ---**
 
@@ -24,7 +32,7 @@ Body: San Francisco – NovaCorp today announced Photon, its new AI accelerator 
 \`\`\`
 
 *Output JSON:*
-\`\`\`json
+<final_json>
 {
   "language": "en",
   "primary_location": "USA",
@@ -67,7 +75,7 @@ Body: San Francisco – NovaCorp today announced Photon, its new AI accelerator 
     "Business"
   ]
 }
-\`\`\`
+</final_json>
 
 **Example 2: Geopolitical Development**
 
@@ -78,7 +86,7 @@ Body: Tensions flared today in the Azure Strait following a close encounter betw
 \`\`\`
 
 *Output JSON:*
-\`\`\`json
+<final_json>
 {
   "language": "en",
   "primary_location": "GLOBAL",
@@ -120,7 +128,7 @@ Body: Tensions flared today in the Azure Strait following a close encounter betw
     "Politics"
   ]
 }
-\`\`\`
+</final_json>
 
 **Example 3: Scientific Breakthrough Report**
 
@@ -131,7 +139,7 @@ Body: A team at Quantum University has developed a new palladium-based catalyst 
 \`\`\`
 
 *Output JSON:*
-\`\`\`json
+<final_json>
 {
   "language": "en",
   "primary_location": "N/A",
@@ -172,13 +180,18 @@ Body: A team at Quantum University has developed a new palladium-based catalyst 
     "Environment"
   ]
 }
-\`\`\`
+</final_json>
 
 **--- End Examples ---**
 
+**CRITICAL REMINDER:**
+- Your response must be ONLY the JSON object wrapped in <final_json></final_json> tags
+- No explanatory text, no "Here is..." or "Based on..."
+- Start immediately with <final_json>{ and end with }</final_json>
+
 **Now, analyze the following article and provide the JSON output:**
 
-\`\`\`json
+<final_json>
 {
   "language": "string",
   "primary_location": "string",
@@ -190,7 +203,7 @@ Body: A team at Quantum University has developed a new palladium-based catalyst 
   "key_entities": ["string"],
   "content_focus": ["string"]
 }
-\`\`\`
+</final_json>
 
 **Detailed Criteria Clarifications:**
 

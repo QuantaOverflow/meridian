@@ -9,8 +9,32 @@ import { Logger } from '../lib/logger';
 const logger = new Logger({ router: 'durable-objects' });
 
 const route = new Hono<HonoEnv>()
-  // handle DO-specific routes
+  // handle DO-specific routes for GET requests
   .get(
+    '/source/:sourceId/*',
+    zValidator(
+      'param',
+      z.object({
+        sourceId: z.string().min(1, 'Source ID is required'),
+      })
+    ),
+    async c => {
+      const { sourceId } = c.req.valid('param');
+      const doId = c.env.SOURCE_SCRAPER.idFromName(decodeURIComponent(sourceId));
+      const stub = c.env.SOURCE_SCRAPER.get(doId);
+
+      // reconstruct path for the DO
+      const url = new URL(c.req.url);
+      const pathParts = url.pathname.split('/');
+      const doPath = '/' + pathParts.slice(4).join('/');
+      const doUrl = new URL(doPath + url.search, 'http://do');
+
+      const doRequest = new Request(doUrl.toString(), c.req.raw);
+      return stub.fetch(doRequest);
+    }
+  )
+  // handle DO-specific routes for POST requests
+  .post(
     '/source/:sourceId/*',
     zValidator(
       'param',

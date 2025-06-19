@@ -10,11 +10,16 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
   capability = 'chat' as const
 
   buildProviderRequest(request: ChatRequest, model: ModelConfig): any {
+    // 确保max_tokens为正数且在合理范围内
+    const requestedTokens = request.max_tokens ?? 1024
+    const modelMaxTokens = model.max_tokens ?? 1024
+    const maxTokens = Math.max(1, Math.min(requestedTokens, modelMaxTokens)) // 至少为1
+    
     const baseRequest = {
       model: model.name,
       messages: request.messages,
       temperature: request.temperature ?? 0.7,
-      max_tokens: Math.min(request.max_tokens ?? 1024, model.max_tokens ?? 1024),
+      max_tokens: maxTokens,
       stream: request.stream ?? false
     }
 
@@ -31,7 +36,7 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
         }],
         generationConfig: {
           temperature: baseRequest.temperature,
-          maxOutputTokens: baseRequest.max_tokens,
+          maxOutputTokens: Math.max(1, baseRequest.max_tokens), // 确保为正数
         }
       }
     } else if (model.name.split('/')[0] === '@cf') {
@@ -40,7 +45,8 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
         messages: request.messages.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        max_tokens: baseRequest.max_tokens // Workers AI需要max_tokens字段
       }
     } else if (model.name.startsWith('claude')) {
       // Anthropic models

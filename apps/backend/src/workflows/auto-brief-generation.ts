@@ -114,7 +114,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       storyMinImportance = 0.1
     } = event.payload;
 
-    const workflowId = crypto.randomUUID();
+    // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
+    const workflowId = event.instanceId;
     const observability = createWorkflowObservability(workflowId, this.env);
     
     await observability.logStep('workflow_start', 'started', {
@@ -440,6 +441,65 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       // =====================================================================
+      // 检查故事质量阈值 - 如果没有有效故事则停止工作流
+      // =====================================================================
+      if (validatedStories.stories.length === 0) {
+        const noStoriesReport = {
+          workflowId,
+          reason: 'INSUFFICIENT_QUALITY_STORIES',
+          analysis: {
+            totalArticles: dataset.articles.length,
+            clustersFound: clusteringResult.clusters.length,
+            validStories: 0,
+            rejectedClusters: validatedStories.rejectedClusters.length,
+            rejectionReasons: validatedStories.rejectedClusters.reduce((acc: Record<string, number>, cluster: any) => {
+              acc[cluster.rejectionReason] = (acc[cluster.rejectionReason] || 0) + 1;
+              return acc;
+            }, {}),
+            clusterBreakdown: validatedStories.rejectedClusters.map((cluster: any) => ({
+              clusterId: cluster.clusterId,
+              articleCount: cluster.originalArticleIds?.length || 0,
+              rejectionReason: cluster.rejectionReason
+            }))
+          },
+          recommendations: [
+            '考虑降低故事重要性阈值 (storyMinImportance)',
+            '增加文章数据的时间范围 (timeRangeDays)',
+            '调整聚类参数以产生更大的聚类',
+            '检查文章质量和多样性'
+          ],
+          timestamp: new Date().toISOString()
+        };
+
+        console.log('[AutoBrief] ❌ 工作流终止：未发现有效故事');
+        console.log('[AutoBrief] 📊 详细分析:', JSON.stringify(noStoriesReport.analysis, null, 2));
+        console.log('[AutoBrief] 💡 优化建议:', noStoriesReport.recommendations);
+
+        await observability.logStep('workflow_terminated', 'completed', noStoriesReport);
+
+        return {
+          success: false,
+          reason: 'NO_VALID_STORIES_FOUND',
+          data: noStoriesReport,
+          message: `工作流终止：在 ${dataset.articles.length} 篇文章中未发现符合质量标准的故事。所有 ${clusteringResult.clusters.length} 个聚类都被拒绝。请参考分析报告和优化建议。`
+        };
+      }
+
+      // 记录故事质量统计
+      const storyQualityMetrics = {
+        averageImportance: validatedStories.stories.reduce((sum: number, story: any) => sum + story.importance, 0) / validatedStories.stories.length,
+        importanceDistribution: validatedStories.stories.reduce((dist: Record<string, number>, story: any) => {
+          const range = story.importance >= 8 ? 'high' : story.importance >= 5 ? 'medium' : 'low';
+          dist[range] = (dist[range] || 0) + 1;
+          return dist;
+        }, {}),
+        totalArticlesInStories: validatedStories.stories.reduce((sum: number, story: any) => sum + story.articleIds.length, 0)
+      };
+
+      console.log('[AutoBrief] ✅ 故事质量检查通过');
+      console.log(`[AutoBrief] 📈 故事统计: 平均重要性 ${storyQualityMetrics.averageImportance.toFixed(2)}, 分布: ${JSON.stringify(storyQualityMetrics.importanceDistribution)}`);
+
+      // =====================================================================
       // 步骤 4: 情报深度分析 (AI Worker)
       // =====================================================================
       await observability.logStep('intelligence_analysis', 'started');
@@ -481,17 +541,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
         }
 
-        // 如果没有情报报告，创建默认报告
-        if (reports.length === 0) {
-          console.log('[AutoBrief] 创建默认情报报告');
-          reports.push({
-            overview: '基于已处理文章数据的智能简报分析',
-            key_developments: dataset.articles.slice(0, 5).map(a => a.title),
-            stakeholders: ['媒体报道', '相关机构'],
-            implications: ['信息传播', '公众关注'],
-            outlook: '持续关注'
-          });
-        }
+        // 移除默认报告逻辑 - 现在在故事验证后就会终止工作流
+        // 如果执行到这里，说明有有效故事，不需要默认报告
 
         console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告`);
         return reports;
@@ -552,59 +603,73 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         const briefResponse = await this.env.AI_WORKER.fetch(briefRequest);
         
-        if (briefResponse.status !== 200) {
-          throw new Error(`简报生成失败: HTTP ${briefResponse.status}`);
-        }
-
-        const briefData = await briefResponse.json() as any;
-        if (!briefData.success) {
-          throw new Error(`简报生成失败: ${briefData.error}`);
-        }
-
-        console.log(`[AutoBrief] 成功生成简报: ${briefData.data.title}`);
-
-        // 生成TLDR
-        const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            briefTitle: briefData.data.title,
-            briefContent: briefData.data.content,
-            options: {
-              provider: 'google-ai-studio',
-              model: 'gemini-2.0-flash'
-            }
-          })
-        });
-
-        const tldrResponse = await this.env.AI_WORKER.fetch(tldrRequest);
-        
-        if (tldrResponse.status !== 200) {
-          throw new Error(`TLDR生成失败: HTTP ${tldrResponse.status}`);
-        }
-
-        const tldrData = await tldrResponse.json() as any;
-        if (!tldrData.success) {
-          throw new Error(`TLDR生成失败: ${tldrData.error}`);
-        }
-
-        console.log(`[AutoBrief] 成功生成TLDR`);
-
-        return {
-          title: briefData.data.title,
-          content: briefData.data.content,
-          tldr: tldrData.data.tldr,
-          model_author: 'meridian-ai-worker',
-          stats: {
-            total_articles: dataset.articles.length,
-            used_articles: intelligenceReports.length,
-            clusters_found: clusteringResult.clusters.length,
-            stories_identified: validatedStories.stories.length,
-            intelligence_analyses: intelligenceReports.length,
-            content_length: briefData.data.content.length,
-            model_used: briefData.data.metadata?.model_used || 'gemini-2.0-flash'
+        try {
+          if (briefResponse.status !== 200) {
+            throw new Error(`简报生成失败: HTTP ${briefResponse.status}`);
           }
-        };
+
+          const briefData = await briefResponse.json() as any;
+          if (!briefData.success) {
+            throw new Error(`简报生成失败: ${briefData.error}`);
+          }
+
+          console.log(`[AutoBrief] 成功生成简报: ${briefData.data.title}`);
+
+          // 生成TLDR
+          const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              briefTitle: briefData.data.title,
+              briefContent: briefData.data.content,
+              options: {
+                provider: 'google-ai-studio',
+                model: 'gemini-2.0-flash'
+              }
+            })
+          });
+
+          const tldrResponse = await this.env.AI_WORKER.fetch(tldrRequest);
+          
+          try {
+            if (tldrResponse.status !== 200) {
+              throw new Error(`TLDR生成失败: HTTP ${tldrResponse.status}`);
+            }
+
+            const tldrData = await tldrResponse.json() as any;
+            if (!tldrData.success) {
+              throw new Error(`TLDR生成失败: ${tldrData.error}`);
+            }
+
+            console.log(`[AutoBrief] 成功生成TLDR`);
+
+            return {
+              title: briefData.data.title,
+              content: briefData.data.content,
+              tldr: tldrData.data.tldr,
+              model_author: 'meridian-ai-worker',
+              stats: {
+                total_articles: dataset.articles.length,
+                used_articles: intelligenceReports.length,
+                clusters_found: clusteringResult.clusters.length,
+                stories_identified: validatedStories.stories.length,
+                intelligence_analyses: intelligenceReports.length,
+                content_length: briefData.data.content.length,
+                model_used: briefData.data.metadata?.model_used || 'gemini-2.0-flash'
+              }
+            };
+          } finally {
+            // 确保释放 TLDR 响应的 RPC stub
+            if (tldrResponse && typeof (tldrResponse as any).dispose === 'function') {
+              (tldrResponse as any).dispose();
+            }
+          }
+        } finally {
+          // 确保释放简报响应的 RPC stub
+          if (briefResponse && typeof (briefResponse as any).dispose === 'function') {
+            (briefResponse as any).dispose();
+          }
+        }
       });
 
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
@@ -694,6 +759,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         tldrLength: briefResult.tldr?.length || 0,
         stats: briefResult.stats
       });
+
+      // 保存可观测性数据到R2存储
+      await observability.complete();
 
       console.log(`[AutoBrief] 端到端简报生成工作流完成! 报告ID: ${reportId}, 标题: ${briefResult.title}`);
 

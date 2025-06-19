@@ -40,6 +40,12 @@ export class EmbeddingCapabilityHandler implements CapabilityHandler<EmbeddingRe
             }
           }
         }
+        // For BGE-small-en-v1.5 and other standard embedding models
+        else if (model.name === '@cf/baai/bge-small-en-v1.5') {
+          return {
+            text: Array.isArray(request.input) ? request.input : [request.input]
+          }
+        }
         // For other Workers AI embedding models
         return {
           text: Array.isArray(request.input) ? request.input : [request.input]

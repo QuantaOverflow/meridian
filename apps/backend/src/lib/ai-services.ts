@@ -1,6 +1,8 @@
 /**
  * 轻量级AI服务协调器
  * 专注于服务调用和结果转发，不处理具体实现细节
+ * 
+ * 注意：调用者需要确保在使用完返回的Response后调用 dispose() 方法释放RPC stub
  */
 
 export interface AIWorkerEnv {
@@ -47,8 +49,8 @@ export class AIWorkerService {
         title,
         content,
         options: options || {
-          provider: 'google-ai-studio',
-          model: 'gemini-2.0-flash'
+          provider: 'workers-ai',
+          model: '@cf/meta/llama-2-7b-chat-int8'
         }
       })
     });

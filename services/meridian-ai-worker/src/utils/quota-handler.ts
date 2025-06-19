@@ -1,8 +1,5 @@
-import { IntelligenceReportBuilder } from './intelligence-report-builder';
-import { Story, Article, IntelligenceReport } from '../types/intelligence-types';
-
 /**
- * 配额限制处理器工具类
+ * 配额限制处理器工具类 - 生产环境版本
  */
 export class QuotaHandler {
   
@@ -71,32 +68,54 @@ export class QuotaHandler {
     
     throw lastError!;
   }
+}
 
-  /**
-   * 处理配额限制的fallback策略
-   */
-  static handleQuotaLimitFallback(
-    story: Story, 
-    articles: Article[], 
-    error: any, 
-    isTestMode: boolean
-  ): IntelligenceReport {
-    if (isTestMode) {
-      // 测试模式：返回测试兼容的结果
-      console.log(`[Intelligence] 测试模式配额限制，返回测试兼容结果: ${story.title}`);
-      return IntelligenceReportBuilder.createTestCompatibleReport(story, articles);
-    } else {
-      // 生产环境：记录详细错误信息后返回基础报告
-      console.error(`[Intelligence] 生产环境配额限制错误:`, {
-        storyTitle: story.title,
-        articlesCount: articles.length,
-        error: error.message,
-        errorType: 'QUOTA_LIMIT',
-        timestamp: new Date().toISOString(),
-        requestId: `fallback-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-      });
-      
-      return IntelligenceReportBuilder.createProductionFallbackReport(story, articles, error);
-    }
-  }
+/**
+ * 检查是否为配额相关错误
+ */
+export function isQuotaError(error: any): boolean {
+  if (!error) return false
+  
+  const errorMessage = typeof error === 'string' ? error : error.message || ''
+  const errorString = errorMessage.toLowerCase()
+  
+  // 配额和限流相关错误模式
+  const quotaPatterns = [
+    'quota', 'limit', 'rate limit', 'throttle', 'resource exhausted',
+    '429', 'too many requests', 'exceeded',
+    'context window', 'token limit', 'max_output_tokens must be positive',
+    'insufficient quota', 'billing', 'usage limit'
+  ]
+  
+  return quotaPatterns.some(pattern => errorString.includes(pattern))
+}
+
+/**
+ * 检查是否为上下文窗口超限错误
+ */
+export function isContextWindowError(error: any): boolean {
+  if (!error) return false
+  
+  const errorMessage = typeof error === 'string' ? error : error.message || ''
+  const errorString = errorMessage.toLowerCase()
+  
+  const contextPatterns = [
+    'context window', 'context length', 'token limit', 'exceeded',
+    'input and maximum output tokens', 'model context window limit',
+    'sequence length', 'maximum context length'
+  ]
+  
+  return contextPatterns.some(pattern => errorString.includes(pattern))
+}
+
+/**
+ * 检查是否为max_output_tokens配置错误
+ */
+export function isTokenConfigError(error: any): boolean {
+  if (!error) return false
+  
+  const errorMessage = typeof error === 'string' ? error : error.message || ''
+  const errorString = errorMessage.toLowerCase()
+  
+  return errorString.includes('max_output_tokens must be positive')
 } 

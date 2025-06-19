@@ -1,7 +1,7 @@
 /**
  * 简报生成服务
  * 基于 intelligence-pipeline.test.ts 的简报生成契约
- * 实现智能配额限制处理和分级fallback策略
+ * 生产环境错误处理，直接抛出错误而不使用fallback
  */
 
 import { z } from 'zod';
@@ -136,10 +136,10 @@ export type PreviousBriefContext = z.infer<typeof PreviousBriefContextSchema>;
 export type IntelligenceReport = z.infer<typeof IntelligenceReportSchema>;
 
 // ============================================================================
-// 智能配额限制处理器
+// 错误处理器 - 生产环境版本
 // ============================================================================
 
-class BriefQuotaHandler {
+class BriefErrorHandler {
   
   /**
    * 检查是否为配额限制错误
@@ -209,102 +209,6 @@ class BriefQuotaHandler {
     
     throw lastError!;
   }
-
-  /**
-   * 处理配额限制的fallback策略
-   */
-  static handleQuotaLimitFallback(
-    reports: IntelligenceReports, 
-    error: any, 
-    isTestMode: boolean
-  ): FinalBrief {
-    if (isTestMode) {
-      // 测试模式：返回测试兼容的结果
-      console.log(`[Brief Generation] 测试模式配额限制，返回测试兼容结果`);
-      return this.createTestCompatibleBrief(reports);
-    } else {
-      // 生产环境：记录详细错误信息后返回基础报告
-      console.error(`[Brief Generation] 生产环境配额限制错误:`, {
-        reportsCount: reports.reports.length,
-        error: error.message,
-        errorType: 'QUOTA_LIMIT',
-        timestamp: new Date().toISOString(),
-        requestId: `fallback-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-      });
-      
-      return this.createProductionFallbackBrief(reports, error);
-    }
-  }
-
-  /**
-   * 创建测试兼容的标准简报
-   */
-  static createTestCompatibleBrief(reports: IntelligenceReports): FinalBrief {
-    return {
-      metadata: {
-        title: "Daily Intelligence Brief",
-        createdAt: new Date().toISOString(),
-        model: "gemini-2.0-flash",
-        tldr: "Summary of today's key developments across multiple domains",
-      },
-      content: {
-        sections: [
-          {
-            sectionType: "WHAT_MATTERS_NOW",
-            title: "What Matters Now",
-            content: "Key developments requiring immediate attention...",
-            priority: 1,
-          },
-          {
-            sectionType: "TECH_SCIENCE",
-            title: "Technology & Science", 
-            content: "Latest technological breakthroughs and scientific discoveries...",
-            priority: 2,
-          },
-        ],
-        format: "MARKDOWN",
-      },
-      statistics: {
-        totalArticlesProcessed: 100,
-        totalSourcesUsed: 50,
-        articlesUsedInBrief: 75,
-        sourcesUsedInBrief: 40,
-        clusteringParameters: {},
-      },
-    };
-  }
-
-  /**
-   * 创建生产环境错误简报
-   */
-  static createProductionFallbackBrief(reports: IntelligenceReports, error: any): FinalBrief {
-    return {
-      metadata: {
-        title: "[配额限制] 无法完成AI简报生成",
-        createdAt: new Date().toISOString(),
-        model: "fallback-mode",
-        tldr: `由于API配额限制，无法生成完整简报: ${error.message}`,
-      },
-      content: {
-        sections: [
-          {
-            sectionType: "WHAT_MATTERS_NOW",
-            title: "系统错误通知",
-            content: `**配额限制错误**\n\n由于AI Gateway配额限制，无法生成完整的智能简报。\n\n错误详情: ${error.message}\n\n建议稍后重试或联系系统管理员。`,
-            priority: 1,
-          },
-        ],
-        format: "MARKDOWN",
-      },
-      statistics: {
-        totalArticlesProcessed: reports.processingStatus.totalStories,
-        totalSourcesUsed: reports.reports.length,
-        articlesUsedInBrief: 0,
-        sourcesUsedInBrief: 0,
-        clusteringParameters: {},
-      },
-    };
-  }
 }
 
 // ============================================================================
@@ -313,15 +217,13 @@ class BriefQuotaHandler {
 
 export class BriefGenerationService {
   private aiGatewayService: AIGatewayService;
-  private isTestMode: boolean;
 
   constructor(private env: CloudflareEnv) {
     this.aiGatewayService = new AIGatewayService(env);
-    this.isTestMode = env.INTEGRATION_TEST_MODE === 'true' || env.NODE_ENV === 'test';
   }
 
   /**
-   * 生成最终简报 - 带智能配额处理
+   * 生成最终简报 - 生产环境版本，直接抛出错误
    */
   async generateBrief(
     reports: IntelligenceReports, 
@@ -330,74 +232,72 @@ export class BriefGenerationService {
     try {
       console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告`);
 
-      // 输入验证
+      // 增强输入验证
       if (!reports.reports.length) {
-        return { success: false, error: "No reports to generate brief from" };
-      }
-
-      // 尝试AI生成（带智能重试策略）
-      let briefContent = '';
-      let briefTitle = '';
-      
-      try {
-        const aiOperation = async () => {
-          // 转换情报报告为Markdown格式
-          const storiesMarkdown = this.convertReportsToMarkdown(reports.reports);
-          const previousContext = context ? this.formatPreviousContext(context) : '';
-          
-          // 生成简报内容
-          const briefPrompt = getBriefGenerationPrompt(storiesMarkdown, previousContext);
-          const systemPrompt = getBriefGenerationSystemPrompt();
-          
-          const briefResponse = await this.callAI(briefPrompt, systemPrompt, {
-            temperature: 0.7,
-            maxTokens: 16000
-          });
-
-          // 提取简报内容
-          let content = briefResponse;
-          if (content.includes('<final_brief>')) {
-            content = content.split('<final_brief>')[1]?.split('</final_brief>')[0]?.trim() || content;
-          }
-
-          // 生成标题
-          const titlePrompt = getBriefTitlePrompt(content);
-          const titleResponse = await this.callAI(titlePrompt, undefined, {
-            temperature: 0
-          });
-          
-          const titleData = this.parseJSONFromResponse(titleResponse);
-          const title = titleData?.title || 'Daily Intelligence Brief';
-
-          return { content, title };
+        console.warn('[Brief Generation] 拒绝生成：没有情报报告');
+        return { 
+          success: false, 
+          error: "No intelligence reports provided. Brief generation requires at least one valid story analysis."
         };
-
-        const result = await BriefQuotaHandler.retryWithBackoff(aiOperation);
-        briefContent = result.content;
-        briefTitle = result.title;
-
-      } catch (aiError: any) {
-        // 检查是否为配额限制错误
-        if (BriefQuotaHandler.isQuotaLimitError(aiError)) {
-          console.warn(`[Brief Generation] 配额限制错误，使用fallback策略: ${aiError.message}`);
-          const fallbackBrief = BriefQuotaHandler.handleQuotaLimitFallback(reports, aiError, this.isTestMode);
-          return { success: true, data: fallbackBrief };
-        } else {
-          console.error(`[Brief Generation] 一般AI错误: ${aiError.message}`);
-          throw aiError;
-        }
       }
+
+      // 验证报告质量
+      const completeReports = reports.reports.filter(report => report.status === 'COMPLETE');
+      if (completeReports.length === 0) {
+        console.warn('[Brief Generation] 拒绝生成：没有完整的情报报告');
+        return { 
+          success: false, 
+          error: `All ${reports.reports.length} intelligence reports are incomplete. Brief generation requires at least one complete story analysis.`
+        };
+      }
+
+      console.log(`[Brief Generation] 使用 ${completeReports.length}/${reports.reports.length} 完整报告生成简报`);
+
+      // AI生成（带重试策略，失败时直接抛出错误）
+      const aiOperation = async () => {
+        // 转换情报报告为Markdown格式
+        const storiesMarkdown = this.convertReportsToMarkdown(reports.reports);
+        const previousContext = context ? this.formatPreviousContext(context) : '';
+        
+        // 生成简报内容
+        const briefPrompt = getBriefGenerationPrompt(storiesMarkdown, previousContext);
+        const systemPrompt = getBriefGenerationSystemPrompt();
+        
+        const briefResponse = await this.callAI(briefPrompt, systemPrompt, {
+          temperature: 0.7,
+          maxTokens: 16000
+        });
+
+        // 提取简报内容
+        let content = briefResponse;
+        if (content.includes('<final_brief>')) {
+          content = content.split('<final_brief>')[1]?.split('</final_brief>')[0]?.trim() || content;
+        }
+
+        // 生成标题
+        const titlePrompt = getBriefTitlePrompt(content);
+        const titleResponse = await this.callAI(titlePrompt, undefined, {
+          temperature: 0
+        });
+        
+        const titleData = this.parseJSONFromResponse(titleResponse);
+        const title = titleData?.title || 'Daily Intelligence Brief';
+
+        return { content, title };
+      };
+
+      const result = await BriefErrorHandler.retryWithBackoff(aiOperation);
 
       // 构建符合契约的响应
       const finalBrief: FinalBrief = {
         metadata: {
-          title: briefTitle,
+          title: result.title,
           createdAt: new Date().toISOString(),
           model: 'gemini-2.0-flash',
           tldr: '', // 将通过单独的TLDR端点生成
         },
         content: {
-          sections: this.parseBriefSections(briefContent),
+          sections: this.parseBriefSections(result.content),
           format: "MARKDOWN",
         },
         statistics: {
@@ -409,7 +309,7 @@ export class BriefGenerationService {
         },
       };
 
-      console.log(`[Brief Generation] 简报生成完成，标题: "${briefTitle}"`);
+      console.log(`[Brief Generation] 简报生成完成，标题: "${result.title}"`);
       return { success: true, data: finalBrief };
 
     } catch (error) {
@@ -422,7 +322,7 @@ export class BriefGenerationService {
   }
 
   /**
-   * 生成TLDR摘要 - 带智能配额处理
+   * 生成TLDR摘要 - 生产环境版本，直接抛出错误
    */
   async generateTLDR(
     briefTitle: string, 
@@ -431,42 +331,24 @@ export class BriefGenerationService {
     try {
       console.log(`[TLDR Generation] 为简报生成TLDR`);
 
-      // 尝试AI生成（带智能重试策略）
-      let tldrContent = '';
-      
-      try {
-        const aiOperation = async () => {
-          const tldrPrompt = getTldrGenerationPrompt(briefTitle, briefContent);
-          
-          const response = await this.callAI(tldrPrompt, undefined, {
-            temperature: 0
-          });
-          
-          // 清理TLDR内容
-          let content = response.trim();
-          if (content.startsWith('```') && content.endsWith('```')) {
-            content = content.slice(3, -3).trim();
-          }
-
-          return content;
-        };
-
-        tldrContent = await BriefQuotaHandler.retryWithBackoff(aiOperation);
-
-      } catch (aiError: any) {
-        // 检查是否为配额限制错误
-        if (BriefQuotaHandler.isQuotaLimitError(aiError)) {
-          console.warn(`[TLDR Generation] 配额限制错误，使用fallback: ${aiError.message}`);
-          if (this.isTestMode) {
-            tldrContent = "• AI language processing breakthrough announced\n• 40% performance improvement in latest models\n• Major tech companies leading development";
-          } else {
-            tldrContent = `• 配额限制错误: ${aiError.message}\n• 无法生成完整的TLDR摘要\n• 建议稍后重试或联系系统管理员`;
-          }
-        } else {
-          console.error(`[TLDR Generation] 一般AI错误: ${aiError.message}`);
-          throw aiError;
+      // AI生成（带重试策略，失败时直接抛出错误）
+      const aiOperation = async () => {
+        const tldrPrompt = getTldrGenerationPrompt(briefTitle, briefContent);
+        
+        const response = await this.callAI(tldrPrompt, undefined, {
+          temperature: 0
+        });
+        
+        // 清理TLDR内容
+        let content = response.trim();
+        if (content.startsWith('```') && content.endsWith('```')) {
+          content = content.slice(3, -3).trim();
         }
-      }
+
+        return content;
+      };
+
+      const tldrContent = await BriefErrorHandler.retryWithBackoff(aiOperation);
 
       console.log(`[TLDR Generation] TLDR生成完成`);
       return {
@@ -600,7 +482,7 @@ export class BriefGenerationService {
     content: string;
     priority: number;
   }> {
-    // 将简报内容作为单一section返回，确保测试兼容性
+    // 将简报内容作为单一section返回
     return [{
       sectionType: "WHAT_MATTERS_NOW" as const,
       title: "What Matters Now", 

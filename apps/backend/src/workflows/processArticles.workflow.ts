@@ -270,13 +270,20 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 article.text
               );
 
-              const result = await handleServiceResponse<AIWorkerAnalysisResponse>(response, 'AI article analysis');
-              
-              if (!result.success || !result.data?.success) {
-                throw new Error(`AI analysis failed: ${result.error || result.data?.error || 'Unknown error'}`);
+              try {
+                const result = await handleServiceResponse<AIWorkerAnalysisResponse>(response, 'AI article analysis');
+                
+                if (!result.success || !result.data?.success) {
+                  throw new Error(`AI analysis failed: ${result.error || result.data?.error || 'Unknown error'}`);
+                }
+                
+                return result.data.data!;
+              } finally {
+                // 确保释放 RPC stub
+                if (response && typeof (response as any).dispose === 'function') {
+                  (response as any).dispose();
+                }
               }
-              
-              return result.data.data!;
             }
           );
 
@@ -302,19 +309,26 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               // 使用轻量级AI服务生成嵌入向量
               const response = await aiServices.aiWorker.generateEmbedding(searchText);
               
-              const result = await handleServiceResponse<{success: boolean; data: Array<{embedding: number[]}>; error?: string}>(response, 'AI embedding generation');
-              
-              if (!result.success || !result.data?.success || !result.data.data?.[0]?.embedding) {
-                throw new Error(`Embedding generation failed: ${result.error || result.data?.error || 'Unknown error'}`);
-              }
+              try {
+                const result = await handleServiceResponse<{success: boolean; data: {embeddings: Array<{embedding: number[]}>}; error?: string}>(response, 'AI embedding generation');
+                
+                if (!result.success || !result.data?.success || !result.data.data?.embeddings?.[0]?.embedding) {
+                  throw new Error(`Embedding generation failed: ${result.error || result.data?.error || 'Unknown error'}`);
+                }
 
-              // 验证嵌入向量维度
-              const embeddingData = result.data.data[0].embedding;
-              if (!Array.isArray(embeddingData) || embeddingData.length !== 384) {
-                throw new Error(`Invalid embedding dimensions: expected 384, got ${Array.isArray(embeddingData) ? embeddingData.length : 'non-array'}`);
-              }
+                // 验证嵌入向量维度
+                const embeddingData = result.data.data.embeddings[0].embedding;
+                if (!Array.isArray(embeddingData) || embeddingData.length !== 384) {
+                  throw new Error(`Invalid embedding dimensions: expected 384, got ${Array.isArray(embeddingData) ? embeddingData.length : 'non-array'}`);
+                }
 
-              return embeddingData;
+                return embeddingData;
+              } finally {
+                // 确保释放 RPC stub
+                if (response && typeof (response as any).dispose === 'function') {
+                  (response as any).dispose();
+                }
+              }
             }),
             step.do(`upload article contents to R2 for article ${article.id}`, async () => {
               articleLogger.info('Uploading article contents to R2');

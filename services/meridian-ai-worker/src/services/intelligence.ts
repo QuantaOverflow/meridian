@@ -26,15 +26,13 @@ export type {
 
 /**
  * 情报分析服务
- * 提供基于AI的深度情报分析功能，支持配额限制处理和fallback策略
+ * 提供基于AI的深度情报分析功能，生产环境版本，直接抛出错误
  */
 export class IntelligenceService {
   private aiGatewayService: AIGatewayService;
-  private isTestMode: boolean;
 
   constructor(private env: CloudflareEnv) {
     this.aiGatewayService = new AIGatewayService(env);
-    this.isTestMode = env.INTEGRATION_TEST_MODE === 'true' || env.NODE_ENV === 'test';
   }
 
   /**
@@ -45,28 +43,30 @@ export class IntelligenceService {
     stories: ValidatedStories, 
     dataset: ArticleDataset
   ): Promise<{ success: boolean; data?: IntelligenceReports; error?: string }> {
+    console.log(`[Intelligence] 开始分析 ${stories.stories.length} 个故事...`);
+    
     try {
-      console.log(`[Intelligence] 开始分析 ${stories.stories.length} 个故事`);
-
-      if (!stories.stories.length) {
-        return { success: false, error: "No stories to analyze" };
-      }
-
       const reports: IntelligenceReport[] = [];
       let completedAnalyses = 0;
       let failedAnalyses = 0;
 
-      // 为每个故事生成情报报告
       for (const story of stories.stories) {
         try {
           const report = await this.processStory(story, dataset);
           reports.push(report);
           completedAnalyses++;
         } catch (error) {
-          console.error(`[Intelligence] 故事 "${story.title}" 分析异常:`, error);
-          const fallbackReport = IntelligenceReportBuilder.createTestCompatibleReport(story);
-          reports.push(fallbackReport);
-          completedAnalyses++;
+          console.error(`[Intelligence] 故事 "${story.title}" 分析失败:`, error);
+          failedAnalyses++;
+          
+          // 生产环境：真实报告错误，不创建fallback报告
+          console.error(`[Intelligence] 故事分析失败: ${story.title}`, {
+            error: error instanceof Error ? error.message : String(error),
+            storyTitle: story.title,
+            articleIds: story.articleIds,
+            timestamp: new Date().toISOString()
+          });
+          // 跳过此故事，不添加任何报告
         }
       }
 
@@ -78,6 +78,16 @@ export class IntelligenceService {
           failedAnalyses,
         },
       };
+
+      // 如果有失败的分析，明确报告错误
+      if (failedAnalyses > 0) {
+        console.error(`[Intelligence] 严重错误: ${failedAnalyses}/${stories.stories.length} 故事分析失败`);
+        return { 
+          success: false, 
+          error: `Analysis failed for ${failedAnalyses} out of ${stories.stories.length} stories. Check AI Gateway configuration and model availability.`,
+          data: result // 仍然返回部分结果用于诊断
+        };
+      }
 
       console.log(`[Intelligence] 分析完成: ${completedAnalyses} 成功, ${failedAnalyses} 失败`);
       return { success: true, data: result };
@@ -112,20 +122,8 @@ export class IntelligenceService {
 
       console.log(`[Intelligence] 分析故事 "${story.title}"，包含 ${relevantArticles.length} 篇文章`);
 
-      // 尝试AI分析（带重试策略）
-      let analysis = null;
-      try {
-        analysis = await this.performAIAnalysis(relevantArticles);
-      } catch (aiError: any) {
-        // 检查是否为配额限制错误
-        if (QuotaHandler.isQuotaLimitError(aiError)) {
-          const report = QuotaHandler.handleQuotaLimitFallback(story, relevantArticles, aiError, this.isTestMode);
-          return { success: true, data: report };
-        } else {
-          console.warn(`[Intelligence] 一般AI分析失败，使用标准fallback: ${aiError.message}`);
-          analysis = null;
-        }
-      }
+      // 执行AI分析（失败时直接抛出错误）
+      const analysis = await this.performAIAnalysis(relevantArticles);
       
       // 构造符合契约的情报报告
       const report = IntelligenceReportBuilder.buildFromAnalysis(story, relevantArticles, analysis);
@@ -195,8 +193,9 @@ export class IntelligenceService {
     );
 
     if (!relevantArticles.length) {
-      console.warn(`[Intelligence] 故事 "${story.title}" 没有找到相关文章`);
-      return IntelligenceReportBuilder.createTestCompatibleReport(story);
+      const errorMsg = `故事 "${story.title}" 没有找到相关文章`;
+      console.error(`[Intelligence] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     // 分析单个故事
@@ -205,8 +204,9 @@ export class IntelligenceService {
     if (singleStoryResult.success && singleStoryResult.data) {
       return singleStoryResult.data;
     } else {
-      console.warn(`[Intelligence] 故事 "${story.title}" 分析失败: ${singleStoryResult.error}`);
-      return IntelligenceReportBuilder.createTestCompatibleReport(story, relevantArticles);
+      const errorMsg = `故事 "${story.title}" 分析失败: ${singleStoryResult.error}`;
+      console.error(`[Intelligence] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
   }
 
@@ -252,7 +252,7 @@ export class IntelligenceService {
       return responseText;
     };
 
-    // 执行带重试的AI调用
+    // 执行带重试的AI调用（失败时直接抛出错误）
     const responseText = await QuotaHandler.retryWithBackoff(aiOperation);
     
     // 解析AI响应为标准情报报告结构

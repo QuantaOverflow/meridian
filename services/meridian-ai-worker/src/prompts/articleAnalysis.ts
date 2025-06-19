@@ -13,6 +13,8 @@ ${content.trim()}
 
 **Goal:** Extract structured, semantically dense information from this article. This data will be used primarily for matching articles to diverse user interests via semantic similarity search and keyword filtering. Focus on extracting core facts and concepts; human readability is secondary to informational density.
 
+**Enhanced Analysis with Advanced Model:** You have access to an advanced language model with extensive contextual understanding. Leverage this to provide comprehensive and nuanced analysis while maintaining the required JSON structure.
+
 **IMPORTANT FORMAT REQUIREMENT:**
 - Start your response immediately with the opening brace {
 - End your response with the closing brace }

@@ -50,7 +50,7 @@ export class AIWorkerService {
         content,
         options: options || {
           provider: 'workers-ai',
-          model: '@cf/meta/llama-2-7b-chat-int8'
+          model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
         }
       })
     });

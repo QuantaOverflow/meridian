@@ -232,6 +232,22 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
           enable_cost_tracking: false,
           custom_tags: ['free', 'workers-ai', 'image']
         }
+      },
+      {
+        name: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+        capabilities: ['chat', 'function_calling'],
+        endpoint: '/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+        max_tokens: 24000, // Context window: 24,000 tokens
+        supports_streaming: true,
+        cost_per_token: { 
+          input: 0.00000029,  // $0.29 per 1M input tokens
+          output: 0.00000225  // $2.25 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800, // 30 minutes for premium model
+          enable_cost_tracking: true, // Enable cost tracking for paid model
+          custom_tags: ['paid', 'workers-ai', 'llama', '3.3', '70b', 'instruct', 'fp8', 'function-calling']
+        }
       }
     ]
   },

@@ -142,8 +142,8 @@ app.post('/meridian/article/analyze', async (c) => {
       return c.json({ success: false, error: '缺少必需字段：title 和 content' }, 400)
     }
 
-    // 输入长度验证 - 限制内容长度以避免上下文窗口超限
-    const maxContentLength = 5000 // 约5000字符，避免超过8192 token限制
+    // 输入长度验证 - 利用llama-3.3-70b的24000上下文窗口
+    const maxContentLength = 20000 // 约20000字符，充分利用24000 token上下文
     const truncatedContent = content.length > maxContentLength 
       ? content.substring(0, maxContentLength) + '...[内容已截断]'
       : content
@@ -154,9 +154,9 @@ app.post('/meridian/article/analyze', async (c) => {
 
     // 分级重试策略，优先使用性能较好的模型
     const analysisStrategies = [
+      { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0.1 },
       { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0.1 },
       { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0 },
-      { provider: 'google-ai-studio', model: 'gemini-2.0-flash', temperature: 0 },
       { provider: 'google-ai-studio', model: 'gemini-2.0-flash', temperature: 0 }
     ]
 
@@ -176,7 +176,7 @@ app.post('/meridian/article/analyze', async (c) => {
           provider: strategy.provider,
           model: strategy.model,
           temperature: strategy.temperature,
-          max_tokens: Math.min(2000, 2048), // 限制输出token数量
+          max_tokens: strategy.model === '@cf/meta/llama-3.3-70b-instruct-fp8-fast' ? 6000 : Math.min(2000, 2048), // Llama 3.3 70B 支持更大的输出
           metadata: requestMetadata
         })
 

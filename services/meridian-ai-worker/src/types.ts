@@ -2,7 +2,7 @@
 // AI Capabilities
 // =============================================================================
 
-export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision' | 'video' | 'text-to-speech' | 'speech-to-text' | 'live-audio' | 'live-video'
+export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision' | 'video' | 'text-to-speech' | 'speech-to-text' | 'live-audio' | 'live-video' | 'function_calling'
 
 // =============================================================================
 // Authentication Types

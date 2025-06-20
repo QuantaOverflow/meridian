@@ -697,8 +697,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               validatedStories.stories && 
               Array.isArray(validatedStories.stories) && 
               validatedStories.stories.some((story: any) => 
-                story.articles && Array.isArray(story.articles) && 
-                story.articles.some((storyArticle: any) => storyArticle.id === article.id)
+                story.articleIds && Array.isArray(story.articleIds) && 
+                story.articleIds.includes(article.id)
               )
             )
             .map(article => article.id);

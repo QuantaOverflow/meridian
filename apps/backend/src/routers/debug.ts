@@ -645,4 +645,62 @@ debugRouter.get('/recent-reports', async (c) => {
     }
 });
 
+/**
+ * 列出R2存储中文章对象的调试端点
+ */
+debugRouter.get('/r2-articles', async (c) => {
+    try {
+        const bucket = c.env.ARTICLES_BUCKET;
+        const listResponse = await bucket.list();
+        const articleKeys = listResponse.objects.map(obj => obj.key);
+
+        return c.json({
+            success: true,
+            data: {
+                totalObjects: articleKeys.length,
+                keys: articleKeys
+            },
+            message: `成功列出R2中${articleKeys.length}篇文章对象`
+        });
+    } catch (error) {
+        console.error('列出R2文章失败:', error);
+        return c.json({
+            success: false,
+            error: `列出R2文章失败: ${error instanceof Error ? error.message : String(error)}`
+        }, 500);
+    }
+});
+
+/**
+ * 根据提供的 key 从 R2 存储中读取并返回文章内容
+ */
+debugRouter.get('/r2-articles/:key', async (c) => {
+    try {
+        const bucket = c.env.ARTICLES_BUCKET;
+        const key = c.req.param('key');
+        const contentObject = await bucket.get(key);
+
+        if (!contentObject) {
+            return c.json({
+                success: false,
+                error: '文章内容未找到'
+            }, 404);
+        }
+
+        const content = await contentObject.text();
+
+        return c.json({
+            success: true,
+            data: { key, content },
+            message: `成功获取R2文章内容: ${key}`
+        });
+    } catch (error) {
+        console.error(`获取R2文章内容失败 (${c.req.param('key')}):`, error);
+        return c.json({
+            success: false,
+            error: `获取R2文章内容失败: ${error instanceof Error ? error.message : String(error)}`
+        }, 500);
+    }
+});
+
 export default debugRouter; 

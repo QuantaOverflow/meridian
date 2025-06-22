@@ -17,17 +17,17 @@ interface ArticleRecord {
   url: string;
   contentFileKey?: string | null;
   publish_date: Date | null;
-  embedding?: number[];
+  embedding?: number[] | null;
   // 从 processArticles 工作流存储的分析结果字段
-  language?: string;
-  primary_location?: string;
-  completeness?: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS';
-  content_quality?: 'OK' | 'LOW_QUALITY' | 'JUNK';
-  event_summary_points?: string[];
-  thematic_keywords?: string[];
-  topic_tags?: string[];
-  key_entities?: string[];
-  content_focus?: string[];
+  language?: string | null;
+  primary_location?: string | null;
+  completeness?: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS' | null;
+  content_quality?: 'OK' | 'LOW_QUALITY' | 'JUNK' | null;
+  event_summary_points?: string[] | null;
+  thematic_keywords?: string[] | null;
+  topic_tags?: string[] | null;
+  key_entities?: string[] | null;
+  content_focus?: string[] | null;
 }
 
 // 工作流参数接口
@@ -137,6 +137,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('prepare_dataset', 'started');
       
+      // 质量控制指标 - 移到外部作用域
+      const qualityMetrics = {
+        validContent: 0,
+        missingR2Content: 0,
+        missingContentKey: 0,
+        contentErrors: 0,
+        insufficientQuality: 0,
+        filtered: 0
+      };
+      let validArticlesCount = 0;
+      
       const dataset: ArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<ArticleDataset> => {
         try {
           const db = getDb(this.env.HYPERDRIVE);
@@ -160,6 +171,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               timeConditions.push(gte($articles.publishDate, daysAgo));
             }
           }
+          console.log(`[AutoBrief] 最终时间条件数量: ${timeConditions.length}`);
 
                      // 查询已处理的文章
            const queryResult = await db
@@ -198,6 +210,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             Array.isArray(row.embedding) && row.embedding.length === 384
           );
           
+          validArticlesCount = validArticles.length; // 保存到外部变量
+          
           if (queryResult.length !== validArticles.length) {
             console.warn(`[AutoBrief] 过滤掉 ${queryResult.length - validArticles.length} 篇无效嵌入向量的文章`);
           }
@@ -206,61 +220,86 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             throw new Error(`文章数量不足进行聚类分析 (获取到 ${validArticles.length} 篇, 需要至少 2 篇)`);
           }
 
-          // 从 R2 获取文章内容（批量）
+          // 从 R2 获取文章内容并进行严格质量控制
           const articles = [];
           const embeddings = [];
-          let contentFoundCount = 0;
-          let contentMissingCount = 0;
+          
+          // 内容质量验证函数
+          const validateContentQuality = (content: string, article: ArticleRecord): { isValid: boolean; reason?: string } => {
+            if (!content || content.trim().length === 0) {
+              return { isValid: false, reason: 'EMPTY_CONTENT' };
+            }
+            
+            // 检查内容长度 - 至少应该超过标题长度的2倍
+            if (content.length < (article.title.length * 2)) {
+              return { isValid: false, reason: 'INSUFFICIENT_LENGTH' };
+            }
+            
+            // 检查内容是否只是标题重复
+            if (content.trim() === article.title.trim()) {
+              return { isValid: false, reason: 'TITLE_ONLY' };
+            }
+            
+            // 检查内容质量标记 - 类型安全检查
+            if (article.content_quality && (article.content_quality === 'LOW_QUALITY' || article.content_quality === 'JUNK')) {
+              return { isValid: false, reason: 'MARKED_LOW_QUALITY' };
+            }
+            
+            // 检查完整性标记  - 类型安全检查
+            if (article.completeness && article.completeness === 'PARTIAL_USELESS') {
+              return { isValid: false, reason: 'MARKED_INCOMPLETE' };
+            }
+            
+            return { isValid: true };
+          };
           
           for (const article of validArticles) {
             let content = '';
+            let contentAcquired = false;
+            let failureReason = '';
             
             try {
-              if (article.contentFileKey) {
-                const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
-                if (contentObject) {
-                  content = await contentObject.text();
-                  contentFoundCount++;
-                } else {
-                  console.warn(`[AutoBrief] 无法从 R2 获取文章内容: ${article.contentFileKey}`);
-                  // 优化的回退策略：使用可用的分析数据
-                  const fallbackContent = [
-                    article.title,
-                    ...(article.event_summary_points as string[] || []),
-                    ...(article.thematic_keywords as string[] || []).map(k => `关键词: ${k}`),
-                    ...(article.key_entities as string[] || []).map(e => `实体: ${e}`)
-                  ].filter(Boolean).join('\n\n');
-                  
-                  content = fallbackContent || article.title;
-                  contentMissingCount++;
-                }
-              } else {
-                // 无contentFileKey时使用分析数据作为内容
-                const fallbackContent = [
-                  article.title,
-                  ...(article.event_summary_points as string[] || []),
-                  ...(article.thematic_keywords as string[] || []).map(k => `关键词: ${k}`),
-                ].filter(Boolean).join('\n\n');
-                
-                content = fallbackContent || article.title;
-                contentMissingCount++;
+              // 严格要求必须有 contentFileKey
+              if (!article.contentFileKey) {
+                qualityMetrics.missingContentKey++;
+                console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (ID: ${article.id}, 标题: ${article.title})`);
+                continue;
               }
-            } catch (error) {
-              console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${article.id}):`, error);
-              // 使用丰富的回退内容
-              const fallbackContent = [
-                article.title,
-                ...(article.event_summary_points as string[] || []),
-                `发布时间: ${article.publish_date?.toISOString().split('T')[0] || '未知'}`,
-                `语言: ${article.language || '未知'}`,
-                `地区: ${article.primary_location || '未知'}`
-              ].filter(Boolean).join('\n\n');
+
+              // 严格从 R2 获取内容，不允许回退
+              const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
+              if (!contentObject) {
+                qualityMetrics.missingR2Content++;
+                console.error(`[AutoBrief] R2内容缺失，跳过文章 (ID: ${article.id}, 标题: ${article.title}, Key: ${article.contentFileKey})`);
+                continue;
+              }
+
+              content = await contentObject.text();
+              if (!content) {
+                qualityMetrics.missingR2Content++;
+                console.error(`[AutoBrief] R2返回空内容，跳过文章 (ID: ${article.id}, 标题: ${article.title})`);
+                continue;
+              }
               
-              content = fallbackContent || article.title;
-              contentMissingCount++;
+              contentAcquired = true;
+              
+            } catch (error) {
+              qualityMetrics.contentErrors++;
+              console.error(`[AutoBrief] R2内容获取异常，跳过文章 (ID: ${article.id}, 标题: ${article.title}):`, error);
+              continue;
             }
 
-            // 构建 ArticleDataset 格式
+            // 严格的内容质量验证
+            const qualityCheck = validateContentQuality(content, article as ArticleRecord);
+            if (!qualityCheck.isValid) {
+              qualityMetrics.insufficientQuality++;
+              console.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (ID: ${article.id}, 标题: ${article.title}, 原因: ${qualityCheck.reason})`);
+              continue;
+            }
+
+            // 只有通过所有质量检查的文章才会被加入数据集
+            qualityMetrics.validContent++;
+            
             articles.push({
               id: article.id,
               title: article.title,
@@ -276,7 +315,19 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             });
           }
 
-          console.log(`[AutoBrief] 内容获取统计: R2成功${contentFoundCount}篇, 回退${contentMissingCount}篇`);
+          // 计算过滤统计
+          qualityMetrics.filtered = validArticles.length - articles.length;
+          
+          // 记录详细的质量控制日志
+          console.log(`[AutoBrief] ✅ 内容质量控制完成:`);
+          console.log(`  - 初始文章数: ${validArticles.length}`);
+          console.log(`  - 高质量内容: ${qualityMetrics.validContent}`);
+          console.log(`  - 缺少内容键: ${qualityMetrics.missingContentKey}`);
+          console.log(`  - R2内容缺失: ${qualityMetrics.missingR2Content}`);
+          console.log(`  - 获取异常: ${qualityMetrics.contentErrors}`);
+          console.log(`  - 质量不符: ${qualityMetrics.insufficientQuality}`);
+          console.log(`  - 总过滤数: ${qualityMetrics.filtered}`);
+          console.log(`  - 质量通过率: ${((qualityMetrics.validContent / validArticles.length) * 100).toFixed(1)}%`);
 
           const dataset: ArticleDataset = {
             articles,
@@ -295,7 +346,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
-        qualityAssessment: articleQuality
+        qualityAssessment: articleQuality,
+        contentQualityMetrics: {
+          validContent: qualityMetrics.validContent,
+          missingR2Content: qualityMetrics.missingR2Content,
+          missingContentKey: qualityMetrics.missingContentKey,
+          contentErrors: qualityMetrics.contentErrors,
+          insufficientQuality: qualityMetrics.insufficientQuality,
+          filtered: qualityMetrics.filtered,
+          qualityPassRate: ((qualityMetrics.validContent / validArticlesCount) * 100).toFixed(1) + '%'
+        }
       });
 
       // =====================================================================

@@ -2,6 +2,11 @@
  * 聚类服务模块
  * 封装与Meridian ML Service的聚类分析交互
  * 提供符合intelligence-pipeline.test.ts数据契约的接口
+ * 
+ * 性能优化说明：
+ * - 聚类请求中不再传递完整的文章内容(content)字段，以减少网络负载
+ * - ML服务的聚类算法仅依赖embedding向量，不需要原始文章内容
+ * - 下游工作流(如简报生成)通过R2存储按需获取完整文章内容
  */
 
 import type { AIWorkerEnv } from './ai-services';
@@ -114,6 +119,7 @@ export class ClusteringService {
       }
 
       // 转换为ML服务期望的AI Worker格式
+      // 优化：移除content字段以减少网络负载，ML服务的聚类算法只依赖embedding向量
       const items = dataset.articles.map(article => {
         const embedding = dataset.embeddings.find(e => e.articleId === article.id);
         if (!embedding) {
@@ -123,10 +129,11 @@ export class ClusteringService {
         return {
           id: article.id,
           title: article.title,
-          content: article.content,
+          // content: article.content, // 移除：聚类不需要完整内容，下游工作流通过R2按需获取
           url: article.url,
           embedding: embedding.embedding,
-          publishDate: article.publishDate
+          publishDate: article.publishDate,
+          summary: article.summary // 保留摘要信息，可能对ML服务有用
         };
       });
 

@@ -8,7 +8,7 @@ import { createAIServices } from '../lib/ai-services';
 import type { Env } from '../index';
 
 // ============================================================================
-// 数据接口定义 - 与端到端测试保持一致
+// 数据接口定义 - 轻量级版本，避免SQLITE_TOOBIG错误
 // ============================================================================
 
 interface ArticleRecord {
@@ -28,6 +28,25 @@ interface ArticleRecord {
   topic_tags?: string[] | null;
   key_entities?: string[] | null;
   content_focus?: string[] | null;
+}
+
+// 轻量级数据集接口 - 不包含完整内容，只保留引用
+interface LightweightArticleDataset {
+  articles: Array<{
+    id: number;
+    title: string;
+    contentFileKey: string;  // R2存储引用
+    publishDate: string;
+    url: string;
+    summary: string;
+    // 可选的内容摘要信息，用于质量评估
+    contentLength?: number;
+    hasValidContent?: boolean;
+  }>;
+  embeddings: Array<{
+    articleId: number;
+    embedding: number[];
+  }>;
 }
 
 // 工作流参数接口
@@ -95,9 +114,61 @@ const dbStepConfig: WorkflowStepConfig = {
 
 // ============================================================================
 // 自动简报生成工作流
+// 
+// 性能优化说明：
+// - 聚类分析步骤使用轻量级数据集，不获取完整文章内容
+// - 聚类算法仅依赖embedding向量，避免不必要的R2读取和内存开销
+// - 下游步骤（故事验证、情报分析等）通过getArticleContents按需获取内容
 // ============================================================================
 
 export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGenerationParams> {
+  
+  /**
+   * 按需从R2获取文章内容的辅助函数
+   * 避免在工作流状态中存储大量内容数据
+   */
+  private async getArticleContents(articleIds: number[], lightweightDataset: LightweightArticleDataset): Promise<Array<{
+    id: number;
+    title: string;
+    content: string;
+    publishDate: string;
+    url: string;
+    summary: string;
+  }>> {
+    const articlesWithContent = [];
+    
+    for (const articleId of articleIds) {
+      const lightweightArticle = lightweightDataset.articles.find(a => a.id === articleId);
+      if (lightweightArticle) {
+        try {
+          const contentObject = await this.env.ARTICLES_BUCKET.get(lightweightArticle.contentFileKey);
+          const content = contentObject ? await contentObject.text() : '';
+          
+          articlesWithContent.push({
+            id: lightweightArticle.id,
+            title: lightweightArticle.title,
+            content: content,
+            publishDate: lightweightArticle.publishDate,
+            url: lightweightArticle.url,
+            summary: lightweightArticle.summary
+          });
+        } catch (error) {
+          console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${articleId}):`, error);
+          // 使用空内容作为回退
+          articlesWithContent.push({
+            id: lightweightArticle.id,
+            title: lightweightArticle.title,
+            content: '',
+            publishDate: lightweightArticle.publishDate,
+            url: lightweightArticle.url,
+            summary: lightweightArticle.summary
+          });
+        }
+      }
+    }
+    
+    return articlesWithContent;
+  }
   
   async run(event: WorkflowEvent<BriefGenerationParams>, step: WorkflowStep) {
     const { 
@@ -107,7 +178,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       dateTo, 
       minImportance = 3,
       
-      articleLimit = 50,
+      articleLimit = 30, // 降低默认限制以避免SQLITE_TOOBIG错误
       timeRangeDays = 2,
       clusteringOptions,
       maxStoriesToGenerate = 15,
@@ -148,7 +219,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
       let validArticlesCount = 0;
       
-      const dataset: ArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<ArticleDataset> => {
+      const dataset: LightweightArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<LightweightArticleDataset> => {
         try {
           const db = getDb(this.env.HYPERDRIVE);
           
@@ -303,10 +374,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             articles.push({
               id: article.id,
               title: article.title,
-              content: content,
+              contentFileKey: article.contentFileKey!, // 确保非空
               publishDate: article.publish_date?.toISOString() || new Date().toISOString(),
               url: article.url,
-              summary: (article.event_summary_points as string[])?.[0] || article.title
+              summary: (article.event_summary_points as string[])?.[0] || article.title,
+              contentLength: content.length, // 记录内容长度用于质量评估
+              hasValidContent: true // 标记为有效内容
             });
 
             embeddings.push({
@@ -329,7 +402,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           console.log(`  - 总过滤数: ${qualityMetrics.filtered}`);
           console.log(`  - 质量通过率: ${((qualityMetrics.validContent / validArticles.length) * 100).toFixed(1)}%`);
 
-          const dataset: ArticleDataset = {
+          const dataset: LightweightArticleDataset = {
             articles,
             embeddings
           };
@@ -343,7 +416,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
+      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset as any); // 临时类型转换，因为评估器需要更新
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
         qualityAssessment: articleQuality,
@@ -369,6 +442,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 创建聚类服务实例
         const clusteringService = createClusteringService(this.env);
         
+        // 优化：聚类分析仅依赖embedding向量，不需要文章内容
+        // clustering-service.ts会自动过滤content字段，只传递必要字段给ML服务
+        console.log(`[AutoBrief] 构建聚类数据集（仅传递聚类所需的核心字段）...`);
+        
+        // 构建符合ArticleDataset接口的数据集
+        // 注意：clustering-service.ts内部会过滤掉content字段，只传递id、title、url、embedding、publishDate、summary给ML服务
+        const clusteringDataset = {
+          articles: dataset.articles.map(article => ({
+            id: article.id,
+            title: article.title,
+            content: article.summary, // 满足接口要求，但clustering-service会过滤此字段
+            publishDate: article.publishDate,
+            url: article.url,
+            summary: article.summary
+          })),
+          embeddings: dataset.embeddings
+        };
+        
         // 使用优化的聚类参数
         const clusteringOptions = {
           umapParams: {
@@ -384,7 +475,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
         };
 
-        const response = await clusteringService.analyzeClusters(dataset, clusteringOptions);
+        const response = await clusteringService.analyzeClusters(clusteringDataset, clusteringOptions);
         
         if (!response.success) {
           throw new Error(`聚类分析失败: ${response.error || '未知错误'}`);
@@ -438,8 +529,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             title: article.title,
             url: article.url,
             // 使用数据库中的实际event_summary_points，如果为空则回退到构建的summary
-            event_summary_points: Array.isArray(metadata?.event_summary_points) && metadata.event_summary_points.length > 0
-              ? metadata.event_summary_points as string[]
+            event_summary_points: Array.isArray((metadata as any)?.event_summary_points) && (metadata as any).event_summary_points.length > 0
+              ? (metadata as any).event_summary_points as string[]
               : [article.summary] // 回退选项
           };
         });
@@ -578,10 +669,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               analysis: { summary: story.title }
             };
             
+            // 为情报分析动态获取相关文章的内容
+            const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
+            
             const clusterForAnalysis = {
-              articles: story.articleIds.map((id: number) => 
-                dataset.articles.find(a => a.id === id)
-              ).filter(Boolean)
+              articles: clusterArticles
             };
 
             const response = await aiServices.aiWorker.analyzeStoryIntelligence(

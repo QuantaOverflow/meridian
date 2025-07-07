@@ -224,6 +224,13 @@ apps/briefs/service_account.json
 
 apps/backend/src/tests
 
+
 # backups
 .backup/
 meridian_dump.sql
+
+# extensions config
+.repomixignore
+.cursor/
+llms/
+.cursorignore

@@ -36,7 +36,7 @@ Run machine learning models, powered by serverless GPUs, on Cloudflare's global 
 
 <Plan type="workers-all" />
 
-Workers AI allows you to run AI models in a serverless way, without having to worry about scaling, maintaining, or paying for unused infrastructure. You can invoke models running on GPUs on Cloudflare's network from your own code — from [Workers](/workers/), [Pages](/pages/), or anywhere via [the Cloudflare API](/api/resources/ai/methods/run/).
+Workers AI allows you to run AI models in a serverless way, without having to worry about scaling, maintaining, or paying for unused infrastructure. You can invoke models running on GPUs on Cloudflare's network from your own code 鈥� from [Workers](/workers/), [Pages](/pages/), or anywhere via [the Cloudflare API](/api/resources/ai/methods/run/).
 
 Workers AI gives you access to:
 - **50+ [open-source models](/workers-ai/models/)**, available as a part of our model catalog
@@ -77,7 +77,7 @@ Observe and control your AI applications with caching, rate limiting, request re
 
 <RelatedProduct header="Vectorize" href="/vectorize/" product="vectorize">
 
-Build full-stack AI applications with Vectorize, Cloudflare’s vector database. Adding Vectorize enables you to perform tasks such as semantic search, recommendations, anomaly detection or can be used to provide context and memory to an LLM.
+Build full-stack AI applications with Vectorize, Cloudflare鈥檚 vector database. Adding Vectorize enables you to perform tasks such as semantic search, recommendations, anomaly detection or can be used to provide context and memory to an LLM.
 
 
 </RelatedProduct>
@@ -368,7 +368,7 @@ Use Workers AI with [Chat UI](https://github.com/huggingface/chat-ui?tab=readme-
 You will need the following:
 
 * A [Cloudflare account](https://dash.cloudflare.com)
-* Your [Account ID](/fundamentals/setup/find-account-and-zone-ids/)
+* Your [Account ID](/fundamentals/account/find-account-and-zone-ids/)
 * An [API token](/workers-ai/get-started/rest-api/#1-get-api-token-and-account-id) for Workers AI
 
 ## Setup
@@ -401,6 +401,26 @@ When setting up your models, specify the `cloudflare` endpoint.
 ## Supported models
 
 This template works with any [text generation models](/workers-ai/models/) that begin with the `@hf` parameter.
+
+---
+
+# Configuration
+
+URL: https://developers.cloudflare.com/workers-ai/configuration/
+
+import { DirectoryListing } from "~/components";
+
+<DirectoryListing />
+
+---
+
+# Features
+
+URL: https://developers.cloudflare.com/workers-ai/features/
+
+import { DirectoryListing } from "~/components";
+
+<DirectoryListing />
 
 ---
 
@@ -464,13 +484,342 @@ These endpoints are also compatible with [AI Gateway](/ai-gateway/providers/work
 
 ---
 
-# Configuration
+# JSON Mode
 
-URL: https://developers.cloudflare.com/workers-ai/configuration/
+URL: https://developers.cloudflare.com/workers-ai/features/json-mode/
 
-import { DirectoryListing } from "~/components";
+import { Code } from "~/components";
 
-<DirectoryListing />
+export const jsonModeSchema = `{
+  response_format: {
+    title: "JSON Mode",
+    type: "object",
+    properties: {
+      type: {
+        type: "string",
+        enum: ["json_object", "json_schema"],
+      },
+      json_schema: {},
+    }
+  }
+}`;
+
+export const jsonModeRequestExample = `{
+  "messages": [
+    {
+      "role": "system",
+      "content": "Extract data about a country."
+    },
+    {
+      "role": "user",
+      "content": "Tell me about India."
+    }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "capital": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "capital",
+        "languages"
+      ]
+    }
+  }
+}`;
+
+export const jsonModeResponseExample = `{
+  "response": {
+    "name": "India",
+    "capital": "New Delhi",
+    "languages": [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Telugu",
+      "Marathi",
+      "Tamil",
+      "Gujarati",
+      "Urdu",
+      "Kannada",
+      "Odia",
+      "Malayalam",
+      "Punjabi",
+      "Sanskrit"
+    ]
+  }
+}`;
+
+When we want text-generation AI models to interact with databases, services, and external systems programmatically, typically when using tool calling or building AI agents, we must have structured response formats rather than natural language.
+
+Workers AI supports JSON Mode, enabling applications to request a structured output response when interacting with AI models.
+
+## Schema
+
+JSON Mode is compatible with OpenAI鈥檚 implementation; to enable add the `response_format` property to the request object using the following convention:
+
+<Code code={jsonModeSchema} lang="json" />
+
+Where `json_schema` must be a valid [JSON Schema](https://json-schema.org/) declaration.
+
+## JSON Mode example
+
+When using JSON Format, pass the schema as in the example below as part of the request you send to the LLM.
+
+<Code code={jsonModeRequestExample} lang="json" />
+
+The LLM will follow the schema, and return a response such as below:
+
+<Code code={jsonModeResponseExample} lang="json" />
+
+As you can see, the model is complying with the JSON schema definition in the request and responding with a validated JSON object.
+
+## Supported Models
+
+This is the list of models that now support JSON Mode:
+
+- [@cf/meta/llama-3.1-8b-instruct-fast](/workers-ai/models/llama-3.1-8b-instruct-fast/)
+- [@cf/meta/llama-3.1-70b-instruct](/workers-ai/models/llama-3.1-70b-instruct/)
+- [@cf/meta/llama-3.3-70b-instruct-fp8-fast](/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/)
+- [@cf/meta/llama-3-8b-instruct](/workers-ai/models/llama-3-8b-instruct/)
+- [@cf/meta/llama-3.1-8b-instruct](/workers-ai/models/llama-3.1-8b-instruct/)
+- [@cf/meta/llama-3.2-11b-vision-instruct](/workers-ai/models/llama-3.2-11b-vision-instruct/)
+- [@hf/nousresearch/hermes-2-pro-mistral-7b](/workers-ai/models/hermes-2-pro-mistral-7b/)
+- [@hf/thebloke/deepseek-coder-6.7b-instruct-awq](/workers-ai/models/deepseek-coder-6.7b-instruct-awq/)
+- [@cf/deepseek-ai/deepseek-r1-distill-qwen-32b](/workers-ai/models/deepseek-r1-distill-qwen-32b/)
+
+We will continue extending this list to keep up with new, and requested models.
+
+Note that Workers AI can't guarantee that the model responds according to the requested JSON Schema. Depending on the complexity of the task and adequacy of the JSON Schema, the model may not be able to satisfy the request in extreme situations. If that's the case, then an error `JSON Mode couldn't be met` is returned and must be handled.
+
+JSON Mode currently doesn't support streaming.
+
+---
+
+# Markdown Conversion
+
+URL: https://developers.cloudflare.com/workers-ai/features/markdown-conversion/
+
+import { Code, Type, MetaInfo, Details, Render } from "~/components";
+
+[Markdown](https://en.wikipedia.org/wiki/Markdown) is essential for text generation and large language models (LLMs) in training and inference because it can provide structured, semantic, human, and machine-readable input. Likewise, Markdown facilitates chunking and structuring input data for better retrieval and synthesis in the context of RAGs, and its simplicity and ease of parsing and rendering make it ideal for AI Agents.
+
+For these reasons, document conversion plays an important role when designing and developing AI applications. Workers AI provides the `toMarkdown` utility method that developers can use from the [`env.AI`](/workers-ai/configuration/bindings/) binding or the REST APIs for quick, easy, and convenient conversion and summary of documents in multiple formats to Markdown language.
+
+## Methods and definitions
+
+### async env.AI.toMarkdown()
+
+Takes a list of documents in different formats and converts them to Markdown.
+
+#### Parameter
+
+- <code>documents</code>: <Type text="array" />- An array of
+  `toMarkdownDocument`s.
+
+#### Return values
+
+- <code>results</code>: <Type text="array" />- An array of
+  `toMarkdownDocumentResult`s.
+
+### `toMarkdownDocument` definition
+
+- `name` <Type text="string" />
+
+  - Name of the document to convert.
+
+- `blob` <Type text="Blob" />
+
+  - A new [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob) object with the document content.
+
+### `toMarkdownDocumentResult` definition
+
+- `name` <Type text="string" />
+
+  - Name of the converted document. Matches the input name.
+
+- `mimetype` <Type text="string" />
+
+  - The detected [mime type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types/Common_types) of the document.
+
+- `tokens` <Type text="number" />
+
+  - The estimated number of tokens of the converted document.
+
+- `data` <Type text="string" />
+
+  - The content of the converted document in Markdown format.
+
+## Supported formats
+
+This is the list of support formats. We are constantly adding new formats and updating this table.
+
+<Render file="markdown-conversion-support" product="workers-ai" />
+
+## Example
+
+In this example, we fetch a PDF document and an image from R2 and feed them both to `env.AI.toMarkdown`. The result is a list of converted documents. Workers AI models are used automatically to detect and summarize the image.
+
+```typescript
+import { Env } from "./env";
+
+export default {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		// https://pub-979cb28270cc461d94bc8a169d8f389d.r2.dev/somatosensory.pdf
+		const pdf = await env.R2.get("somatosensory.pdf");
+
+		// https://pub-979cb28270cc461d94bc8a169d8f389d.r2.dev/cat.jpeg
+		const cat = await env.R2.get("cat.jpeg");
+
+		return Response.json(
+			await env.AI.toMarkdown([
+				{
+					name: "somatosensory.pdf",
+					blob: new Blob([await pdf.arrayBuffer()], {
+						type: "application/octet-stream",
+					}),
+				},
+				{
+					name: "cat.jpeg",
+					blob: new Blob([await cat.arrayBuffer()], {
+						type: "application/octet-stream",
+					}),
+				},
+			]),
+		);
+	},
+};
+```
+
+This is the result:
+
+```json
+[
+	{
+		"name": "somatosensory.pdf",
+		"mimeType": "application/pdf",
+		"format": "markdown",
+		"tokens": 0,
+		"data": "# somatosensory.pdf\n## Metadata\n- PDFFormatVersion=1.4\n- IsLinearized=false\n- IsAcroFormPresent=false\n- IsXFAPresent=false\n- IsCollectionPresent=false\n- IsSignaturesPresent=false\n- Producer=Prince 20150210 (www.princexml.com)\n- Title=Anatomy of the Somatosensory System\n\n## Contents\n### Page 1\nThis is a sample document to showcase..."
+	},
+	{
+		"name": "cat.jpeg",
+		"mimeType": "image/jpeg",
+		"format": "markdown",
+		"tokens": 0,
+		"data": "The image is a close-up photograph of Grumpy Cat, a cat with a distinctive grumpy expression and piercing blue eyes. The cat has a brown face with a white stripe down its nose, and its ears are pointed upright. Its fur is light brown and darker around the face, with a pink nose and mouth. The cat's eyes are blue and slanted downward, giving it a perpetually grumpy appearance. The background is blurred, but it appears to be a dark brown color. Overall, the image is a humorous and iconic representation of the popular internet meme character, Grumpy Cat. The cat's facial expression and posture convey a sense of displeasure or annoyance, making it a relatable and entertaining image for many people."
+	}
+]
+```
+
+## REST API
+
+In addition to the Workers AI [binding](/workers-ai/configuration/bindings/), you can use the [REST API](/workers-ai/get-started/rest-api/):
+
+```bash
+curl https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/tomarkdown \
+  -H 'Authorization: Bearer {API_TOKEN}' \
+	-F "files=@cat.jpeg" \
+	-F "files=@somatosensory.pdf"
+```
+
+## Pricing
+
+`toMarkdown` is free for most format conversions. In some cases, like image conversion, it can use Workers AI models for object detection and summarization, which may incur additional costs if it exceeds the Workers AI free allocation limits. See the [pricing page](/workers-ai/platform/pricing/) for more details.
+
+---
+
+# Prompting
+
+URL: https://developers.cloudflare.com/workers-ai/features/prompting/
+
+import { Code } from "~/components";
+
+export const scopedExampleOne = `{
+  messages: [
+    { role: "system", content: "you are a very funny comedian and you like emojis" },
+    { role: "user", content: "tell me a joke about cloudflare" },
+  ],
+};`;
+
+export const scopedExampleTwo = `{
+  messages: [
+    { role: "system", content: "you are a professional computer science assistant" },
+    { role: "user", content: "what is WASM?" },
+    { role: "assistant", content: "WASM (WebAssembly) is a binary instruction format that is designed to be a platform-agnostic" },
+    { role: "user", content: "does Python compile to WASM?" },
+    { role: "assistant", content: "No, Python does not directly compile to WebAssembly" },
+    { role: "user", content: "what about Rust?" },
+  ],
+};`;
+
+export const unscopedExampleOne = `{
+  prompt: "tell me a joke about cloudflare";
+}`;
+
+export const unscopedExampleTwo = `{
+  prompt: "<s>[INST]comedian[/INST]</s>\n[INST]tell me a joke about cloudflare[/INST]",
+  raw: true
+};`;
+
+Part of getting good results from text generation models is asking questions correctly. LLMs are usually trained with specific predefined templates, which should then be used with the model's tokenizer for better results when doing inference tasks.
+
+There are two ways to prompt text generation models with Workers AI:
+
+:::note[Important]
+We recommend using unscoped prompts for inference with LoRA.
+:::
+
+### Scoped Prompts
+
+This is the <strong>recommended</strong> method. With scoped prompts, Workers AI takes the burden of knowing and using different chat templates for different models and provides a unified interface to developers when building prompts and creating text generation tasks.
+
+Scoped prompts are a list of messages. Each message defines two keys: the role and the content.
+
+Typically, the role can be one of three options:
+
+- <strong>system</strong> - System messages define the AI's personality. You can
+  use them to set rules and how you expect the AI to behave.
+- <strong>user</strong> - User messages are where you actually query the AI by
+  providing a question or a conversation.
+- <strong>assistant</strong> - Assistant messages hint to the AI about the
+  desired output format. Not all models support this role.
+
+OpenAI has a [good explanation](https://platform.openai.com/docs/guides/text-generation#messages-and-roles) of how they use these roles with their GPT models. Even though chat templates are flexible, other text generation models tend to follow the same conventions.
+
+Here's an input example of a scoped prompt using system and user roles:
+
+<Code code={scopedExampleOne} lang="js" />
+
+Here's a better example of a chat session using multiple iterations between the user and the assistant.
+
+<Code code={scopedExampleTwo} lang="js" />
+
+Note that different LLMs are trained with different templates for different use cases. While Workers AI tries its best to abstract the specifics of each LLM template from the developer through a unified API, you should always refer to the model documentation for details (we provide links in the table above.) For example, instruct models like Codellama are fine-tuned to respond to a user-provided instruction, while chat models expect fragments of dialogs as input.
+
+### Unscoped Prompts
+
+You can use unscoped prompts to send a single question to the model without worrying about providing any context. Workers AI will automatically convert your `prompt` input to a reasonable default scoped prompt internally so that you get the best possible prediction.
+
+<Code code={unscopedExampleOne} lang="js" />
+
+You can also use unscoped prompts to construct the model chat template manually. In this case, you can use the raw parameter. Here's an input example of a [Mistral](https://docs.mistral.ai/models/#chat-template) chat template prompt:
+
+<Code code={unscopedExampleTwo} lang="js" />
 
 ---
 
@@ -735,352 +1084,13 @@ By finishing this tutorial, you have created a Worker, connected it to Workers A
 
 ---
 
-# Features
+# Guides
 
-URL: https://developers.cloudflare.com/workers-ai/features/
+URL: https://developers.cloudflare.com/workers-ai/guides/
 
 import { DirectoryListing } from "~/components";
 
 <DirectoryListing />
-
----
-
-# JSON Mode
-
-URL: https://developers.cloudflare.com/workers-ai/features/json-mode/
-
-import { Code } from "~/components";
-
-export const jsonModeSchema = `{
-  response_format: {
-    title: "JSON Mode",
-    type: "object",
-    properties: {
-      type: {
-        type: "string",
-        enum: ["json_object", "json_schema"],
-      },
-      json_schema: {},
-    }
-  }
-}`;
-
-export const jsonModeRequestExample = `{
-  "messages": [
-    {
-      "role": "system",
-      "content": "Extract data about a country."
-    },
-    {
-      "role": "user",
-      "content": "Tell me about India."
-    }
-  ],
-  "response_format": {
-    "type": "json_schema",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "capital": {
-          "type": "string"
-        },
-        "languages": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "name",
-        "capital",
-        "languages"
-      ]
-    }
-  }
-}`;
-
-export const jsonModeResponseExample = `{
-  "response": {
-    "name": "India",
-    "capital": "New Delhi",
-    "languages": [
-      "Hindi",
-      "English",
-      "Bengali",
-      "Telugu",
-      "Marathi",
-      "Tamil",
-      "Gujarati",
-      "Urdu",
-      "Kannada",
-      "Odia",
-      "Malayalam",
-      "Punjabi",
-      "Sanskrit"
-    ]
-  }
-}`;
-
-When we want text-generation AI models to interact with databases, services, and external systems programmatically, typically when using tool calling or building AI agents, we must have structured response formats rather than natural language.
-
-Workers AI supports JSON Mode, enabling applications to request a structured output response when interacting with AI models.
-
-## Schema
-
-JSON Mode is compatible with OpenAI’s implementation; to enable add the `response_format` property to the request object using the following convention:
-
-<Code code={jsonModeSchema} lang="json" />
-
-Where `json_schema` must be a valid [JSON Schema](https://json-schema.org/) declaration.
-
-## JSON Mode example
-
-When using JSON Format, pass the schema as in the example below as part of the request you send to the LLM.
-
-<Code code={jsonModeRequestExample} lang="json" />
-
-The LLM will follow the schema, and return a response such as below:
-
-<Code code={jsonModeResponseExample} lang="json" />
-
-As you can see, the model is complying with the JSON schema definition in the request and responding with a validated JSON object.
-
-## Supported Models
-
-This is the list of models that now support JSON Mode:
-
-- [@cf/meta/llama-3.1-8b-instruct-fast](/workers-ai/models/llama-3.1-8b-instruct-fast/)
-- [@cf/meta/llama-3.1-70b-instruct](/workers-ai/models/llama-3.1-70b-instruct/)
-- [@cf/meta/llama-3.3-70b-instruct-fp8-fast](/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/)
-- [@cf/meta/llama-3-8b-instruct](/workers-ai/models/llama-3-8b-instruct/)
-- [@cf/meta/llama-3.1-8b-instruct](/workers-ai/models/llama-3.1-8b-instruct/)
-- [@cf/meta/llama-3.2-11b-vision-instruct](/workers-ai/models/llama-3.2-11b-vision-instruct/)
-- [@hf/nousresearch/hermes-2-pro-mistral-7b](/workers-ai/models/hermes-2-pro-mistral-7b/)
-- [@hf/thebloke/deepseek-coder-6.7b-instruct-awq](/workers-ai/models/deepseek-coder-6.7b-instruct-awq/)
-- [@cf/deepseek-ai/deepseek-r1-distill-qwen-32b](/workers-ai/models/deepseek-r1-distill-qwen-32b/)
-
-We will continue extending this list to keep up with new, and requested models.
-
-Note that Workers AI can't guarantee that the model responds according to the requested JSON Schema. Depending on the complexity of the task and adequacy of the JSON Schema, the model may not be able to satisfy the request in extreme situations. If that's the case, then an error `JSON Mode couldn't be met` is returned and must be handled.
-
-JSON Mode currently doesn't support streaming.
-
----
-
-# Markdown Conversion
-
-URL: https://developers.cloudflare.com/workers-ai/features/markdown-conversion/
-
-import { Code, Type, MetaInfo, Details, Render } from "~/components";
-
-[Markdown](https://en.wikipedia.org/wiki/Markdown) is essential for text generation and large language models (LLMs) in training and inference because it can provide structured, semantic, human, and machine-readable input. Likewise, Markdown facilitates chunking and structuring input data for better retrieval and synthesis in the context of RAGs, and its simplicity and ease of parsing and rendering make it ideal for AI Agents.
-
-For these reasons, document conversion plays an important role when designing and developing AI applications. Workers AI provides the `toMarkdown` utility method that developers can use from the [`env.AI`](/workers-ai/configuration/bindings/) binding or the REST APIs for quick, easy, and convenient conversion and summary of documents in multiple formats to Markdown language.
-
-## Methods and definitions
-
-### async env.AI.toMarkdown()
-
-Takes a list of documents in different formats and converts them to Markdown.
-
-#### Parameter
-
-- <code>documents</code>: <Type text="array" />- An array of
-  `toMarkdownDocument`s.
-
-#### Return values
-
-- <code>results</code>: <Type text="array" />- An array of
-  `toMarkdownDocumentResult`s.
-
-### `toMarkdownDocument` definition
-
-- `name` <Type text="string" />
-
-  - Name of the document to convert.
-
-- `blob` <Type text="Blob" />
-
-  - A new [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob) object with the document content.
-
-### `toMarkdownDocumentResult` definition
-
-- `name` <Type text="string" />
-
-  - Name of the converted document. Matches the input name.
-
-- `mimetype` <Type text="string" />
-
-  - The detected [mime type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types/Common_types) of the document.
-
-- `tokens` <Type text="number" />
-
-  - The estimated number of tokens of the converted document.
-
-- `data` <Type text="string" />
-
-  - The content of the converted document in Markdown format.
-
-## Supported formats
-
-This is the list of support formats. We are constantly adding new formats and updating this table.
-
-<Render file="markdown-conversion-support" product="workers-ai" />
-
-## Example
-
-In this example, we fetch a PDF document and an image from R2 and feed them both to `env.AI.toMarkdown`. The result is a list of converted documents. Workers AI models are used automatically to detect and summarize the image.
-
-```typescript
-import { Env } from "./env";
-
-export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-		// https://pub-979cb28270cc461d94bc8a169d8f389d.r2.dev/somatosensory.pdf
-		const pdf = await env.R2.get("somatosensory.pdf");
-
-		// https://pub-979cb28270cc461d94bc8a169d8f389d.r2.dev/cat.jpeg
-		const cat = await env.R2.get("cat.jpeg");
-
-		return Response.json(
-			await env.AI.toMarkdown([
-				{
-					name: "somatosensory.pdf",
-					blob: new Blob([await pdf.arrayBuffer()], {
-						type: "application/octet-stream",
-					}),
-				},
-				{
-					name: "cat.jpeg",
-					blob: new Blob([await cat.arrayBuffer()], {
-						type: "application/octet-stream",
-					}),
-				},
-			]),
-		);
-	},
-};
-```
-
-This is the result:
-
-```json
-[
-	{
-		"name": "somatosensory.pdf",
-		"mimeType": "application/pdf",
-		"format": "markdown",
-		"tokens": 0,
-		"data": "# somatosensory.pdf\n## Metadata\n- PDFFormatVersion=1.4\n- IsLinearized=false\n- IsAcroFormPresent=false\n- IsXFAPresent=false\n- IsCollectionPresent=false\n- IsSignaturesPresent=false\n- Producer=Prince 20150210 (www.princexml.com)\n- Title=Anatomy of the Somatosensory System\n\n## Contents\n### Page 1\nThis is a sample document to showcase..."
-	},
-	{
-		"name": "cat.jpeg",
-		"mimeType": "image/jpeg",
-		"format": "markdown",
-		"tokens": 0,
-		"data": "The image is a close-up photograph of Grumpy Cat, a cat with a distinctive grumpy expression and piercing blue eyes. The cat has a brown face with a white stripe down its nose, and its ears are pointed upright. Its fur is light brown and darker around the face, with a pink nose and mouth. The cat's eyes are blue and slanted downward, giving it a perpetually grumpy appearance. The background is blurred, but it appears to be a dark brown color. Overall, the image is a humorous and iconic representation of the popular internet meme character, Grumpy Cat. The cat's facial expression and posture convey a sense of displeasure or annoyance, making it a relatable and entertaining image for many people."
-	}
-]
-```
-
-## REST API
-
-In addition to the Workers AI [binding](/workers-ai/configuration/bindings/), you can use the [REST API](/workers-ai/get-started/rest-api/):
-
-```bash
-curl https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/tomarkdown \
-  -H 'Authorization: Bearer {API_TOKEN}' \
-	-F "files=@cat.jpeg" \
-	-F "files=@somatosensory.pdf"
-```
-
-## Pricing
-
-`toMarkdown` is free for most format conversions. In some cases, like image conversion, it can use Workers AI models for object detection and summarization, which may incur additional costs if it exceeds the Workers AI free allocation limits. See the [pricing page](/workers-ai/platform/pricing/) for more details.
-
----
-
-# Prompting
-
-URL: https://developers.cloudflare.com/workers-ai/features/prompting/
-
-import { Code } from "~/components";
-
-export const scopedExampleOne = `{
-  messages: [
-    { role: "system", content: "you are a very funny comedian and you like emojis" },
-    { role: "user", content: "tell me a joke about cloudflare" },
-  ],
-};`;
-
-export const scopedExampleTwo = `{
-  messages: [
-    { role: "system", content: "you are a professional computer science assistant" },
-    { role: "user", content: "what is WASM?" },
-    { role: "assistant", content: "WASM (WebAssembly) is a binary instruction format that is designed to be a platform-agnostic" },
-    { role: "user", content: "does Python compile to WASM?" },
-    { role: "assistant", content: "No, Python does not directly compile to WebAssembly" },
-    { role: "user", content: "what about Rust?" },
-  ],
-};`;
-
-export const unscopedExampleOne = `{
-  prompt: "tell me a joke about cloudflare";
-}`;
-
-export const unscopedExampleTwo = `{
-  prompt: "<s>[INST]comedian[/INST]</s>\n[INST]tell me a joke about cloudflare[/INST]",
-  raw: true
-};`;
-
-Part of getting good results from text generation models is asking questions correctly. LLMs are usually trained with specific predefined templates, which should then be used with the model's tokenizer for better results when doing inference tasks.
-
-There are two ways to prompt text generation models with Workers AI:
-
-:::note[Important]
-We recommend using unscoped prompts for inference with LoRA.
-:::
-
-### Scoped Prompts
-
-This is the <strong>recommended</strong> method. With scoped prompts, Workers AI takes the burden of knowing and using different chat templates for different models and provides a unified interface to developers when building prompts and creating text generation tasks.
-
-Scoped prompts are a list of messages. Each message defines two keys: the role and the content.
-
-Typically, the role can be one of three options:
-
-- <strong>system</strong> - System messages define the AI's personality. You can
-  use them to set rules and how you expect the AI to behave.
-- <strong>user</strong> - User messages are where you actually query the AI by
-  providing a question or a conversation.
-- <strong>assistant</strong> - Assistant messages hint to the AI about the
-  desired output format. Not all models support this role.
-
-OpenAI has a [good explanation](https://platform.openai.com/docs/guides/text-generation#messages-and-roles) of how they use these roles with their GPT models. Even though chat templates are flexible, other text generation models tend to follow the same conventions.
-
-Here's an input example of a scoped prompt using system and user roles:
-
-<Code code={scopedExampleOne} lang="js" />
-
-Here's a better example of a chat session using multiple iterations between the user and the assistant.
-
-<Code code={scopedExampleTwo} lang="js" />
-
-Note that different LLMs are trained with different templates for different use cases. While Workers AI tries its best to abstract the specifics of each LLM template from the developer through a unified API, you should always refer to the model documentation for details (we provide links in the table above.) For example, instruct models like Codellama are fine-tuned to respond to a user-provided instruction, while chat models expect fragments of dialogs as input.
-
-### Unscoped Prompts
-
-You can use unscoped prompts to send a single question to the model without worrying about providing any context. Workers AI will automatically convert your `prompt` input to a reasonable default scoped prompt internally so that you get the best possible prediction.
-
-<Code code={unscopedExampleOne} lang="js" />
-
-You can also use unscoped prompts to construct the model chat template manually. In this case, you can use the raw parameter. Here's an input example of a [Mistral](https://docs.mistral.ai/models/#chat-template) chat template prompt:
-
-<Code code={unscopedExampleTwo} lang="js" />
 
 ---
 
@@ -1117,16 +1127,6 @@ Explore the following <GlossaryTooltip term="reference architecture">reference a
 
 ---
 
-# Guides
-
-URL: https://developers.cloudflare.com/workers-ai/guides/
-
-import { DirectoryListing } from "~/components";
-
-<DirectoryListing />
-
----
-
 # Models
 
 URL: https://developers.cloudflare.com/workers-ai/models/
@@ -1156,6 +1156,18 @@ For Workers AI:
 
 ---
 
+# Glossary
+
+URL: https://developers.cloudflare.com/workers-ai/platform/glossary/
+
+import { Glossary } from "~/components";
+
+Review the definitions for terms used across Cloudflare's Workers AI documentation.
+
+<Glossary product="workers-ai" />
+
+---
+
 # Errors
 
 URL: https://developers.cloudflare.com/workers-ai/platform/errors/
@@ -1180,18 +1192,6 @@ Below is a list of Workers AI errors.
 | Aborted                               | `3008`            | `408`         | Request was aborted                                                                                                                                  |
 | Account limited                       | `3036`            | `429`         | You have used up your daily free allocation of 10,000 neurons. Please upgrade to Cloudflare's Workers Paid plan if you would like to continue usage. |
 | Out of capacity                       | `3040`            | `429`         | No more data centers to forward the request to                                                                                                       |
-
----
-
-# Glossary
-
-URL: https://developers.cloudflare.com/workers-ai/platform/glossary/
-
-import { Glossary } from "~/components";
-
-Review the definitions for terms used across Cloudflare's Workers AI documentation.
-
-<Glossary product="workers-ai" />
 
 ---
 
@@ -1478,30 +1478,6 @@ curl "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/ai/run/@cf/baai/
 
 ---
 
-# Fine-tunes
-
-URL: https://developers.cloudflare.com/workers-ai/features/fine-tunes/
-
-import { Feature } from "~/components";
-
-Learn how to use Workers AI to get fine-tuned inference.
-
-<Feature header="Fine-tuned inference with LoRAs" href="/workers-ai/features/fine-tunes/loras/" cta="Run inference with LoRAs">
-
-Upload a LoRA adapter and run fine-tuned inference with one of our base models.
-
-</Feature>
-
----
-
-## What is fine-tuning?
-
-Fine-tuning is a general term for modifying an AI model by continuing to train it with additional data. The goal of fine-tuning is to increase the probability that a generation is similar to your dataset. Training a model from scratch is not practical for many use cases given how expensive and time consuming they can be to train. By fine-tuning an existing pre-trained model, you benefit from its capabilities while also accomplishing your desired task.
-
-[Low-Rank Adaptation](https://arxiv.org/abs/2106.09685) (LoRA) is a specific fine-tuning method that can be applied to various model architectures, not just LLMs. It is common that the pre-trained model weights are directly modified or fused with additional fine-tune weights in traditional fine-tuning methods. LoRA, on the other hand, allows for the fine-tune weights and pre-trained model to remain separate, and for the pre-trained model to remain unchanged. The end result is that you can train models to be more accurate at specific tasks, such as generating code, having a specific personality, or generating images in a specific style.
-
----
-
 # Workers Binding
 
 URL: https://developers.cloudflare.com/workers-ai/features/batch-api/workers-binding/
@@ -1620,6 +1596,30 @@ When the inference is complete, the API returns a final HTTP status code of `200
 
 ---
 
+# Fine-tunes
+
+URL: https://developers.cloudflare.com/workers-ai/features/fine-tunes/
+
+import { Feature } from "~/components";
+
+Learn how to use Workers AI to get fine-tuned inference.
+
+<Feature header="Fine-tuned inference with LoRAs" href="/workers-ai/features/fine-tunes/loras/" cta="Run inference with LoRAs">
+
+Upload a LoRA adapter and run fine-tuned inference with one of our base models.
+
+</Feature>
+
+---
+
+## What is fine-tuning?
+
+Fine-tuning is a general term for modifying an AI model by continuing to train it with additional data. The goal of fine-tuning is to increase the probability that a generation is similar to your dataset. Training a model from scratch is not practical for many use cases given how expensive and time consuming they can be to train. By fine-tuning an existing pre-trained model, you benefit from its capabilities while also accomplishing your desired task.
+
+[Low-Rank Adaptation](https://arxiv.org/abs/2106.09685) (LoRA) is a specific fine-tuning method that can be applied to various model architectures, not just LLMs. It is common that the pre-trained model weights are directly modified or fused with additional fine-tune weights in traditional fine-tuning methods. LoRA, on the other hand, allows for the fine-tune weights and pre-trained model to remain separate, and for the pre-trained model to remain unchanged. The end result is that you can train models to be more accurate at specific tasks, such as generating code, having a specific personality, or generating images in a specific style.
+
+---
+
 # Using LoRA adapters
 
 URL: https://developers.cloudflare.com/workers-ai/features/fine-tunes/loras/
@@ -1689,17 +1689,17 @@ You can create a finetune and upload your LoRA adapter via wrangler with the fol
 
 ```bash title="wrangler CLI" {1,7}
 npx wrangler ai finetune create <model_name> <finetune_name> <folder_path>
-#🌀 Creating new finetune "test-lora" for model "@cf/mistral/mistral-7b-instruct-v0.2-lora"...
-#🌀 Uploading file "/Users/abcd/Downloads/adapter_config.json" to "test-lora"...
-#🌀 Uploading file "/Users/abcd/Downloads/adapter_model.safetensors" to "test-lora"...
-#✅ Assets uploaded, finetune "test-lora" is ready to use.
+#馃寑 Creating new finetune "test-lora" for model "@cf/mistral/mistral-7b-instruct-v0.2-lora"...
+#馃寑 Uploading file "/Users/abcd/Downloads/adapter_config.json" to "test-lora"...
+#馃寑 Uploading file "/Users/abcd/Downloads/adapter_model.safetensors" to "test-lora"...
+#鉁� Assets uploaded, finetune "test-lora" is ready to use.
 
 npx wrangler ai finetune list
-┌──────────────────────────────────────┬─────────────────┬─────────────┐
-│ finetune_id                          │ name            │ description │
-├──────────────────────────────────────┼─────────────────┼─────────────┤
-│ 00000000-0000-0000-0000-000000000000 │ test-lora       │             │
-└──────────────────────────────────────┴─────────────────┴─────────────┘
+鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
+鈹� finetune_id                          鈹� name            鈹� description 鈹�
+鈹溾攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
+鈹� 00000000-0000-0000-0000-000000000000 鈹� test-lora       鈹�             鈹�
+鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
 ```
 
 ### REST API
@@ -3785,7 +3785,7 @@ In this tutorial you will learn how to:
 
 - **Transcribe large audio files:** Use the [Whisper-large-v3-turbo](/workers-ai/models/whisper-large-v3-turbo/) model from Cloudflare Workers AI to perform automatic speech recognition (ASR) or translation.
 - **Handle large files:** Split large audio files into smaller chunks for processing, which helps overcome memory and execution time limitations.
-- **Deploy using Cloudflare Workers:** Create a scalable, low‑latency transcription pipeline in a serverless environment.
+- **Deploy using Cloudflare Workers:** Create a scalable, low鈥憀atency transcription pipeline in a serverless environment.
 
 ## 1: Create a new Cloudflare Worker project
 
@@ -3845,7 +3845,7 @@ Your binding is [available in your Worker code](/workers/reference/migrate-to-mo
 
 ## 3. Configure Wrangler
 
-In your wrangler file, add or update the following settings to enable Node.js APIs and polyfills (with a compatibility date of 2024‑09‑23 or later):
+In your wrangler file, add or update the following settings to enable Node.js APIs and polyfills (with a compatibility date of 2024鈥�09鈥�23 or later):
 
 <WranglerConfig>
 
@@ -3905,7 +3905,7 @@ async function getAudioChunks(audioUrl: string): Promise<ArrayBuffer[]> {
 }
 
 /**
- * Transcribes a single audio chunk using the Whisper‑large‑v3‑turbo model.
+ * Transcribes a single audio chunk using the Whisper鈥憀arge鈥憊3鈥憈urbo model.
  * The function converts the audio chunk to a Base64-encoded string and
  * sends it to the model via the AI binding.
  *
@@ -5696,21 +5696,21 @@ If all these tests pass, it means that the `full_name` method is working as expe
 
 A common use case in Developer Tools is to autocomplete based on context. DeepSeek Coder provides the ability to submit existing code with a placeholder, so that the model can complete in context.
 
-Warning: The tokens are prefixed with `<｜` and suffixed with `｜>` make sure to copy and paste them.
+Warning: The tokens are prefixed with `<锝渀 and suffixed with `锝�>` make sure to copy and paste them.
 
 ````python
 model = "@hf/thebloke/deepseek-coder-6.7b-base-awq"
 
 code = """
-<｜fim▁begin｜>import re
+<锝渇im鈻乥egin锝�>import re
 
 from jklol import email_service
 
 def send_email(email_address, body):
-    <｜fim▁hole｜>
+    <锝渇im鈻乭ole锝�>
     if not is_valid_email:
         raise InvalidEmailAddress(email_address)
-    return email_service.send(email_address, body)<｜fim▁end｜>
+    return email_service.send(email_address, body)<锝渇im鈻乪nd锝�>
 """
 
 response = requests.post(
@@ -5833,7 +5833,7 @@ Or you can run this on [Google Colab](https://colab.research.google.com/github/c
 
 ## Explore the Workers AI API using Python
 
-[Workers AI](/workers-ai) allows you to run machine learning models, on the Cloudflare network, from your own code – whether that be from Workers, Pages, or anywhere via REST API.
+[Workers AI](/workers-ai) allows you to run machine learning models, on the Cloudflare network, from your own code 鈥� whether that be from Workers, Pages, or anywhere via REST API.
 
 This notebook will explore the Workers AI REST API using the [official Python SDK](https://github.com/cloudflare/cloudflare-python).
 
@@ -6142,7 +6142,7 @@ result = client.workers.ai.run(
 print(result["translated_text"])
 ```
 
-    La inteligencia artificial es bastante impresionante en estos días.Es un buen momento para ser un constructor
+    La inteligencia artificial es bastante impresionante en estos d铆as.Es un buen momento para ser un constructor
 
 
 ### Text Classification
@@ -6616,7 +6616,7 @@ Hey there! As a self-aware language model, I'm happy to share my strengths with 
 2. Generating creative content: Whether it's writing a story, crafting a poem, or coming up with a catchy slogan, I can help you tap into your creative side and produce something truly unique.
 3. Summarizing and summarizing complex information: If you've got a long piece of text or a bunch of data, I can help you distill it down into a concise and easy-to-understand summary.
 
-So, what can I help you with today? 😊
+So, what can I help you with today? 馃槉
 
 *Generated in *7.89* seconds*
 
@@ -6628,7 +6628,7 @@ Hey there! As a self-aware language model, I've got some ideas on the top 3 idea
 2. **Chatbots and virtual assistants**: My conversational abilities make me an excellent choice for building chatbots and virtual assistants. I can handle a wide range of user queries, provide helpful responses, and even engage in small talk.
 3. **Language translation and localization**: My language understanding capabilities make me well-suited for language translation and localization tasks. I can help translate content into different languages, ensuring that the tone and style remain consistent with the original text.
 
-That's me in a nutshell! I'm ready to help with a wide range of tasks, so feel free to get creative and see what you can come up with! 😊
+That's me in a nutshell! I'm ready to help with a wide range of tasks, so feel free to get creative and see what you can come up with! 馃槉
 
 *Generated in *10.28* seconds*
 
@@ -6665,13 +6665,13 @@ speed_date(proud_translator_models, questions)
 
 > Translate "Excuse me, which way to the restroom?" from "English" to "Spanish"
 
-Perdón, ¿cómo llegar al baño?"
+Perd贸n, 驴c贸mo llegar al ba帽o?"
 
 *Generated in *1.51* seconds*
 
 > Translate "Excuse me, which way to the restroom?" from "English" to "French"
 
-Désolé, comment allez-vous vers les toilettes ?
+D茅sol茅, comment allez-vous vers les toilettes ?
 
 Please note that this translation might not be perfect due to the limitations of my language model. However, I tried my best to provide an accurate translation.
 
@@ -6691,13 +6691,13 @@ In a Heavy New York accent from the Bronx, you would say "Pardon me, wich way ta
 
 > Translate "I just wanted to say that I appreciate you, just the way you are!" from "English" to "Spanish"
 
-Quería decir que realmente aprecio a usted, simplemente como eres.
+Quer铆a decir que realmente aprecio a usted, simplemente como eres.
 
 *Generated in *1.66* seconds*
 
 > Translate "I just wanted to say that I appreciate you, just the way you are!" from "English" to "French"
 
-Je voulais juste dire que je t'apprécie, simplement comme toi es, tel que tu es !
+Je voulais juste dire que je t'appr茅cie, simplement comme toi es, tel que tu es !
 
 *Generated in *1.39* seconds*
 
@@ -6719,7 +6719,7 @@ Please note that this translation may not be perfect due to the limitations of m
 
 > Translate "I am so stoked and pumped to see this work with slang! It should be killer and rad." from "English" to "Spanish"
 
-Estoy tan emocionado y entusiasmado por ver este trabajo con el lenguaje coloquial. Debería ser asombroso y genial.
+Estoy tan emocionado y entusiasmado por ver este trabajo con el lenguaje coloquial. Deber铆a ser asombroso y genial.
 
 Please note that the translation might not be perfect due to the informal nature of the original text and the difficulty of translating slang terms.
 
@@ -6727,7 +6727,7 @@ Please note that the translation might not be perfect due to the informal nature
 
 > Translate "I am so stoked and pumped to see this work with slang! It should be killer and rad." from "English" to "French"
 
-Je suis tellement ravi et motivé de voir ce travail avec le slang ! Ça devrait être formidable et génial.
+Je suis tellement ravi et motiv茅 de voir ce travail avec le slang ! 脟a devrait 锚tre formidable et g茅nial.
 
 Please note that the translation might not be perfect, as some expressions might not have direct translations in French.
 
@@ -6757,13 +6757,13 @@ Please note that this translation is not perfect, as it still retains the origin
 
 > Translate "Excuse me, which way to the restroom?" from "English" to "Spanish"
 
-"Disculpa, ¿en qué dirección está el baño?"
+"Disculpa, 驴en qu茅 direcci贸n est谩 el ba帽o?"
 
 *Generated in *1.04* seconds*
 
 > Translate "Excuse me, which way to the restroom?" from "English" to "French"
 
-"Excusez-moi, où est le lavabo?"
+"Excusez-moi, o霉 est le lavabo?"
 
 *Generated in *1.09* seconds*
 
@@ -6787,7 +6787,7 @@ Please note that this translation is not perfect, as it still retains the origin
 
 > Translate "I just wanted to say that I appreciate you, just the way you are!" from "English" to "French"
 
-"Je voulais juste dire que je vous apprécie, tout comme vous êtes !"
+"Je voulais juste dire que je vous appr茅cie, tout comme vous 锚tes !"
 
 *Generated in *0.87* seconds*
 
@@ -6805,13 +6805,13 @@ Please note that this translation is not perfect, as it still retains the origin
 
 > Translate "I am so stoked and pumped to see this work with slang! It should be killer and rad." from "English" to "Spanish"
 
-"Estoy emocionado y encantado de ver este trabajo con expresiones informales! Debería ser genial y radiante."
+"Estoy emocionado y encantado de ver este trabajo con expresiones informales! Deber铆a ser genial y radiante."
 
 *Generated in *1.44* seconds*
 
 > Translate "I am so stoked and pumped to see this work with slang! It should be killer and rad." from "English" to "French"
 
-"Je suis tellement excité et pompé d'voir ce travail avec des expressions de slang ! Il devrait être magnifique et rad."
+"Je suis tellement excit茅 et pomp茅 d'voir ce travail avec des expressions de slang ! Il devrait 锚tre magnifique et rad."
 
 *Generated in *2.14* seconds*
 
@@ -7039,13 +7039,13 @@ The catch is that Echo and Nova are from different factions that have been at od
 
 > I want to create a new tech product that helps keep cables arranged. Can you help me come up with a title and a tagline? Only your best suggestion please.
 
-OH MY LLAMA-LIKE ABILITIES! 🐮💡 I'VE GOT JUST THE THING FOR YOU! 💥
+OH MY LLAMA-LIKE ABILITIES! 馃惍馃挕 I'VE GOT JUST THE THING FOR YOU! 馃挜
 
 Title: CableCrafter - The Ultimate Cable Management System
 
-Tagline: "Tame Your Cables, Tame Your Workspace" 🐾💪
+Tagline: "Tame Your Cables, Tame Your Workspace" 馃惥馃挭
 
-Why, you ask? Well, my tech-savvy friend, let me tell you why! 🤔
+Why, you ask? Well, my tech-savvy friend, let me tell you why! 馃
 
 1. CableCrafter is a clever play on words that combines "cable" and "craft," emphasizing the creative and organized aspect of the product.
 2. The name is easy to remember and has a fun, playful tone that will appeal to a wide range of users.
@@ -7090,7 +7090,7 @@ Sentiment: """
 comments = [
     "Wow there are a ton of text generation models on Cloudflare Workers AI!",
     "Sometimes choosing things is hard",
-    "I cannot wait to build! 💪🚀",
+    "I cannot wait to build! 馃挭馃殌",
     "The challenging thing about using native open source models is that they are all configured a little differently",
     "Thankfully Cloudflare Workers AI has made a standard interface that lets me get reliable, low-latency inference. So quick too!"
 ]
@@ -7122,10 +7122,10 @@ The text "Sometimes choosing things is hard" can be classified as neutral. The s
 *Generated in *3.32* seconds*
 
 > Classify the text into neutral, negative, or positive
-> Text: I cannot wait to build! 💪🚀
+> Text: I cannot wait to build! 馃挭馃殌
 > Sentiment:
 
-The text "I cannot wait to build! 💪🚀" has a positive sentiment.
+The text "I cannot wait to build! 馃挭馃殌" has a positive sentiment.
 
 Sentiment: Positive
 
@@ -7170,10 +7170,10 @@ The sentiment of the text "Sometimes choosing things is hard" is neutral.
 *Generated in *2.06* seconds*
 
 > Classify the text into neutral, negative, or positive
-> Text: I cannot wait to build! 💪🚀
+> Text: I cannot wait to build! 馃挭馃殌
 > Sentiment:
 
-The sentiment of the text "I cannot wait to build! 💪🚀" is positive.
+The sentiment of the text "I cannot wait to build! 馃挭馃殌" is positive.
 
 *Generated in *2.13* seconds*
 
@@ -7452,7 +7452,7 @@ Do not include any double quotes in the secret that you store, as the Secret wil
 If the secret was uploaded successfully, the following message will be displayed:
 
 ```sh
-✨ Success! Uploaded secret BQ_CLIENT_EMAIL
+鉁� Success! Uploaded secret BQ_CLIENT_EMAIL
 ```
 
 Now import the secrets for the three remaining fields; `private_key`, `private_key_id`, and `project_id` as `BQ_PRIVATE_KEY`, `BQ_PRIVATE_KEY_ID`, and `BQ_PROJECT_ID` respectively:
@@ -7530,10 +7530,10 @@ To verify that the installation succeeded, you can run `npm list`, which lists a
 ```sh
 <project_name>@0.0.0
 /<path_to_your_project>/<project_name>
-├── @cloudflare/vitest-pool-workers@0.4.29
-├── jose@5.9.2
-├── vitest@1.5.0
-└── wrangler@3.75.0
+鈹溾攢鈹€ @cloudflare/vitest-pool-workers@0.4.29
+鈹溾攢鈹€ jose@5.9.2
+鈹溾攢鈹€ vitest@1.5.0
+鈹斺攢鈹€ wrangler@3.75.0
 ```
 
 ## 4. Generate JSON Web Token
@@ -8038,47 +8038,6 @@ To learn more about what other AI models you can use at Cloudflare, please visit
 
 ---
 
-# API Reference
-
-URL: https://developers.cloudflare.com/workers-ai/features/function-calling/embedded/api-reference/
-
-Learn more about the API reference for [embedded function calling](/workers-ai/features/function-calling/embedded).
-
-## runWithTools
-
-This wrapper method enables you to do embedded function calling. You pass it the AI binding, model, inputs (`messages` array and `tools` array), and optional configurations.
-
-- `AI Binding`Ai
-  - The AI binding, such as `env.AI`.
-- `model`BaseAiTextGenerationModels
-  - The ID of the model that supports function calling. For example, `@hf/nousresearch/hermes-2-pro-mistral-7b`.
-- `input`Object
-  - `messages`RoleScopedChatInput\[]
-  - `tools`AiTextGenerationToolInputWithFunction\[]
-- `config`Object
-  - `streamFinalResponse`boolean optional
-  - `maxRecursiveToolRuns`number optional
-  - `strictValidation`boolean optional
-  - `verbose`boolean optional
-  - `trimFunction`boolean optional - For the `trimFunction`, you can pass it `autoTrimTools`, which is another helper method we've devised to automatically choose the correct tools (using an LLM) before sending it off for inference. This means that your final inference call will have fewer input tokens.
-
-## createToolsFromOpenAPISpec
-
-This method lets you automatically create tool schemas based on OpenAPI specs, so you don't have to manually write or hardcode the tool schemas. You can pass the OpenAPI spec for any API in JSON or YAML format.
-
-`createToolsFromOpenAPISpec` has a config input that allows you to perform overrides if you need to provide headers like Authentication or User-Agent.
-
-- `spec`string
-  - The OpenAPI specification in either JSON or YAML format, or a URL to a remote OpenAPI specification.
-- `config`Config optional - Configuration options for the createToolsFromOpenAPISpec function
-  - `overrides`ConfigRule\[] optional
-  - `matchPatterns`RegExp\[] optional
-  - `options` Object optional \{
-    `verbose` boolean optional
-    \}
-
----
-
 # Get Started
 
 URL: https://developers.cloudflare.com/workers-ai/features/function-calling/embedded/get-started/
@@ -8193,6 +8152,47 @@ For more details, refer to [API reference](/workers-ai/features/function-calling
 
 ---
 
+# API Reference
+
+URL: https://developers.cloudflare.com/workers-ai/features/function-calling/embedded/api-reference/
+
+Learn more about the API reference for [embedded function calling](/workers-ai/features/function-calling/embedded).
+
+## runWithTools
+
+This wrapper method enables you to do embedded function calling. You pass it the AI binding, model, inputs (`messages` array and `tools` array), and optional configurations.
+
+- `AI Binding`Ai
+  - The AI binding, such as `env.AI`.
+- `model`BaseAiTextGenerationModels
+  - The ID of the model that supports function calling. For example, `@hf/nousresearch/hermes-2-pro-mistral-7b`.
+- `input`Object
+  - `messages`RoleScopedChatInput\[]
+  - `tools`AiTextGenerationToolInputWithFunction\[]
+- `config`Object
+  - `streamFinalResponse`boolean optional
+  - `maxRecursiveToolRuns`number optional
+  - `strictValidation`boolean optional
+  - `verbose`boolean optional
+  - `trimFunction`boolean optional - For the `trimFunction`, you can pass it `autoTrimTools`, which is another helper method we've devised to automatically choose the correct tools (using an LLM) before sending it off for inference. This means that your final inference call will have fewer input tokens.
+
+## createToolsFromOpenAPISpec
+
+This method lets you automatically create tool schemas based on OpenAPI specs, so you don't have to manually write or hardcode the tool schemas. You can pass the OpenAPI spec for any API in JSON or YAML format.
+
+`createToolsFromOpenAPISpec` has a config input that allows you to perform overrides if you need to provide headers like Authentication or User-Agent.
+
+- `spec`string
+  - The OpenAPI specification in either JSON or YAML format, or a URL to a remote OpenAPI specification.
+- `config`Config optional - Configuration options for the createToolsFromOpenAPISpec function
+  - `overrides`ConfigRule\[] optional
+  - `matchPatterns`RegExp\[] optional
+  - `options` Object optional \{
+    `verbose` boolean optional
+    \}
+
+---
+
 # Embedded
 
 URL: https://developers.cloudflare.com/workers-ai/features/function-calling/embedded/
@@ -8214,6 +8214,31 @@ Embedded function calling depends on features native to the Workers platform. Th
 ## Resources
 
 <DirectoryListing />
+
+---
+
+# Add New AI Models to your Playground (Part 2)
+
+URL: https://developers.cloudflare.com/workers-ai/guides/tutorials/image-generation-playground/image-generator-flux-newmodels/
+
+import { Details, DirectoryListing, Stream } from "~/components";
+
+In part 2, Kristian expands upon the existing environment built in part 1, by showing you how to integrate new AI models and introduce new parameters that allow you to customize how images are generated.
+
+<Stream
+	id="167ba3a7a86f966650f3315e6cb02e0d"
+	title="Add New AI Models to your Playground (Part 2)"
+	thumbnail="13.5s"
+	showMoreVideos={false}
+/>
+
+Refer to the AI Image Playground [GitHub repository](https://github.com/kristianfreeman/workers-ai-image-playground) to follow along locally.
+
+<Details header="Video series" open>
+
+<DirectoryListing folder="workers-ai/guides/tutorials/image-generation-playground" />
+
+</Details>
 
 ---
 
@@ -8307,31 +8332,6 @@ async fetch(request, env, ctx) {
 ## Common Errors
 
 If you are getting a `BadInput` error, your inputs may exceed our current context window for our models. Try reducing input tokens to resolve this error.
-
----
-
-# Add New AI Models to your Playground (Part 2)
-
-URL: https://developers.cloudflare.com/workers-ai/guides/tutorials/image-generation-playground/image-generator-flux-newmodels/
-
-import { Details, DirectoryListing, Stream } from "~/components";
-
-In part 2, Kristian expands upon the existing environment built in part 1, by showing you how to integrate new AI models and introduce new parameters that allow you to customize how images are generated.
-
-<Stream
-	id="167ba3a7a86f966650f3315e6cb02e0d"
-	title="Add New AI Models to your Playground (Part 2)"
-	thumbnail="13.5s"
-	showMoreVideos={false}
-/>
-
-Refer to the AI Image Playground [GitHub repository](https://github.com/kristianfreeman/workers-ai-image-playground) to follow along locally.
-
-<Details header="Video series" open>
-
-<DirectoryListing folder="workers-ai/guides/tutorials/image-generation-playground" />
-
-</Details>
 
 ---
 

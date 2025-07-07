@@ -13,6 +13,13 @@ vars = { ENVIRONMENT = "development" }
 [ai]
 binding = "AI"
 
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true
+
+
+
+
 # Environment variables (set these using wrangler secret put)
 # Required:
 # CLOUDFLARE_ACCOUNT_ID

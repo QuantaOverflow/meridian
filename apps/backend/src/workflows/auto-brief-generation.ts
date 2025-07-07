@@ -1,10 +1,10 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
-import { getDb } from '../lib/utils';
+import { getDb } from '../lib/database';
 import { $articles, $reports, $sources, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
-import { createDataFlowObserver } from '../lib/dataflow-observability';
-import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/clustering-service';
-import { createAIServices } from '../lib/ai-services';
+import { createDataFlowObserver } from '../lib/observability/dataflow';
+import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
+import { createAIServices } from '../lib/services/ai-services';
 import type { Env } from '../index';
 
 // ============================================================================

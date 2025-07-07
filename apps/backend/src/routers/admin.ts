@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import { getDb } from '../lib/utils';
+import { getDb } from '../lib/database';
 import { $sources, $articles, $reports, eq, and, or, desc, isNotNull, gte, sql, inArray } from '@meridian/database';
 import { AutoBriefGenerationWorkflow, type BriefGenerationParams } from '../workflows/auto-brief-generation';
-import { createAIServices } from '../lib/ai-services';
-import { handleServiceResponse } from '../lib/clustering-service';
+import { createAIServices } from '../lib/services/ai-services';
+import { handleServiceResponse } from '../lib/services/clustering';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
   createSuccessResponse, 
@@ -12,8 +12,8 @@ import {
   processPaginationParams,
   checkResourceExists,
   validateDateRange
-} from '../lib/api-utils';
-import { Logger } from '../lib/logger';
+} from '../lib/api/utils';
+import { Logger } from '../lib/core/logger';
 import type { Env } from '../index';
 
 const app = new Hono<{ Bindings: Env }>();

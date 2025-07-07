@@ -3,8 +3,9 @@ import { z } from 'zod';
 import type { HonoEnv } from '../app';
 import { $sources, eq } from '@meridian/database';
 import { zValidator } from '@hono/zod-validator';
-import { hasValidAuthToken, getDb } from '../lib/utils';
-import { Logger } from '../lib/logger';
+import { hasValidAuthToken } from '../lib/core/utils';
+import { getDb } from '../lib/database';
+import { Logger } from '../lib/core/logger';
 
 const logger = new Logger({ router: 'sources' });
 

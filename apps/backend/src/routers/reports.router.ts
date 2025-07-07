@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { HonoEnv } from '../app';
 import { $reports, desc } from '@meridian/database';
-import { hasValidAuthToken, getDb } from '../lib/utils';
+import { hasValidAuthToken } from '../lib/core/utils';
+import { getDb } from '../lib/database';
 import { zValidator } from '@hono/zod-validator';
 
 const route = new Hono<HonoEnv>()

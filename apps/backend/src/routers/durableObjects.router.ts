@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import { HonoEnv } from '../app';
 import { $articles, $sources, eq, isNull } from '@meridian/database';
-import { hasValidAuthToken, getDb } from '../lib/utils';
+import { hasValidAuthToken } from '../lib/core/utils';
+import { getDb } from '../lib/database';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { Logger } from '../lib/logger';
+import { Logger } from '../lib/core/logger';
 
 const logger = new Logger({ router: 'durable-objects' });
 

@@ -2,30 +2,13 @@ import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import { XMLParser } from 'fast-xml-parser';
 import { z } from 'zod';
+import { cleanString, cleanUrl } from '../core/utils';
 
 const rssFeedSchema = z.object({
   title: z.string().min(1),
   link: z.string(),
   pubDate: z.date().nullable(),
 });
-
-function cleanString(text: string) {
-  return text
-    .replace(/[ \t]+/g, ' ') // collapse spaces/tabs
-    .replace(/\n\s+/g, '\n') // clean spaces after newlines
-    .replace(/\s+\n/g, '\n') // clean spaces before newlines
-    .replace(/\n{3,}/g, '\n\n') // keep max 2 consecutive newlines
-    .trim(); // clean edges
-}
-
-function cleanUrl(url: string) {
-  const u = new URL(url);
-
-  const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid'];
-  paramsToRemove.forEach(param => u.searchParams.delete(param));
-
-  return u.toString();
-}
 
 /**
  * Parses an RSS/XML feed content to extract article information

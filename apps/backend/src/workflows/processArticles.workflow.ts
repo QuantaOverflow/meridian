@@ -1,13 +1,14 @@
 import getArticleAnalysisPrompt, { articleAnalysisSchema } from '../prompts/articleAnalysis.prompt';
 import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
-import { DomainRateLimiter } from '../lib/rateLimiter';
+import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';
-import { generateSearchText, getDb } from '../lib/utils';
-import { getArticleWithBrowser, getArticleWithFetch } from '../lib/articleFetchers';
+import { generateSearchText } from '../lib/core/utils';
+import { getDb } from '../lib/database';
+import { getArticleWithBrowser, getArticleWithFetch } from '../lib/services/article-fetchers';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
-import { Logger } from '../lib/logger';
-import { createAIServices } from '../lib/ai-services';
-import { handleServiceResponse } from '../lib/clustering-service';
+import { Logger } from '../lib/core/logger';
+import { createAIServices } from '../lib/services/ai-services';
+import { handleServiceResponse } from '../lib/services/clustering';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {

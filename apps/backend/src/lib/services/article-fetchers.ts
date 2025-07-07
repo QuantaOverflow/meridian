@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { parseArticle } from './parsers';
-import { userAgents } from './utils';
-import { Env } from '../index';
+import { parseArticle } from '../api/parsers';
+import { userAgents } from '../core/constants';
+import { Env } from '../../index';
 
 /**
  * Schema for validating responses from the Cloudflare Browser Rendering API

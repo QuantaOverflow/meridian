@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import { Logger } from './logger';
+import { Logger } from '../core/logger';
 
 // 统一的API响应格式
 export type ApiResponse<T = any> = {

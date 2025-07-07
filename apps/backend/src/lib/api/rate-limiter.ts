@@ -1,5 +1,5 @@
 import { WorkflowStep } from 'cloudflare:workers';
-import { Logger } from './logger';
+import { Logger } from '../core/logger';
 
 /**
  * Configuration options for the rate limiter

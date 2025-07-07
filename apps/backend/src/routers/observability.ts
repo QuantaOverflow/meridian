@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
-import { getDb } from '../lib/utils';
+import { getDb } from '../lib/database';
 import { $reports, desc, gte } from '@meridian/database';
 
 const app = new Hono<{ Bindings: Env }>();

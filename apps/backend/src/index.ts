@@ -3,7 +3,7 @@ import importedApp from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';
-import { Logger } from './lib/logger';
+import { Logger } from './lib/core/logger';
 import { Ai } from '@cloudflare/ai';
 
 type ArticleQueueMessage = { articles_id: number[] };

@@ -1,9 +1,9 @@
 import { $articles, $sources, eq } from '@meridian/database';
 import { Env } from '../index';
-import { getDb } from '../lib/utils';
-import { Logger } from '../lib/logger';
-import { parseRSSFeed } from '../lib/parsers';
-import { userAgents } from '../lib/utils';
+import { getDb } from '../lib/database';
+import { Logger } from '../lib/core/logger';
+import { parseRSSFeed } from '../lib/api/parsers';
+import { userAgents } from '../lib/core/constants';
 import { DurableObject } from 'cloudflare:workers';
 import { z } from 'zod';
 

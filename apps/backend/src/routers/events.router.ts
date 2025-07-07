@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { Env } from '../index';
 import { $articles, $sources, eq, sql, and } from '@meridian/database';
-import { getDb } from '../lib/utils';
+import { getDb } from '../lib/database';
 import type { HonoEnv } from '../app';
-import { Logger } from '../lib/logger';
+import { Logger } from '../lib/core/logger';
 
 const app = new Hono<{ Bindings: Env }>();
 const logger = new Logger({ component: 'events-api', level: 'debug' });

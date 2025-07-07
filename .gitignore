@@ -226,3 +226,4 @@ apps/backend/src/tests
 
 # backups
 .backup/
+meridian_dump.sql

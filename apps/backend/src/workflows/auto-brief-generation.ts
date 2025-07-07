@@ -208,14 +208,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('prepare_dataset', 'started');
       
-      // 质量控制指标 - 移到外部作用域
-      const qualityMetrics = {
-        validContent: 0,
-        missingR2Content: 0,
-        missingContentKey: 0,
-        contentErrors: 0,
-        insufficientQuality: 0,
-        filtered: 0
+      // 简化的质量控制指标 - 只记录工作流特有的R2内容获取统计
+      const r2ContentMetrics = {
+        r2FetchAttempts: 0,
+        r2FetchSuccesses: 0,
+        r2FetchFailures: 0,
+        qualityFilteredOut: 0
       };
       let validArticlesCount = 0;
       
@@ -332,30 +330,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             try {
               // 严格要求必须有 contentFileKey
               if (!article.contentFileKey) {
-                qualityMetrics.missingContentKey++;
+                r2ContentMetrics.r2FetchFailures++;
                 console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (ID: ${article.id}, 标题: ${article.title})`);
                 continue;
               }
 
               // 严格从 R2 获取内容，不允许回退
+              r2ContentMetrics.r2FetchAttempts++;
               const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
               if (!contentObject) {
-                qualityMetrics.missingR2Content++;
+                r2ContentMetrics.r2FetchFailures++;
                 console.error(`[AutoBrief] R2内容缺失，跳过文章 (ID: ${article.id}, 标题: ${article.title}, Key: ${article.contentFileKey})`);
                 continue;
               }
 
               content = await contentObject.text();
               if (!content) {
-                qualityMetrics.missingR2Content++;
+                r2ContentMetrics.r2FetchFailures++;
                 console.error(`[AutoBrief] R2返回空内容，跳过文章 (ID: ${article.id}, 标题: ${article.title})`);
                 continue;
               }
               
+              r2ContentMetrics.r2FetchSuccesses++;
               contentAcquired = true;
               
             } catch (error) {
-              qualityMetrics.contentErrors++;
+              r2ContentMetrics.r2FetchFailures++;
               console.error(`[AutoBrief] R2内容获取异常，跳过文章 (ID: ${article.id}, 标题: ${article.title}):`, error);
               continue;
             }
@@ -363,13 +363,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             // 严格的内容质量验证
             const qualityCheck = validateContentQuality(content, article as ArticleRecord);
             if (!qualityCheck.isValid) {
-              qualityMetrics.insufficientQuality++;
+              r2ContentMetrics.qualityFilteredOut++;
               console.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (ID: ${article.id}, 标题: ${article.title}, 原因: ${qualityCheck.reason})`);
               continue;
             }
 
             // 只有通过所有质量检查的文章才会被加入数据集
-            qualityMetrics.validContent++;
+            // 不需要额外计数，直接添加到articles数组
             
             articles.push({
               id: article.id,
@@ -388,19 +388,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             });
           }
 
-          // 计算过滤统计
-          qualityMetrics.filtered = validArticles.length - articles.length;
-          
           // 记录详细的质量控制日志
           console.log(`[AutoBrief] ✅ 内容质量控制完成:`);
           console.log(`  - 初始文章数: ${validArticles.length}`);
-          console.log(`  - 高质量内容: ${qualityMetrics.validContent}`);
-          console.log(`  - 缺少内容键: ${qualityMetrics.missingContentKey}`);
-          console.log(`  - R2内容缺失: ${qualityMetrics.missingR2Content}`);
-          console.log(`  - 获取异常: ${qualityMetrics.contentErrors}`);
-          console.log(`  - 质量不符: ${qualityMetrics.insufficientQuality}`);
-          console.log(`  - 总过滤数: ${qualityMetrics.filtered}`);
-          console.log(`  - 质量通过率: ${((qualityMetrics.validContent / validArticles.length) * 100).toFixed(1)}%`);
+          console.log(`  - 最终有效文章: ${articles.length}`);
+          console.log(`  - R2获取尝试: ${r2ContentMetrics.r2FetchAttempts}`);
+          console.log(`  - R2获取成功: ${r2ContentMetrics.r2FetchSuccesses}`);
+          console.log(`  - R2获取失败: ${r2ContentMetrics.r2FetchFailures}`);
+          console.log(`  - 质量过滤: ${r2ContentMetrics.qualityFilteredOut}`);
+          console.log(`  - 总过滤数: ${validArticles.length - articles.length}`);
+          console.log(`  - 质量通过率: ${((articles.length / validArticles.length) * 100).toFixed(1)}%`);
 
           const dataset: LightweightArticleDataset = {
             articles,
@@ -416,18 +413,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset as any); // 临时类型转换，因为评估器需要更新
+      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
         qualityAssessment: articleQuality,
-        contentQualityMetrics: {
-          validContent: qualityMetrics.validContent,
-          missingR2Content: qualityMetrics.missingR2Content,
-          missingContentKey: qualityMetrics.missingContentKey,
-          contentErrors: qualityMetrics.contentErrors,
-          insufficientQuality: qualityMetrics.insufficientQuality,
-          filtered: qualityMetrics.filtered,
-          qualityPassRate: ((qualityMetrics.validContent / validArticlesCount) * 100).toFixed(1) + '%'
+        r2ContentMetrics: {
+          fetchAttempts: r2ContentMetrics.r2FetchAttempts,
+          fetchSuccesses: r2ContentMetrics.r2FetchSuccesses,
+          fetchFailures: r2ContentMetrics.r2FetchFailures,
+          qualityFilteredOut: r2ContentMetrics.qualityFilteredOut,
+          successRate: r2ContentMetrics.r2FetchAttempts > 0 
+            ? ((r2ContentMetrics.r2FetchSuccesses / r2ContentMetrics.r2FetchAttempts) * 100).toFixed(1) + '%'
+            : '0%'
         }
       });
 

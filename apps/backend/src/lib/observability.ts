@@ -355,21 +355,38 @@ export class DataQualityAssessor {
       // 从嵌入映射中获取对应的嵌入向量
       const articleEmbedding = embeddingMap.get(article.id);
       
+      // 检查是否有 hasValidContent 属性（LightweightArticleDataset），否则回退到检查 content 字段
+      const hasContent = article.hasValidContent !== undefined 
+                         ? article.hasValidContent 
+                         : (!!article.content && article.content.trim().length > 0);
+      
+      // 检查是否有 contentLength 属性（LightweightArticleDataset），否则回退到检查 content 字段的长度
+      const contentLength = article.contentLength !== undefined 
+                            ? article.contentLength 
+                            : (article.content ? article.content.length : 0);
+      
+      // 检查是否有 contentFileKey 属性（LightweightArticleDataset），表示内容存储在 R2
+      const hasContentReference = !!article.contentFileKey;
+      
       const quality: any = {
         hasTitle: !!article.title && article.title.trim().length > 0,
-        hasContent: !!article.content && article.content.trim().length > 0,
+        hasContent: hasContent,
+        hasContentReference: hasContentReference,
         // 修复：从嵌入映射中检查嵌入向量
         hasEmbedding: !!articleEmbedding && Array.isArray(articleEmbedding) && articleEmbedding.length === 384,
         // 修复：检查publishDate字段，它在ArticleDataset中是字符串格式
         hasValidDate: !!article.publishDate && new Date(article.publishDate).getTime() > 0,
         embeddingLength: articleEmbedding && Array.isArray(articleEmbedding) ? articleEmbedding.length : 0,
         titleLength: article.title ? article.title.length : 0,
-        contentLength: article.content ? article.content.length : 0
+        contentLength: contentLength
       };
+      
+      // 对于 LightweightArticleDataset，内容存储在 R2，所以使用 hasContentReference 代替 hasContent
+      const effectiveHasContent = hasContentReference || hasContent;
       
       quality.score = [
         quality.hasTitle,
-        quality.hasContent, 
+        effectiveHasContent, 
         quality.hasEmbedding,
         quality.hasValidDate
       ].filter(Boolean).length / 4;
@@ -385,7 +402,8 @@ export class DataQualityAssessor {
       lowQuality: assessments.filter((a: any) => a.quality.score < 0.5).length,
       issues: {
         missingTitles: assessments.filter((a: any) => !a.quality.hasTitle).length,
-        missingContent: assessments.filter((a: any) => !a.quality.hasContent).length,
+        missingContent: assessments.filter((a: any) => !a.quality.hasContent && !a.quality.hasContentReference).length,
+        missingContentReference: assessments.filter((a: any) => !a.quality.hasContentReference).length,
         missingEmbeddings: assessments.filter((a: any) => !a.quality.hasEmbedding).length,
         invalidDates: assessments.filter((a: any) => !a.quality.hasValidDate).length
       },
@@ -393,7 +411,8 @@ export class DataQualityAssessor {
         avgContentLength: assessments.length > 0 ? assessments.reduce((sum: number, a: any) => sum + a.quality.contentLength, 0) / assessments.length : 0,
         minContentLength: assessments.length > 0 ? Math.min(...assessments.map((a: any) => a.quality.contentLength)) : 0,
         maxContentLength: assessments.length > 0 ? Math.max(...assessments.map((a: any) => a.quality.contentLength)) : 0,
-        emptyContent: assessments.filter((a: any) => a.quality.contentLength === 0).length
+        emptyContent: assessments.filter((a: any) => a.quality.contentLength === 0).length,
+        hasContentReference: assessments.filter((a: any) => a.quality.hasContentReference).length
       },
       embeddingStats: {
         totalEmbeddings: embeddings.length,

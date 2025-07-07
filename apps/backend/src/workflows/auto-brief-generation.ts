@@ -113,6 +113,17 @@ const dbStepConfig: WorkflowStepConfig = {
 };
 
 // ============================================================================
+// R2并行读取配置
+// ============================================================================
+
+/**
+ * R2内容读取并发批量大小
+ * 控制同时进行的R2读取操作数量，避免过度并发导致的性能问题
+ * 推荐值: 3-8, 根据R2性能和网络状况调整
+ */
+const R2_BATCH_SIZE = 5;
+
+// ============================================================================
 // 自动简报生成工作流
 // 
 // 性能优化说明：
@@ -123,8 +134,50 @@ const dbStepConfig: WorkflowStepConfig = {
 
 export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGenerationParams> {
   
+  // ============================================================================
+  // R2并行读取工具函数
+  // ============================================================================
+
   /**
-   * 按需从R2获取文章内容的辅助函数
+   * 批量并行处理函数，控制并发数量
+   * @param items 要处理的项目数组
+   * @param batchSize 批量大小，控制并发数量
+   * @param processor 处理单个项目的异步函数
+   * @returns 处理结果数组
+   */
+  private async batchProcessParallel<T, R>(
+    items: T[],
+    batchSize: number,
+    processor: (item: T, index: number) => Promise<R>
+  ): Promise<R[]> {
+    const results: R[] = [];
+    
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      console.log(`[AutoBrief] 并行处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)}, 大小: ${batch.length}`);
+      
+      // 并行处理当前批次
+      const batchPromises = batch.map((item, batchIndex) => 
+        processor(item, i + batchIndex)
+      );
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      // 处理批次结果，只保留成功的结果
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          console.warn(`[AutoBrief] 批次处理项目失败:`, result.reason);
+        }
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * 按需从R2获取文章内容的辅助函数 (并行化版本)
    * 避免在工作流状态中存储大量内容数据
    */
   private async getArticleContents(articleIds: number[], lightweightDataset: LightweightArticleDataset): Promise<Array<{
@@ -135,38 +188,51 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     url: string;
     summary: string;
   }>> {
-    const articlesWithContent = [];
-    
-    for (const articleId of articleIds) {
-      const lightweightArticle = lightweightDataset.articles.find(a => a.id === articleId);
-      if (lightweightArticle) {
-        try {
-          const contentObject = await this.env.ARTICLES_BUCKET.get(lightweightArticle.contentFileKey);
-          const content = contentObject ? await contentObject.text() : '';
-          
-          articlesWithContent.push({
-            id: lightweightArticle.id,
-            title: lightweightArticle.title,
-            content: content,
-            publishDate: lightweightArticle.publishDate,
-            url: lightweightArticle.url,
-            summary: lightweightArticle.summary
-          });
-        } catch (error) {
-          console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${articleId}):`, error);
-          // 使用空内容作为回退
-          articlesWithContent.push({
-            id: lightweightArticle.id,
-            title: lightweightArticle.title,
-            content: '',
-            publishDate: lightweightArticle.publishDate,
-            url: lightweightArticle.url,
-            summary: lightweightArticle.summary
-          });
-        }
-      }
+      console.log(`[AutoBrief] 开始并行获取 ${articleIds.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
+  
+  // 过滤出有效的文章信息
+  const validArticleInfos = articleIds
+    .map(articleId => lightweightDataset.articles.find(a => a.id === articleId))
+    .filter((article): article is NonNullable<typeof article> => !!article);
+  
+  console.log(`[AutoBrief] 有效文章信息: ${validArticleInfos.length} 篇`);
+  
+  // 并行处理函数
+  const processArticle = async (lightweightArticle: typeof validArticleInfos[0], index: number) => {
+    try {
+      const contentObject = await this.env.ARTICLES_BUCKET.get(lightweightArticle.contentFileKey);
+      const content = contentObject ? await contentObject.text() : '';
+      
+      return {
+        id: lightweightArticle.id,
+        title: lightweightArticle.title,
+        content: content,
+        publishDate: lightweightArticle.publishDate,
+        url: lightweightArticle.url,
+        summary: lightweightArticle.summary
+      };
+    } catch (error) {
+      console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${lightweightArticle.id}):`, error);
+      // 使用空内容作为回退
+      return {
+        id: lightweightArticle.id,
+        title: lightweightArticle.title,
+        content: '',
+        publishDate: lightweightArticle.publishDate,
+        url: lightweightArticle.url,
+        summary: lightweightArticle.summary
+      };
     }
-    
+  };
+
+  // 使用批量并行处理，控制并发数量
+  const articlesWithContent = await this.batchProcessParallel(
+    validArticleInfos,
+    R2_BATCH_SIZE, // 使用配置的批量大小
+    processArticle
+  );
+  
+  console.log(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇`);
     return articlesWithContent;
   }
   
@@ -289,7 +355,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             throw new Error(`文章数量不足进行聚类分析 (获取到 ${validArticles.length} 篇, 需要至少 2 篇)`);
           }
 
-          // 从 R2 获取文章内容并进行严格质量控制
+          // 从 R2 获取文章内容并进行严格质量控制 (并行化版本)
           const articles = [];
           const embeddings = [];
           
@@ -322,7 +388,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             return { isValid: true };
           };
           
-          for (const article of validArticles) {
+          // 并行处理文章内容获取的函数
+          const processArticleContent = async (article: typeof validArticles[0], index: number) => {
             let content = '';
             let contentAcquired = false;
             let failureReason = '';
@@ -331,8 +398,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               // 严格要求必须有 contentFileKey
               if (!article.contentFileKey) {
                 r2ContentMetrics.r2FetchFailures++;
-                console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (ID: ${article.id}, 标题: ${article.title})`);
-                continue;
+                return {
+                  success: false,
+                  reason: 'MISSING_CONTENT_KEY',
+                  article: null,
+                  embedding: null
+                };
               }
 
               // 严格从 R2 获取内容，不允许回退
@@ -340,15 +411,23 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
               if (!contentObject) {
                 r2ContentMetrics.r2FetchFailures++;
-                console.error(`[AutoBrief] R2内容缺失，跳过文章 (ID: ${article.id}, 标题: ${article.title}, Key: ${article.contentFileKey})`);
-                continue;
+                return {
+                  success: false,
+                  reason: 'R2_CONTENT_MISSING',
+                  article: null,
+                  embedding: null
+                };
               }
 
               content = await contentObject.text();
               if (!content) {
                 r2ContentMetrics.r2FetchFailures++;
-                console.error(`[AutoBrief] R2返回空内容，跳过文章 (ID: ${article.id}, 标题: ${article.title})`);
-                continue;
+                return {
+                  success: false,
+                  reason: 'EMPTY_R2_CONTENT',
+                  article: null,
+                  embedding: null
+                };
               }
               
               r2ContentMetrics.r2FetchSuccesses++;
@@ -356,40 +435,91 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               
             } catch (error) {
               r2ContentMetrics.r2FetchFailures++;
-              console.error(`[AutoBrief] R2内容获取异常，跳过文章 (ID: ${article.id}, 标题: ${article.title}):`, error);
-              continue;
+              return {
+                success: false,
+                reason: 'R2_FETCH_ERROR',
+                error: error,
+                article: null,
+                embedding: null
+              };
             }
 
             // 严格的内容质量验证
             const qualityCheck = validateContentQuality(content, article as ArticleRecord);
             if (!qualityCheck.isValid) {
               r2ContentMetrics.qualityFilteredOut++;
-              console.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (ID: ${article.id}, 标题: ${article.title}, 原因: ${qualityCheck.reason})`);
-              continue;
+              return {
+                success: false,
+                reason: `QUALITY_FILTER_${qualityCheck.reason}`,
+                article: null,
+                embedding: null
+              };
             }
 
-            // 只有通过所有质量检查的文章才会被加入数据集
-            // 不需要额外计数，直接添加到articles数组
-            
-            articles.push({
-              id: article.id,
-              title: article.title,
-              contentFileKey: article.contentFileKey!, // 确保非空
-              publishDate: article.publish_date?.toISOString() || new Date().toISOString(),
-              url: article.url,
-              summary: (article.event_summary_points as string[])?.[0] || article.title,
-              contentLength: content.length, // 记录内容长度用于质量评估
-              hasValidContent: true // 标记为有效内容
-            });
-
-            embeddings.push({
-              articleId: article.id,
-              embedding: article.embedding as number[]
-            });
+            // 只有通过所有质量检查的文章才会被返回
+            return {
+              success: true,
+              article: {
+                id: article.id,
+                title: article.title,
+                contentFileKey: article.contentFileKey!, // 确保非空
+                publishDate: article.publish_date?.toISOString() || new Date().toISOString(),
+                url: article.url,
+                summary: (article.event_summary_points as string[])?.[0] || article.title,
+                contentLength: content.length, // 记录内容长度用于质量评估
+                hasValidContent: true // 标记为有效内容
+              },
+              embedding: {
+                articleId: article.id,
+                embedding: article.embedding as number[]
+              }
+            };
+          };
+          
+          console.log(`[AutoBrief] 开始并行获取 ${validArticles.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
+          
+          // 使用批量并行处理 R2 内容获取
+          const processResults = await this.batchProcessParallel(
+            validArticles,
+            R2_BATCH_SIZE, // 使用配置的批量大小
+            processArticleContent
+          );
+          
+          // 处理结果并构建最终数据集
+          let successCount = 0;
+          let failuresByReason: Record<string, number> = {};
+          
+          for (const result of processResults) {
+            if (result.success && result.article && result.embedding) {
+              articles.push(result.article);
+              embeddings.push(result.embedding);
+              successCount++;
+            } else {
+              const reason = result.reason || 'UNKNOWN_ERROR';
+              failuresByReason[reason] = (failuresByReason[reason] || 0) + 1;
+              
+              if (result.reason === 'MISSING_CONTENT_KEY') {
+                console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (索引: ${processResults.indexOf(result)})`);
+              } else if (result.reason === 'R2_CONTENT_MISSING') {
+                console.error(`[AutoBrief] R2内容缺失，跳过文章 (索引: ${processResults.indexOf(result)})`);
+              } else if (result.reason === 'EMPTY_R2_CONTENT') {
+                console.error(`[AutoBrief] R2返回空内容，跳过文章 (索引: ${processResults.indexOf(result)})`);
+              } else if (result.reason?.startsWith('QUALITY_FILTER_')) {
+                const qualityReason = result.reason.replace('QUALITY_FILTER_', '');
+                console.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (索引: ${processResults.indexOf(result)}, 原因: ${qualityReason})`);
+              } else if (result.reason === 'R2_FETCH_ERROR') {
+                console.error(`[AutoBrief] R2内容获取异常，跳过文章 (索引: ${processResults.indexOf(result)}):`, result.error);
+              }
+            }
           }
+          
+          console.log(`[AutoBrief] 📊 并行内容获取统计:`);
+          console.log(`  - 成功处理: ${successCount} 篇`);
+          console.log(`  - 失败分布: ${JSON.stringify(failuresByReason, null, 2)}`);
+          console.log(`  - 总体成功率: ${((successCount / validArticles.length) * 100).toFixed(1)}%`);
 
           // 记录详细的质量控制日志
-          console.log(`[AutoBrief] ✅ 内容质量控制完成:`);
+          console.log(`[AutoBrief] ✅ 并行内容质量控制完成:`);
           console.log(`  - 初始文章数: ${validArticles.length}`);
           console.log(`  - 最终有效文章: ${articles.length}`);
           console.log(`  - R2获取尝试: ${r2ContentMetrics.r2FetchAttempts}`);
@@ -398,6 +528,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           console.log(`  - 质量过滤: ${r2ContentMetrics.qualityFilteredOut}`);
           console.log(`  - 总过滤数: ${validArticles.length - articles.length}`);
           console.log(`  - 质量通过率: ${((articles.length / validArticles.length) * 100).toFixed(1)}%`);
+          console.log(`  - 并行批次处理效率: 批量大小${R2_BATCH_SIZE}, 减少网络延迟`);
+          
+          // 记录具体的失败原因分布，用于监控和优化
+          console.log(`[AutoBrief] 📋 失败原因详细分布:`);
+          Object.entries(failuresByReason).forEach(([reason, count]) => {
+            const percentage = ((count / validArticles.length) * 100).toFixed(1);
+            console.log(`  - ${reason}: ${count} 篇 (${percentage}%)`);
+          });
 
           const dataset: LightweightArticleDataset = {
             articles,
@@ -646,6 +784,95 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       console.log('[AutoBrief] ✅ 故事质量检查通过');
       console.log(`[AutoBrief] 📈 故事统计: 平均重要性 ${storyQualityMetrics.averageImportance.toFixed(2)}, 分布: ${JSON.stringify(storyQualityMetrics.importanceDistribution)}`);
+
+      // =====================================================================
+      // 故事重要性评估观测 - 使用可观测性框架记录详细的故事选择指标
+      // =====================================================================
+      const totalCandidateStories = validatedStories.stories.length + validatedStories.rejectedClusters.length;
+      const importanceThreshold = storyMinImportance;
+      
+      // 构建故事明细分析
+      const storyBreakdown: Array<{
+        storyId: number;
+        title: string;
+        importance: number;
+        articleCount: number;
+        clusterId: number;
+        selected: boolean;
+        rejectionReason?: string;
+        marginFromThreshold: number;
+        selectionCategory: string;
+      }> = [];
+      
+      // 添加接受的故事
+      validatedStories.stories.forEach((story: any, index: number) => {
+        storyBreakdown.push({
+          storyId: index + 1,
+          title: story.title,
+          importance: story.importance,
+          articleCount: story.articleIds.length,
+          clusterId: story.clusterId || (index + 1), // 如果没有clusterId使用索引
+          selected: true,
+          marginFromThreshold: story.importance - importanceThreshold,
+          selectionCategory: story.importance >= 8 ? 'high_confidence' : story.importance >= 5 ? 'medium_confidence' : 'low_confidence'
+        });
+      });
+      
+      // 添加拒绝的聚类作为拒绝的故事
+      validatedStories.rejectedClusters.forEach((cluster: any, index: number) => {
+        storyBreakdown.push({
+          storyId: validatedStories.stories.length + index + 1,
+          title: `[拒绝聚类] ${cluster.rejectionReason}`,
+          importance: 0, // 拒绝的聚类重要性为0
+          articleCount: cluster.originalArticleIds?.length || 0,
+          clusterId: cluster.clusterId,
+          selected: false,
+          rejectionReason: cluster.rejectionReason,
+          marginFromThreshold: 0 - importanceThreshold, // 负值表示低于阈值
+          selectionCategory: 'rejected'
+        });
+      });
+      
+      // 计算阈值分析统计
+      const passedStories = storyBreakdown.filter(s => s.selected && s.importance >= importanceThreshold);
+      const rejectedStories = storyBreakdown.filter(s => !s.selected);
+      const highConfidenceSelections = storyBreakdown.filter(s => s.selected && s.importance >= 8);
+      const borderlineCases = storyBreakdown.filter(s => s.selected && s.importance >= importanceThreshold && s.importance < (importanceThreshold + 2));
+      const selectedStories = storyBreakdown.filter(s => s.selected);
+      
+      const avgMarginForSelected = selectedStories.length > 0 
+        ? selectedStories.reduce((sum, s) => sum + s.marginFromThreshold, 0) / selectedStories.length 
+        : 0;
+      const avgMarginForRejected = rejectedStories.length > 0 
+        ? rejectedStories.reduce((sum, s) => sum + s.marginFromThreshold, 0) / rejectedStories.length 
+        : 0;
+      
+      // 构建详细的故事选择指标
+      const storySelectionMetrics = {
+        candidateStories: totalCandidateStories,
+        selectedStories: validatedStories.stories.length,
+        rejectedStories: validatedStories.rejectedClusters.length,
+        importanceThreshold,
+        qualityFilters: ['AI_VALIDATION', 'CLUSTER_SIZE', 'CONTENT_QUALITY'],
+        avgImportanceScore: storyQualityMetrics.averageImportance,
+        storyBreakdown,
+        thresholdAnalysis: {
+          passedStories: passedStories.length,
+          rejectedStories: rejectedStories.length,
+          highConfidenceSelections: highConfidenceSelections.length,
+          borderlineCases: borderlineCases.length,
+          avgMarginForSelected,
+          avgMarginForRejected
+        },
+        selectionConfidence: {
+          highConfidence: highConfidenceSelections.length,
+          borderlineCases: borderlineCases.length,
+          avgSelectionMargin: avgMarginForSelected
+        }
+      };
+      
+      // 使用可观测性框架记录故事选择过程
+      await observability.logStorySelection(storySelectionMetrics);
 
       // =====================================================================
       // 步骤 4: 情报深度分析 (AI Worker)

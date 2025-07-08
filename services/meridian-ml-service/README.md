@@ -1,54 +1,55 @@
 # Meridian ML Service
 
-AI驱动的智能聚类分析服务，专为Meridian项目设计，提供嵌入生成和聚类分析功能。
+An AI-driven intelligent clustering and embedding generation service designed for the Meridian project, providing core machine learning capabilities with efficient text embedding, robust clustering with parameter optimization, and seamless integration with existing backend systems.
 
-## 🌟 主要特性
+## 🌟 Key Features
 
-- **嵌入生成**: 使用 `intfloat/multilingual-e5-small` 模型生成多语言文本嵌入
-- **智能聚类**: UMAP降维 + HDBSCAN聚类算法
-- **AI Worker集成**: 完美兼容Meridian后端的数据格式
-- **生产就绪**: Docker容器化，支持健康检查和监控
-- **可扩展**: 支持多种部署方式和自定义配置
+- **Multi-language Embedding Generation**: Uses `intfloat/multilingual-e5-small` model for high-quality text embeddings
+- **Intelligent Clustering**: UMAP dimensionality reduction + HDBSCAN clustering algorithms with automatic parameter optimization
+- **AI Worker Integration**: Perfect compatibility with Meridian backend data formats
+- **Production Ready**: Docker containerized with health checks and monitoring support
+- **Flexible API**: Auto-detects input data formats and provides multiple endpoint options
+- **Scalable Architecture**: Modular pipeline design supporting various deployment methods
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 本地开发
+### Local Development
 
-1. **安装依赖**:
+1. **Install Dependencies**:
 ```bash
 cd services/meridian-ml-service
 pip install -e .
 ```
 
-2. **启动服务**:
+2. **Start Service**:
 ```bash
 ./start_local.sh
 ```
 
-3. **测试服务**:
+3. **Test Service**:
 ```bash
 curl http://localhost:8081/health
 ```
 
-### Docker部署
+### Docker Deployment
 
-#### 方式1: 使用docker-compose（推荐）
+#### Method 1: Using docker-compose (Recommended)
 
 ```bash
-# 开发环境
+# Development environment
 docker-compose up -d
 
-# 生产环境（不挂载源代码）
+# Production environment (without source code mounting)
 docker-compose --profile production up -d
 ```
 
-#### 方式2: 直接Docker运行
+#### Method 2: Direct Docker Run
 
 ```bash
-# 构建镜像
+# Build image
 docker build -t meridian-ml-service:latest .
 
-# 运行容器
+# Run container
 docker run -d \
   --name meridian-ml-service \
   -p 8081:8080 \
@@ -57,96 +58,7 @@ docker run -d \
   meridian-ml-service:latest
 ```
 
-## 🛠️ 构建和部署
-
-### 1. 本地构建
-
-```bash
-# 仅构建镜像
-./build-and-push-multiarch.sh --build-only
-
-# 构建并推送到Docker Hub
-./build-and-push-multiarch.sh --push --user your-dockerhub-username
-
-# 多架构构建
-./build-and-push-multiarch.sh --platform linux/amd64,linux/arm64 --push
-```
-
-### 2. VPS部署
-
-#### 简单部署
-```bash
-# 部署到VPS（自动生成API令牌）
-./deploy-to-vps.sh --host user@your-vps-ip
-
-# 使用自定义镜像和令牌
-./deploy-to-vps.sh --host user@your-vps-ip \
-  --image your-dockerhub-user/meridian-ml-service \
-  --token your-api-token
-```
-
-#### 生产环境部署（带SSL和监控）
-```bash
-# 完整生产环境部署
-./deploy-to-vps.sh --host user@your-vps-ip \
-  --domain api.yourdomain.com \
-  --monitoring
-```
-
-这将自动配置：
-- ✅ SSL证书（Let's Encrypt）
-- ✅ Nginx反向代理
-- ✅ Prometheus监控
-- ✅ Grafana仪表板
-- ✅ 自动重启和健康检查
-
-## 📋 环境变量
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| `API_TOKEN` | API访问令牌 | 必需设置 |
-| `EMBEDDING_MODEL_NAME` | 嵌入模型名称 | `intfloat/multilingual-e5-small` |
-| `LOG_LEVEL` | 日志级别 | `INFO` |
-| `PYTHONUNBUFFERED` | Python输出缓冲 | `1` |
-
-## 🔧 API接口
-
-### 核心端点
-
-- `GET /` - 服务信息
-- `GET /health` - 健康检查
-- `POST /embeddings` - 生成文本嵌入
-- `POST /ai-worker/clustering` - AI Worker格式聚类
-- `POST /clustering/auto` - 自动检测格式聚类
-
-### 示例请求
-
-#### 嵌入生成
-```bash
-curl -X POST "http://localhost:8081/embeddings" \
-  -H "Authorization: Bearer your-api-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "texts": ["Hello world", "你好世界"],
-    "normalize": true
-  }'
-```
-
-#### AI Worker聚类
-```bash
-curl -X POST "http://localhost:8081/ai-worker/clustering" \
-  -H "Authorization: Bearer your-api-token" \
-  -H "Content-Type: application/json" \
-  -d '[
-    {
-      "id": 1,
-      "embedding": [0.1, 0.2, ..., 0.384],
-      "title": "文章标题"
-    }
-  ]'
-```
-
-## 🏗️ 架构设计
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -160,157 +72,499 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
                        └─────────────────┘
 ```
 
-### 技术栈
+### Core Components
 
-- **Web框架**: FastAPI + Uvicorn
-- **AI模型**: Transformers + PyTorch
-- **聚类算法**: UMAP + HDBSCAN + scikit-learn
-- **容器化**: Docker + Docker Compose
-- **反向代理**: Nginx (生产环境)
-- **监控**: Prometheus + Grafana (可选)
+The system is structured into several logical components:
 
-## 🔍 监控和运维
+- **Core ML Service**: FastAPI application exposing ML functionalities via RESTful APIs
+- **ML Pipeline**: Modular processing pipeline with data extraction, clustering, and content analysis stages
+- **Embedding Engine**: Handles loading and computation of text embeddings using transformer models
+- **Clustering Engine**: Implements UMAP + HDBSCAN with automatic parameter optimization
+- **AI Worker Integration**: Seamless compatibility with existing AI Worker data formats
 
-### 健康检查
+### Technology Stack
+
+- **Web Framework**: FastAPI + Uvicorn
+- **AI Models**: Transformers + PyTorch (CPU)
+- **Clustering**: UMAP + HDBSCAN + Scikit-learn
+- **Data Validation**: Pydantic v2
+- **Containerization**: Docker + Docker Compose
+- **Reverse Proxy**: Nginx (production)
+- **Monitoring**: Prometheus + Grafana (optional)
+
+## 🛠️ Build and Deployment
+
+### 1. Local Build
 
 ```bash
-# 本地检查
+# Build image only
+./build-and-push-multiarch.sh --build-only
+
+# Build and push to Docker Hub
+./build-and-push-multiarch.sh --push --user your-dockerhub-username
+
+# Multi-architecture build
+./build-and-push-multiarch.sh --platform linux/amd64,linux/arm64 --push
+```
+
+### 2. VPS Deployment
+
+#### Simple Deployment
+```bash
+# Deploy to VPS (auto-generate API token)
+./deploy-to-vps.sh --host user@your-vps-ip
+
+# Use custom image and token
+./deploy-to-vps.sh --host user@your-vps-ip \
+  --image your-dockerhub-user/meridian-ml-service \
+  --token your-api-token
+```
+
+#### Production Deployment (with SSL and Monitoring)
+```bash
+# Complete production environment deployment
+./deploy-to-vps.sh --host user@your-vps-ip \
+  --domain api.yourdomain.com \
+  --monitoring
+```
+
+This automatically configures:
+- ✅ SSL certificates (Let's Encrypt)
+- ✅ Nginx reverse proxy
+- ✅ Prometheus monitoring
+- ✅ Grafana dashboard
+- ✅ Auto-restart and health checks
+
+## 📋 Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_TOKEN` | API access token | Required |
+| `EMBEDDING_MODEL_NAME` | Embedding model name | `intfloat/multilingual-e5-small` |
+| `LOG_LEVEL` | Logging level | `INFO` |
+| `BATCH_SIZE` | Processing batch size | `32` |
+| `MAX_TEXT_LENGTH` | Maximum text length | `512` |
+| `PYTHONUNBUFFERED` | Python output buffering | `1` |
+
+## 🔧 API Endpoints
+
+### Core Endpoints
+
+- `GET /` - Service information and available endpoints
+- `GET /health` - Health check with ML functionality status
+- `GET /metrics` - System metrics and supported data formats
+- `GET /config` - Current configuration settings
+- `POST /embeddings` - Generate text embeddings
+- `POST /ai-worker/clustering` - AI Worker format clustering
+- `POST /clustering/auto` - Auto-detect format clustering
+
+### API Request Examples
+
+#### Embedding Generation
+```bash
+curl -X POST "http://localhost:8081/embeddings" \
+  -H "X-API-Token: your-api-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": ["Hello world", "Machine learning is fascinating"],
+    "normalize": true
+  }'
+```
+
+#### AI Worker Clustering
+```bash
+curl -X POST "http://localhost:8081/ai-worker/clustering" \
+  -H "X-API-Token: your-api-token" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "id": 1,
+      "embedding": [0.1, 0.2, ..., 0.384],
+      "title": "Article Title",
+      "url": "https://example.com/article1"
+    },
+    {
+      "id": 2,
+      "embedding": [0.3, 0.4, ..., 0.256],
+      "title": "Another Article",
+      "url": "https://example.com/article2"
+    }
+  ]'
+```
+
+#### Auto-Format Clustering
+```bash
+curl -X POST "http://localhost:8081/clustering/auto" \
+  -H "X-API-Token: your-api-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {"text": "First document to cluster"},
+      {"text": "Second document with similar content"},
+      {"text": "Third document about different topic"}
+    ],
+    "config": {
+      "min_cluster_size": 2,
+      "min_samples": 1
+    },
+    "optimization": {
+      "enabled": true,
+      "metric": "dbcv"
+    },
+    "content_analysis": {
+      "enabled": true,
+      "max_representative_content": 3
+    }
+  }'
+```
+
+## 🔍 Data Flow and Processing Pipeline
+
+The service processes data through a modular pipeline:
+
+1. **Request Reception**: Client sends HTTP POST request with JSON payload
+2. **Authentication**: Verifies `X-API-Token` header for authorized access
+3. **Input Validation**: Validates JSON using Pydantic models with auto-format detection
+4. **Data Extraction Stage**:
+   - Generates embeddings for raw text using transformer models
+   - Extracts and validates pre-computed embeddings
+   - Preserves original texts and metadata
+5. **Clustering Stage**:
+   - Applies UMAP for dimensionality reduction
+   - Performs HDBSCAN clustering with density-based grouping
+   - Optimizes parameters using DBCV metric (if enabled)
+6. **Content Analysis Stage**:
+   - Combines clustering results with original content
+   - Identifies representative content for each cluster
+   - Compiles statistical summaries
+7. **Response Generation**: Returns structured results following API schema
+
+## 📊 Supported Data Formats
+
+The service automatically detects and processes multiple input formats:
+
+### Text Format
+```json
+{
+  "items": [
+    {"text": "Document content to cluster"},
+    {"text": "Another document for analysis"}
+  ]
+}
+```
+
+### Vector Format
+```json
+{
+  "items": [
+    {"embedding": [0.1, 0.2, ..., 0.384]},
+    {"embedding": [0.3, 0.4, ..., 0.256]}
+  ]
+}
+```
+
+### AI Worker Basic Format
+```json
+[
+  {
+    "id": 1,
+    "embedding": [0.1, 0.2, ..., 0.384]
+  },
+  {
+    "id": 2,
+    "embedding": [0.3, 0.4, ..., 0.256]
+  }
+]
+```
+
+### AI Worker Extended Format
+```json
+[
+  {
+    "id": 1,
+    "embedding": [0.1, 0.2, ..., 0.384],
+    "title": "Article Title",
+    "url": "https://example.com/article1"
+  }
+]
+```
+
+### AI Worker Full Article Format
+```json
+[
+  {
+    "id": 1,
+    "embedding": [0.1, 0.2, ..., 0.384],
+    "title": "Complete Article Title",
+    "url": "https://example.com/article1",
+    "content": "Full article content...",
+    "author": "Author Name",
+    "published_date": "2024-01-01",
+    "source": "Source Name"
+  }
+]
+```
+
+## 🎛️ Configuration Options
+
+### Clustering Configuration
+```json
+{
+  "config": {
+    "min_cluster_size": 5,
+    "min_samples": 3,
+    "n_neighbors": 15,
+    "n_components": 10,
+    "metric": "cosine"
+  }
+}
+```
+
+### Optimization Configuration
+```json
+{
+  "optimization": {
+    "enabled": true,
+    "metric": "dbcv",
+    "n_trials": 20,
+    "umap_params": {
+      "n_neighbors": [5, 10, 15],
+      "n_components": [5, 10, 15],
+      "min_dist": [0.0, 0.1, 0.25]
+    },
+    "hdbscan_params": {
+      "min_cluster_size": [3, 5, 10],
+      "min_samples": [1, 3, 5]
+    }
+  }
+}
+```
+
+### Content Analysis Configuration
+```json
+{
+  "content_analysis": {
+    "enabled": true,
+    "max_representative_content": 5,
+    "include_outliers": true
+  }
+}
+```
+
+## 📈 Monitoring and Operations
+
+### Health Monitoring
+
+```bash
+# Local health check
 curl http://localhost:8081/health
 
-# VPS检查
+# VPS health check
 curl http://your-vps-ip:8080/health
 ```
 
-### 查看日志
+### View Logs
 
 ```bash
 # Docker Compose
 docker-compose logs -f ml-service
 
-# 单个容器
+# Single container
 docker logs meridian-ml-service -f
 ```
 
-### 性能监控
+### Performance Monitoring
 
-如果启用了监控，可以访问：
+If monitoring is enabled:
 - **Grafana**: `http://your-vps-ip:3000` (admin/admin123)
 - **Prometheus**: `http://your-vps-ip:9090`
 
-## 🛡️ 安全配置
+## 🛡️ Security Configuration
 
-### 生产环境检查清单
+### Production Security Checklist
 
-- [ ] 设置强密码的API令牌
-- [ ] 配置SSL证书（HTTPS）
-- [ ] 启用防火墙规则
-- [ ] 定期更新依赖包
-- [ ] 配置日志轮转
-- [ ] 设置资源限制
+- [ ] Set strong API token password
+- [ ] Configure SSL certificates (HTTPS)
+- [ ] Enable firewall rules
+- [ ] Regular dependency updates
+- [ ] Configure log rotation
+- [ ] Set resource limits
 
-### 推荐配置
+### Recommended Security Setup
 
 ```bash
-# 生成安全的API令牌
+# Generate secure API token
 openssl rand -hex 32
 
-# 设置防火墙（Ubuntu/Debian）
+# Configure firewall (Ubuntu/Debian)
 sudo ufw allow 22/tcp    # SSH
 sudo ufw allow 80/tcp    # HTTP
 sudo ufw allow 443/tcp   # HTTPS
 sudo ufw enable
 ```
 
-## 🚨 故障排查
+## 🚨 Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **镜像构建失败**
+1. **Image Build Failures**
    ```bash
-   # 检查Docker版本
+   # Check Docker version
    docker --version
    
-   # 清理缓存重新构建
+   # Clean cache and rebuild
    docker system prune -a
    ./build-and-push-multiarch.sh --build-only
    ```
 
-2. **健康检查失败**
+2. **Health Check Failures**
    ```bash
-   # 查看容器日志
+   # Check container logs
    docker logs meridian-ml-service --tail 50
    
-   # 检查端口占用
+   # Check port usage
    netstat -tulpn | grep :8080
    ```
 
-3. **VPS部署失败**
+3. **VPS Deployment Issues**
    ```bash
-   # 检查SSH连接
+   # Test SSH connection
    ssh user@your-vps-ip "docker --version"
    
-   # 手动部署
+   # Manual deployment
    scp docker-compose.yml user@your-vps-ip:~/
    ssh user@your-vps-ip "cd ~ && docker-compose up -d"
    ```
 
-### 性能优化
+### Performance Optimization
 
-- **内存**: 建议至少2GB RAM
-- **CPU**: 至少1核心，建议2核心以上
-- **存储**: 至少10GB可用空间
-- **网络**: 稳定的互联网连接（用于下载模型）
+- **Memory**: Minimum 2GB RAM recommended
+- **CPU**: At least 1 core, 2+ cores recommended
+- **Storage**: Minimum 10GB available space
+- **Network**: Stable internet connection (for model downloads)
 
-## 📚 API文档
+## 🧪 Testing
 
-部署后访问以下地址查看完整API文档：
+### Running Tests
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run all tests
+pytest
+
+# Run specific test modules
+pytest test/test_ml_service.py
+pytest test/test_ai_worker_integration.py
+pytest test/test_small_dataset.py
+```
+
+### Test Coverage
+
+The test suite includes:
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: AI Worker format compatibility
+- **Edge Case Tests**: Small dataset handling
+- **Mock Data Tests**: Synthetic data validation
+
+## 📚 API Documentation
+
+Access comprehensive API documentation after deployment:
 
 - **Swagger UI**: `http://your-host:8080/docs`
 - **ReDoc**: `http://your-host:8080/redoc`
 
-## 🤝 开发贡献
+## 🤝 Development
 
-### 开发环境设置
+### Development Environment Setup
 
 ```bash
-# 克隆项目
+# Clone repository
 git clone <repository-url>
 cd meridian/services/meridian-ml-service
 
-# 安装开发依赖
+# Install development dependencies
 pip install -e ".[dev]"
 
-# 运行测试
-pytest
-
-# 代码格式化
+# Code formatting
 ruff format .
 ruff check .
+
+# Type checking
+mypy src/
 ```
 
-### 项目结构
+### Project Structure
 
 ```
-src/
-├── main.py              # FastAPI应用入口
-├── pipeline.py          # 聚类处理管道
-├── clustering.py        # 聚类算法实现
-├── embeddings.py        # 嵌入生成
-├── schemas.py           # 数据模型定义
-├── config.py            # 配置管理
-└── dependencies.py      # 依赖注入
+src/meridian_ml_service/
+├── main.py              # FastAPI application entry point
+├── config.py            # Configuration management
+├── schemas.py           # Pydantic data models
+├── dependencies.py      # FastAPI dependency injection
+├── embeddings.py        # Embedding generation
+├── clustering.py        # Clustering algorithms
+└── pipeline.py          # ML processing pipeline
+
+docs/
+├── PROJECT_SUMMARY.md   # Project overview
+├── DOCKER_GUIDE.md      # Docker deployment guide
+├── AI_WORKER_INTEGRATION.md  # AI Worker compatibility
+└── README-DEPLOYMENT.md # Deployment instructions
+
+scripts/
+├── build-and-push.sh    # Docker build automation
+├── deploy-vps.sh        # VPS deployment
+├── download_model.py    # Model pre-download
+└── test_service.py      # Service testing
+
+test/
+├── test_ml_service.py   # Main service tests
+├── test_ai_worker_integration.py  # AI Worker tests
+├── test_small_dataset.py  # Edge case tests
+└── generate_mock_articles.py  # Mock data generation
 ```
 
-## 📄 许可证
+### Module Architecture
 
-本项目采用 MIT 许可证。详见 [LICENSE](../../LICENSE) 文件。
+- **`main.py`**: FastAPI application with endpoint definitions and request orchestration
+- **`config.py`**: Environment-based configuration using Pydantic Settings
+- **`schemas.py`**: Request/response models and data format detection utilities
+- **`dependencies.py`**: Shared resources and authentication management
+- **`embeddings.py`**: Transformer model loading and text-to-vector conversion
+- **`clustering.py`**: UMAP + HDBSCAN implementation with parameter optimization
+- **`pipeline.py`**: Modular processing workflow with configurable stages
 
-## 🆘 获取帮助
+## 🔗 Integration Points
 
-- **文档**: 查看 `docs/` 目录
-- **问题**: 在 GitHub Issues 中提交
-- **讨论**: 参与 GitHub Discussions
+### Meridian Backend Integration
+
+The service is designed as a drop-in replacement for existing AI Worker services:
+
+- **Compatible Data Formats**: Supports all AI Worker data structures
+- **Consistent API**: Maintains familiar endpoint patterns
+- **Enhanced Features**: Adds parameter optimization and content analysis
+- **Migration Support**: Provides automated format detection and conversion
+
+### External Dependencies
+
+- **Hugging Face Hub**: Downloads `intfloat/multilingual-e5-small` model
+- **Docker Hub**: Hosts pre-built images (`crossovo/meridian-ml-service`)
+- **Nginx**: Production reverse proxy configuration
+- **Prometheus/Grafana**: Optional monitoring and visualization
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](../../LICENSE) file for details.
+
+## 🆘 Getting Help
+
+- **Documentation**: Check the `docs/` directory
+- **Issues**: Submit issues on GitHub Issues
+- **Discussions**: Join GitHub Discussions
+- **API Reference**: Visit `/docs` endpoint after deployment
 
 ---
 
-**Meridian ML Service** - 让AI智能聚类变得简单高效 🚀 
+**Meridian ML Service** - Making AI-powered clustering simple and efficient 🚀

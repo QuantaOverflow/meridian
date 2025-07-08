@@ -1,324 +1,251 @@
 # Meridian AI Worker
 
-Meridian情报简报系统的AI服务工作器，提供统一的AI Gateway接口，支持多个AI提供商。
+Meridian AI Worker is an AI gateway service built on Cloudflare Workers, designed to provide a unified AI service interface for the Meridian Intelligence Brief System. It supports interaction with multiple AI providers (OpenAI, Anthropic, Google AI, Cloudflare Workers AI) and integrates enterprise-grade features including authentication, cost tracking, intelligent caching, and enhanced monitoring.
 
-## 🏗️ 项目结构
+## System Architecture Overview
+
+Meridian AI Worker adopts a clear layered architecture with well-defined responsibilities, featuring excellent modularity and extensibility. The core design philosophy is to abstract the differences between underlying AI providers through a unified AI Gateway service, achieving high maintainability and flexibility.
 
 ```
-meridian-ai-worker/
-├── 📁 src/                        # 核心源码
-│   ├── index.ts                   # 主要API端点
-│   ├── types.ts                   # TypeScript类型定义
-│   ├── 📁 capabilities/           # AI能力实现
-│   │   ├── chat.ts               # 对话能力
-│   │   ├── embedding.ts          # 嵌入生成
-│   │   ├── image.ts              # 图像处理
-│   │   └── index.ts              # 能力导出
-│   ├── 📁 services/              # 核心服务层
-│   │   ├── ai-gateway.ts         # AI Gateway核心服务
-│   │   ├── intelligence.ts       # 情报分析服务
-│   │   ├── embedding.ts          # 嵌入生成服务（待废弃）
-│   │   ├── auth.ts               # 认证服务
-│   │   ├── retry.ts              # 重试机制
-│   │   ├── logger.ts             # 日志服务
-│   │   ├── metadata.ts           # 元数据管理
-│   │   └── 📁 providers/         # AI提供商适配器
-│   ├── 📁 config/                # 配置管理
-│   │   └── providers.ts          # AI提供商配置
-│   └── 📁 prompts/               # AI提示词模板
-├── 📁 docs/                      # 项目文档
-│   ├── API_GUIDE.md              # API使用指南
-│   ├── QUICK_DEPLOY.md           # 快速部署指南
-│   ├── INTEGRATION_GUIDE.md      # 集成开发指南
-│   ├── NEW_SERVICE_INTEGRATION.md # 新服务集成指南
-│   ├── ARCHITECTURE.md           # 架构设计文档
-│   ├── AI_GATEWAY_CONFIGURATION.md # AI Gateway配置
-│   └── PROJECT_COMPREHENSIVE_GUIDE.md # 项目综合指南
-├── 📁 tests/                     # 测试文件
-│   ├── 📁 fixtures/              # 测试数据和夹具
-│   ├── auth.test.ts              # 认证测试
-│   ├── metadata.test.ts          # 元数据测试
-│   └── retry.test.ts             # 重试机制测试
-├── 📁 scripts/                   # 开发和部署脚本
-│   ├── create-new-service.js     # 新服务生成脚本
-│   ├── setup-local-env.sh        # 本地环境设置
-│   ├── test-deployment.sh        # 部署测试
-│   ├── base-test.sh              # 基础测试
-│   └── setup-env.sh              # 环境配置
-├── 📁 .wrangler/                 # Cloudflare Workers构建缓存
-├── 📁 dist/                      # 构建输出目录
-├── 📄 CHANGELOG.md               # 版本变更日志
-├── 📄 package.json               # 项目依赖配置
-├── 📄 wrangler.toml              # Cloudflare Workers配置
-├── 📄 tsconfig.json              # TypeScript配置
-├── 📄 vitest.config.ts           # 测试配置
-└── 📄 .dev.vars                  # 开发环境变量
+┌───────────────────────────────────────────────┐
+│              HTTP Routes (index.ts)           │  (API endpoints, request parsing, response handling)
+├───────────────────────────────────────────────┤
+│                  Service Layer                │  (Core business logic, AI capability coordination, provider calls)
+│  ┌───────────────────────────────────────────┐│
+│  │ AIGatewayService (Core AI request dispatch & enhancement) ││
+│  │ IntelligenceService (Intelligence analysis workflow)      ││
+│  │ BriefGenerationService (Brief generation workflow)       ││
+│  │ StoryValidationService (Story validation workflow)       ││
+│  │ AuthenticationService (Authentication & authorization)    ││
+│  │ RetryService (Retry mechanisms)                         ││
+│  │ Logger, MetadataService (Logging & metadata)            ││
+│  └───────────────────────────────────────────┘│
+├───────────────────────────────────────────────┤
+│                 Provider Layer                │  (AI provider adapters, unified request/response format)
+│  ┌───────────────────────────────────────────┐│
+│  │ OpenAIProvider │ AnthropicProvider │        ││
+│  │ GoogleAIProvider │ WorkersAIProvider │ MockProvider ││
+│  └───────────────────────────────────────────┘│
+├───────────────────────────────────────────────┤
+│               Capability Layer                │  (Specific AI capability request building & response parsing)
+│  ┌───────────────────────────────────────────┐│
+│  │ ChatCapability │ EmbeddingCapability │ ImageCapability ││
+│  │ VideoCapability │ TextToSpeechCapability │ LiveAudioCapability │ etc. ││
+│  └───────────────────────────────────────────┘│
+└───────────────────────────────────────────────┘
+                                   ↓
+                       Cloudflare AI Gateway (Unified entry, caching, cost tracking, monitoring)
+                                   ↓
+                       AI Models (GPT-4, Gemini, Llama, Claude, BGE-M3, etc.)
 ```
 
-## 📋 部署状态
+### Design Principles
 
-| 组件 | 状态 | 说明 |
-|------|------|------|
-| 代码质量 | ✅ 就绪 | 所有编译错误已修复，类型安全 |
-| 功能测试 | ✅ 通过 | 所有端点正常响应 |
-| 配置支持 | ✅ 完整 | 环境变量和自动化脚本就绪 |
-| 部署就绪 | ✅ 已部署 | 生产环境运行中 |
-| AI提供商 | ✅ 3个 | OpenAI、Workers AI、Google AI Studio |
+- **Layered Architecture**: Application logic is divided into clear layers for easy understanding and maintenance
+- **Adapter Pattern**: Through `AbstractProvider` and its concrete implementations, unifies interfaces across different AI providers
+- **Strategy Pattern**: `CapabilityHandler` defines specific processing logic for each AI capability
+- **Single Responsibility Principle**: Each service and module focuses on a single function
+- **Configuration-Driven**: Centralized management of AI model and provider configurations for easy extension
+- **Robustness**: Built-in retry mechanisms, error handling, and logging
 
-**当前部署**: `https://meridian-ai-worker.swj299792458.workers.dev`
+## Tech Stack
 
-## 🌟 核心功能
+- **Platform**: Cloudflare Workers
+- **Programming Language**: TypeScript
+- **Web Framework**: Hono (lightweight, high-performance)
+- **Runtime Compatibility**: Node.js compatibility mode (`nodejs_compat`)
+- **Package Management**: npm (or pnpm)
+- **Testing Framework**: Vitest (unit testing, integration testing), Miniflare (Workers environment simulation)
+- **Deployment Tool**: Cloudflare Wrangler CLI
+- **Data Validation**: Zod (for API request and response contract validation)
+- **AI Gateway**: Cloudflare AI Gateway (unified proxy for all AI requests)
+- **AI Providers**: OpenAI, Anthropic, Google AI Studio, Cloudflare Workers AI
 
-### 🎯 Meridian 专用端点
+## Core Components & Modules
 
-- **📰 文章分析**: `POST /meridian/article/analyze` - 结构化文章内容分析
-- **🔍 嵌入生成**: `POST /meridian/embeddings/generate` - 向量嵌入生成
-- **🔧 配置管理**: `GET /meridian/config` - 服务配置和状态查询
+### Entry Point
+- **`src/index.ts`**: Application entry point defining all external HTTP API endpoints
+  - Routes requests to appropriate service layer handlers
+  - Performs basic request validation
+  - Constructs unified API response format
 
-### 🤖 支持的AI提供商
+### Services (`src/services/`)
 
-| 提供商 | 模型数量 | 主要能力 | 成本效益 | 状态 |
-|--------|----------|----------|----------|------|
-| **Google AI Studio** | 3个 | Chat (Gemini) | 🟢 低成本 | ✅ 已配置 |
-| **Workers AI** | 5个 | Chat, Embedding (多语言), Image | 🟢 边缘计算 | ✅ 已配置 |
-| **OpenAI** | 7个 | Chat, Embedding, Image, Audio | 🟡 高质量 | ✅ 已配置 |
+#### `ai-gateway.ts` (`AIGatewayService`)
+- **Purpose**: System core, acting as unified dispatcher and enhancer for all AI requests
+- **Functionality**: Selects appropriate `BaseProvider` based on request capability and provider, builds requests compatible with Cloudflare AI Gateway universal endpoint format, executes HTTP calls, and parses responses
+- **Key Responsibilities**: AI request routing, traffic control, external AI API abstraction
 
-### 🛡️ 企业级功能
+#### Provider Layer (`services/providers/`)
+- **Purpose**: Adapts different AI providers, providing unified API call interfaces
+- **Functionality**: `AbstractProvider` defines common methods for all providers (getting supported capabilities and models, building request bodies, parsing responses)
+- **Implementations**: `OpenAIProvider`, `AnthropicProvider`, `GoogleAIProvider`, `WorkersAIProvider`
 
-- 🚀 **统一 AI Gateway 接口** - 通过 Cloudflare AI Gateway 统一访问
-- 🔄 **智能故障转移** - 自动切换到可用提供商
-- 📈 **请求重试机制** - 指数退避重试策略  
-- 🎯 **能力路由** - 基于 AI 能力的智能模型选择
-- 📊 **成本跟踪** - Token级别成本监控
-- ⚡ **边缘缓存** - 相同请求缓存优化
+#### `auth.ts` (`AuthenticationService`)
+- **Purpose**: Handles API request authentication and authorization
+- **Functionality**: Validates API keys, checks request origins (CORS), handles preflight requests
+- **Key Responsibilities**: Security control, API access management
 
-## 🚀 快速开始
+#### `logger.ts` (`Logger`)
+- **Purpose**: Provides unified, structured logging functionality
+- **Functionality**: Supports different log levels (debug, info, warn, error), records request/response, errors, and performance metrics
+- **Key Responsibilities**: System observability, problem diagnosis
 
-### 1. 环境配置
+#### `metadata.ts` (`MetadataService`)
+- **Purpose**: Creates and manages request metadata for tracking, monitoring, and analysis
+- **Functionality**: Extracts user information, IP addresses, User-Agent from HTTP requests, adds processing information
+- **Key Responsibilities**: Data tracking, performance analysis, error attribution
 
+#### `retry.ts` (`RetryService`)
+- **Purpose**: Provides automatic retry mechanisms for unstable external calls
+- **Functionality**: Implements exponential backoff strategy with jitter to avoid thundering herd effects
+- **Key Responsibilities**: Improves system reliability, reduces transient failure impact
+
+#### Business Logic Services
+- **`brief-generation.ts`**: Generates final intelligence briefs and summaries from intelligence analysis reports
+- **`intelligence.ts`**: Performs deep intelligence analysis on validated stories
+- **`story-validation.ts`**: Validates whether article clusters constitute meaningful "stories"
+
+### Capabilities (`src/capabilities/`)
+- **Purpose**: Defines request building and response parsing logic for each AI capability
+- **Functionality**: `CapabilityHandler` interface defines `buildProviderRequest` and `parseProviderResponse` methods
+- **Implementations**: `ChatCapabilityHandler`, `EmbeddingCapabilityHandler`, etc.
+
+### Configuration (`src/config/providers.ts`)
+- **Purpose**: Centralized management of all AI provider and model configurations
+- **Functionality**: Contains provider names, base URLs, auth headers, default models, and detailed model information
+- **Key Responsibilities**: Global configuration, model capability definition
+
+### Prompts (`src/prompts/`)
+- **Purpose**: Stores all AI prompt templates
+- **Functionality**: Provides reusable functions for generating prompts for article analysis, story validation, intelligence analysis, and brief generation
+- **Key Responsibilities**: AI interaction content management
+
+### Types (`src/types/`)
+- **Purpose**: Defines TypeScript types used throughout the application
+- **Functionality**: Includes common API responses, unified AI request/response interfaces, provider configurations, and business domain data contracts
+- **Key Responsibilities**: Ensures code type safety, defines data contracts
+
+### Utilities (`src/utils/`)
+- **Purpose**: Contains common utility functions
+- **Functionality**: Includes AI response JSON parsing, text token limiting, article Markdown formatting, and quota handling logic
+- **Key Responsibilities**: Common logic encapsulation, code reuse
+
+## Data Flow & Business Logic
+
+The core business logic revolves around the "Intelligence Brief Generation Workflow":
+
+1. **Initial Data Preparation**: External systems provide `ArticleDataset` containing raw article content and embeddings
+2. **Article Analysis** (`POST /meridian/article/analyze`): Structured analysis of articles using AI
+3. **Embedding Generation** (`POST /meridian/embeddings/generate`): Generate vector embeddings for text
+4. **Clustering** (external): ML service groups related articles into clusters
+5. **Story Validation** (`POST /meridian/story/validate`): Validate if clusters constitute coherent "stories"
+6. **Intelligence Analysis** (`POST /meridian/intelligence/analyze-stories`): Deep AI analysis of validated stories
+7. **Brief Generation** (`POST /meridian/generate-final-brief`): Synthesize intelligence reports into comprehensive daily briefings
+8. **TLDR Generation** (`POST /meridian/generate-brief-tldr`): Generate concise summaries of briefs
+9. **General Chat** (`POST /meridian/chat`): General-purpose AI conversation
+
+## API Endpoints
+
+### Core Endpoints
+- `POST /meridian/article/analyze` - Analyze individual articles
+- `POST /meridian/embeddings/generate` - Generate text embeddings
+- `POST /meridian/story/validate` - Validate article clusters as stories
+- `POST /meridian/intelligence/analyze-stories` - Analyze multiple stories
+- `POST /meridian/intelligence/analyze-single-story` - Analyze single story
+- `POST /meridian/generate-final-brief` - Generate comprehensive brief
+- `POST /meridian/generate-brief-tldr` - Generate brief summary
+- `POST /meridian/chat` - General AI chat
+
+### Utility Endpoints
+- `GET /health` - Health check
+- `GET /` - Service information
+
+## Integration Points
+
+- **HTTP API**: RESTful API endpoints for external integration
+- **Environment Variables**: Configuration via Cloudflare Workers environment variables
+- **Cloudflare AI Gateway**: All AI requests proxy through AI Gateway for caching, cost tracking, and monitoring
+- **AI Provider APIs**: Internal integration with OpenAI, Anthropic, Google AI, and Cloudflare Workers AI
+- **CORS**: Cross-origin request handling via Hono middleware
+- **Logging/Monitoring**: Structured logging to Cloudflare Workers platform
+- **External ML Services**: Integration with external services for embedding generation and clustering
+
+## Dependencies
+
+- **`hono`**: Lightweight web framework for Workers routing and HTTP handling
+- **`zod`**: TypeScript-first schema declaration and validation library
+- **`@cloudflare/workers-types`**: TypeScript definitions for Cloudflare Workers APIs
+- **`vitest`**: Next-generation testing framework for unit and integration tests
+- **`miniflare`**: Local Cloudflare Workers simulator for testing
+- **`wrangler`**: Official Cloudflare CLI tool for development and deployment
+
+## Design Patterns
+
+- **Abstract Factory/Strategy Pattern**: Dynamic selection of AI providers and processing strategies
+- **Template Method Pattern**: Common AI request processing flow with provider-specific implementations
+- **Chain of Responsibility**: Request processing through authentication, metadata enhancement, AI Gateway enhancement, retry mechanisms
+- **Singleton Pattern**: Shared service instances (Logger, AuthenticationService, etc.)
+- **Dependency Injection**: Constructor-based dependency injection for loose coupling
+- **Configuration as Code**: TypeScript-based configuration management
+- **High Cohesion, Low Coupling**: Well-defined module boundaries with clear interfaces
+- **Observability First**: Built-in logging and metadata collection for monitoring and diagnostics
+
+## Development & Deployment
+
+### Prerequisites
+- Node.js 18+ with npm or pnpm
+- Cloudflare account with Workers enabled
+- Wrangler CLI installed globally
+
+### Local Development
 ```bash
-# 基础配置（必需）
-export CLOUDFLARE_ACCOUNT_ID="your-account-id"
-export CLOUDFLARE_GATEWAY_ID="meridian-ai-gateway-dev" 
-export CLOUDFLARE_API_TOKEN="your-api-token"
-
-# AI 提供商密钥（至少配置一个）
-export OPENAI_API_KEY="sk-..."
-export GOOGLE_AI_API_KEY="AIza..."
-```
-
-### 2. 部署
-
-```bash
+# Install dependencies
 npm install
+
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Type checking
+npm run type-check
+```
+
+### Deployment
+```bash
+# Deploy to Cloudflare Workers
 npm run deploy
+
+# Deploy to specific environment
+wrangler deploy --env production
 ```
 
-### 3. 验证
+### Environment Variables
+Configure the following variables in your Cloudflare Workers environment:
+- `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
+- `CLOUDFLARE_AI_GATEWAY_ID` - AI Gateway ID for request proxying
+- `OPENAI_API_KEY` - OpenAI API key
+- `ANTHROPIC_API_KEY` - Anthropic API key
+- `GOOGLE_AI_API_KEY` - Google AI Studio API key
+- `MERIDIAN_API_KEY` - Authentication key for API access
 
-```bash
-# 健康检查
-curl https://meridian-ai-worker.swj299792458.workers.dev/health
+## Contributing
 
-# 测试文章分析
-curl -X POST "https://meridian-ai-worker.swj299792458.workers.dev/meridian/article/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "测试标题", "content": "测试内容"}'
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with appropriate tests
+4. Ensure all tests pass
+5. Submit a pull request
 
-## 📡 API 使用
+## License
 
-### Meridian 专用接口
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-#### 文章分析
+## Architecture Documentation
 
-```bash
-curl -X POST "/meridian/article/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "新闻标题",
-    "content": "新闻内容...",
-    "options": {
-      "provider": "google-ai-studio",
-      "model": "gemini-1.5-flash-8b-001"
-    }
-  }'
-```
-
-#### 嵌入生成
-
-```bash
-# 标准文本嵌入
-curl -X POST "/meridian/embeddings/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "要生成嵌入的文本",
-    "options": {
-      "provider": "workers-ai",
-      "model": "@cf/baai/bge-base-en-v1.5"
-    }
-  }'
-
-# 使用 BGE-M3 多语言嵌入
-curl -X POST "/meridian/embeddings/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": ["Hello world", "你好世界", "こんにちは"],
-    "options": {
-      "provider": "workers-ai",
-      "model": "@cf/baai/bge-m3"
-    }
-  }'
-
-# BGE-M3 查询和上下文相似度评分
-curl -X POST "/meridian/embeddings/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "AI technology",
-    "contexts": [
-      {"text": "Artificial intelligence is transforming industries"},
-      {"text": "Machine learning algorithms improve over time"},
-      {"text": "Cooking recipes vary by culture"}
-    ],
-    "options": {
-      "provider": "workers-ai", 
-      "model": "@cf/baai/bge-m3"
-    }
-  }'
-```
-
-### 通用 AI 接口
-
-```bash
-curl -X POST "/ai" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "capability": "chat",
-    "messages": [{"role": "user", "content": "Hello"}],
-    "provider": "openai",
-    "model": "gpt-3.5-turbo"
-  }'
-```
-
-## 🔧 环境变量
-
-| 变量名 | 必需 | 说明 |
-|--------|------|------|
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Cloudflare 账户 ID |
-| `CLOUDFLARE_GATEWAY_ID` | ✅ | AI Gateway ID |
-| `CLOUDFLARE_API_TOKEN` | ✅ | Cloudflare API Token |
-| `OPENAI_API_KEY` | 🔶 | OpenAI API 密钥 |
-| `GOOGLE_AI_API_KEY` | 🔶 | Google AI API 密钥 |
-| `ANTHROPIC_API_KEY` | ❌ | Anthropic API 密钥 |
-
-## 🧪 测试和验证
-
-```bash
-# 健康检查
-curl -s https://meridian-ai-worker.swj299792458.workers.dev/health | jq .
-
-# 提供商状态
-curl -s https://meridian-ai-worker.swj299792458.workers.dev/providers | jq .
-
-# 功能测试
-npm run test:integration
-```
-
-## 📈 监控
-
-服务提供结构化日志和健康检查端点，支持以下监控：
-
-- **可用性**: 服务健康状态和响应时间
-- **成本**: 各提供商的Token使用量和成本
-- **性能**: 请求延迟和缓存命中率
-- **错误率**: 各提供商的错误率和故障转移频率
-
-## 🔄 版本历史
-
-### v2.0.0 (当前版本)
-- ✅ 新增 Google AI Studio 支持
-- ✅ 优化 Meridian 专用端点
-- ✅ 修复 TypeScript 类型错误
-- ✅ 改进错误处理和日志记录
-
-## 📚 文档
-
-- [架构设计](./docs/ARCHITECTURE.md) - 详细的系统架构和技术设计
-- [API 使用指南](./API_GUIDE.md) - 完整的 API 文档和示例
-- [快速部署](./QUICK_DEPLOY.md) - 一键部署配置指南
-- [变更日志](./CHANGELOG.md) - 版本变更记录和迁移指南
-
-## 📞 技术支持
-
-**当前部署地址**: `https://meridian-ai-worker.swj299792458.workers.dev`
-
-如需技术支持或反馈问题，请查看相关文档或提交 Issue。
-
-## Story Validation API
-
-### POST /meridian/story/validate
-
-基于 `intelligence-pipeline.test.ts` 契约的故事验证端点。
-
-**输入格式:**
-```typescript
-{
-  clusteringResult: {
-    clusters: Array<{
-      clusterId: number
-      articleIds: number[]
-      size: number
-    }>,
-    parameters: {
-      umapParams: { n_neighbors, n_components, min_dist, metric },
-      hdbscanParams: { min_cluster_size, min_samples, epsilon }
-    },
-    statistics: {
-      totalClusters: number
-      noisePoints: number
-      totalArticles: number
-    }
-  },
-  useAI?: boolean,  // 是否使用AI进行深度验证，默认 true
-  options?: {
-    provider?: string
-    model?: string
-  }
-}
-```
-
-**输出格式:**
-```typescript
-{
-  success: boolean,
-  data: {
-    stories: Array<{
-      title: string
-      importance: number  // 1-10
-      articleIds: number[]
-      storyType: "SINGLE_STORY" | "COLLECTION_OF_STORIES"
-    }>,
-    rejectedClusters: Array<{
-      clusterId: number
-      rejectionReason: "PURE_NOISE" | "NO_STORIES" | "INSUFFICIENT_ARTICLES"
-      originalArticleIds: number[]
-    }>
-  },
-  metadata: {
-    totalClusters: number
-    validatedStories: number
-    rejectedClusters: number
-    processingStatistics: object
-  }
-}
-```
-
-**验证逻辑:**
-1. 聚类尺寸 < 3：标记为 "INSUFFICIENT_ARTICLES"
-2. 聚类尺寸 >= 3：使用AI进行深度分析
-   - single_story：创建单一故事，移除异常点
-   - collection_of_stories：分解为多个独立故事
-   - pure_noise：标记为 "PURE_NOISE"
-   - no_stories：标记为 "NO_STORIES"
-3. 重要性评分限制在1-10范围内
-4. 故事至少需要2篇文章才能被接受
+For detailed architecture documentation, design patterns, and integration guides, see:
+- `docs/ARCHITECTURE.md` - System architecture and design patterns
+- `docs/API_GUIDE.md` - Detailed API usage guide
+- `docs/workflow_integration.md` - End-to-end workflow integration

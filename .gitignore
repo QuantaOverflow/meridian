@@ -232,5 +232,8 @@ meridian_dump.sql
 # extensions config
 .repomixignore
 .cursor/
+.cursorrules
 llms/
 .cursorignore
+briefs/
+.repomix-output.txt

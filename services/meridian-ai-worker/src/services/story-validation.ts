@@ -79,27 +79,6 @@ export class StoryValidationService {
                 originalArticleIds: cluster.articleIds
               })
             }
-          } else if (validation.answer === 'thematic_umbrella') {
-            // 主题伞型故事：cluster 内多个相关但独立的事件共享一个主题
-            // 整体作为单一 thematic story 进入情报分析
-            const validArticleIds = cluster.articleIds.filter(
-              (id: number) => !validation.outliers?.includes(id)
-            )
-
-            if (validArticleIds.length >= 2) {
-              stories.push({
-                title: validation.title || `Theme ${cluster.clusterId}`,
-                importance: Math.min(Math.max(validation.importance || 5, 1), 10),
-                articleIds: validArticleIds,
-                storyType: "THEMATIC_UMBRELLA"
-              })
-            } else {
-              rejectedClusters.push({
-                clusterId: cluster.clusterId,
-                rejectionReason: "INSUFFICIENT_ARTICLES",
-                originalArticleIds: cluster.articleIds
-              })
-            }
           } else if (validation.answer === 'collection_of_stories') {
             // 故事集合：分解为多个独立故事
             validation.stories?.forEach((story: any, index: number) => {

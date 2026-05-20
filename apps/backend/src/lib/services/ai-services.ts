@@ -119,12 +119,12 @@ export class AIWorkerService {
   async analyzeStoryIntelligence(story: any, cluster: any, options?: any, callIndex?: number): Promise<Response> {
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
-    const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-story`, {
+    const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-single-story`, {
       method: 'POST',
       headers: this.buildHeaders(extra),
       body: JSON.stringify({
         story,
-        cluster,
+        articleData: cluster.articles,
         options: options || { analysis_depth: 'detailed' }
       })
     });

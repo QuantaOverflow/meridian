@@ -1,4 +1,3 @@
-import getArticleAnalysisPrompt, { articleAnalysisSchema } from '../prompts/articleAnalysis.prompt';
 import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
 import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';

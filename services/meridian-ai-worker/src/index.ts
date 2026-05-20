@@ -7,7 +7,7 @@ import { BriefGenerationService } from './services/brief-generation'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
-import { APIResponse, ArticleItem, StoryAnalysis, BriefContent } from './types/api'
+import { APIResponse, ArticleItem, BriefContent } from './types/api'
 import { ValidatedStories } from './types/story-validation'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
@@ -424,86 +424,6 @@ app.post('/meridian/intelligence/analyze-single-story', async (c) => {
   }
 })
 
-// 保持向后兼容的端点
-app.post('/meridian/intelligence/analyze-story', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // 统一输入格式：支持工作流格式和传统格式
-    let storyData, articlesData
-    
-    if (body.story && body.cluster) {
-      // 工作流格式
-      storyData = body.story
-      articlesData = body.cluster.articles
-    } else if (body.articles_data) {
-      // 传统格式
-      storyData = { storyId: 'traditional', analysis: { summary: body.title } }
-      articlesData = body.articles_data
-    } else {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'Invalid input format: expected story+cluster or articles_data'
-      }, 400)
-    }
-
-    if (!articlesData || !Array.isArray(articlesData)) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'articles data is required'
-      }, 400)
-    }
-
-    console.log(`[Intelligence] 兼容模式分析故事，包含 ${articlesData.length} 篇文章`)
-
-    // 使用 IntelligenceService 进行分析
-    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
-    
-    // 转换为 IntelligenceService 期望的格式
-    const analysisRequest = {
-      title: storyData.analysis?.summary || `故事分析`,
-      articles_ids: articlesData.map((a: any) => a.id),
-      articles_data: articlesData.map((a: any) => ({
-        id: a.id,
-        title: a.title || '无标题',
-        url: a.url || '',
-        content: a.content || a.title || '内容不可用',
-        publishDate: a.publish_date || a.publishDate || new Date().toISOString()
-      }))
-    }
-    
-    const result = await intelligenceService.analyzeStory(analysisRequest)
-    
-    // 简化输出格式
-    const analysis: StoryAnalysis = {
-      overview: result.story_title || result.analysis?.title || storyData.analysis?.summary || '故事概述',
-      key_developments: result.analysis?.key_developments || [result.analysis?.executiveSummary || '关键发展待分析'],
-      stakeholders: result.analysis?.stakeholders || ['相关方待识别'],
-      implications: result.analysis?.implications || ['影响待评估'],
-      outlook: result.analysis?.outlook || result.analysis?.storyStatus || '发展中'
-    }
-    
-    return c.json<APIResponse<StoryAnalysis>>({
-      success: true,
-      data: analysis,
-      metadata: {
-        articles_analyzed: articlesData.length,
-        analysis_method: 'legacy_compatibility',
-        provider: result.metadata?.provider,
-        model: result.metadata?.model
-      }
-    })
-    
-  } catch (error: any) {
-    console.error('Legacy intelligence analysis error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to analyze story intelligence',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
-
 // ============================================================================
 // Brief Generation - 基于数据契约的完整实现
 // ============================================================================
@@ -738,11 +658,9 @@ app.get('/meridian/status', (c) => {
           article_analysis: '/meridian/article/analyze',
           embedding_generation: '/meridian/embeddings/generate', 
           story_validation: '/meridian/story/validate',
-          // 新情报分析端点 - 符合测试契约
+          // 情报分析端点
           intelligence_batch_analysis: '/meridian/intelligence/analyze-stories',
           intelligence_single_analysis: '/meridian/intelligence/analyze-single-story',
-          // 兼容性端点
-          intelligence_legacy: '/meridian/intelligence/analyze-story',
           brief_generation: '/meridian/generate-final-brief',
           brief_tldr: '/meridian/generate-brief-tldr',
           // 通用端点
@@ -757,7 +675,6 @@ app.get('/meridian/status', (c) => {
             story_validation: 'ClusteringResult + articlesData (MinimalArticleInfo[]) → ValidatedStories',
             intelligence_batch_analysis: 'ValidatedStories + ArticleDataset → IntelligenceReports',
             intelligence_single_analysis: 'Story + Article[] → IntelligenceReport',
-            intelligence_legacy: 'Legacy format for backward compatibility',
             brief_generation: 'Array of StoryAnalysis objects'
           },
           refactored_services: {

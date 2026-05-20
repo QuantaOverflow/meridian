@@ -79,6 +79,27 @@ export class StoryValidationService {
                 originalArticleIds: cluster.articleIds
               })
             }
+          } else if (validation.answer === 'thematic_umbrella') {
+            // 主题伞型故事：cluster 内多个相关但独立的事件共享一个主题
+            // 整体作为单一 thematic story 进入情报分析
+            const validArticleIds = cluster.articleIds.filter(
+              (id: number) => !validation.outliers?.includes(id)
+            )
+
+            if (validArticleIds.length >= 2) {
+              stories.push({
+                title: validation.title || `Theme ${cluster.clusterId}`,
+                importance: Math.min(Math.max(validation.importance || 5, 1), 10),
+                articleIds: validArticleIds,
+                storyType: "THEMATIC_UMBRELLA"
+              })
+            } else {
+              rejectedClusters.push({
+                clusterId: cluster.clusterId,
+                rejectionReason: "INSUFFICIENT_ARTICLES",
+                originalArticleIds: cluster.articleIds
+              })
+            }
           } else if (validation.answer === 'collection_of_stories') {
             // 故事集合：分解为多个独立故事
             validation.stories?.forEach((story: any, index: number) => {
@@ -197,10 +218,10 @@ export class StoryValidationService {
     const chatRequest = {
       capability: 'chat' as const,
       messages,
-      provider: options.provider || 'google-ai-studio',
-      model: options.model || 'gemini-2.0-flash',
+      provider: options.provider || 'dashscope',
+      model: options.model || 'qwen-plus',
       temperature: options.temperature || 0.1,
-      max_tokens: options.maxTokens || 8000,
+      max_tokens: options.maxTokens || 4000,
       metadata: this.createRequestMetadata()
     }
 
@@ -216,18 +237,32 @@ export class StoryValidationService {
    * 解析AI响应中的JSON
    */
   private parseJSONFromResponse(response: string): any {
-    try {
-      // 尝试提取 JSON 代码块
-      const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1])
-      }
-      // 尝试直接解析
-      return JSON.parse(response)
-    } catch (error) {
-      console.warn('JSON解析失败:', error)
-      return null
+    // 候选片段：优先 ```json/``` 代码块，否则尝试第一个 {...} 块，最后整段
+    const candidates: string[] = []
+    const fenced = response.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (fenced) candidates.push(fenced[1])
+    const firstBrace = response.indexOf('{')
+    const lastBrace = response.lastIndexOf('}')
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      candidates.push(response.slice(firstBrace, lastBrace + 1))
     }
+    candidates.push(response)
+
+    for (const raw of candidates) {
+      // 容错清洗：去掉行内 // 注释、块注释、尾随逗号
+      const cleaned = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '') // /* ... */ 块注释
+        .replace(/(^|[^:"'])\/\/[^\n]*/g, '$1') // // 行内注释（避开 url 里的 ://）
+        .replace(/,(\s*[}\]])/g, '$1') // 尾随逗号
+        .trim()
+      try {
+        return JSON.parse(cleaned)
+      } catch {
+        // try next candidate
+      }
+    }
+    console.warn('JSON解析失败，原始响应前 300 字符:', response.slice(0, 300))
+    return null
   }
 
   /**

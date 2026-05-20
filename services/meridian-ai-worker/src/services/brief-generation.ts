@@ -263,7 +263,10 @@ export class BriefGenerationService {
         const briefPrompt = getBriefGenerationPrompt(storiesMarkdown, previousContext);
         const systemPrompt = getBriefGenerationSystemPrompt();
         
+        // 多故事合成：输入是所有情报报告拼接的 Markdown + 前日简报上下文，
+        // 单次合成长度容易超过 qwen-plus 的 131k 上下文，使用长文本模型 qwen-long
         const briefResponse = await this.callAI(briefPrompt, systemPrompt, {
+          model: 'qwen-long',
           temperature: 0.7,
           maxTokens: 16000
         });
@@ -293,7 +296,7 @@ export class BriefGenerationService {
         metadata: {
           title: result.title,
           createdAt: new Date().toISOString(),
-          model: 'gemini-2.0-flash',
+          model: 'qwen-long',
           tldr: '', // 将通过单独的TLDR端点生成
         },
         content: {
@@ -384,8 +387,8 @@ export class BriefGenerationService {
     const chatRequest = {
       capability: 'chat' as const,
       messages,
-      provider: options.provider || 'google-ai-studio',
-      model: options.model || 'gemini-2.0-flash',
+      provider: options.provider || 'dashscope',
+      model: options.model || 'qwen-plus',
       temperature: options.temperature || 0.1,
       max_tokens: options.maxTokens || 8000,
       metadata: {

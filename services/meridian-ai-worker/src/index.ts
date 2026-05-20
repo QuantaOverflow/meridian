@@ -44,8 +44,8 @@ async function callAI(
   const chatRequest = {
     capability: 'chat' as const,
     messages,
-    provider: options.provider || 'google-ai-studio',
-    model: options.model || 'gemini-2.0-flash',
+    provider: options.provider || 'dashscope',
+    model: options.model || 'qwen-plus',
     temperature: options.temperature || 0.1,
     max_tokens: options.maxTokens || 8000,
     metadata: createRequestMetadata({ req: { header: () => 'ai-worker' } })
@@ -154,10 +154,9 @@ app.post('/meridian/article/analyze', async (c) => {
 
     // 分级重试策略，优先使用性能较好的模型
     const analysisStrategies = [
-      { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0.1 },
-      { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0.1 },
-      { provider: 'workers-ai', model: '@cf/meta/llama-2-7b-chat-int8', temperature: 0 },
-      { provider: 'google-ai-studio', model: 'gemini-2.0-flash', temperature: 0 }
+      { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1 },
+      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0.1 },
+      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0 }
     ]
 
     let lastError: Error | null = null
@@ -670,8 +669,8 @@ app.post('/meridian/chat', async (c) => {
     const chatRequest = {
       capability: 'chat' as const,
       messages: body.messages,
-      provider: body.options?.provider || 'google-ai-studio',
-      model: body.options?.model || 'gemini-2.0-flash',
+      provider: body.options?.provider || 'dashscope',
+      model: body.options?.model || 'qwen-plus',
       temperature: body.options?.temperature || 0.7,
       max_tokens: body.options?.max_tokens || 1000,
       stream: body.options?.stream || false,

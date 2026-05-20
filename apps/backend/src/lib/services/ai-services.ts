@@ -20,22 +20,50 @@ export class AIWorkerService {
   constructor(private env: AIWorkerEnv) {}
 
   /**
-   * 生成嵌入向量
+   * 生成嵌入向量。
+   * 直接调用本地/远端 ML Service (multilingual-e5-small, 384维)，跳过 ai-worker 这层中间转发。
+   * 与数据库 schema (vector(384)) 和历史 embedding 的向量空间保持一致。
+   * 返回结构包装成调用方期望的 {success, data: {embeddings: [{embedding}]}} 形式。
    */
   async generateEmbedding(text: string | string[]): Promise<Response> {
-    const request = new Request(`${this.baseUrl}/meridian/embeddings/generate`, {
+    const texts = Array.isArray(text) ? text : [text];
+    const mlResp = await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        options: {
-          provider: 'workers-ai',
-          model: '@cf/baai/bge-small-en-v1.5'
-        }
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY,
+      },
+      body: JSON.stringify({ texts, normalize: true }),
     });
 
-    return await this.env.AI_WORKER.fetch(request);
+    if (!mlResp.ok) {
+      const errorText = await mlResp.text();
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `ML embedding failed: ${mlResp.status} - ${errorText}`,
+        }),
+        { status: mlResp.status, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const ml = (await mlResp.json()) as {
+      embeddings: number[][];
+      model_name: string;
+      dimensions: number;
+    };
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: {
+          embeddings: ml.embeddings.map((emb) => ({ embedding: emb })),
+          model: ml.model_name,
+          dimensions: ml.dimensions,
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   /**
@@ -70,8 +98,8 @@ export class AIWorkerService {
         articlesData,
         useAI: options?.useAI ?? true,
         options: options?.aiOptions || {
-          provider: 'google-ai-studio',
-          model: 'gemini-2.0-flash'
+          provider: 'dashscope',
+          model: 'qwen-plus'
         }
       })
     });

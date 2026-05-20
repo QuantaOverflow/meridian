@@ -169,8 +169,8 @@ export class IntelligenceService {
         articles_count: articles.length,
         analysis: IntelligenceReportBuilder.convertToLegacyFormat(result.data),
         metadata: {
-          provider: 'google-ai-studio',
-          model: 'gemini-2.0-flash',
+          provider: 'dashscope',
+          model: 'qwen-long',
           original_articles: articles_ids
         }
       };
@@ -227,8 +227,9 @@ export class IntelligenceService {
       const chatRequest = {
         capability: 'chat' as const,
         messages: [{ role: 'user' as const, content: limitedPrompt }],
-        provider: 'google-ai-studio',
-        model: 'gemini-2.0-flash',
+        provider: 'dashscope',
+        // 单故事深度分析：输入可达 850k 字符 (~200k tokens)，需要长上下文模型
+        model: 'qwen-long',
         temperature: 0.1,
         max_tokens: 8192,
         metadata: {

@@ -558,7 +558,82 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
         }
       }
     ]
-  }
+  },
+
+  dashscope: {
+    name: 'dashscope',
+    // DashScope OpenAI-compatible endpoint (chat completions API parity with OpenAI SDK)
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    auth_header: 'Authorization',
+    default_model: 'qwen-plus',
+    models: [
+      {
+        name: 'qwen-plus',
+        capabilities: ['chat'],
+        endpoint: '/chat/completions',
+        max_tokens: 8192,
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.0000008,  // ~¥0.0008 / 1K tokens
+          output: 0.000002,
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['dashscope', 'qwen', 'plus'],
+        },
+      },
+      {
+        name: 'qwen-turbo',
+        capabilities: ['chat'],
+        endpoint: '/chat/completions',
+        max_tokens: 8192,
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.0000003,
+          output: 0.0000006,
+        },
+        ai_gateway_config: {
+          cache_ttl: 3600,
+          enable_cost_tracking: true,
+          custom_tags: ['dashscope', 'qwen', 'turbo'],
+        },
+      },
+      {
+        name: 'qwen-max',
+        capabilities: ['chat'],
+        endpoint: '/chat/completions',
+        max_tokens: 8192,
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.00002,
+          output: 0.00006,
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['dashscope', 'qwen', 'max'],
+        },
+      },
+      {
+        // 长文本模型，最大上下文 10M tokens，专为文档摘要/情报合成类任务设计
+        name: 'qwen-long',
+        capabilities: ['chat'],
+        endpoint: '/chat/completions',
+        max_tokens: 8192,
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.0000005,  // ~¥0.0005 / 1K tokens
+          output: 0.000002,
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['dashscope', 'qwen', 'long-context'],
+        },
+      },
+    ],
+  },
 }
 
 export function getProviderConfig(providerName: string): ProviderConfig | undefined {

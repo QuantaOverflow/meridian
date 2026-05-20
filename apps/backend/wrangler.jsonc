@@ -29,7 +29,7 @@
     {
       "binding": "HYPERDRIVE",
       "id": "e3bbe9cee04649a98bd5396476432de0",
-      "localConnectionString": "postgresql://postgres:709323@localhost:5432/shiwenjie",
+      "localConnectionString": "postgresql://shiwenjie:dev@localhost:5432/meridian_local",
     },
   ],
   /**

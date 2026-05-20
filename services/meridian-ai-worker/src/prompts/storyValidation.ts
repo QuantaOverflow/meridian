@@ -1,103 +1,103 @@
 /**
  * 故事验证提示词
- * 基于 reportV5.md 的 process_story 函数逻辑
+ * 适配多源聚合数据（BBC/Guardian/Al Jazeera/NPR/France24/HN）：cluster 内常是
+ * "相关主题但各报道独立事件"。原版要求"同一事件 3+ 篇报道"过于严苛，会导致全部
+ * NO_STORIES。本版放宽规则：
+ *   - story 阈值 3+ → 2+
+ *   - 新增对"主题伞型故事"(thematic umbrella) 的显式支持
  */
 
 export function getStoryValidationPrompt(articleList: string): string {
   return `
 # Task
-Determine if the following collection of news articles is:
-1) A single story - A cohesive narrative where all articles relate to the same central event/situation and its direct consequences
-2) A collection of stories - Distinct narratives that should be analyzed separately
-3) Pure noise - Random articles with no meaningful pattern
-4) No stories - Distinct narratives but none of them have more than 3 articles
+Given a cluster of news articles, decide how it should enter the intelligence
+analysis pipeline. Pick ONE of:
 
-# Important clarification
-A "single story" can still have multiple aspects or angles. What matters is whether the articles collectively tell one broader narrative where understanding each part enhances understanding of the whole.
+1) single_story — Articles cover a single event/situation (and its direct
+   consequences) from one or more angles. Multiple outlets reporting the same
+   incident, follow-up coverage of the same crisis, etc.
 
-# Handling outliers
-- For single stories: You can exclude true outliers in an "outliers" array
-- For collections: Focus **only** on substantive stories (3+ articles). Ignore one-off articles or noise.
+2) thematic_umbrella — Articles share a clear theme/region/topic but report
+   DIFFERENT events under that umbrella. e.g. "Middle East developments" with
+   pieces on Iran strikes, Gaza aid, Lebanon casualties; or "AI industry
+   moves" with separate items on Anthropic, OpenAI, model releases. This is
+   the COMMON case for daily news aggregation across multiple outlets.
+
+3) collection_of_stories — Articles cleanly split into multiple distinct
+   stories, each with at least 2 articles. List them separately.
+
+4) pure_noise — No meaningful pattern; articles are unrelated and not even
+   thematically connected.
+
+# Important
+- A "thematic_umbrella" is the right answer when articles are about related
+  topics (same region, same domain, same actor space) even if each item is
+  its own event. Don't reject this as "no stories" — it IS a story collection
+  worth analyzing as a thematic brief.
+- Lower the bar from "same event" to "same coherent narrative space".
+- Aim to surface stories rather than reject. Reject as pure_noise only when
+  there is genuinely no shared theme.
 
 # Title guidelines
-- Titles should be purely factual, descriptive and neutral
-- Include necessary context (region, countries, institutions involved)
-- No editorialization, opinion, or emotional language
-- Format: "[Subject] [action/event] in/with [location/context]"
+- Factual, descriptive, neutral.
+- Include region/actor context (e.g. "Middle East — Iran, Gaza, Lebanon
+  developments").
+- No editorialization.
 
-# Input data
-Articles with detailed information (including titles, URLs, and summary points when available):
+# Outlier handling
+For single_story and thematic_umbrella, you MAY exclude clearly unrelated
+articles via an "outliers" array of article ids.
+
+# Input
 ${articleList}
 
-# Output format
-Start by reasoning step by step. Consider:
-- Central themes and events
-- Temporal relationships (are events happening in the same timeframe?)
-- Causal relationships (do events influence each other?)
-- Whether splitting the narrative would lose important context
+# Output
+**Output ONLY the JSON, no analysis, no reasoning, no prose before or after.**
+Wrap the JSON in a \`\`\`json fenced code block. Use ONE of these shapes:
 
-Return your final answer in JSON format:
+Single event:
 \`\`\`json
 {
-    "answer": "single_story" | "collection_of_stories" | "pure_noise" | "no_stories",
-    // single_story_start: if answer is "single_story", include the following fields:
-    "title": "title of the story",
-    "importance": 1-10, // global significance (1=minor local event, 10=major global impact)
-    "outliers": [] // array of article ids to exclude as unrelated
-    // single_story_end
-    // collection_of_stories_start: if answer is "collection_of_stories", include the following fields:
-    "stories": [
-        {
-            "title": "title of the story",
-            "importance": 1-10, // global significance scale
-            "articles": [] // list of article ids in the story (**only** include substantial stories with **3+ articles**)
-        },
-        ...
-    ]
-    // collection_of_stories_end
+  "answer": "single_story",
+  "title": "...",
+  "importance": 1-10,
+  "outliers": []
 }
 \`\`\`
 
-Example for a single story:
+Thematic umbrella (multiple independent events sharing a theme):
 \`\`\`json
 {
-    "answer": "single_story",
-    "title": "The Great Fire of London",
-    "importance": 8,
-    "outliers": [123, 456] // article ids to exclude as unrelated
+  "answer": "thematic_umbrella",
+  "title": "Theme — short summary",
+  "importance": 1-10,
+  "subEvents": [
+    {"summary": "Iran strikes called off", "articles": [123]},
+    {"summary": "Gaza aid boat activists deported", "articles": [456]},
+    {"summary": "Lebanon strike death toll", "articles": [789]}
+  ],
+  "outliers": []
 }
 \`\`\`
 
-Example for a collection of stories:
+Collection of multiple distinct stories (each with 2+ articles):
 \`\`\`json
 {
-    "answer": "collection_of_stories",
-    "stories": [
-        {
-            "title": "The Great Fire of London",
-            "importance": 8,
-            "articles": [123, 456] // article ids in the story
-        },
-        ...
-    ]
+  "answer": "collection_of_stories",
+  "stories": [
+    {"title": "...", "importance": 1-10, "articles": [12, 34]},
+    {"title": "...", "importance": 1-10, "articles": [56, 78, 90]}
+  ]
 }
 \`\`\`
 
-Example for pure noise:
+Pure noise:
 \`\`\`json
-{
-    "answer": "pure_noise"
-}
-\`\`\`
-
-Example for distinct narratives with no stories that contain more than 3+ articles:
-\`\`\`json
-{
-    "answer": "no_stories"
-}
+{"answer": "pure_noise"}
 \`\`\`
 
 Note:
-- Always include articles IDs (outliers, articles, etc...) as integers, not strings and never include the # symbol.
+- Article ids MUST be integers, no "#" prefix, no strings.
+- importance: 1 = minor local, 10 = major global impact.
 `.trim()
-} 
+}

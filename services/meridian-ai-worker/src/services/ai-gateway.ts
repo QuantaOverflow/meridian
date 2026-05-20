@@ -19,6 +19,7 @@ import { OpenAIProvider } from './providers/openai'
 import { WorkersAIProvider } from './providers/workers-ai'
 import { AnthropicProvider } from './providers/anthropic'
 import { GoogleAIProvider } from './providers/google-ai'
+import { DashScopeProvider } from './providers/dashscope'
 import { MockProvider } from './providers/mock'
 import { getProvidersForCapability, getAllProviders } from '../config/providers'
 import { AuthenticationService } from './auth'
@@ -79,6 +80,10 @@ export class AIGatewayService {
 
     if (env.GOOGLE_AI_API_KEY) {
       this.providers.set('google-ai-studio', new GoogleAIProvider(env.GOOGLE_AI_API_KEY))
+    }
+
+    if (env.DASHSCOPE_API_KEY) {
+      this.providers.set('dashscope', new DashScopeProvider(env.DASHSCOPE_API_KEY))
     }
 
     // Add mock provider in development mode or when no real providers are available
@@ -208,9 +213,39 @@ export class AIGatewayService {
       )
     }
 
+    // Custom Providers (e.g. DashScope) 不能走 CF AI Gateway 的 Universal Endpoint，
+    // 必须用 provider-specific path: {gatewayUrl}/custom-{slug}/{base-relative-path}
+    const customSlugs = new Set(['dashscope'])
+    const requestedProvider = request.provider || availableProviders[0]
+    if (customSlugs.has(requestedProvider)) {
+      try {
+        const mappedResponse = await this.executeCustomProviderViaGateway(request, requestedProvider)
+        if (request.metadata && request.metadata.requestId) {
+          mappedResponse.metadata = this.metadataService.addPerformanceMetrics(request.metadata as RequestMetadata, {
+            tokenUsage: {
+              promptTokens: mappedResponse.usage?.prompt_tokens || 0,
+              completionTokens: mappedResponse.usage?.completion_tokens || 0,
+              totalTokens: mappedResponse.usage?.total_tokens || 0,
+            },
+            latency: { totalLatency: Date.now() - startTime, providerLatency: Date.now() - startTime, gatewayLatency: 0 },
+          })
+          mappedResponse.processingTime = Date.now() - startTime
+        }
+        return mappedResponse
+      } catch (error) {
+        this.logger.logProviderError(
+          request.metadata?.requestId || 'unknown',
+          requestedProvider,
+          error as Error,
+          { capability: request.capability, model: request.model }
+        )
+        throw new Error(`Custom provider via gateway failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
     // Build universal request for AI Gateway compliance
     const { requests: universalRequestData, usedProvider } = await this.buildUniversalRequest(request, availableProviders)
-    
+
     try {
       const response = await this.executeUniversalRequestWithMetadata(universalRequestData, request.metadata as RequestMetadata)
       const mappedResponse = this.mapUniversalResponse(response, request, usedProvider)
@@ -448,7 +483,7 @@ export class AIGatewayService {
       const universalEndpoint = this.transformEndpointForUniversal(providerRequest.provider, providerRequest.endpoint, request.model || provider.getDefaultModel(request.capability))
       
       requests.push({
-        provider: providerRequest.provider,
+        provider: this.toGatewayProviderName(providerRequest.provider),
         endpoint: universalEndpoint,
         headers: finalHeaders,
         query: providerRequest.query
@@ -468,7 +503,7 @@ export class AIGatewayService {
             const fallbackUniversalEndpoint = this.transformEndpointForUniversal(fallbackRequest.provider, fallbackRequest.endpoint, request.model || fallbackProvider.getDefaultModel(request.capability))
             
             requests.push({
-              provider: fallbackRequest.provider,
+              provider: this.toGatewayProviderName(fallbackRequest.provider),
               endpoint: fallbackUniversalEndpoint,
               headers: fallbackFinalHeaders,
               query: fallbackRequest.query
@@ -556,7 +591,15 @@ export class AIGatewayService {
         }
         // If already a relative path, keep it as is
         return endpoint
-      
+
+      case 'dashscope':
+        // Custom Provider registered with base_url = https://dashscope.aliyuncs.com.
+        // Universal endpoint expects path relative to that base, e.g. compatible-mode/v1/chat/completions
+        if (endpoint.startsWith('https://dashscope.aliyuncs.com/')) {
+          return endpoint.replace('https://dashscope.aliyuncs.com/', '')
+        }
+        return endpoint
+
       default:
         // For unknown providers, keep original endpoint
         return endpoint
@@ -566,6 +609,75 @@ export class AIGatewayService {
   private mapUniversalResponse(response: any, request: AIRequest, usedProvider: string): AIResponse {
     const provider = this.providers.get(usedProvider)!
     return provider.mapResponse(response, request)
+  }
+
+  /**
+   * CF AI Gateway 上对 Custom Provider 的 slug 必须用 `custom-{slug}` 前缀。
+   * 内部 providers Map 用原生名（如 'dashscope'），发往 CF Gateway 前转换。
+   */
+  private toGatewayProviderName(providerName: string): string {
+    const customSlugs = new Set(['dashscope'])
+    return customSlugs.has(providerName) ? `custom-${providerName}` : providerName
+  }
+
+  /**
+   * Custom Provider 走 CF AI Gateway 的 provider-specific path
+   * (Universal endpoint 不支持 Custom Provider)。
+   *
+   *   URL: {gatewayUrl}/custom-{slug}/{base-relative-path}
+   *   Headers:
+   *     Authorization: Bearer <provider-key>      (转给阿里云)
+   *     cf-aig-authorization: Bearer <cf-token>   (CF Gateway 自己鉴权)
+   *   Body: 原生 provider 格式 (本例为 OpenAI 兼容 chat completion)
+   */
+  private async executeCustomProviderViaGateway(request: AIRequest, providerName: string): Promise<AIResponse> {
+    const provider = this.providers.get(providerName)
+    if (!provider) {
+      throw new Error(`Provider ${providerName} not registered`)
+    }
+
+    const providerRequest = provider.buildRequest(request)
+
+    // 把 provider 的完整 URL (https://dashscope.aliyuncs.com/...) 改成相对路径，
+    // 再拼到 CF Gateway 的 custom provider path 之后
+    const relativePath = this.transformEndpointForUniversal(
+      providerRequest.provider,
+      providerRequest.endpoint,
+      request.model || provider.getDefaultModel(request.capability)
+    )
+    const url = `${this.gatewayUrl}/${this.toGatewayProviderName(providerName)}/${relativePath}`
+
+    const headers: Record<string, string> = { ...providerRequest.headers }
+    if (this.env.AI_GATEWAY_TOKEN) {
+      headers['cf-aig-authorization'] = `Bearer ${this.env.AI_GATEWAY_TOKEN}`
+    }
+
+    this.logger.log('debug', 'Custom provider via CF Gateway', {
+      url,
+      provider: providerName,
+      requestId: request.metadata?.requestId,
+    })
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(providerRequest.query),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      this.logger.log('error', 'Custom provider via gateway failed', {
+        provider: providerName,
+        url,
+        status: response.status,
+        errorText,
+        requestId: request.metadata?.requestId,
+      })
+      throw new Error(`${providerName} (via CF Gateway) failed: ${response.status} - ${errorText}`)
+    }
+
+    const body = await response.json()
+    return provider.mapResponse(body, request)
   }
 
   // Convenience methods for different capabilities

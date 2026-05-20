@@ -334,7 +334,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                  isNotNull($articles.embedding),
                  eq($articles.status, 'PROCESSED'),
                  isNotNull($articles.contentFileKey),
-                 ...(article_ids.length > 0 ? [eq($articles.id, article_ids[0])] : timeConditions) // 简化处理，实际应该用 inArray
+                 ...(article_ids.length > 0 ? [inArray($articles.id, article_ids)] : timeConditions)
                )
              )
              .limit(articleLimit || 100);
@@ -595,8 +595,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           embeddings: dataset.embeddings
         };
         
-        // 使用优化的聚类参数
-        const clusteringOptions = {
+        // 优先使用用户传入的 clusteringOptions（来自 generate API 的 body），
+        // 否则根据数据规模启发式生成默认值
+        const effectiveClusteringOptions = clusteringOptions ?? {
           umapParams: {
             n_neighbors: Math.min(15, Math.max(3, Math.floor(dataset.articles.length / 3))),
             n_components: Math.min(10, Math.max(2, Math.floor(dataset.articles.length / 5))),
@@ -609,8 +610,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             epsilon: 0.5
           }
         };
+        console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'heuristic-default'}):`, JSON.stringify(effectiveClusteringOptions));
 
-        const response = await clusteringService.analyzeClusters(clusteringDataset, clusteringOptions);
+        const response = await clusteringService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
         
         if (!response.success) {
           throw new Error(`聚类分析失败: ${response.error || '未知错误'}`);
@@ -680,8 +682,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           {
             useAI: true,    // 启用AI验证
             aiOptions: {
-              provider: 'google-ai-studio',
-              model: 'gemini-2.0-flash'
+              provider: 'dashscope',
+              model: 'qwen-plus'
             }
           }
         );
@@ -879,13 +881,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('intelligence_analysis', 'started');
       
-      const intelligenceReports = await step.do('执行情报深度分析', defaultStepConfig, async () => {
-        console.log(`[AutoBrief] 开始情报分析，处理 ${validatedStories.stories.length} 个故事`);
-        
+      // 情报深度分析这一步串行调多次 qwen-long，每次 30-90s，需要更长 timeout
+      const intelligenceStepConfig: WorkflowStepConfig = {
+        retries: { limit: 1, delay: '10 seconds', backoff: 'linear' },
+        timeout: '30 minutes',
+      };
+
+      // 按 importance 降序取 top-N，避免把 15 个 story 全部送进 LLM 深度分析（成本/时间爆炸）
+      const storiesForIntelligence = [...validatedStories.stories]
+        .sort((a: any, b: any) => (b.importance ?? 0) - (a.importance ?? 0))
+        .slice(0, maxStoriesToGenerate);
+
+      const intelligenceReports = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
+        console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
+
                  const aiServices = createAIServices(this.env);
         const reports = [];
-        
-        for (const story of validatedStories.stories) {
+
+        for (const story of storiesForIntelligence) {
           try {
             // 构建故事和聚类数据
             const storyWithContent = {
@@ -971,8 +984,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             analysisData: intelligenceReports,
             previousBrief: previousBrief,
             options: {
-              provider: 'google-ai-studio',
-              model: 'gemini-2.0-flash'
+              provider: 'dashscope',
+              model: 'qwen-long'
             }
           })
         });
@@ -999,8 +1012,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               briefTitle: briefData.data.title,
               briefContent: briefData.data.content,
               options: {
-                provider: 'google-ai-studio',
-                model: 'gemini-2.0-flash'
+                provider: 'dashscope',
+                model: 'qwen-plus'
               }
             })
           });
@@ -1031,7 +1044,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 stories_identified: validatedStories.stories.length,
                 intelligence_analyses: intelligenceReports.length,
                 content_length: briefData.data.content.length,
-                model_used: briefData.data.metadata?.model_used || 'gemini-2.0-flash'
+                model_used: briefData.data.metadata?.model_used || 'qwen-long'
               }
             };
           } finally {

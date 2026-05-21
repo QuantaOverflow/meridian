@@ -237,3 +237,11 @@ llms/
 .cursorignore
 briefs/
 .repomix-output.txt
+
+# eval framework
+eval-reports/
+scripts/eval/story-validation/node_modules/
+scripts/eval/story-validation/fixtures/
+
+# ML model cache - downloaded locally, not for git
+services/meridian-ml-service/model-cache/

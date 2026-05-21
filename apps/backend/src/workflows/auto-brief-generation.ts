@@ -554,6 +554,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
+        articleIds: dataset.articles.map(a => a.id),  // 供 eval fixture 提取使用
         qualityAssessment: articleQuality,
         r2ContentMetrics: {
           fetchAttempts: r2ContentMetrics.r2FetchAttempts,
@@ -724,8 +725,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       await observability.logStep('story_validation', 'completed', {
-        validStories: validatedStories.stories.length,
-        rejectedClusters: validatedStories.rejectedClusters.length
+        validStoriesCount: validatedStories.stories.length,
+        rejectedClustersCount: validatedStories.rejectedClusters.length,
+        stories: validatedStories.stories,
+        rejectedClusters: validatedStories.rejectedClusters,
       });
 
       // =====================================================================

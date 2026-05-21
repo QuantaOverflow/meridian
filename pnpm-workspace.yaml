@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - services/*
+  - services/meridian-ml-service/cf-worker
 
 ignoredBuiltDependencies:
   - workerd

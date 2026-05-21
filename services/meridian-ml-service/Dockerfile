@@ -21,29 +21,6 @@ COPY pyproject.toml uv.lock* ./
 RUN uv pip install --system --no-cache --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu --requirement pyproject.toml && \
     rm -rf /root/.cache /tmp/* /var/tmp/*
 
-# --- Model Download Stage ---
-FROM python:3.11-slim AS model-downloader
-
-# Copy installed dependencies from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-
-# Create user and directories
-RUN useradd --create-home --shell /bin/bash appuser
-USER appuser
-WORKDIR /home/appuser/app
-
-# Set environment variables for model download
-ENV PYTHONUNBUFFERED=1 \
-    EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small \
-    HF_HOME=/home/appuser/.cache/huggingface
-
-# Copy download script
-COPY --chown=appuser:appuser ./scripts ./scripts
-
-# Download the model
-RUN python scripts/download_model.py
-
 # --- Runtime Stage ---
 FROM python:3.11-slim
 
@@ -66,8 +43,8 @@ WORKDIR /home/appuser/app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy the downloaded model from model-downloader stage
-COPY --from=model-downloader --chown=appuser:appuser /home/appuser/.cache/huggingface /home/appuser/.cache/huggingface
+# Copy pre-downloaded model files (downloaded locally to avoid HF rate limits)
+COPY --chown=appuser:appuser ./model-cache /home/appuser/model
 
 # Copy your application code
 COPY --chown=appuser:appuser ./src ./src
@@ -77,10 +54,7 @@ COPY --chown=appuser:appuser pyproject.toml ./
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/home/appuser/app:${PYTHONPATH} \
-    EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small \
-    HF_HOME=/home/appuser/.cache/huggingface \
-    TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers \
-    HF_HUB_CACHE=/home/appuser/.cache/huggingface/hub
+    EMBEDDING_MODEL_NAME=/home/appuser/model
 
 # Expose the default port
 EXPOSE 8080

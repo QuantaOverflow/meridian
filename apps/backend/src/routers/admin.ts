@@ -451,6 +451,32 @@ app.get('/overview', async (c) => {
   }
 });
 
+// ========== 文章按 ID 批量查询（用于 eval 等下游工具） ==========
+app.post('/articles/by-ids', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const ids = Array.isArray(body.ids)
+      ? (body.ids as unknown[]).filter((n): n is number => Number.isInteger(n))
+      : [];
+    if (ids.length === 0) {
+      return c.json({ success: true, articles: [] });
+    }
+    const db = getDb(c.env.HYPERDRIVE);
+    const rows = await db
+      .select({
+        id: $articles.id,
+        title: $articles.title,
+        url: $articles.url,
+        event_summary_points: $articles.event_summary_points,
+      })
+      .from($articles)
+      .where(inArray($articles.id, ids));
+    return c.json({ success: true, articles: rows });
+  } catch (e: any) {
+    return c.json({ success: false, error: e?.message || 'unknown' }, 500);
+  }
+});
+
 // ========== 工作流手动触发 ==========
 app.post('/articles/process', async (c) => {
   try {

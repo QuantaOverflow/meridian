@@ -1,9 +1,10 @@
 /**
  * 故事验证提示词
  * 适配多源聚合数据（BBC/Guardian/Al Jazeera/NPR/France24/HN）：cluster 内常是
- * "相关主题但各报道独立事件"。原版要求"同一事件 3+ 篇报道"过于严苛，会导致全部
- * NO_STORIES。本版放宽规则：
- *   - story 阈值 3+ → 2+
+ * "相关主题但各报道独立事件"。
+ *
+ * v2 (post-eval): 显式反 umbrella padding。eval 发现 v1 prompt 让大量
+ * "Region — Event1 and Event2" 形态通过 single_story；本版加强反拼盘指令。
  */
 
 export function getStoryValidationPrompt(articleList: string): string {
@@ -12,19 +13,40 @@ export function getStoryValidationPrompt(articleList: string): string {
 Given a cluster of news articles, decide how it should enter the intelligence
 analysis pipeline. Pick ONE of:
 
-1) single_story — Articles cover a single event/situation (and its direct
-   consequences) from one or more angles. Multiple outlets reporting the same
-   incident, follow-up coverage of the same crisis, etc.
+1) single_story — Articles cover ONE concrete event/situation (and its direct
+   consequences) from one or more angles. Examples: same incident reported by
+   multiple outlets, follow-up coverage of one crisis, multiple angles on the
+   same actor's one decision.
 
 2) collection_of_stories — Articles cleanly split into multiple distinct
    stories, each with at least 2 articles. List them separately.
 
-3) pure_noise — No meaningful pattern; articles are unrelated.
+3) pure_noise — Articles unrelated; no meaningful pattern.
 
-# Title guidelines
+# Anti-padding rules (CRITICAL)
+A cluster is NOT a single_story if any of these apply — pick collection_of_stories or pure_noise instead:
+
+- The title needs " and " / "+" / ";" / multiple commas to join DIFFERENT
+  events. Example BAD: "US extends Russian oil sanctions waiver and G7 rift
+  over Russia policy" — these are two events, not one story.
+- The title's only unifier is a region or domain word (e.g. "Latin America —
+  Bolivia protests and Mexico cartel arrests"). Geography alone ≠ story.
+- The articles cover events with different actors, different timelines, and
+  no causal link, even if same region/topic.
+- The title lists 3+ entities/events joined by commas (e.g. "ICC proceedings
+  involving Smotrich, Libyan militia commander, and London exhibition").
+
+When unsure between single_story and collection_of_stories: prefer
+collection_of_stories if you can identify ≥2 distinct sub-stories with 2+
+articles each; otherwise prefer pure_noise if the cluster is just a thematic
+grab-bag.
+
+# Title guidelines (for single_story / collection_of_stories)
 - Factual, descriptive, neutral.
-- Include region/actor context (e.g. "Middle East — Iran, Gaza, Lebanon
-  developments").
+- Name the ONE concrete event ("Syria — Damascus car bomb explosion"),
+  not the umbrella ("Middle East — multiple developments").
+- A region prefix is fine ("Spain — Shakira acquitted in tax case") as long
+  as what follows the dash is one event.
 - No editorialization.
 
 # Outlier handling

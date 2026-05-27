@@ -245,3 +245,8 @@ scripts/eval/story-validation/fixtures/
 
 # ML model cache - downloaded locally, not for git
 services/meridian-ml-service/model-cache/
+
+# Claude Code internal state
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/pain-log.md

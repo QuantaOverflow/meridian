@@ -21,8 +21,17 @@ const app = new Hono<HonoEnv>()
 app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Trace-ID', 'x-trace-id'],
 }))
+
+// 跨服务追踪：把上游传过来的 x-trace-id 在请求入口打一行结构化日志，便于 wrangler tail 关联
+app.use('*', async (c, next) => {
+  const traceId = c.req.header('x-trace-id') || c.req.header('X-Trace-ID')
+  if (traceId) {
+    console.log(`[trace] svc=meridian-ai-worker trace_id=${traceId} path=${c.req.path} method=${c.req.method}`)
+  }
+  await next()
+})
 
 // ============================================================================
 // 通用工具函数

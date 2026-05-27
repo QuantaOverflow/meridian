@@ -64,7 +64,14 @@ export interface ClusteringServiceResponse {
  * 提供与intelligence-pipeline.test.ts兼容的聚类分析接口
  */
 export class ClusteringService {
-  constructor(private env: AIWorkerEnv) {}
+  constructor(private env: AIWorkerEnv, private traceId?: string) {}
+
+  // 统一构建 outbound headers，自动注入 x-trace-id 以贯通跨 service 日志
+  private buildHeaders(extra?: Record<string, string>): Record<string, string> {
+    const h: Record<string, string> = { 'Content-Type': 'application/json', ...(extra || {}) };
+    if (this.traceId) h['x-trace-id'] = this.traceId;
+    return h;
+  }
 
   /**
    * 执行聚类分析
@@ -253,10 +260,7 @@ export class ClusteringService {
 
     const request = new Request(url.toString(), {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-      },
+      headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
       body: JSON.stringify({
         items,
         config: options?.config,
@@ -274,9 +278,7 @@ export class ClusteringService {
   async healthCheck(): Promise<{ success: boolean; error?: string }> {
     try {
       const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/health`, {
-        headers: { 
-          'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY
-        }
+        headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
       });
 
       const response = await fetch(request);
@@ -301,8 +303,8 @@ export class ClusteringService {
 /**
  * 便捷函数：创建聚类服务实例
  */
-export function createClusteringService(env: AIWorkerEnv): ClusteringService {
-  return new ClusteringService(env);
+export function createClusteringService(env: AIWorkerEnv, traceId?: string): ClusteringService {
+  return new ClusteringService(env, traceId);
 }
 
 /**

@@ -5,7 +5,7 @@ Meridian ML Service - 精简核心版本
 
 import time
 from typing import List, Dict, Any
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
@@ -43,6 +43,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 跨服务追踪：把上游传过来的 x-trace-id 在请求入口打一行结构化日志，便于关联三个 service 的日志
+@app.middleware("http")
+async def trace_id_logger(request: Request, call_next):
+    trace_id = request.headers.get("x-trace-id") or request.headers.get("X-Trace-ID")
+    if trace_id:
+        print(f"[trace] svc=meridian-ml-service trace_id={trace_id} path={request.url.path} method={request.method}", flush=True)
+    return await call_next(request)
 
 # ============================================================================
 # 健康检查和基础端点

@@ -591,7 +591,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         console.log(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
         
         // 创建聚类服务实例
-        const clusteringService = createClusteringService(this.env);
+        const clusteringService = createClusteringService(this.env, workflowId);
         
         // 优化：聚类分析仅依赖embedding向量，不需要文章内容
         // clustering-service.ts会自动过滤content字段，只传递必要字段给ML服务
@@ -652,9 +652,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const validatedStories = await step.do('执行故事验证', defaultStepConfig, async () => {
         console.log(`[AutoBrief] 开始故事验证，处理 ${clusteringResult.clusters.length} 个聚类`);
         
-        // 创建 AI 服务实例
-        const aiServices = createAIServices(this.env);
-        
+        // 创建 AI 服务实例（注入 trace_id 以贯通跨 service 日志）
+        const aiServices = createAIServices(this.env, workflowId);
+
         // 构建故事验证请求数据 - 使用真实的数据库字段
         const db = getDb(this.env.HYPERDRIVE);
         const articleIds = dataset.articles.map(a => a.id);
@@ -978,7 +978,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const intelligenceReports = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
         console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
-                 const aiServices = createAIServices(this.env);
+                 const aiServices = createAIServices(this.env, workflowId);
         const reports = [];
 
         for (let idx = 0; idx < storiesForIntelligence.length; idx++) {
@@ -1082,7 +1082,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 调用AI Worker的简报生成端点
         const briefRequest = new Request(`http://localhost:8786/meridian/generate-final-brief`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
           body: JSON.stringify({
             analysisData: intelligenceReports,
             previousBrief: previousBrief,
@@ -1110,7 +1110,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 生成TLDR
           const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
             body: JSON.stringify({
               briefTitle: briefData.data.title,
               briefContent: briefData.data.content,

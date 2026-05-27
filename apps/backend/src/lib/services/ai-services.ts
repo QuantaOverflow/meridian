@@ -16,8 +16,15 @@ export interface AIWorkerEnv {
 // AI Worker服务协调器
 export class AIWorkerService {
   private readonly baseUrl = 'https://meridian-ai-worker';
-  
-  constructor(private env: AIWorkerEnv) {}
+
+  constructor(private env: AIWorkerEnv, private traceId?: string) {}
+
+  // 统一构建 outbound headers，自动注入 x-trace-id 以贯通跨 service 日志
+  private buildHeaders(extra?: Record<string, string>): Record<string, string> {
+    const h: Record<string, string> = { 'Content-Type': 'application/json', ...(extra || {}) };
+    if (this.traceId) h['x-trace-id'] = this.traceId;
+    return h;
+  }
 
   /**
    * 生成嵌入向量。
@@ -29,10 +36,7 @@ export class AIWorkerService {
     const texts = Array.isArray(text) ? text : [text];
     const mlResp = await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY,
-      },
+      headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
       body: JSON.stringify({ texts, normalize: true }),
     });
 
@@ -72,7 +76,7 @@ export class AIWorkerService {
   async analyzeArticle(title: string, content: string, options?: any): Promise<Response> {
     const request = new Request(`${this.baseUrl}/meridian/article/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildHeaders(),
       body: JSON.stringify({
         title,
         content,
@@ -92,7 +96,7 @@ export class AIWorkerService {
   async validateStory(clusteringResult: any, articlesData: any, options?: any): Promise<Response> {
     const request = new Request(`${this.baseUrl}/meridian/story/validate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildHeaders(),
       body: JSON.stringify({
         clusteringResult,
         articlesData,
@@ -113,7 +117,7 @@ export class AIWorkerService {
   async analyzeStoryIntelligence(story: any, cluster: any, options?: any): Promise<Response> {
     const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-story`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildHeaders(),
       body: JSON.stringify({
         story,
         cluster,
@@ -137,10 +141,11 @@ export class AIWorkerService {
 
 /**
  * 创建AI服务实例的工厂函数
+ * @param traceId 可选；传入后所有 outbound 请求自动带 x-trace-id header，用于跨 service 日志关联
  */
-export function createAIServices(env: AIWorkerEnv) {
+export function createAIServices(env: AIWorkerEnv, traceId?: string) {
   return {
-    aiWorker: new AIWorkerService(env)
+    aiWorker: new AIWorkerService(env, traceId)
   };
 }
 

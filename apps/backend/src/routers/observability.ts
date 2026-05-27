@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { getDb } from '../lib/database';
-import { $reports, desc, gte } from '@meridian/database';
+import { $reports, $brief_runs, $brief_stories, $cluster_rejections, $articles, and, eq, desc, gte, sql } from '@meridian/database';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -349,6 +349,263 @@ app.get('/quality/analysis', async (c) => {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
+  }
+});
+
+// ========== 新观测性聚合查询（Phase 3） ==========
+
+/**
+ * 一次拉到 brief workflow 的完整链路：brief_runs + stories + rejections + 可观测性快照 + 关联报告
+ */
+app.get('/runs/:workflowId', async (c) => {
+  try {
+    const workflowId = c.req.param('workflowId');
+    const db = getDb(c.env.HYPERDRIVE);
+
+    const runs = await db
+      .select()
+      .from($brief_runs)
+      .where(eq($brief_runs.workflow_id, workflowId))
+      .limit(1);
+
+    if (runs.length === 0) {
+      return c.json({ success: false, error: 'workflow not found' }, 404);
+    }
+    const run = runs[0];
+
+    const [stories, rejections] = await Promise.all([
+      db
+        .select()
+        .from($brief_stories)
+        .where(eq($brief_stories.workflow_id, workflowId))
+        .orderBy(desc($brief_stories.importance)),
+      db
+        .select()
+        .from($cluster_rejections)
+        .where(eq($cluster_rejections.workflow_id, workflowId)),
+    ]);
+
+    // R2 可观测性快照（Phase 1 起以稳定 key 存储）
+    let observabilitySnapshot: any = null;
+    try {
+      const obj = await c.env.ARTICLES_BUCKET.get(`observability/${workflowId}.json`);
+      if (obj) observabilitySnapshot = JSON.parse(await obj.text());
+    } catch (e) {
+      // 静默：观测性数据缺失不影响其他链路
+    }
+
+    // 列出该 workflow 全部 intel report R2 key
+    const intelList = await c.env.ARTICLES_BUCKET.list({ prefix: `intel-reports/${workflowId}/` });
+
+    return c.json({
+      success: true,
+      run,
+      stories,
+      rejections,
+      intelReportKeys: intelList.objects.map((o) => o.key),
+      observability: observabilitySnapshot,
+    });
+  } catch (error) {
+    console.error('/observability/runs/:workflowId 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * 拿单份 intel report 全文（直接从 R2 流式返回 JSON）
+ */
+app.get('/runs/:workflowId/stories/:storyId/intel', async (c) => {
+  try {
+    const workflowId = c.req.param('workflowId');
+    const storyId = parseInt(c.req.param('storyId'), 10);
+    const db = getDb(c.env.HYPERDRIVE);
+
+    const stories = await db
+      .select({ key: $brief_stories.intel_report_r2_key })
+      .from($brief_stories)
+      .where(and(eq($brief_stories.workflow_id, workflowId), eq($brief_stories.id, storyId)))
+      .limit(1);
+
+    if (stories.length === 0 || !stories[0].key) {
+      return c.json({ success: false, error: 'intel report not found' }, 404);
+    }
+
+    const obj = await c.env.ARTICLES_BUCKET.get(stories[0].key);
+    if (!obj) {
+      return c.json({ success: false, error: 'intel report missing in R2' }, 404);
+    }
+
+    return new Response(obj.body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('/observability/runs/:workflowId/stories/:storyId/intel 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * 业务质量趋势：按天聚合最近 N 天的 brief_runs / brief_stories 指标
+ */
+app.get('/trends', async (c) => {
+  try {
+    const days = Math.max(1, Math.min(90, parseInt(c.req.query('days') || '14', 10)));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const db = getDb(c.env.HYPERDRIVE);
+
+    // 按天聚合 run 级指标
+    const runTrends = await db
+      .select({
+        day: sql<string>`date_trunc('day', ${$brief_runs.started_at})::date::text`,
+        total_runs: sql<number>`count(*)::int`,
+        completed: sql<number>`count(*) filter (where ${$brief_runs.status} = 'COMPLETED')::int`,
+        failed: sql<number>`count(*) filter (where ${$brief_runs.status} = 'FAILED')::int`,
+        terminated: sql<number>`count(*) filter (where ${$brief_runs.status} = 'TERMINATED_NO_STORIES')::int`,
+        avg_articles: sql<number>`avg(${$brief_runs.total_articles})::real`,
+        avg_clusters: sql<number>`avg(${$brief_runs.clusters_found})::real`,
+        avg_stories: sql<number>`avg(${$brief_runs.stories_identified})::real`,
+        avg_brief_len: sql<number>`avg(${$brief_runs.brief_content_length})::real`,
+      })
+      .from($brief_runs)
+      .where(gte($brief_runs.started_at, since))
+      .groupBy(sql`date_trunc('day', ${$brief_runs.started_at})`)
+      .orderBy(sql`date_trunc('day', ${$brief_runs.started_at}) desc`);
+
+    // story-level 指标：平均 importance、validation rate
+    const storyTrends = await db
+      .select({
+        day: sql<string>`date_trunc('day', ${$brief_runs.started_at})::date::text`,
+        avg_importance: sql<number>`avg(${$brief_stories.importance})::real`,
+        total_stories: sql<number>`count(${$brief_stories.id})::int`,
+      })
+      .from($brief_stories)
+      .innerJoin($brief_runs, eq($brief_stories.workflow_id, $brief_runs.workflow_id))
+      .where(gte($brief_runs.started_at, since))
+      .groupBy(sql`date_trunc('day', ${$brief_runs.started_at})`)
+      .orderBy(sql`date_trunc('day', ${$brief_runs.started_at}) desc`);
+
+    return c.json({
+      success: true,
+      days,
+      runTrends,
+      storyTrends,
+    });
+  } catch (error) {
+    console.error('/observability/trends 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * 健康度一眼可见：当日运行状态 + 文章数 + 最后成功 brief 时间
+ */
+app.get('/health/summary', async (c) => {
+  try {
+    const db = getDb(c.env.HYPERDRIVE);
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [runStats, lastBrief, articleStats, recentRuns] = await Promise.all([
+      db
+        .select({
+          total: sql<number>`count(*)::int`,
+          completed: sql<number>`count(*) filter (where ${$brief_runs.status} = 'COMPLETED')::int`,
+          failed: sql<number>`count(*) filter (where ${$brief_runs.status} = 'FAILED')::int`,
+          terminated: sql<number>`count(*) filter (where ${$brief_runs.status} = 'TERMINATED_NO_STORIES')::int`,
+          running: sql<number>`count(*) filter (where ${$brief_runs.status} = 'RUNNING')::int`,
+        })
+        .from($brief_runs)
+        .where(gte($brief_runs.started_at, last24h)),
+      db
+        .select({
+          id: $reports.id,
+          title: $reports.title,
+          createdAt: $reports.createdAt,
+        })
+        .from($reports)
+        .orderBy(desc($reports.createdAt))
+        .limit(1),
+      db
+        .select({
+          status: $articles.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from($articles)
+        .where(gte($articles.createdAt, last24h))
+        .groupBy($articles.status),
+      db
+        .select({
+          workflow_id: $brief_runs.workflow_id,
+          status: $brief_runs.status,
+          started_at: $brief_runs.started_at,
+          finished_at: $brief_runs.finished_at,
+          stories_identified: $brief_runs.stories_identified,
+          error: $brief_runs.error,
+        })
+        .from($brief_runs)
+        .orderBy(desc($brief_runs.started_at))
+        .limit(10),
+    ]);
+
+    const lastBriefAgeHours = lastBrief[0]?.createdAt
+      ? (Date.now() - lastBrief[0].createdAt.getTime()) / 3600000
+      : null;
+
+    return c.json({
+      success: true,
+      generated_at: new Date().toISOString(),
+      runs_24h: runStats[0] ?? { total: 0, completed: 0, failed: 0, terminated: 0, running: 0 },
+      last_brief: lastBrief[0]
+        ? {
+            id: lastBrief[0].id,
+            title: lastBrief[0].title,
+            created_at: lastBrief[0].createdAt,
+            age_hours: lastBriefAgeHours != null ? Number(lastBriefAgeHours.toFixed(2)) : null,
+          }
+        : null,
+      articles_24h_by_status: articleStats.reduce<Record<string, number>>((acc, row) => {
+        if (row.status) acc[row.status] = row.count;
+        return acc;
+      }, {}),
+      recent_runs: recentRuns.map((r) => ({
+        workflow_id: r.workflow_id,
+        status: r.status,
+        started_at: r.started_at,
+        duration_sec:
+          r.finished_at && r.started_at
+            ? Math.round((r.finished_at.getTime() - r.started_at.getTime()) / 1000)
+            : null,
+        stories_identified: r.stories_identified,
+        error: r.error,
+      })),
+    });
+  } catch (error) {
+    console.error('/observability/health/summary 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
   }
 });
 

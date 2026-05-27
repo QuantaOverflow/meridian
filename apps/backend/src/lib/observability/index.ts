@@ -117,7 +117,7 @@ export class WorkflowObservability {
     }
 
     this.metrics.push(metric);
-    
+
     // 记录到控制台（带结构化格式）
     console.log(`[观测性-${stepName}] ${status.toUpperCase()}`, {
       工作流ID: this.workflowId,
@@ -127,10 +127,8 @@ export class WorkflowObservability {
       错误: error || '无'
     });
 
-    // 如果是关键错误，立即保存指标
-    if (status === 'failed') {
-      await this.persistMetrics();
-    }
+    // 每次状态变化都持久化，保证 mid-flight 崩溃的 workflow 也能在 R2 中查到
+    await this.persistMetrics();
   }
 
   // 记录数据流变化
@@ -265,17 +263,16 @@ export class WorkflowObservability {
   }
 
   // 持久化指标到存储
+  // 使用稳定 key 覆盖写：每个 workflow 一份 R2 对象，反映最新状态
   private async persistMetrics() {
     try {
       const summary = this.generateSummaryReport();
-      const key = `observability/workflow_${this.workflowId}_${Date.now()}.json`;
-      
+      const key = `observability/${this.workflowId}.json`;
+
       await this.env.ARTICLES_BUCKET.put(key, JSON.stringify({
         summary,
         detailedMetrics: this.metrics
       }, null, 2));
-
-      console.log(`[可观测性] 指标已保存: ${key}`);
     } catch (error) {
       console.error('[可观测性] 保存指标失败:', error);
     }

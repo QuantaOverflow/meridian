@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, vector } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgEnum, pgTable, real, serial, text, timestamp, vector } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -99,3 +99,78 @@ export const $newsletter = pgTable('newsletter', {
   email: text('email').notNull().unique(),
   createdAt: timestamp('created_at', { mode: 'date' }).default(sql`CURRENT_TIMESTAMP`),
 });
+
+// 观测性：brief 生成工作流的运行级记录
+export const briefRunStatusEnum = pgEnum('brief_run_status', [
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'TERMINATED_NO_STORIES',
+]);
+
+export const $brief_runs = pgTable(
+  'brief_runs',
+  {
+    id: serial('id').primaryKey(),
+    workflow_id: text('workflow_id').notNull().unique(),
+    trace_id: text('trace_id').notNull(),
+    status: briefRunStatusEnum().notNull().default('RUNNING'),
+    triggered_by: text('triggered_by'),
+    params: jsonb('params'),
+
+    started_at: timestamp('started_at', { mode: 'date' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    finished_at: timestamp('finished_at', { mode: 'date' }),
+
+    total_articles: integer('total_articles'),
+    clusters_found: integer('clusters_found'),
+    stories_identified: integer('stories_identified'),
+    intelligence_analyses: integer('intelligence_analyses'),
+    brief_content_length: integer('brief_content_length'),
+
+    report_id: integer('report_id').references(() => $reports.id),
+    error: text('error'),
+  },
+  table => [index('brief_runs_workflow_id_idx').on(table.workflow_id)]
+);
+
+// 观测性：每次 workflow 验证通过的 story 元数据
+export const $brief_stories = pgTable(
+  'brief_stories',
+  {
+    id: serial('id').primaryKey(),
+    workflow_id: text('workflow_id')
+      .notNull()
+      .references(() => $brief_runs.workflow_id),
+    cluster_id: integer('cluster_id'),
+    title: text('title'),
+    importance: real('importance'),
+    article_count: integer('article_count'),
+    article_ids: jsonb('article_ids'),
+    selected_for_intel: boolean('selected_for_intel').notNull().default(false),
+    intel_report_r2_key: text('intel_report_r2_key'),
+    created_at: timestamp('created_at', { mode: 'date' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  table => [index('brief_stories_workflow_id_idx').on(table.workflow_id)]
+);
+
+// 观测性：每次 workflow 中被拒绝的聚类与拒因
+export const $cluster_rejections = pgTable(
+  'cluster_rejections',
+  {
+    id: serial('id').primaryKey(),
+    workflow_id: text('workflow_id')
+      .notNull()
+      .references(() => $brief_runs.workflow_id),
+    cluster_id: integer('cluster_id'),
+    reason: text('reason'),
+    article_count: integer('article_count'),
+    created_at: timestamp('created_at', { mode: 'date' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  table => [index('cluster_rejections_workflow_id_idx').on(table.workflow_id)]
+);

@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -266,9 +266,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       article_ids_provided: article_ids.length
     });
 
+    // 观测性：写入 brief_runs(status=RUNNING)。step.do 包裹保证重试时幂等（workflow_id unique）
+    await step.do('persist:brief_run_start', dbStepConfig, async () => {
+      const db = getDb(this.env.HYPERDRIVE);
+      await db
+        .insert($brief_runs)
+        .values({
+          workflow_id: workflowId,
+          trace_id: workflowId,
+          status: 'RUNNING',
+          triggered_by: triggeredBy,
+          params: event.payload as any,
+        })
+        .onConflictDoNothing({ target: $brief_runs.workflow_id });
+    });
+
     try {
       console.log(`[AutoBriefGeneration] 开始简报生成工作流, 参数:`, event.payload);
-      
+
       // =====================================================================
       // 步骤 1: 获取文章数据并构建 ArticleDataset
       // =====================================================================
@@ -731,6 +746,36 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         rejectedClusters: validatedStories.rejectedClusters,
       });
 
+      // 观测性：写入 brief_stories + cluster_rejections。delete+insert 保证 step 重试时幂等
+      await step.do('persist:brief_stories_and_rejections', dbStepConfig, async () => {
+        const db = getDb(this.env.HYPERDRIVE);
+        await db.delete($brief_stories).where(eq($brief_stories.workflow_id, workflowId));
+        await db.delete($cluster_rejections).where(eq($cluster_rejections.workflow_id, workflowId));
+        if (validatedStories.stories.length > 0) {
+          await db.insert($brief_stories).values(
+            validatedStories.stories.map((s: any, i: number) => ({
+              workflow_id: workflowId,
+              cluster_id: s.clusterId ?? i + 1,
+              title: s.title ?? null,
+              importance: typeof s.importance === 'number' ? s.importance : null,
+              article_count: Array.isArray(s.articleIds) ? s.articleIds.length : null,
+              article_ids: Array.isArray(s.articleIds) ? s.articleIds : null,
+              selected_for_intel: false,
+            }))
+          );
+        }
+        if (validatedStories.rejectedClusters.length > 0) {
+          await db.insert($cluster_rejections).values(
+            validatedStories.rejectedClusters.map((c: any) => ({
+              workflow_id: workflowId,
+              cluster_id: typeof c.clusterId === 'number' ? c.clusterId : null,
+              reason: c.rejectionReason ?? null,
+              article_count: Array.isArray(c.originalArticleIds) ? c.originalArticleIds.length : null,
+            }))
+          );
+        }
+      });
+
       // =====================================================================
       // 检查故事质量阈值 - 如果没有有效故事则停止工作流
       // =====================================================================
@@ -767,6 +812,22 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         console.log('[AutoBrief] 💡 优化建议:', noStoriesReport.recommendations);
 
         await observability.logStep('workflow_terminated', 'completed', noStoriesReport);
+
+        // 观测性：标记 brief_runs 为 TERMINATED_NO_STORIES
+        await step.do('persist:brief_run_terminated', dbStepConfig, async () => {
+          const db = getDb(this.env.HYPERDRIVE);
+          await db
+            .update($brief_runs)
+            .set({
+              status: 'TERMINATED_NO_STORIES',
+              finished_at: new Date(),
+              total_articles: dataset.articles.length,
+              clusters_found: clusteringResult.clusters.length,
+              stories_identified: 0,
+              intelligence_analyses: 0,
+            })
+            .where(eq($brief_runs.workflow_id, workflowId));
+        });
 
         return {
           success: false,
@@ -895,23 +956,43 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         .sort((a: any, b: any) => (b.importance ?? 0) - (a.importance ?? 0))
         .slice(0, maxStoriesToGenerate);
 
+      // 观测性：标记被选中跑 intel 的 stories
+      await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {
+        const db = getDb(this.env.HYPERDRIVE);
+        const selectedClusterIds = storiesForIntelligence
+          .map((s: any, i: number) => s.clusterId ?? (validatedStories.stories.indexOf(s) + 1))
+          .filter((id: any) => id != null);
+        if (selectedClusterIds.length > 0) {
+          await db
+            .update($brief_stories)
+            .set({ selected_for_intel: true })
+            .where(
+              and(
+                eq($brief_stories.workflow_id, workflowId),
+                inArray($brief_stories.cluster_id, selectedClusterIds)
+              )
+            );
+        }
+      });
+
       const intelligenceReports = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
         console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
                  const aiServices = createAIServices(this.env);
         const reports = [];
 
-        for (const story of storiesForIntelligence) {
+        for (let idx = 0; idx < storiesForIntelligence.length; idx++) {
+          const story = storiesForIntelligence[idx];
           try {
             // 构建故事和聚类数据
             const storyWithContent = {
               storyId: story.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
               analysis: { summary: story.title }
             };
-            
+
             // 为情报分析动态获取相关文章的内容
             const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
-            
+
             const clusterForAnalysis = {
               articles: clusterArticles
             };
@@ -926,6 +1007,25 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               const data = await response.json() as any;
               if (data.success) {
                 reports.push(data.data);
+
+                // 观测性：把这份 intel report 全文落 R2，并把 R2 key 记到 brief_stories
+                const r2Key = `intel-reports/${workflowId}/${idx}.json`;
+                try {
+                  await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
+                  const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
+                  const db = getDb(this.env.HYPERDRIVE);
+                  await db
+                    .update($brief_stories)
+                    .set({ intel_report_r2_key: r2Key })
+                    .where(
+                      and(
+                        eq($brief_stories.workflow_id, workflowId),
+                        eq($brief_stories.cluster_id, clusterId)
+                      )
+                    );
+                } catch (persistErr) {
+                  console.warn(`[AutoBrief] intel report 落盘失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+                }
               }
             }
           } catch (error) {
@@ -1141,6 +1241,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       await observability.logStep('save_brief', 'completed', { reportId });
 
+      // 观测性：标记 brief_runs 为 COMPLETED 并填充全部统计
+      await step.do('persist:brief_run_complete', dbStepConfig, async () => {
+        const db = getDb(this.env.HYPERDRIVE);
+        await db
+          .update($brief_runs)
+          .set({
+            status: 'COMPLETED',
+            finished_at: new Date(),
+            report_id: reportId,
+            total_articles: briefResult.stats.total_articles,
+            clusters_found: briefResult.stats.clusters_found,
+            stories_identified: briefResult.stats.stories_identified,
+            intelligence_analyses: briefResult.stats.intelligence_analyses,
+            brief_content_length: briefResult.stats.content_length,
+          })
+          .where(eq($brief_runs.workflow_id, workflowId));
+      });
+
       // =====================================================================
       // 完成工作流
       // =====================================================================
@@ -1170,6 +1288,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     } catch (error) {
       console.error('[AutoBrief] 工作流执行失败:', error);
       await observability.fail(error instanceof Error ? error.message : String(error));
+
+      // 观测性：标记 brief_runs 为 FAILED。step.do 防止本身抖动；失败也不再 throw
+      try {
+        await step.do('persist:brief_run_failed', dbStepConfig, async () => {
+          const db = getDb(this.env.HYPERDRIVE);
+          await db
+            .update($brief_runs)
+            .set({
+              status: 'FAILED',
+              finished_at: new Date(),
+              error: error instanceof Error ? error.message : String(error),
+            })
+            .where(eq($brief_runs.workflow_id, workflowId));
+        });
+      } catch (persistErr) {
+        console.error('[AutoBrief] 标记 brief_runs FAILED 失败:', persistErr);
+      }
+
       throw error;
     }
   }

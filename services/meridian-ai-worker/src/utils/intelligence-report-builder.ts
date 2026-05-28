@@ -81,15 +81,6 @@ export class IntelligenceReportBuilder {
     }];
   }
 
-  private static createDefaultEntities(): Entity[] {
-    return [{
-      name: "Entity 1",
-      type: "Organization",
-      role: "Primary actor",
-      positions: ["Position 1"],
-    }];
-  }
-
   private static mapStoryStatus(status: string): "DEVELOPING" | "ESCALATING" | "DE_ESCALATING" | "CONCLUDING" | "STATIC" {
     const statusMap: Record<string, any> = {
       'developing': 'DEVELOPING',
@@ -151,24 +142,37 @@ export class IntelligenceReportBuilder {
   }
 
   private static buildEntities(analysis: any): Entity[] {
-    if (Array.isArray(analysis.entities)) {
-      return analysis.entities.map((entity: any) => ({
+    // prompt 实际输出的是 keyEntities.list；兼容历史 entities 字段
+    const list = Array.isArray(analysis.keyEntities?.list)
+      ? analysis.keyEntities.list
+      : Array.isArray(analysis.entities)
+        ? analysis.entities
+        : null;
+    if (list) {
+      return list.map((entity: any) => ({
         name: entity.name || "Unknown Entity",
         type: entity.type || "Unknown",
-        role: entity.role || "Unknown Role",
+        role: entity.role || entity.description || "Unknown Role",
         positions: Array.isArray(entity.positions) ? entity.positions : [],
       }));
     }
-    
-    return this.createDefaultEntities();
+
+    // 真没有就返回空，绝不注入 "Entity 1" 占位符污染下游 brief
+    return [];
   }
 
   private static extractFactualBasis(analysis: any): string[] {
     if (Array.isArray(analysis.factualBasis)) {
       return analysis.factualBasis;
     }
-    
-    return ["Fact 1", "Fact 2"];
+    // prompt 不产 factualBasis，但 timeline 就是按时序的事实发展——用它作为关键发展
+    if (Array.isArray(analysis.timeline)) {
+      return analysis.timeline
+        .map((e: any) => (typeof e === 'string' ? e : e?.description))
+        .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0);
+    }
+    // 真没有就返回空，绝不注入 "Fact 1/Fact 2" 占位符
+    return [];
   }
 
   private static extractInformationGaps(analysis: any): string[] {

@@ -458,9 +458,8 @@ export class BriefGenerationService {
 
   private convertReportsToMarkdown(reports: IntelligenceReport[]): string {
     return reports.map((report, index) => {
-      if (index > 0) return '\n---\n\n';
-      
-      let markdown = `# ${report.executiveSummary}\n\n`;
+      let markdown = index > 0 ? '\n---\n\n' : '';
+      markdown += `# ${report.executiveSummary}\n\n`;
       
       if (report.factualBasis?.length) {
         markdown += '## 关键发展\n';

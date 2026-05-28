@@ -13,6 +13,12 @@ vars = { ENVIRONMENT = "development" }
 [ai]
 binding = "AI"
 
+# 与 backend 同一个 bucket：写入 llm-calls/{trace_id}/{phase}-{idx}.json 用于 eval
+[[r2_buckets]]
+binding = "ARTICLES_BUCKET"
+bucket_name = "meridian-articles-prod"
+preview_bucket_name = "meridian-articles-dev"
+
 # wrangler.toml (wrangler v3.88.0^)
 [observability.logs]
 enabled = true

@@ -1000,7 +1000,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             const response = await aiServices.aiWorker.analyzeStoryIntelligence(
               storyWithContent,
               clusterForAnalysis,
-              { analysis_depth: 'detailed' }
+              { analysis_depth: 'detailed' },
+              idx
             );
 
             if (response.status === 200) {

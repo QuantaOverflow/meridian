@@ -113,11 +113,15 @@ export class AIWorkerService {
 
   /**
    * 分析故事情报 (第二阶段深度分析)
+   *
+   * @param callIndex 在同一个 workflow 内的调用序号，用于 R2 中 LLM 调用日志的去重 key
    */
-  async analyzeStoryIntelligence(story: any, cluster: any, options?: any): Promise<Response> {
+  async analyzeStoryIntelligence(story: any, cluster: any, options?: any, callIndex?: number): Promise<Response> {
+    const extra: Record<string, string> = {};
+    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-story`, {
       method: 'POST',
-      headers: this.buildHeaders(),
+      headers: this.buildHeaders(extra),
       body: JSON.stringify({
         story,
         cluster,

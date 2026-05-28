@@ -4,6 +4,7 @@ import { AIGatewayService } from './services/ai-gateway'
 import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
+import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem, StoryAnalysis, BriefContent } from './types/api'
@@ -177,7 +178,7 @@ app.post('/meridian/article/analyze', async (c) => {
       console.log(`[Article Analysis] 使用模型: ${strategy.model} (提供商: ${strategy.provider}), 温度: ${strategy.temperature}`)
       
       try {
-        const aiResult = await aiGateway.chat({
+        const aiResult = await loggedChat(aiGateway, c.env, readTraceContext(c.req.raw), 'article_analysis', {
           messages: [
             { role: 'user', content: analysisPrompt }
           ],
@@ -305,8 +306,8 @@ app.post('/meridian/story/validate', async (c) => {
       }, 400)
     }
 
-    // 使用重构后的故事验证服务
-    const storyValidationService = new StoryValidationService(c.env)
+    // 使用重构后的故事验证服务（注入 trace 上下文以便 LLM I/O 落 R2）
+    const storyValidationService = new StoryValidationService(c.env, readTraceContext(c.req.raw))
     const result = await storyValidationService.validateStories({
       clusteringResult: body.clusteringResult,
       articlesData: body.articlesData,
@@ -348,7 +349,7 @@ app.post('/meridian/intelligence/analyze-stories', async (c) => {
 
     console.log(`[Intelligence] 分析 ${body.stories.stories?.length || 0} 个故事`)
 
-    const intelligenceService = new IntelligenceService(c.env)
+    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
     const result = await intelligenceService.analyzeStories(body.stories, body.dataset)
     
     if (result.success) {
@@ -393,7 +394,7 @@ app.post('/meridian/intelligence/analyze-single-story', async (c) => {
 
     console.log(`[Intelligence] 分析单个故事: ${body.story.title}`)
 
-    const intelligenceService = new IntelligenceService(c.env)
+    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
     const result = await intelligenceService.analyzeSingleStory(body.story, body.articleData)
     
     if (result.success) {
@@ -456,7 +457,7 @@ app.post('/meridian/intelligence/analyze-story', async (c) => {
     console.log(`[Intelligence] 兼容模式分析故事，包含 ${articlesData.length} 篇文章`)
 
     // 使用 IntelligenceService 进行分析
-    const intelligenceService = new IntelligenceService(c.env)
+    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
     
     // 转换为 IntelligenceService 期望的格式
     const analysisRequest = {
@@ -520,7 +521,7 @@ app.post('/meridian/generate-final-brief', async (c) => {
 
     console.log(`[Brief Generation] 生成简报，输入 ${body.analysisData.length} 个分析`)
 
-    const briefService = new BriefGenerationService(c.env)
+    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
 
     // 将legacy格式转换为IntelligenceReports格式
     const intelligenceReports = {
@@ -624,7 +625,7 @@ app.post('/meridian/generate-brief-tldr', async (c) => {
 
     console.log(`[TLDR Generation] 为简报生成TLDR`)
 
-    const briefService = new BriefGenerationService(c.env)
+    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
     
     const result = await briefService.generateTLDR(body.briefTitle, body.briefContent)
     

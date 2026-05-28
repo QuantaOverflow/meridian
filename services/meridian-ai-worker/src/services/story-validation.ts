@@ -1,4 +1,5 @@
 import { AIGatewayService } from './ai-gateway'
+import { loggedChat, TraceContext } from './llm-call-logger'
 import { getStoryValidationPrompt } from '../prompts/storyValidation'
 import {
   StoryValidationRequest,
@@ -13,9 +14,13 @@ import { CloudflareEnv } from '../types'
 
 export class StoryValidationService {
   private aiGateway: AIGatewayService
+  private env: CloudflareEnv
+  private traceContext: TraceContext
 
-  constructor(env: CloudflareEnv) {
+  constructor(env: CloudflareEnv, traceContext: TraceContext = {}) {
+    this.env = env
     this.aiGateway = new AIGatewayService(env)
+    this.traceContext = traceContext
   }
 
   /**
@@ -204,7 +209,7 @@ export class StoryValidationService {
       metadata: this.createRequestMetadata()
     }
 
-    const result = await this.aiGateway.chat(chatRequest)
+    const result = await loggedChat(this.aiGateway, this.env, this.traceContext, 'story_validation', chatRequest)
     if (result.capability !== 'chat') {
       throw new Error('Unexpected response type from chat service')
     }

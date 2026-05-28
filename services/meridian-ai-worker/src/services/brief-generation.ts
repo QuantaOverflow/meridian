@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import { AIGatewayService } from './ai-gateway';
+import { loggedChat, TraceContext, LLMCallPhase } from './llm-call-logger';
 import { 
   getBriefGenerationSystemPrompt, 
   getBriefGenerationPrompt, 
@@ -217,9 +218,11 @@ class BriefErrorHandler {
 
 export class BriefGenerationService {
   private aiGatewayService: AIGatewayService;
+  private traceContext: TraceContext;
 
-  constructor(private env: CloudflareEnv) {
+  constructor(private env: CloudflareEnv, traceContext: TraceContext = {}) {
     this.aiGatewayService = new AIGatewayService(env);
+    this.traceContext = traceContext;
   }
 
   /**
@@ -268,7 +271,9 @@ export class BriefGenerationService {
         const briefResponse = await this.callAI(briefPrompt, systemPrompt, {
           model: 'qwen-long',
           temperature: 0.7,
-          maxTokens: 16000
+          maxTokens: 16000,
+          phase: 'brief_generation',
+          callIndex: 0
         });
 
         // 提取简报内容
@@ -280,7 +285,9 @@ export class BriefGenerationService {
         // 生成标题
         const titlePrompt = getBriefTitlePrompt(content);
         const titleResponse = await this.callAI(titlePrompt, undefined, {
-          temperature: 0
+          temperature: 0,
+          phase: 'brief_generation',
+          callIndex: 1
         });
         
         const titleData = this.parseJSONFromResponse(titleResponse);
@@ -339,7 +346,9 @@ export class BriefGenerationService {
         const tldrPrompt = getTldrGenerationPrompt(briefTitle, briefContent);
         
         const response = await this.callAI(tldrPrompt, undefined, {
-          temperature: 0
+          temperature: 0,
+          phase: 'tldr_generation',
+          callIndex: 0
         });
         
         // 清理TLDR内容
@@ -373,11 +382,11 @@ export class BriefGenerationService {
   // ============================================================================
 
   private async callAI(
-    prompt: string, 
+    prompt: string,
     systemPrompt?: string,
-    options: { provider?: string; model?: string; temperature?: number; maxTokens?: number } = {}
+    options: { provider?: string; model?: string; temperature?: number; maxTokens?: number; phase?: LLMCallPhase; callIndex?: number } = {}
   ): Promise<string> {
-    const messages = systemPrompt 
+    const messages = systemPrompt
       ? [
           { role: 'system' as const, content: systemPrompt },
           { role: 'user' as const, content: prompt }
@@ -398,7 +407,17 @@ export class BriefGenerationService {
     };
 
     try {
-      const result = await this.aiGatewayService.chat(chatRequest);
+      const phaseTrace: TraceContext = {
+        ...this.traceContext,
+        callIndex: options.callIndex ?? this.traceContext.callIndex,
+      };
+      const result = await loggedChat(
+        this.aiGatewayService,
+        this.env,
+        phaseTrace,
+        options.phase ?? 'brief_generation',
+        chatRequest
+      );
       
       // 检查结果是否存在
       if (!result) {

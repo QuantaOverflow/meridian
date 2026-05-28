@@ -1,4 +1,5 @@
 import { AIGatewayService } from './ai-gateway';
+import { loggedChat, TraceContext } from './llm-call-logger';
 import { getIntelligenceAnalysisPrompt } from '../prompts/intelligenceAnalysis';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { 
@@ -30,9 +31,11 @@ export type {
  */
 export class IntelligenceService {
   private aiGatewayService: AIGatewayService;
+  private traceContext: TraceContext;
 
-  constructor(private env: CloudflareEnv) {
+  constructor(private env: CloudflareEnv, traceContext: TraceContext = {}) {
     this.aiGatewayService = new AIGatewayService(env);
+    this.traceContext = traceContext;
   }
 
   /**
@@ -238,8 +241,8 @@ export class IntelligenceService {
         }
       };
 
-      const result = await this.aiGatewayService.chat(chatRequest);
-      
+      const result = await loggedChat(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis', chatRequest);
+
       if (result.capability !== 'chat') {
         throw new Error('Unexpected response type from chat service');
       }

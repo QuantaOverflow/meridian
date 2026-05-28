@@ -609,6 +609,84 @@ app.get('/health/summary', async (c) => {
   }
 });
 
+/**
+ * 列出某次 workflow 全部 LLM 调用（每条 raw input + raw output 存在 R2 llm-calls/{workflow_id}/*.json）
+ * 不内联文件内容（可能很大），只返回 key + uploaded + size + 简要 metadata
+ */
+app.get('/runs/:workflowId/llm-calls', async (c) => {
+  try {
+    const workflowId = c.req.param('workflowId');
+    const list = await c.env.ARTICLES_BUCKET.list({ prefix: `llm-calls/${workflowId}/` });
+
+    // 拉每个对象的简要 metadata（解析 R2 头）。如果想看全文走 /llm-calls/:key
+    const calls = await Promise.all(
+      list.objects.map(async (obj) => {
+        try {
+          const o = await c.env.ARTICLES_BUCKET.get(obj.key);
+          if (!o) return null;
+          const data: any = JSON.parse(await o.text());
+          return {
+            key: obj.key,
+            uploaded: obj.uploaded,
+            size: obj.size,
+            phase: data.phase,
+            call_index: data.call_index,
+            provider: data.request?.provider,
+            model: data.request?.model,
+            tokens: data.response?.usage,
+            latency_ms: data.latency_ms,
+            error: data.error || null,
+          };
+        } catch {
+          return { key: obj.key, uploaded: obj.uploaded, size: obj.size, error: 'parse_failed' };
+        }
+      })
+    );
+
+    return c.json({ success: true, total: list.objects.length, calls: calls.filter(Boolean) });
+  } catch (error) {
+    console.error('/observability/runs/:workflowId/llm-calls 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * 拿单条 LLM 调用的完整 raw input/output JSON（直接从 R2 流式返回）
+ */
+app.get('/llm-calls/*', async (c) => {
+  try {
+    const fullPath = c.req.path; // 形如 /observability/llm-calls/llm-calls/xxx/yyy.json
+    const idx = fullPath.indexOf('/llm-calls/') + '/llm-calls/'.length;
+    const key = decodeURIComponent(fullPath.slice(idx));
+    if (!key.startsWith('llm-calls/')) {
+      return c.json({ success: false, error: 'invalid key' }, 400);
+    }
+    const obj = await c.env.ARTICLES_BUCKET.get(key);
+    if (!obj) {
+      return c.json({ success: false, error: 'not found' }, 404);
+    }
+    return new Response(obj.body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('/observability/llm-calls/* 失败:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
 // ========== 辅助函数 ==========
 
 function generatePerformanceRecommendations(performance: any): string[] {

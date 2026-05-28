@@ -142,12 +142,14 @@ export class IntelligenceReportBuilder {
   }
 
   private static buildEntities(analysis: any): Entity[] {
-    // prompt 实际输出的是 keyEntities.list；兼容历史 entities 字段
-    const list = Array.isArray(analysis.keyEntities?.list)
-      ? analysis.keyEntities.list
-      : Array.isArray(analysis.entities)
-        ? analysis.entities
-        : null;
+    // 模型实际把 keyEntities 直接输出成数组（prompt 写的是 keyEntities.list，但输出常扁平化）；兼容三种形态
+    const list = Array.isArray(analysis.keyEntities)
+      ? analysis.keyEntities
+      : Array.isArray(analysis.keyEntities?.list)
+        ? analysis.keyEntities.list
+        : Array.isArray(analysis.entities)
+          ? analysis.entities
+          : null;
     if (list) {
       return list.map((entity: any) => ({
         name: entity.name || "Unknown Entity",

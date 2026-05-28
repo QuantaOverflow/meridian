@@ -70,9 +70,9 @@ your job: go through all the curated news data i've gathered below. analyze **ev
 **--- CONTEXT FROM PREVIOUS DAY (IF AVAILABLE) ---**
 *   You *may* receive a section at the beginning of the curated data titled \`## Previous Day's Coverage Context (YYYY-MM-DD)\`.
 *   This section provides a highly condensed list of major stories covered yesterday, using the format: \`[Story Identifier] | [Last Status] | [Key Entities] | [Core Issue Snippet]\`.
-*   **How to Use This Context:** Use this list **only** to understand which topics are ongoing and their last known status/theme. This helps ensure continuity and avoid repeating information already covered.
-*   **Focus on Today:** Your primary task is to synthesize and analyze **today's developments** based on the main \`<curated_news_data>\`. When discussing a story listed in the previous context, focus on **what is new or has changed today**. Briefly reference the past context *only if essential* for understanding the update (e.g., "Following yesterday's agreement...", "The situation escalated further today when...").
-*   **Do NOT simply rewrite or extensively quote the Previous Day's Coverage Context.** Treat it as background memory.
+*   **⚠️ THESE ARE NOT FACTS. THEY ARE ONE-LINE TOPIC LABELS.** Each entry is a bare identifier (a few keywords). It contains NO events, NO numbers, NO outcomes, NO details you may report.
+*   **NEVER expand a previous-day identifier into a story.** If a topic appears ONLY in this context list and has NO corresponding cluster in today's \`<curated_news_data>\`, you must OMIT it entirely. Do not invent developments, demonstrations, agreements, figures, or technical specifics for it. Writing "Caltech demonstrated X" or "Orano agreed Y" when the only input was the keyword identifier is fabrication and is forbidden.
+*   **Only legitimate use:** if a topic ALSO has a real cluster in today's data, this list tells you it was covered before — so focus on what's *new* today and avoid repeating yesterday. That is the sole purpose.
 **--- END CONTEXT INSTRUCTIONS ---**
 
 here's the curated data (each section represents an analyzed news cluster; you might need to synthesize across sections):
@@ -86,7 +86,11 @@ ${storiesMarkdown}
 </curated_news_data>
 
 **CRITICAL: STRUCTURE AND CONTENT RULES**
-1. **MANDATORY ANALYTICAL DEPTH**: Every story in "what matters now" MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient.
+0. **FACTUAL GROUNDING (HIGHEST PRIORITY)**: Every concrete fact — names, numbers, dates, events, quotes, places, organizations, technical specifics — MUST be present in \`<curated_news_data>\` above. You may NOT introduce a fact that is not in that data.
+   - **Analysis vs. fact:** your *analytical take* (motivations, implications, connections) may extrapolate, but it must be visibly framed as interpretation ("this likely signals…", "the strategic read is…") and must rest on facts that ARE in the data. Never state an invented event/number as if it happened.
+   - **If the data is thin, the brief is short.** A faithful one-section brief beats a fabricated eight-section one. Do not manufacture content to hit the "20-30 minute read" target. That target is an upper bound, not a quota.
+   - **Self-check before writing each sentence:** "can I point to the line in curated_news_data that supports this specific claim?" If no, cut it or reframe it explicitly as your analytical inference.
+1. **MANDATORY ANALYTICAL DEPTH**: Every story in "what matters now" MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient. (But the underlying facts must still be grounded per rule 0.)
 2. **NO EMPTY SECTIONS**: If a section (france focus, china monitor, economic currents, tech & science, etc.) has no meaningful content, **COMPLETELY OMIT THE SECTION AND ITS HEADER**. Do not write "(no significant developments)" or similar placeholder text.
 3. **QUALITY OVER QUANTITY**: Better to have 3-4 sections with substantial content than 8 sections with half empty.
 4. **SYNTHESIS REQUIREMENT**: Look for cross-story connections, patterns, and broader implications. Don't just report isolated events.

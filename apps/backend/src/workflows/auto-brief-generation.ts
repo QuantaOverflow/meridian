@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, and, eq, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -1053,32 +1053,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const briefResult = await step.do('生成最终简报', defaultStepConfig, async (): Promise<BriefGenerationResultData> => {
         console.log(`[AutoBrief] 开始生成简报，基于 ${intelligenceReports.length} 个情报分析`);
         
-        // 获取前一天的简报上下文（如果有）
-        let previousBrief = null;
-        try {
-          const db = getDb(this.env.HYPERDRIVE);
-          const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-          const previousBriefs = await db
-            .select({
-              title: $reports.title,
-              tldr: $reports.tldr,
-              created_at: $reports.createdAt
-            })
-            .from($reports)
-            .where(gte($reports.createdAt, yesterday))
-            .orderBy(desc($reports.createdAt))
-            .limit(1);
-          
-          if (previousBriefs.length > 0) {
-            previousBrief = {
-              title: previousBriefs[0].title,
-              tldr: previousBriefs[0].tldr,
-              date: previousBriefs[0].created_at?.toISOString().split('T')[0]
-            };
-          }
-        } catch (error) {
-          console.warn(`[AutoBrief] 无法获取前一天简报上下文:`, error);
-        }
+        // 前日简报上下文已停用：它把昨天 brief 的 TLDR（一串主题标识符）回灌进来，
+        // brief 会无视 guardrail 把这些标识符展开成编造的整节，再被 TLDR 压回、次日重灌，
+        // 形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。断源 > 靠模型自觉。
+        const previousBrief = null;
 
         // 调用AI Worker的简报生成端点
         const briefRequest = new Request(`http://localhost:8786/meridian/generate-final-brief`, {

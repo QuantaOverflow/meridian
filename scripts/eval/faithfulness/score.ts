@@ -6,7 +6,6 @@ import type { FaithfulnessReport } from './types.js';
 const BACKEND_URL = process.env.BACKEND_URL || 'https://meridian-backend.swj299792458.workers.dev';
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 
-// 把 brief 合成步骤的 LLM 输入（messages）拼成 source 文本
 function messagesToSource(messages: Array<{ role: string; content: string }>): string {
   return messages.map((m) => m.content).join('\n\n');
 }
@@ -27,7 +26,6 @@ async function main() {
 
   console.log(`[faithfulness] workflow=${workflowId} judge=${JUDGE_MODEL}`);
 
-  // 1. 找到 brief_generation-000 这次 LLM 调用（含 input=intel 源材料 + output=brief）
   const callList = await fetchJSON(`${BACKEND_URL}/observability/runs/${workflowId}/llm-calls`);
   const briefCall = (callList.calls || []).find(
     (c: any) => c.phase === 'brief_generation' && c.call_index === 0
@@ -39,7 +37,6 @@ async function main() {
     );
   }
 
-  // 2. 拉这次调用的完整 raw input/output
   const raw = await fetchJSON(`${BACKEND_URL}/observability/llm-calls/${briefCall.key}`);
   const source = messagesToSource(raw.request?.messages || []);
   const brief = raw.response?.content || '';
@@ -48,18 +45,23 @@ async function main() {
   }
   console.log(`[faithfulness] source=${source.length} chars, brief=${brief.length} chars`);
 
-  // 3. 抽 claim
   const claims = await extractClaims(brief, JUDGE_MODEL);
-  console.log(`[faithfulness] extracted ${claims.length} claims`);
+  const nFactual = claims.filter((c) => c.type === 'factual').length;
+  const nAnalytical = claims.length - nFactual;
+  console.log(`[faithfulness] ${claims.length} claims (${nFactual} factual, ${nAnalytical} analytical)`);
 
-  // 4. 逐 claim 裁决（强制取证 + 子串校验）
-  const judgements = await judgeAll(claims, source, JUDGE_MODEL);
+  const { factual, analytical } = await judgeAll(claims, source, JUDGE_MODEL);
 
-  // 5. 双通道聚合
-  const supported = judgements.filter((j) => j.verdict === 'supported').length;
-  const unsupported = judgements.filter((j) => j.verdict === 'unsupported').length;
-  const contradicted = judgements.filter((j) => j.verdict === 'contradicted').length;
-  const flagged = judgements.filter((j) => j.verdict !== 'supported');
+  // 事实通道
+  const supported = factual.filter((j) => j.verdict === 'supported').length;
+  const unsupported = factual.filter((j) => j.verdict === 'unsupported').length;
+  const contradicted = factual.filter((j) => j.verdict === 'contradicted').length;
+  const flaggedFactual = factual.filter((j) => j.verdict !== 'supported');
+
+  // 分析通道
+  const consistent = analytical.filter((j) => j.verdict === 'consistent').length;
+  const contradicting = analytical.filter((j) => j.verdict === 'contradicts_facts').length;
+  const flaggedAnalytical = analytical.filter((j) => j.verdict === 'contradicts_facts');
 
   const report: FaithfulnessReport = {
     workflow_id: workflowId,
@@ -67,31 +69,46 @@ async function main() {
     checked_at: new Date().toISOString(),
     source_layer: 'brief_vs_intel_input',
     total_claims: claims.length,
+    factual_claims: factual.length,
+    analytical_claims: analytical.length,
     supported,
     unsupported,
     contradicted,
-    faithfulness_score: claims.length ? supported / claims.length : 0,
-    gate_pass: contradicted === 0,
-    flagged,
-    judgements,
+    factual_faithfulness: factual.length ? supported / factual.length : 0,
+    gate_pass: contradicted === 0 && contradicting === 0,
+    analytical_consistent: consistent,
+    analytical_contradicting: contradicting,
+    flagged_factual: flaggedFactual,
+    flagged_analytical: flaggedAnalytical,
+    factual_judgements: factual,
+    analytical_judgements: analytical,
   };
 
-  // 6. 落盘 + 打印
   const outDir = 'eval-reports/faithfulness';
   mkdirSync(outDir, { recursive: true });
   const outPath = `${outDir}/${workflowId}.json`;
   writeFileSync(outPath, JSON.stringify(report, null, 2));
 
   console.log('\n========== FAITHFULNESS ==========');
-  console.log(`score:        ${report.faithfulness_score.toFixed(3)}  (${supported}/${claims.length} supported)`);
-  console.log(`unsupported:  ${unsupported}`);
-  console.log(`contradicted: ${contradicted}   gate: ${report.gate_pass ? 'PASS' : 'FAIL ❌'}`);
-  if (flagged.length) {
-    console.log('\n--- flagged claims ---');
-    for (const j of flagged) {
+  console.log(`factual_faithfulness: ${report.factual_faithfulness.toFixed(3)}  (${supported}/${factual.length} factual claims grounded)`);
+  console.log(`  unsupported:  ${unsupported}`);
+  console.log(`  contradicted: ${contradicted}`);
+  console.log(`analytical:           ${consistent} consistent / ${contradicting} contradicting-facts (of ${analytical.length})`);
+  console.log(`gate: ${report.gate_pass ? 'PASS' : 'FAIL ❌'}  (fails if any factual contradiction or analysis on a fabricated premise)`);
+
+  if (flaggedFactual.length) {
+    console.log('\n--- flagged FACTUAL claims ---');
+    for (const j of flaggedFactual) {
       console.log(`\n[${j.verdict.toUpperCase()}] ${j.claim.text}`);
       console.log(`   reason: ${j.reason}`);
       if (j.evidence_quote) console.log(`   judge-quote: ${j.evidence_quote.slice(0, 120)} (verified=${j.evidence_verified})`);
+    }
+  }
+  if (flaggedAnalytical.length) {
+    console.log('\n--- flagged ANALYTICAL (built on premise the source contradicts/lacks) ---');
+    for (const j of flaggedAnalytical) {
+      console.log(`\n[CONTRADICTS_FACTS] ${j.claim.text}`);
+      console.log(`   reason: ${j.reason}`);
     }
   }
   console.log(`\nfull report -> ${outPath}`);

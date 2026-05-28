@@ -1,6 +1,8 @@
 // 通过 ai-worker 的 /meridian/chat 调 judge LLM（DashScope），复用现有 eval 框架的模式。
 const AI_WORKER_URL = process.env.AI_WORKER_URL || 'https://meridian-ai-worker.swj299792458.workers.dev';
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function chat(
   prompt: string,
   options: { model?: string; temperature?: number; maxTokens?: number } = {}
@@ -14,19 +16,31 @@ export async function chat(
       max_tokens: options.maxTokens ?? 1500,
     },
   };
-  const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`chat call failed: ${resp.status} ${txt.slice(0, 200)}`);
+
+  // 代理网络已知不稳，单次失败重试，避免一个 blip 拖垮整轮 eval
+  const maxAttempts = 4;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`chat call failed: ${resp.status} ${txt.slice(0, 200)}`);
+      }
+      const data = (await resp.json()) as {
+        data?: { choices?: Array<{ message?: { content?: string } }> };
+      };
+      return data?.data?.choices?.[0]?.message?.content || '';
+    } catch (e) {
+      lastErr = e;
+      if (attempt < maxAttempts) await sleep(1500 * attempt);
+    }
   }
-  const data = (await resp.json()) as {
-    data?: { choices?: Array<{ message?: { content?: string } }> };
-  };
-  return data?.data?.choices?.[0]?.message?.content || '';
+  throw new Error(`chat failed after ${maxAttempts} attempts: ${lastErr instanceof Error ? lastErr.message : lastErr}`);
 }
 
 // 从可能带 ```json fenced / 前后噪声的 LLM 输出里抠出 JSON

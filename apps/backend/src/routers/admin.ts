@@ -192,7 +192,7 @@ app.post('/briefs/generate', async (c) => {
       dateFrom, 
       dateTo, 
       timeRangeDays = 1, // 默认最近1天内的文章
-      articleLimit = 100, // 默认限制100篇文章
+      articleLimit = 500, // 默认500篇（embeddings 已卸载 R2，不再受 1MB step 输出限制）
       
       // 业务参数
       minImportance = 3, // 降低默认重要性阈值，增加故事识别率

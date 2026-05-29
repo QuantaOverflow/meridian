@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, and, eq, sql, inArray } from '@meridian/database';
+import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -47,6 +47,8 @@ interface LightweightArticleDataset {
     articleId: number;
     embedding: number[];
   }>;
+  // embeddings 卸载到 R2 的 key（避开 CF Workflow 单 step ~1MB 输出上限）
+  embeddingsR2Key?: string;
 }
 
 // 工作流参数接口
@@ -352,6 +354,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                  ...(article_ids.length > 0 ? [inArray($articles.id, article_ids)] : timeConditions)
                )
              )
+             // 按发布时间倒序：窗口内文章数常 >limit，无排序时 Postgres 按堆序(偏旧)返回，
+             // 会截掉最新文章。日报必须优先最新，否则新增源/当天新闻进不了简报。
+             .orderBy(desc($articles.publishDate))
              .limit(articleLimit || 100);
           console.log(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
 
@@ -552,19 +557,27 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             console.log(`  - ${reason}: ${count} 篇 (${percentage}%)`);
           });
 
-          const dataset: LightweightArticleDataset = {
-            articles,
-            embeddings
-          };
+          // 卸载 embeddings 到 R2：CF Workflow 把 step 输出存进 SQLite，单 step ~1MB 上限；
+          // 500 篇 × 384 维 ≈ 2.5MB 会触发 WorkflowInternalError/SQLITE_TOOBIG。
+          // 只让轻量 articles 走 step 输出，embeddings 走 R2，step 后再读回。
+          const embeddingsR2Key = `datasets/${workflowId}/embeddings.json`;
+          await this.env.ARTICLES_BUCKET.put(embeddingsR2Key, JSON.stringify(embeddings));
 
-          console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章`);
-          return dataset;
+          console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章 (embeddings 卸载至 ${embeddingsR2Key})`);
+          return { articles, embeddings: [], embeddingsR2Key };
           
         } catch (error) {
           console.error('[AutoBrief] 准备数据集失败:', error);
           throw new Error(`数据集准备失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       });
+
+      // 从 R2 读回 embeddings（它们未走 step 输出以避开 1MB 限制），供质量评估与聚类使用
+      if (dataset.embeddingsR2Key && dataset.embeddings.length === 0) {
+        const embObj = await this.env.ARTICLES_BUCKET.get(dataset.embeddingsR2Key);
+        dataset.embeddings = embObj ? JSON.parse(await embObj.text()) : [];
+        console.log(`[AutoBrief] 从 R2 读回 ${dataset.embeddings.length} 个 embedding`);
+      }
 
       const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
@@ -643,6 +656,26 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         totalArticles: clusteringResult.statistics.totalArticles,
         noisePoints: clusteringResult.statistics.noisePoints
       });
+
+      // 观测性：落一份 cluster_id → article_ids 映射到 R2。
+      // 簇成员在 workflow 内是临时数据，被毙簇的文章无处可查；持久化后
+      // story-validation eval 才能按 cluster_id 取回被拒簇的原文做二审。
+      try {
+        await this.env.ARTICLES_BUCKET.put(
+          `observability/clustering/${workflowId}.json`,
+          JSON.stringify({
+            workflowId,
+            createdAt: new Date().toISOString(),
+            statistics: clusteringResult.statistics,
+            clusters: clusteringResult.clusters.map(c => ({
+              clusterId: c.clusterId,
+              articleIds: c.articleIds,
+            })),
+          }, null, 2)
+        );
+      } catch (persistErr) {
+        console.warn(`[AutoBrief] clustering 映射落盘失败 (workflow=${workflowId}):`, persistErr);
+      }
 
       // =====================================================================
       // 步骤 3: 故事验证 (AI Worker)

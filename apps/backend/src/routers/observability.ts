@@ -458,6 +458,30 @@ app.get('/runs/:workflowId/stories/:storyId/intel', async (c) => {
 });
 
 /**
+ * 取某次 run 的 cluster_id → article_ids 映射（聚类步骤落的 R2 快照）。
+ * story-validation eval 用它按 cluster_id 取回被拒簇的文章做二审。
+ */
+app.get('/runs/:workflowId/clustering', async (c) => {
+  try {
+    const workflowId = c.req.param('workflowId');
+    const obj = await c.env.ARTICLES_BUCKET.get(`observability/clustering/${workflowId}.json`);
+    if (!obj) {
+      return c.json({ success: false, error: 'clustering snapshot not found' }, 404);
+    }
+    return new Response(obj.body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('/observability/runs/:workflowId/clustering 失败:', error);
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      500
+    );
+  }
+});
+
+/**
  * 业务质量趋势：按天聚合最近 N 天的 brief_runs / brief_stories 指标
  */
 app.get('/trends', async (c) => {

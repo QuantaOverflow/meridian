@@ -153,7 +153,11 @@ export class ClusteringService {
           umap_metric: options?.umapParams?.metric || 'cosine',
           hdbscan_min_cluster_size: options?.hdbscanParams?.min_cluster_size || 5,
           hdbscan_min_samples: options?.hdbscanParams?.min_samples || 3,
-          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2
+          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2,
+          // 确定性后处理:质心剪枝(治簇内噪音污染)。eval 交叉验证锁定(prod 无前缀嵌入, mcs5/ms3):
+          // B-cubed P 0.45→0.83 / F 0.61→0.84 / R 0.87,跨窗口稳定。阈值与嵌入余弦分布绑定——
+          // 若改嵌入(如加 e5 query: 前缀)需用 scripts/eval/clustering/tune.ts 重标。
+          postprocess_prune_threshold: 0.92
         },
         return_embeddings: false,
         return_reduced_embeddings: false

@@ -346,12 +346,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                content_focus: $articles.content_focus,
              })
              .from($articles)
+             .innerJoin($sources, eq($articles.sourceId, $sources.id))
              .where(
                and(
                  isNotNull($articles.embedding),
                  eq($articles.status, 'PROCESSED'),
                  isNotNull($articles.contentFileKey),
-                 ...(article_ids.length > 0 ? [inArray($articles.id, article_ids)] : timeConditions)
+                 // 自动选样时只取新闻源,排除技术类(如 HN)单篇噪音——与聚类 prune 互补的上游过滤。
+                 // 显式传 article_ids 时不强加(调用方/eval 自行决定样本)。
+                 ...(article_ids.length > 0
+                   ? [inArray($articles.id, article_ids)]
+                   : [eq($sources.category, 'news'), ...timeConditions])
                )
              )
              // 按发布时间倒序：窗口内文章数常 >limit，无排序时 Postgres 按堆序(偏旧)返回，

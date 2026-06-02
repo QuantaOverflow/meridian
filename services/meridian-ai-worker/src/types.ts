@@ -503,7 +503,6 @@ export interface CloudflareEnv extends Record<string, string | undefined> {
   ALLOWED_ORIGINS?: string
   // AI Gateway enhanced features
   AI_GATEWAY_TOKEN?: string
-  ENABLE_AI_GATEWAY_AUTH?: string
   DEFAULT_CACHE_TTL?: string
   ENABLE_COST_TRACKING?: string
   // Retry configuration

@@ -95,7 +95,6 @@
   
 "vars": {
   "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
-  "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
   "MERIDIAN_ML_SERVICE_URL": "https://meridian-ml-service.swj299792458.workers.dev"
 },
   // !!! NOTE !!! : tail workers make workers with durable objects CRASH for now - 30/04/2025

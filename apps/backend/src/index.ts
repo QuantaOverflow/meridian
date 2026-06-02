@@ -26,16 +26,8 @@ export type Env = {
   // Secrets
   API_TOKEN: string;
 
-  AXIOM_DATASET: string | undefined; // optional, use if you want to send logs to axiom
-  AXIOM_TOKEN: string | undefined; // optional, use if you want to send logs to axiom
-
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
-
-  DATABASE_URL: string;
-
-  GEMINI_API_KEY: string;
-  GEMINI_BASE_URL: string;
 
   MERIDIAN_ML_SERVICE_URL: string;
   MERIDIAN_ML_SERVICE_API_KEY: string;

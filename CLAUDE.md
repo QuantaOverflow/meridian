@@ -31,7 +31,7 @@
 - 报错先 `wrangler tail`，再加 console.log
 
 ## 已知坑
-- **CF Workflow 单 step 输出 ~1MB 上限**——多 story 会触发 `WorkflowInternalError`，当前 `maxStoriesToGenerate=3`
+- **CF Workflow 单 step 输出 ~1MB 上限**——曾因情报 step 内联返回全部 story 报告而触发 `WorkflowInternalError`（当时靠 `maxStoriesToGenerate=3` 规避）。**已解决（2026-06）**：情报报告卸载 R2、step 只回传 keys（`auto-brief-generation.ts`），现 `maxStoriesToGenerate=15` 安全。新增 step 若要传大对象，沿用"卸 R2 + 传 key"模式
 - `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点
 - 调试三件套：`wrangler tail` / `wrangler workflows instances describe` / R2 `observability/*.json`

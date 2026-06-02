@@ -116,7 +116,7 @@ export class AIWorkerService {
    *
    * @param callIndex 在同一个 workflow 内的调用序号，用于 R2 中 LLM 调用日志的去重 key
    */
-  async analyzeStoryIntelligence(story: any, cluster: any, options?: any, callIndex?: number): Promise<Response> {
+  async analyzeStoryIntelligence(story: any, articles: any[], options?: any, callIndex?: number): Promise<Response> {
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-single-story`, {
@@ -124,7 +124,7 @@ export class AIWorkerService {
       headers: this.buildHeaders(extra),
       body: JSON.stringify({
         story,
-        articleData: cluster.articles,
+        articleData: articles,
         options: options || { analysis_depth: 'detailed' }
       })
     });
@@ -152,7 +152,3 @@ export function createAIServices(env: AIWorkerEnv, traceId?: string) {
     aiWorker: new AIWorkerService(env, traceId)
   };
 }
-
-
-
- 

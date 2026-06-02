@@ -1026,13 +1026,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             // 为情报分析动态获取相关文章的内容
             const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
 
-            const clusterForAnalysis = {
-              articles: clusterArticles
-            };
-
             const response = await aiServices.aiWorker.analyzeStoryIntelligence(
               storyWithContent,
-              clusterForAnalysis,
+              clusterArticles,
               { analysis_depth: 'detailed' },
               idx
             );

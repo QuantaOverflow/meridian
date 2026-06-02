@@ -33,7 +33,7 @@ const CONFIG = {
     category: 'tech',
     scrape_frequency: 1
   },
-  DB_CONNECTION: process.env.DATABASE_URL || 'postgresql://postgres:709323@localhost:5432/shiwenjie',
+  DB_CONNECTION: process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/shiwenjie',
   POLLING_INTERVAL: 3000,
   MAX_WAIT_TIME: 180000,
 };

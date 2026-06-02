@@ -4,7 +4,7 @@ import type { AIWorkerEnv } from '../../src/lib/ai-services';
 
 // --- Configuration for Live Integration Test ---
 const REAL_ML_SERVICE_URL = 'http://107.174.196.203:8080';
-const REAL_API_TOKEN = 'f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336';
+const REAL_API_TOKEN = process.env.MERIDIAN_ML_SERVICE_API_KEY || '';
 const BAD_API_TOKEN = 'invalid-token-for-testing';
 
 const isServiceReachable = await fetch(`${REAL_ML_SERVICE_URL}/health`, {

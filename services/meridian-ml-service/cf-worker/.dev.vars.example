@@ -1,0 +1,5 @@
+# 本地开发：复制本文件为 .dev.vars 并填值（.dev.vars 已 gitignored）
+# 生产：在本目录用 `wrangler secret put API_TOKEN`
+# 该 token 经 worker 注入 container，FastAPI 校验 X-API-Token；须与 backend 的 MERIDIAN_ML_SERVICE_API_KEY 一致。
+
+API_TOKEN=dev-token-123                          # 🔐

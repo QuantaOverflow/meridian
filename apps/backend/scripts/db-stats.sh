@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DB_CONN_STR="postgresql://postgres:709323@localhost:5432/shiwenjie"
+DB_CONN_STR="${DATABASE_URL:-postgresql://postgres@localhost:5432/shiwenjie}"
 
 echo "=== Meridian 数据库统计概览 ==="
 echo "统计时间: $(date)"

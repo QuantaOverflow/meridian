@@ -24,7 +24,7 @@ const WRANGLER_CONFIG = {
   CLOUDFLARE_ACCOUNT_ID: "c8317cfcb330d45b37b00ccd7e8a9936",
   GEMINI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta", 
   MERIDIAN_ML_SERVICE_URL: "https://meridian-ml.pathsoflight.org",
-  MERIDIAN_ML_SERVICE_API_KEY: "f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336",
+  MERIDIAN_ML_SERVICE_API_KEY: process.env.MERIDIAN_ML_SERVICE_API_KEY || "test-ml-service-key",
   AI_WORKER_SERVICE_URL: "http://localhost:8786" // AI Worker 本地服务
 };
 

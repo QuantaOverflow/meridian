@@ -20,7 +20,7 @@ const { execSync } = require('child_process');
 
 // 配置
 const CONFIG = {
-  DB_CONNECTION: process.env.DATABASE_URL || 'postgresql://postgres:709323@localhost:5432/shiwenjie',
+  DB_CONNECTION: process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/shiwenjie',
   REFRESH_INTERVAL: 3000, // 3秒刷新一次
   SHOW_RECENT_HOURS: 24, // 显示最近24小时的数据
 };

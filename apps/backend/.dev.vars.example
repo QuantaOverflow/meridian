@@ -1,0 +1,11 @@
+# 本地开发：复制本文件为 .dev.vars 并填值（.dev.vars 已 gitignored）
+# 生产：在 apps/backend 目录用 `wrangler secret put <NAME>`（标 🔐 的）
+# DB 不在此：backend 走 Hyperdrive 绑定（本地用 wrangler.jsonc 的 localConnectionString）
+
+# --- 🔐 密钥（生产经 wrangler secret put）---
+API_TOKEN=dev-local-token                       # backend API 鉴权
+CLOUDFLARE_API_TOKEN=your_cloudflare_token      # 抓取/渲染用
+MERIDIAN_ML_SERVICE_API_KEY=dev-token-123       # 须与 meridian-ml-service 的 API_TOKEN 一致
+
+# --- 非密：本地可覆盖 wrangler.jsonc vars 时才写 ---
+MERIDIAN_ML_SERVICE_URL=http://127.0.0.1:8081   # 本地指向本地 ML；不写则用 wrangler.jsonc 的生产 URL

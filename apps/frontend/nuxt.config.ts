@@ -59,9 +59,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     database: { url: process.env.DATABASE_URL, }, // NUXT_DATABASE_URL
     mailerlite: { api_key: process.env.MAILERLITE_API_KEY || 'your_mailerlite_key', group_id: process.env.MAILERLITE_GROUP_ID || 'your_group_id' }, // NUXT_MAILERLITE_API_KEY, NUXT_MAILERLITE_GROUP_ID
-    admin: { username: process.env.ADMIN_USERNAME || 'admin', password: process.env.ADMIN_PASSWORD || '709323' }, // NUXT_ADMIN_USERNAME, NUXT_ADMIN_PASSWORD
+    admin: { username: process.env.ADMIN_USERNAME || 'admin', password: process.env.ADMIN_PASSWORD || 'changeme' }, // NUXT_ADMIN_USERNAME, NUXT_ADMIN_PASSWORD
     worker: { api_token: process.env.WORKER_API_TOKEN || 'localtest' }, // NUXT_WORKER_API_TOKEN
-    session: { password: process.env.SESSION_PASSWORD || '7f1ab0148b14456584a38b989c5fedd4' }, // NUXT_SESSION_PASSWORD
+    session: { password: process.env.SESSION_PASSWORD || 'dev_only_session_password_change_me' }, // NUXT_SESSION_PASSWORD
 
     // IMPORTANT: all "public" config is exposed to the client
     public: { WORKER_API: process.env.NUXT_PUBLIC_WORKER_API || 'http://localhost:8787' }, // NUXT_PUBLIC_WORKER_API

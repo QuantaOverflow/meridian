@@ -164,7 +164,7 @@ node apps/backend/scripts/generate-fixtures.js
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `DATABASE_URL` | PostgreSQL连接字符串 | `postgresql://postgres:709323@localhost:5432/shiwenjie` |
+| `DATABASE_URL` | PostgreSQL连接字符串 | `postgresql://postgres@localhost:5432/shiwenjie` |
 | `API_TOKEN` | Backend API认证令牌 | `localtest` |
 
 ### 测试配置

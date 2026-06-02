@@ -1,10 +1,11 @@
+import os
 import requests
 import json
 import time
 
 # --- 配置 ---
 BASE_URL = "http://107.174.196.203:8080"
-API_TOKEN = "f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336" # 替换为您的实际API令牌
+API_TOKEN = os.environ.get("MERIDIAN_ML_SERVICE_API_KEY", "") # 从环境变量读取，勿硬编码
 
 HEADERS = {
     "Content-Type": "application/json",

@@ -88,7 +88,7 @@ check_services() {
     fi
     
     # 检查数据库连接
-    DB_URL=${DATABASE_URL:-"postgresql://postgres:709323@localhost:5432/shiwenjie"}
+    DB_URL=${DATABASE_URL:-"postgresql://postgres@localhost:5432/shiwenjie"}
     if psql "$DB_URL" -c "SELECT 1;" > /dev/null 2>&1; then
         echo -e "${GREEN}✅ 数据库连接正常${NC}"
     else

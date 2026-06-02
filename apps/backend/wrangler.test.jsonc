@@ -37,7 +37,7 @@
     {
       "binding": "HYPERDRIVE",
       "id": "e3bbe9cee04649a98bd5396476432de0",
-      "localConnectionString": "postgresql://postgres:709323@localhost:5432/shiwenjie"
+      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/meridian_test"
     }
   ],
   
@@ -87,7 +87,7 @@
     "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
     "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
     "MERIDIAN_ML_SERVICE_URL": "https://meridian-ml.pathsoflight.org",
-    "MERIDIAN_ML_SERVICE_API_KEY": "f10c0976a3e273a7829666c3c5af658e5d9aee790187617b98e8c6e5d35d6336",
+    "MERIDIAN_ML_SERVICE_API_KEY": "test-ml-service-key",
     "API_TOKEN": "test-api-token",
     "GEMINI_API_KEY": "test-gemini-key"
   }

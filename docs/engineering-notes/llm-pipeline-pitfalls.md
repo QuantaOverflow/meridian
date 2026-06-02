@@ -250,22 +250,202 @@ Smotrich/ICC..."），8000 tokens 用完时 JSON 还没开始。
 
 ---
 
+## 11. Prompt↔Builder 字段契约漂移，且 structured output 救不了（qwen-long 仅 json_object）
+
+**现象**：情报报告下游 `/stories/:id/intel` 的 `stakeholders`、`key_developments`
+返回空；更早一版还直接吐 `"Entity 1" / "Fact 1"` 占位符污染简报。
+
+**根因**：两处 prompt 约定与 builder 消费的字段名/形态不一致，纯靠
+"prompt 里写结构 + 裸 `JSON.parse`"维系，没有任何 schema 强制：
+- `intelligenceAnalysis.ts` 约定 `keyEntities.list`（嵌套），但 qwen-long 实际把
+  `keyEntities` **拍平成数组**直接输出；builder 只读 `.list` → 匹配不上 → 返回空。
+- prompt 根本不产 `factualBasis` 字段，builder 却去读它 → 永远空 → 老代码兜底成
+  `"Fact 1/Fact 2"` 占位符。
+
+**修复**：`utils/intelligence-report-builder.ts` 做防御性形态兼容（不依赖模型行为）：
+`buildEntities` 同时接受 `keyEntities`（扁平数组）/ `keyEntities.list` / 历史
+`entities` 三种形态；`extractFactualBasis` 从 `timeline[].description` 派生关键
+发展；两处都把兜底从占位符改成空数组，绝不向下游注入假数据。
+
+**为什么 structured output 不是这个 bug 的解**（重点，避免再有人走这条路）：
+- AI Gateway 是透传代理，不剥离 `response_format`；瓶颈不在网关。
+- qwen-long（`qwen-long-latest` / `qwen-long-2025-01-25`）**只支持
+  `response_format:{type:"json_object"}`，不支持 strict `json_schema`**。
+  json_object 只保证"输出是合法 JSON"，**不保证字段名和嵌套结构** —— 而本 bug
+  恰恰是形态漂移，json_object 管不到。要强制 `keyEntities.list` 这种契约得用
+  strict json_schema，目前只有 qwen3-max 等较新型号支持，换型号又是另一笔
+  模型/成本/质量权衡。
+- 且 json_object 有附带约束：prompt 必须含 "json" 关键字、thinking 模式不可用、
+  **开启时不能设 `max_tokens`**（我们 intel 调用硬设了 8192，见
+  `services/intelligence.ts:237`），还要求整个响应是纯 JSON —— 会砍掉 prompt 里
+  "先 preliminary analysis 再 `<final_json>`"的 CoT 铺垫。
+- 官方依据：<https://www.alibabacloud.com/help/en/model-studio/qwen-structured-output>
+
+**教训**：
+1. prompt 与 builder 之间的字段名/嵌套是**隐式 hard contract**，prompt 一改就会
+   悄悄漂移；消费端兜底要返回空、绝不注入占位符（占位符会被下游当真实数据编造）。
+2. "上 structured output 就能强制结构"是常见误判 —— 必须先确认目标模型支持的是
+   **json_object（仅合法性）还是 strict json_schema（含形态）**。在 qwen-long 上
+   只有前者，治不了形态漂移。低风险止血永远是消费端做形态兼容。
+
+---
+
+## 12. 简报"编造反馈环"：TLDR 被当 context 回灌再被展开
+
+**现象**：某天只识别出 1 个真 story，简报却产出 5–8 个带机制细节的整节
+（"磁致伸缩光刻""pH 聚合物靶向治疗""zk-SNARK 仲裁电路"等根本不存在的内容）。
+
+**根因**：闭环。`auto-brief-generation.ts` 每次取**前一天 brief 的 TLDR**当
+"前日简报上下文"喂给今天的 brief（`index.ts` 把 `previousBrief.tldr` → summary →
+`formatPreviousContext`）。而 TLDR 本身是 `[主题]|状态|实体|一句话` 的标识符表
+（`tldrGeneration.ts` 规定的格式）。今天的 brief 无视 prompt 里的 guardrail，把这些
+**只有标识符、没有事实**的主题展开成编造的整节 → 今天的 brief 又被压成 TLDR →
+次日再回灌 → 滚雪球。取证发现编造主题在 brief 输入里**根本不存在**，是凭空生成。
+
+**修复**：`auto-brief-generation.ts` 直接**砍掉 previousBrief 注入**
+（`const previousBrief = null`）。断源 > 靠 prompt guardrail（实测 qwen-long 压不住）。
+
+**教训**：
+1. **任何"把 LLM 输出回灌成下一轮输入"的链路都要警惕自我放大**——尤其当回灌的是
+   高度浓缩、只剩标识符的摘要时，下游会把标识符当种子编造。
+2. prompt 写死的禁令（"NEVER expand"）对 qwen 系列约束力有限；**数据层断源才可靠**。
+3. TLDR/摘要这类"记忆态"不是无害的——它会成为下一轮的事实来源，要么不回灌，
+   要么只回灌"今天也有真 cluster"的主题（实测纯靠实体重叠过滤会漏，故选断源）。
+
+---
+
+## 13. dataset 选文章 `LIMIT` 无 `ORDER BY`，静默截掉最新文章
+
+**现象**：新加的新闻源已成功抓取入库、已处理出 embedding，但**进不了简报**——
+某次 brief 的 96 篇里只有 6 篇是新文章。
+
+**根因**：`auto-brief-generation.ts` 的 dataset 查询 `WHERE 已处理+时间窗口` 后
+直接 `.limit(100)`，**没有 `ORDER BY`**。窗口内合格文章常 >100（实测 374），
+Postgres 无排序时按堆/插入顺序返回（偏向低 id=旧文章）→ LIMIT 抓的全是旧的，
+刚插入的新文章（高 id）被截掉。日报却恰恰该优先最新。
+
+**修复**：`.limit()` 前加 `.orderBy(desc($articles.publishDate))`，取最新 N 篇。
+
+**教训**：任何 `LIMIT` 都必须配 `ORDER BY`——否则"取哪些"是数据库实现细节，
+随数据增长悄悄漂移。"日报/最新"类查询尤其要按时间倒序，新数据源才进得来。
+
+---
+
+## 14. CF Workflow 单 step 输出 ~1MB 上限——embeddings 必须卸 R2
+
+**现象**：把 `articleLimit` 提到 500 后，workflow 在 `prepare_dataset` 步报
+`WorkflowInternalError`/`SQLITE_TOOBIG`（默认值历史上被压到 30 也是因为这个）。
+
+**根因**：CF Workflow 把**每个 `step.do()` 的返回值持久化进内部 SQLite**（供重放/
+恢复），单 step 输出有 ~1MB 上限。`prepare_dataset` 返回的 `LightweightArticleDataset`
+带每篇 384 维 embedding，500 篇 ≈ 2.5MB，远超限。100 篇（~0.5MB）只是压着线没炸。
+
+**修复**：embeddings **卸载到 R2**——`prepare_dataset` 把 embeddings 写
+`datasets/{workflowId}/embeddings.json`，step 只返回轻量 `articles + embeddingsR2Key`；
+step 返回后在 workflow body 里从 R2 读回挂到 dataset（**不要**包在 `step.do` 里，
+否则又被序列化成 step 输出）。下游 assessArticleQuality/clustering 不变。
+
+**教训**：
+1. CF Workflow 的容量瓶颈是 **step 输出大小**，不是内存——大数组(embeddings/全文)
+   绝不走 step 边界，存 R2 传 key（与项目"DB 元数据 + R2 原文"混合存储一致）。
+2. step 之间传大对象用"R2 key + step 后读回"，读回放在 step 外（in-memory），
+   避免二次序列化。
+
+---
+
+## 15. 简报质量的根因是**源覆盖**，不是聚类/prompt（最高杠杆所在）
+
+**现象**：简报空、爱编造、聚类全判 PURE_NOISE、0 stories——一路当成
+聚类参数/prompt/LLM 问题在修。
+
+**根因（完整诊断链）**：编造 → 燃料来自回灌 TLDR（§12，已断）→ 但更根本是
+brief 没真料 → validator 全判 PURE_NOISE → 聚类无多篇故事可聚 → **源稀疏**：
+近 7 天仅 4 个活跃源、其中 **HN 占 65%（天生单篇、无冗余）**；配置的 7 个源里
+**Reuters World / 联合早报 / 端傳媒 三个的 RSS URL 失效（404），一篇没抓到**
+（`last_checked` 一直 null，但 `do_initialized_at` 已设——抓取排程了但每次 fetch 失败）。
+聚类是为"多源海量、同事件多家重叠报道"设计的，4 源 + HN 主导的结构在它适用范围之外。
+
+**修复**：修 端傳媒 URL（`/newsfeed`→`/rss`）、用 Guardian/Al Jazeera/NPR/France24
+替代死源。验证：源丰富后同一事件被多家报道（"美伊停火"= Al Jazeera+Guardian+Politico），
+聚类终于出真故事，**真实 story 数 2 → 9 → 29**。
+
+**教训**：
+1. **"编造是饿出来的不是坏出来的"被实证**——下游的编造/空洞是上游数据匮乏的症状，
+   先喂饱上游（源覆盖）再谈夹编造/调 prompt。
+2. **故事形成（聚类+验证）是最高杠杆**，而它又被**源覆盖**决定：聚类要靠"多家报同
+   一事件"的冗余，源不重叠就无活可干。诊断要一路追到源，别停在算法层。
+3. 死源排查信号：`sources.last_checked IS NULL` 但 `do_initialized_at` 非空 =
+   排程了但 fetch 一直失败，**八成是 RSS URL 失效**（curl 一下，多半 404 返回 HTML）。
+
+---
+
+## 16. DBCV（几何聚类质量）对"语义 conflation"是盲的——几何调参反而更糟
+
+**现象**：想用 ml-service 里现成的网格搜索（按 DBCV 选参）自动调聚类。实测对同一批
+97 篇：固定参数 4 簇 DBCV=0.12，"DBCV 最优"反而塌成 **2 个巨簇** DBCV=0.50——
+几何分数翻倍，但把无关主题揉得更狠（grab-bag 没裂开，反被吸进更大的簇）。
+
+**根因**：DBCV/`validity_index` 衡量的是**几何**（簇在 UMAP 空间里是否致密、分得开），
+不是**语义**（一簇=一个故事）。对一天的新闻，几何上最"干净"的划分就是 2 个大团，
+而那正是我们最不想要的。两种"好"相关但不等价，grab-bag 正是几何 OK / 语义烂。
+
+**修复/方向**：聚类 eval 不能用 DBCV 当目标函数。改用**语义参考划分**：强模型
+（qwen-max）一次性把当天文章分成故事作 gold，再用确定性 **B-cubed**
+（precision=conflation，recall=fragmentation）打分。LLM 只用一次产参考，打分无 LLM。
+见 `scripts/eval/clustering/`。
+
+**教训**：
+1. **无监督聚类的内置指标（DBCV/silhouette）优化的是几何，不是业务语义**——
+   直接拿来自动调参可能把系统往错方向推。先确认指标和业务目标是否一致。
+2. 语义评估的成本/循环问题解法：**把昂贵的语义判断（产参考）做一次，把打分
+   （确定性指标）做无数次**；参考用更强、且方法不同的模型，避免"自己评自己"。
+
+---
+
+## 17. 源管理 / Durable Object 运维坑
+
+**现象**：改了 `sources.url` 但抓取还在用旧 URL；`/do/admin/initialize-dos` 对死源
+不起作用；调 init 端点 401。
+
+**根因 & 正确姿势**：
+- **DO id 由 URL 派生**（`SOURCE_SCRAPER.idFromName(source.url)`）→ 改 URL =
+  映射到**全新 DO**，旧 DO（存着旧 URL）还在跑。光改 DB 的 url **无效**，
+  必须重新 init 让新 DO 拿到新 url。
+- **`/do/admin/initialize-dos` 只挑 `do_initialized_at IS NULL` 的源**——死源
+  （已初始化过）会被跳过。改 URL 后要用**单源** `POST /do/admin/source/:id/init`。
+- **新增源**：`POST /admin/sources` 只插 DB（不碰 DO），且 `scrape_frequency` 默认
+  60 会被 DO 当非法值降级成 tier 2——**插入时显式传 `1`**。然后 `initialize-dos`
+  挑走新源（null）。init 会设 +5s alarm 立即抓一轮，之后 DO 靠自身 alarm 自循环
+  （**无 cron**，全靠 DO 自调度）。
+- init 端点要 `Authorization: Bearer <API_TOKEN>`（backend secret）。`wrangler secret
+  put API_TOKEN` 设；`!` 非交互环境弹不出输入提示，用 `echo "val" | wrangler secret
+  put API_TOKEN` 喂值。
+
+**教训**：DO 的身份/状态独立于 DB 行——改 DB 不等于改 DO 行为。涉及 DO 的源变更
+都要"改 DB + 重新 init"两步，且分清"批量 init 只管新源 / 单源 init 管任意"。
+
+---
+
 ## 复盘总结
 
-10 个问题按性质聚类：
+17 个问题按性质聚类：
 
 | 类别 | 编号 | 共同教训 |
 |---|---|---|
 | Provider/网关边界 | 1, 8 | 跨 provider 抽象层必须显式建模"路径差异 + 内容审核差异" |
 | 配置耦合 | 2, 3 | 模型名、连接字符串这类隐式 contract 必须 hard-code 在唯一来源 |
 | 参数透传链路 | 4, 5 | 长链路里**每一层都要自己 enforce**，shadowing bug 是大敌 |
-| 编排默认值 | 6 | LLM step 永远显式覆盖 timeout，默认值是"普通业务"设计的 |
-| Prompt + 数据形态 | 7 | Prompt 改动**必须配 eval**，否则迭代是盲调；prompt 措辞影响远超直觉 |
-| LLM 输出鲁棒性 | 9, 10 | JSON 输出 parser 必须容错；推理与结构化输出不能同步 |
+| 编排默认值 / 容量 | 6, 14 | LLM step 显式覆盖 timeout；大对象绝不走 step 输出（~1MB SQLite 限），卸 R2 |
+| Prompt + 数据形态 | 7 | Prompt 改动**必须配 eval**；prompt 措辞影响远超直觉 |
+| LLM 输出鲁棒性 | 9, 10, 11 | parser 容错；推理与结构化输出分离；structured output 仅 json_object 治不了形态漂移 |
+| 自我放大 / 回灌 | 12 | LLM 输出回灌成输入会自我放大编造；数据层断源 > prompt 禁令 |
+| 查询正确性 | 13 | `LIMIT` 必配 `ORDER BY`；"取最新"类按时间倒序，否则新数据进不来 |
+| **根因层级** | **15** | **简报质量根因是源覆盖，不是算法/prompt——"编造是饿出来的"；诊断一路追到源** |
+| 评估指标选型 | 16 | 无监督内置指标(DBCV)优化几何非语义，别拿来自动调参；语义评估靠"一次参考+确定性打分" |
+| 运维 / DO | 17 | DO 身份独立于 DB 行，改源要"改 DB + 重新 init"两步 |
 
 下一阶段直接动机：
-- **eval 框架**（来自 §7）—— 让 prompt 迭代有客观信号而不是盲调
-- **per-step token & latency 观测**（来自 §6, §10）—— 给 cost / regression
-  报告托底
-- **provider 失败率监控**（来自 §1, §8）—— 给后续多 provider fallback 决策
-  提供数据
+- **源覆盖是当前 roadmap 主线**（来自 §15）—— 加更多会重叠报道的主流源
+- **聚类语义 eval**（来自 §16）—— 用 B-cubed 量化故事形成质量、对比算法
+- **下游容量**：intel/brief 仍受 maxStoriesToGenerate 与 brief 1MB 限制制约
+  （§14 的 R2 卸载套路可复用到 intel 报告 / brief 输出）

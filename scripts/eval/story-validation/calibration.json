@@ -1,0 +1,25 @@
+{
+  "source": "brief #7 / admin-brief-1779253365414 / 2026-05-20",
+  "notes": "11 个真实独立故事 + 3 个合理多角度合并 (BORDERLINE) + 5 个强行拼盘 (FAKE)",
+  "labels": [
+    { "title": "Middle East — Israel-Gaza conflict: ICC arrest claims, Gaza flotilla interception, US sanctions, and East Jerusalem demolitions", "expected": "BORDERLINE", "note": "4 events tightly under Israel-Gaza umbrella; debatable" },
+    { "title": "Latin America — Bolivia anti-government protests and Mexico ex-officials surrender over cartel ties", "expected": "FAKE", "note": "two unrelated events glued by Latin America label" },
+    { "title": "International justice — ICC proceedings involving Israeli minister Smotrich, Libyan militia commander El Hishri, and 7 October exhibition in London", "expected": "FAKE", "note": "three independent ICC items; Smotrich already covered in story #1" },
+    { "title": "Caribbean/Latin America — Cuba warns US of 'bloodbath' over drone claims; US DoD inquiry into airstrikes on alleged drug boats", "expected": "FAKE", "note": "two distinct US-Caribbean tension items" },
+    { "title": "Middle East — Escalating Israel-Lebanon conflict and casualties", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Middle East — US-Iran tensions: Trump cancels planned strike amid Gulf diplomacy", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Middle East — Drone strike on UAE's Barakah nuclear plant raises wartime safety concerns", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Syria — Car bomb explosion in Damascus", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Global — US extends Russian oil sanctions waiver and G7 rift over Russia policy", "expected": "FAKE", "note": "two distinct events bundled" },
+    { "title": "United States — San Diego mosque shooting and hero security guard Amin Abdullah", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Spain — Arrest of Jonathan Andic in Catalonia over father Isak Andic's death", "expected": "REAL", "note": "single concrete event" },
+    { "title": "US Politics — Trump Endorsements in Texas and Kentucky Republican Primaries", "expected": "BORDERLINE", "note": "same actor, same domain; reasonable consolidation" },
+    { "title": "US Legal Developments — Musk's OpenAI Lawsuit Dismissed, Trump's IRS Lawsuit Dropped, Justice Department Anti-Weaponization Fund", "expected": "FAKE", "note": "three unrelated legal items bundled" },
+    { "title": "East Asia — Putin's state visit to Beijing amid diplomatic sequencing with Trump summit", "expected": "REAL", "note": "single concrete event" },
+    { "title": "DR Congo — Ebola outbreak in Ituri province (Bundibugyo virus, PHEIC declaration)", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Ukraine-Russia drone warfare escalation — frontline operations and long-range strikes", "expected": "REAL", "note": "single concrete topic/event-cluster" },
+    { "title": "FIFA World Cup 2026 — National team squad announcements (Portugal, Brazil)", "expected": "BORDERLINE", "note": "same event type, two countries; reasonable merge" },
+    { "title": "Spain — Shakira acquitted and awarded €55m tax refund in Spanish tax case", "expected": "REAL", "note": "single concrete event" },
+    { "title": "Australia — Tasmania government apology for historical retention of Indigenous and other human remains", "expected": "REAL", "note": "single concrete event" }
+  ]
+}

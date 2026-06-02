@@ -1041,12 +1041,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             if (response.status === 200) {
               const data = await response.json() as any;
               if (data.success) {
-                reports.push(data.data);
-
-                // 观测性：把这份 intel report 全文落 R2，并把 R2 key 记到 brief_stories
+                // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
+                // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
+                // R2 put 失败会抛 → 被外层 per-story catch 捕获 → 该 story 跳过(可接受的罕见丢失)。
                 const r2Key = `intel-reports/${workflowId}/${idx}.json`;
+                await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
+                reports.push({ r2Key });
+
+                // R2 key 记到 brief_stories(观测;落库失败不致命)
                 try {
-                  await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
                   const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
                   const db = getDb(this.env.HYPERDRIVE);
                   await db
@@ -1059,7 +1062,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                       )
                     );
                 } catch (persistErr) {
-                  console.warn(`[AutoBrief] intel report 落盘失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+                  console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
                 }
               }
             }
@@ -1092,12 +1095,20 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。断源 > 靠模型自觉。
         const previousBrief = null;
 
+        // 情报报告已卸到 R2(上一 step 只回传 keys,避免内联超 1MB)；这里读回全文供简报生成。
+        const analysisData = (await Promise.all(
+          intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
+            const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
+            return obj ? JSON.parse(await obj.text()) : null;
+          })
+        )).filter(Boolean);
+
         // 调用AI Worker的简报生成端点
         const briefRequest = new Request(`http://localhost:8786/meridian/generate-final-brief`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
           body: JSON.stringify({
-            analysisData: intelligenceReports,
+            analysisData: analysisData,
             previousBrief: previousBrief,
             options: {
               provider: 'dashscope',

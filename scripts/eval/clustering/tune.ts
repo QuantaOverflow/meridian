@@ -31,11 +31,15 @@ function parseArgs(argv: string[]) {
 
 const PROD = { umap_n_components: 10, umap_n_neighbors: 15, umap_min_dist: 0.0, umap_metric: 'cosine', hdbscan_min_cluster_size: 5, hdbscan_min_samples: 3, hdbscan_cluster_selection_epsilon: 0.2 };
 
-type Cfg = { mcs: number; eps: number; nn: number };
+type Cfg = { mcs: number; eps: number; nn: number; ms: number; prune: number | null };
 type MlItem = { id?: number | string; metadata?: { id?: number | string } };
 
 async function cluster(mlUrl: string, token: string, items: Array<{ id: number; embedding: number[] }>, cfg: Cfg): Promise<Partition> {
-  const config = { ...PROD, umap_n_neighbors: cfg.nn, hdbscan_min_cluster_size: cfg.mcs, hdbscan_cluster_selection_epsilon: cfg.eps };
+  const config = {
+    ...PROD, umap_n_neighbors: cfg.nn, hdbscan_min_cluster_size: cfg.mcs,
+    hdbscan_min_samples: cfg.ms, hdbscan_cluster_selection_epsilon: cfg.eps,
+    ...(cfg.prune != null ? { postprocess_prune_threshold: cfg.prune } : {}),
+  };
   const resp = await fetch(`${mlUrl}/ai-worker/clustering?return_embeddings=false&return_reduced_embeddings=false`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Token': token },
     body: JSON.stringify({ items, config }),
@@ -55,13 +59,16 @@ async function main() {
   const mcsList = (args.mcs || '3,5,8,12').split(',').map(Number);
   const epsList = (args.eps || '0.0,0.1,0.2').split(',').map(Number);
   const nnList = (args.nn || '10,15').split(',').map(Number);
+  const msList = (args.ms || '3').split(',').map(Number);
+  const pruneList: Array<number | null> = args.prune ? args.prune.split(',').map(Number) : [null];
 
   // 完整合池 gold(作参考；bcubed 自动按窗口取交集)
   const gold = JSON.parse(await readFile(resolve(CACHE_DIR, `reference-${args['pool-key']}.json`), 'utf8')) as ReferencePartition;
   const reference = referenceToPartition(gold);
 
-  // embedding(全 634)
-  const embMap = JSON.parse(await readFile(resolve(CACHE_DIR, `embeddings-${args['pool-key']}.json`), 'utf8')) as Record<string, number[]>;
+  // embedding(全 634);--emb-key 可指向不同嵌入缓存
+  const embKey = args['emb-key'] || args['pool-key'];
+  const embMap = JSON.parse(await readFile(resolve(CACHE_DIR, `embeddings-${embKey}.json`), 'utf8')) as Record<string, number[]>;
 
   // 每天的文章 ids(从 per-day gold)
   const dayIds: Record<string, number[]> = {};
@@ -80,7 +87,7 @@ async function main() {
 
   // 扫参
   const grid: Cfg[] = [];
-  for (const mcs of mcsList) for (const eps of epsList) for (const nn of nnList) grid.push({ mcs, eps, nn });
+  for (const mcs of mcsList) for (const eps of epsList) for (const nn of nnList) for (const ms of msList) for (const prune of pruneList) grid.push({ mcs, eps, nn, ms, prune });
   console.log(`[tune] 网格 ${grid.length} 组 × ${windows.length} 窗口 = ${grid.length * windows.length} 次聚类\n`);
 
   const rows: Array<{ cfg: Cfg; meanP: number; meanR: number; meanF: number; per: BcubedMetrics[] }> = [];
@@ -96,12 +103,13 @@ async function main() {
 
   rows.sort((a, b) => b.meanF - a.meanF);
   const isBaseline = (c: Cfg) => c.mcs === 5 && c.eps === 0.2 && c.nn === 15;
-  console.log('mcs  eps   nn   meanP   meanR   meanF    (P per window)');
-  console.log('────────────────────────────────────────────────────────');
+  console.log('mcs  ms   eps   nn   prune  meanP   meanR   meanF    (P per window)');
+  console.log('──────────────────────────────────────────────────────────────────');
   for (const r of rows) {
     const tag = isBaseline(r.cfg) ? '  ← prod baseline' : '';
     const perP = r.per.map(m => m.precision.toFixed(2)).join('/');
-    console.log(`${String(r.cfg.mcs).padEnd(4)} ${r.cfg.eps.toFixed(1).padEnd(5)} ${String(r.cfg.nn).padEnd(4)} ${r.meanP.toFixed(3)}  ${r.meanR.toFixed(3)}  ${r.meanF.toFixed(3)}  [${perP}]${tag}`);
+    const pr = r.cfg.prune == null ? '-' : r.cfg.prune.toFixed(2);
+    console.log(`${String(r.cfg.mcs).padEnd(4)} ${String(r.cfg.ms).padEnd(4)} ${r.cfg.eps.toFixed(1).padEnd(5)} ${String(r.cfg.nn).padEnd(4)} ${pr.padEnd(6)} ${r.meanP.toFixed(3)}  ${r.meanR.toFixed(3)}  ${r.meanF.toFixed(3)}  [${perP}]${tag}`);
   }
 }
 

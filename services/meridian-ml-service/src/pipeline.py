@@ -337,6 +337,18 @@ class ClusteringStage(ProcessingStage):
         
         # 分析簇内容
         cluster_labels = np.array(clustering_result['cluster_labels'])
+
+        # 确定性后处理:质心剪枝 + 低内聚解散(阈值来自请求 config,None=跳过)
+        pp_prune = getattr(self.config, 'postprocess_prune_threshold', None) if self.config else None
+        pp_dissolve = getattr(self.config, 'postprocess_dissolve_threshold', None) if self.config else None
+        if pp_prune is not None or pp_dissolve is not None:
+            from .clustering import postprocess_labels
+            before_noise = int((cluster_labels == -1).sum())
+            cluster_labels = postprocess_labels(embeddings, cluster_labels, pp_prune, pp_dissolve)
+            after_noise = int((cluster_labels == -1).sum())
+            print(f"[postprocess] prune={pp_prune} dissolve={pp_dissolve}: 噪音 {before_noise}->{after_noise}")
+            clustering_result['cluster_labels'] = cluster_labels.tolist()
+
         cluster_content = analyze_cluster_content(texts, cluster_labels)
         
         # 构建增强的结果

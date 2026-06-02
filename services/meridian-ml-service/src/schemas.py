@@ -29,6 +29,10 @@ class BaseClusteringConfig(BaseModel):
     normalize_embeddings: bool = Field(default=True, description="是否L2归一化嵌入向量")
     remove_outliers: bool = Field(default=False, description="是否移除异常点")
 
+    # 确定性后处理(HDBSCAN 后,原始嵌入空间余弦);None=不启用,便于 eval 扫阈值
+    postprocess_prune_threshold: Optional[float] = Field(default=None, description="成员到簇质心余弦<此值则剪为噪音(治污染)")
+    postprocess_dissolve_threshold: Optional[float] = Field(default=None, description="簇平均内聚(成员到质心余弦)<此值则整簇解散为噪音(治噪音巨团)")
+
 class OptimizationConfig(BaseModel):
     """参数优化配置"""
     enabled: bool = Field(default=False, description="是否启用参数优化")

@@ -68,6 +68,8 @@ async function main() {
     ...(args['min-cluster-size'] ? { hdbscan_min_cluster_size: +args['min-cluster-size'] } : {}),
     ...(args['min-samples'] ? { hdbscan_min_samples: +args['min-samples'] } : {}),
     ...(args.epsilon ? { hdbscan_cluster_selection_epsilon: +args.epsilon } : {}),
+    ...(args.prune ? { postprocess_prune_threshold: +args.prune } : {}),
+    ...(args.dissolve ? { postprocess_dissolve_threshold: +args.dissolve } : {}),
   };
 
   // 1) 冻结 gold → 文章 ids + 参考划分
@@ -139,6 +141,7 @@ async function main() {
         clusterSizes: sizes,
         referenceStories: gold.stories.length,
         bcubed: m,
+        predicted: Object.fromEntries(predicted),
       },
       null,
       2

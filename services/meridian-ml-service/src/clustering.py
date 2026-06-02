@@ -234,6 +234,47 @@ def perform_hdbscan_clustering(
         return np.zeros(n_samples, dtype=int), None
 
 
+def postprocess_labels(
+    embeddings: np.ndarray,
+    labels: np.ndarray,
+    prune_threshold: Optional[float] = None,
+    dissolve_threshold: Optional[float] = None,
+) -> np.ndarray:
+    """确定性后处理:在原始嵌入空间用余弦相似度清理 HDBSCAN 结果。
+
+    - 低内聚解散(治噪音巨团 B):簇内成员到质心的平均余弦 < dissolve_threshold,整簇打回噪音(-1)。
+    - 质心剪枝(治污染 A):成员到本簇质心余弦 < prune_threshold,该成员打回噪音(-1)。
+
+    两阈值均为 None 时原样返回。被清理的成员标 -1(不重新归类)。
+    """
+    if prune_threshold is None and dissolve_threshold is None:
+        return labels
+    labels = labels.copy()
+    # L2 归一化 → 余弦相似度=点积
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    units = embeddings / np.clip(norms, 1e-12, None)
+    for cid in np.unique(labels):
+        if cid == -1:
+            continue
+        idx = np.where(labels == cid)[0]
+        if idx.size == 0:
+            continue
+        centroid = units[idx].mean(axis=0)
+        cnorm = np.linalg.norm(centroid)
+        if cnorm < 1e-12:
+            continue
+        centroid = centroid / cnorm
+        sims = units[idx] @ centroid  # 每个成员到质心的余弦
+        # 解散:整簇内聚过低(用剪枝前的内聚判,巨团 93% 单例→内聚极低→整簇消失)
+        if dissolve_threshold is not None and float(sims.mean()) < dissolve_threshold:
+            labels[idx] = -1
+            continue
+        # 剪枝:踢掉离群成员
+        if prune_threshold is not None:
+            labels[idx[sims < prune_threshold]] = -1
+    return labels
+
+
 def optimize_clusters(
     embeddings: np.ndarray,
     grid_config: Optional[GridSearchConfig] = None

@@ -4,7 +4,7 @@ import json
 import time
 
 # --- 配置 ---
-BASE_URL = "http://107.174.196.203:8080"
+BASE_URL = os.environ.get("MERIDIAN_ML_SERVICE_URL", "http://localhost:8080")
 API_TOKEN = os.environ.get("MERIDIAN_ML_SERVICE_API_KEY", "") # 从环境变量读取，勿硬编码
 
 HEADERS = {

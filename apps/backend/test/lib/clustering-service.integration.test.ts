@@ -3,7 +3,7 @@ import { ClusteringService, type ArticleDataset } from '../../src/lib/clustering
 import type { AIWorkerEnv } from '../../src/lib/ai-services';
 
 // --- Configuration for Live Integration Test ---
-const REAL_ML_SERVICE_URL = 'http://107.174.196.203:8080';
+const REAL_ML_SERVICE_URL = process.env.MERIDIAN_ML_SERVICE_URL || 'http://localhost:8080';
 const REAL_API_TOKEN = process.env.MERIDIAN_ML_SERVICE_API_KEY || '';
 const BAD_API_TOKEN = 'invalid-token-for-testing';
 

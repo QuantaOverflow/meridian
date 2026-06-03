@@ -80,8 +80,10 @@ export async function judgeFactual(
     : 'unsupported';
 
   const quote = (parsed.evidence_quote || '').toString();
+  // verified 仅作审计线索(judge 是否给出可逐字定位的原句),不再回写 verdict。
+  // 摘要本质是改写:忠实的陈述被 source 蕴含(entailment)而非逐字包含,
+  // 子串匹配会把"会改写"的忠实句误判为 unsupported(度量错位)。判定以 judge 的 verdict 为准。
   const verified = verifyEvidence(quote, source);
-  if (verdict === 'supported' && !verified) verdict = 'unsupported';
 
   return {
     claim,

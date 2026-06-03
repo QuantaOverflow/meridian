@@ -73,7 +73,7 @@ export class StoryValidationService {
             if (validArticleIds.length >= 2) {
               stories.push({
                 title: validation.title || `Story ${cluster.clusterId}`,
-                importance: Math.min(Math.max(validation.importance || 5, 1), 10),
+                importance: this.coerceImportance(validation.importance),
                 articleIds: validArticleIds,
                 storyType: "SINGLE_STORY"
               })
@@ -85,17 +85,34 @@ export class StoryValidationService {
               })
             }
           } else if (validation.answer === 'collection_of_stories') {
-            // 故事集合：分解为多个独立故事
+            // 故事集合：分解为多个独立故事。
+            // LLM 吐回的 article id 视为不可信输入：只留确属本簇、且未被别的子故事用过的。
+            // (曾观测到幻觉 id —— 簇外/捏造 —— 与跨子故事重复；用簇成员白名单挡掉，不靠模型自觉)
+            const clusterIds = new Set(cluster.articleIds)
+            const seen = new Set<number>()
+            let addedFromCollection = 0
             validation.stories?.forEach((story: any, index: number) => {
-              if (story.articles?.length >= 2) {
+              const ids: number[] = (Array.isArray(story.articles) ? story.articles : [])
+                .filter((id: any) => typeof id === 'number' && clusterIds.has(id) && !seen.has(id))
+              if (ids.length >= 2) {
+                ids.forEach((id: number) => seen.add(id))
                 stories.push({
                   title: story.title || `Story ${cluster.clusterId}-${index + 1}`,
-                  importance: Math.min(Math.max(story.importance || 5, 1), 10),
-                  articleIds: story.articles,
+                  importance: this.coerceImportance(story.importance),
+                  articleIds: ids,
                   storyType: "SINGLE_STORY" // 分解后的每个故事都是单一故事
                 })
+                addedFromCollection++
               }
             })
+            // 子集过滤后一个有效故事都不剩(全幻觉 / 全单篇 / 全重复)→ 显式拒绝，便于观测
+            if (addedFromCollection === 0) {
+              rejectedClusters.push({
+                clusterId: cluster.clusterId,
+                rejectionReason: "NO_STORIES",
+                originalArticleIds: cluster.articleIds
+              })
+            }
           } else if (validation.answer === 'pure_noise') {
             rejectedClusters.push({
               clusterId: cluster.clusterId,
@@ -143,6 +160,28 @@ export class StoryValidationService {
         processingStatistics: clusteringResult.statistics
       }
     }
+  }
+
+  /**
+   * importance 容错归一：模型偶尔返回字符串("high"/"medium")或数字字符串("7")。
+   * 裸用 Math.max("high",1) 会得 NaN 污染下游排序。统一成 1-10 整数,无法识别默认 5。
+   * prompt 已要求整数,此处为双保险(已观测到 collection 路径吐 "high"/"medium")。
+   */
+  private coerceImportance(v: any): number {
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      return Math.min(Math.max(Math.round(v), 1), 10)
+    }
+    if (typeof v === 'string') {
+      const n = parseFloat(v.trim())
+      if (Number.isFinite(n)) return Math.min(Math.max(Math.round(n), 1), 10)
+      const map: Record<string, number> = {
+        'critical': 9, 'very high': 9, 'high': 8, 'medium-high': 7,
+        'moderate': 5, 'medium': 5, 'low': 3, 'very low': 2, 'minor': 2,
+      }
+      const w = map[v.trim().toLowerCase()]
+      if (w !== undefined) return w
+    }
+    return 5
   }
 
   /**

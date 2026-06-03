@@ -9,6 +9,7 @@ import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem, BriefContent } from './types/api'
 import { ValidatedStories } from './types/story-validation'
+import { StorySchema } from './types/intelligence-types'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
 type HonoEnv = {
@@ -383,19 +384,29 @@ app.post('/meridian/intelligence/analyze-stories', async (c) => {
 app.post('/meridian/intelligence/analyze-single-story', async (c) => {
   try {
     const body = await c.req.json()
-    
-    // 验证输入格式：支持新的 Story + Article[] 格式
-    if (!body.story || !body.articleData) {
-      return c.json<APIResponse<null>>({ 
+
+    // story 形状必须在边界处运行时校验：跨 service 调用走 JSON，TS 类型已被抹掉。
+    // 缺字段(曾经的 articleIds 丢失)若不在此拦下，会潜到 service 里变成 undefined.length 的 TypeError。
+    const storyParse = StorySchema.safeParse(body?.story)
+    if (!storyParse.success) {
+      const detail = storyParse.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
+      return c.json<APIResponse<null>>({
         success: false,
-        error: 'story (Story) and articleData (Article[]) are required'
+        error: `Invalid story payload: ${detail}`
+      }, 400)
+    }
+    // articleData 保持轻校验(非空数组)：不套严格 ArticleSchema，避免 publishDate/url 格式差异误拒真实数据。
+    if (!Array.isArray(body.articleData) || body.articleData.length === 0) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'articleData (Article[]) is required and must be a non-empty array'
       }, 400)
     }
 
-    console.log(`[Intelligence] 分析单个故事: ${body.story.title}`)
+    console.log(`[Intelligence] 分析单个故事: ${storyParse.data.title}`)
 
     const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
-    const result = await intelligenceService.analyzeSingleStory(body.story, body.articleData)
+    const result = await intelligenceService.analyzeSingleStory(storyParse.data, body.articleData)
     
     if (result.success) {
       return c.json<APIResponse<any>>({
@@ -443,33 +454,49 @@ app.post('/meridian/generate-final-brief', async (c) => {
 
     const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
 
-    // 将legacy格式转换为IntelligenceReports格式
+    // analysisData 实际就是上游 intel 端点产出的 IntelligenceReport（backend 原样卸 R2 再回灌）。
+    // 这里直读其字段、原样透传；legacy 字段名（overview/key_developments/...）仅作旧调用方兜底。
+    // 历史 bug：本段曾假设输入是 legacy 形状去拆装，把已经正确的 IntelligenceReport 全搅成占位符 → 空 brief。
     const intelligenceReports = {
       reports: body.analysisData.map((analysis: any) => ({
-        storyId: analysis.id || `story_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-        status: "COMPLETE" as const,
-        executiveSummary: analysis.overview || analysis.summary || '发展概述',
-        storyStatus: "DEVELOPING" as const,
-        timeline: [],
-        significance: {
-          level: "MODERATE" as const,
-          reasoning: analysis.outlook || '需要持续关注的发展',
-        },
-        entities: (analysis.stakeholders || []).map((name: string) => ({
-          name,
-          type: 'Organization',
-          role: 'Stakeholder',
-          positions: [],
-        })),
-        sources: [{
-          sourceName: 'Multiple Sources',
-          articleIds: [1, 2, 3], // 占位符
-          reliabilityLevel: "HIGH" as const,
-          bias: 'Minimal',
-        }],
-        factualBasis: analysis.key_developments || [],
-        informationGaps: analysis.implications || [],
-        contradictions: [],
+        storyId: analysis.storyId || analysis.id || `story_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        status: analysis.status || ("COMPLETE" as const),
+        executiveSummary: analysis.executiveSummary || analysis.overview || analysis.summary || '发展概述',
+        storyStatus: analysis.storyStatus || ("DEVELOPING" as const),
+        timeline: Array.isArray(analysis.timeline) ? analysis.timeline : [],
+        significance: (analysis.significance && (analysis.significance.level || analysis.significance.reasoning))
+          ? {
+              level: analysis.significance.level || ("MODERATE" as const),
+              reasoning: analysis.significance.reasoning || analysis.outlook || '需要持续关注的发展',
+            }
+          : {
+              level: "MODERATE" as const,
+              reasoning: analysis.outlook || '需要持续关注的发展',
+            },
+        entities: Array.isArray(analysis.entities) && analysis.entities.length
+          ? analysis.entities.map((e: any) => ({
+              name: e.name || 'Unknown Entity',
+              type: e.type || 'Organization',
+              role: e.role || 'Stakeholder',
+              positions: Array.isArray(e.positions) ? e.positions : [],
+            }))
+          : (analysis.stakeholders || []).map((name: string) => ({
+              name,
+              type: 'Organization',
+              role: 'Stakeholder',
+              positions: [],
+            })),
+        sources: (Array.isArray(analysis.sources) && analysis.sources.length)
+          ? analysis.sources
+          : [{
+              sourceName: 'Multiple Sources',
+              articleIds: [1, 2, 3], // 占位符
+              reliabilityLevel: "HIGH" as const,
+              bias: 'Minimal',
+            }],
+        factualBasis: analysis.factualBasis || analysis.key_developments || [],
+        informationGaps: analysis.informationGaps || analysis.implications || [],
+        contradictions: Array.isArray(analysis.contradictions) ? analysis.contradictions : [],
       })),
       processingStatus: {
         totalStories: body.analysisData.length,

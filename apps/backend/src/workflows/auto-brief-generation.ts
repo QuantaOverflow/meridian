@@ -1022,17 +1022,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         for (let idx = 0; idx < storiesForIntelligence.length; idx++) {
           const story = storiesForIntelligence[idx];
           try {
-            // 构建故事和聚类数据
-            const storyWithContent = {
-              storyId: story.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-              analysis: { summary: story.title }
-            };
-
             // 为情报分析动态获取相关文章的内容
             const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
 
+            // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
+            // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
             const response = await aiServices.aiWorker.analyzeStoryIntelligence(
-              storyWithContent,
+              story,
               clusterArticles,
               { analysis_depth: 'detailed' },
               idx
@@ -1064,10 +1060,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 } catch (persistErr) {
                   console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
                 }
+              } else {
+                console.error(`[AutoBrief] 情报分析返回 success:false (idx=${idx}, "${story.title}"): ${data.error}`);
               }
+            } else {
+              // 非 200 别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断
+              const errBody = await response.text().catch(() => '<unreadable>');
+              console.error(`[AutoBrief] 情报分析 HTTP ${response.status} (idx=${idx}, "${story.title}"): ${errBody.slice(0, 300)}`);
             }
           } catch (error) {
-            console.warn(`[AutoBrief] 故事情报分析失败:`, error);
+            console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}):`, error);
           }
         }
 
@@ -1075,6 +1077,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 如果执行到这里，说明有有效故事，不需要默认报告
 
         console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告`);
+        // 全部失败必须在本层显式失败：空报告下传只会以 brief_generation "HTTP 500" 假象冒出，难以诊断
+        if (storiesForIntelligence.length > 0 && reports.length === 0) {
+          throw new Error(`情报分析对全部 ${storiesForIntelligence.length} 个故事均失败，无可用报告（详见上方各故事错误日志）`);
+        }
         return reports;
       });
 

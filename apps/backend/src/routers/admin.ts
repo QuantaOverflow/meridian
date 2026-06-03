@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import { getDb } from '../lib/database';
 import { $sources, $articles, $reports, eq, and, or, desc, isNotNull, gte, sql, inArray } from '@meridian/database';
 import { AutoBriefGenerationWorkflow, type BriefGenerationParams } from '../workflows/auto-brief-generation';
@@ -19,6 +21,40 @@ import type { Env } from '../index';
 const app = new Hono<{ Bindings: Env }>();
 const logger = new Logger({ router: 'admin' });
 
+// ===== 入参校验 schema =====
+// 与其余 backend 路由(sources/reports/...)一致,用 zValidator 在边界挡畸形输入,
+// 避免畸形 payload 潜入下游变成隐晦崩溃。可选字段保持 optional,默认值仍由各 handler 兜底。
+const sourceCreateSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().min(1),
+  category: z.string().min(1), // DB 列为 notNull,必填(原 `category || null` 是潜在 bug,会向 notNull 列插 null)
+  scrape_frequency: z.number().int().positive().optional(),
+});
+const sourceUpdateSchema = sourceCreateSchema.partial();
+const idParamSchema = z.object({ id: z.coerce.number().int() });
+const workflowIdParamSchema = z.object({ workflowId: z.string().min(1) });
+const articlesQuerySchema = z.object({ status: z.string().optional() });
+const briefGenerateSchema = z.object({
+  article_ids: z.array(z.number().int()).optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  timeRangeDays: z.number().optional(),
+  articleLimit: z.number().int().positive().optional(),
+  minImportance: z.number().optional(),
+  maxStoriesToGenerate: z.number().int().positive().optional(),
+  storyMinImportance: z.number().optional(),
+  clusteringOptions: z.any().optional(),
+  triggeredBy: z.string().optional(),
+});
+const byIdsSchema = z.object({ ids: z.array(z.number().int()).optional() });
+const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
+const retryFailedSchema = z.object({
+  article_ids: z.array(z.number().int()).optional(),
+  status_filters: z.array(z.string()).optional(),
+  auto_clear_reasons: z.boolean().optional(),
+  max_articles: z.number().int().positive().optional(),
+});
+
 // ========== RSS源管理 ==========
 app.get('/sources', async (c) => {
   try {
@@ -36,13 +72,9 @@ app.get('/sources', async (c) => {
   }
 });
 
-app.post('/sources', async (c) => {
+app.post('/sources', zValidator('json', sourceCreateSchema), async (c) => {
   try {
-    const { name, url, category, scrape_frequency } = await c.req.json();
-    
-    if (!name || !url) {
-      return c.json(createErrorResponse('缺少必需的字段: name, url'), 400 as any);
-    }
+    const { name, url, category, scrape_frequency } = c.req.valid('json');
 
     const db = getDb(c.env.HYPERDRIVE);
     const routeLogger = logger.child({ operation: 'create-source', url });
@@ -61,7 +93,7 @@ app.post('/sources', async (c) => {
     const newSource = await db.insert($sources).values({
       name,
       url,
-      category: category || null,
+      category,
       scrape_frequency: scrape_frequency || 60,
     }).returning();
 
@@ -77,11 +109,11 @@ app.post('/sources', async (c) => {
   }
 });
 
-app.put('/sources/:id', async (c) => {
+app.put('/sources/:id', zValidator('param', idParamSchema), zValidator('json', sourceUpdateSchema), async (c) => {
   try {
-    const sourceId = parseInt(c.req.param('id'));
-    const { name, url, category, scrape_frequency } = await c.req.json();
-    
+    const sourceId = c.req.valid('param').id;
+    const { name, url, category, scrape_frequency } = c.req.valid('json');
+
     const db = getDb(c.env.HYPERDRIVE);
     const routeLogger = logger.child({ operation: 'update-source', source_id: sourceId });
 
@@ -111,9 +143,9 @@ app.put('/sources/:id', async (c) => {
   }
 });
 
-app.delete('/sources/:id', async (c) => {
+app.delete('/sources/:id', zValidator('param', idParamSchema), async (c) => {
   try {
-    const sourceId = parseInt(c.req.param('id'));
+    const sourceId = c.req.valid('param').id;
     const db = getDb(c.env.HYPERDRIVE);
     const routeLogger = logger.child({ operation: 'delete-source', source_id: sourceId });
     
@@ -138,10 +170,10 @@ app.delete('/sources/:id', async (c) => {
 });
 
 // ========== 文章管理 ==========
-app.get('/articles', async (c) => {
+app.get('/articles', zValidator('query', articlesQuerySchema), async (c) => {
   try {
     const { page, limit, offset } = processPaginationParams(c);
-    const status = c.req.query('status');
+    const status = c.req.valid('query').status;
 
     const db = getDb(c.env.HYPERDRIVE);
     
@@ -183,10 +215,10 @@ app.get('/articles', async (c) => {
 });
 
 // ========== 简报管理 ==========
-app.post('/briefs/generate', async (c) => {
+app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({})); // 支持空请求体
-    const { 
+    const body = c.req.valid('json'); // 空请求体也需为合法 JSON(至少 {});字段类型由 zValidator 校验
+    const {
       // 文章选择参数
       article_ids,
       dateFrom, 
@@ -297,9 +329,9 @@ app.post('/briefs/generate', async (c) => {
 });
 
 // ========== 简报工作流状态查询 ==========
-app.get('/briefs/workflow/:workflowId/status', async (c) => {
+app.get('/briefs/workflow/:workflowId/status', zValidator('param', workflowIdParamSchema), async (c) => {
   try {
-    const workflowId = c.req.param('workflowId');
+    const workflowId = c.req.valid('param').workflowId;
     const routeLogger = logger.child({ operation: 'get-workflow-status', workflowId });
 
     routeLogger.info('查询工作流状态', { workflowId });
@@ -452,12 +484,9 @@ app.get('/overview', async (c) => {
 });
 
 // ========== 文章按 ID 批量查询（用于 eval 等下游工具） ==========
-app.post('/articles/by-ids', async (c) => {
+app.post('/articles/by-ids', zValidator('json', byIdsSchema), async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({}));
-    const ids = Array.isArray(body.ids)
-      ? (body.ids as unknown[]).filter((n): n is number => Number.isInteger(n))
-      : [];
+    const ids = c.req.valid('json').ids ?? [];
     if (ids.length === 0) {
       return c.json({ success: true, articles: [] });
     }
@@ -478,14 +507,10 @@ app.post('/articles/by-ids', async (c) => {
 });
 
 // ========== 工作流手动触发 ==========
-app.post('/articles/process', async (c) => {
+app.post('/articles/process', zValidator('json', processArticlesSchema), async (c) => {
   try {
-    const { article_ids } = await c.req.json();
+    const { article_ids } = c.req.valid('json');
     const routeLogger = logger.child({ operation: 'manual-process-articles' });
-
-    if (!Array.isArray(article_ids) || article_ids.length === 0) {
-      return c.json(createErrorResponse('缺少或无效的article_ids数组'), 400 as any);
-    }
 
     routeLogger.info('手动触发文章处理工作流', { article_count: article_ids.length });
 
@@ -517,15 +542,14 @@ app.post('/articles/process', async (c) => {
 });
 
 // ========== 重试失败文章 ==========
-app.post('/articles/retry-failed', async (c) => {
+app.post('/articles/retry-failed', zValidator('json', retryFailedSchema), async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({}));
-    const { 
-      article_ids, 
-      status_filters, 
+    const {
+      article_ids,
+      status_filters,
       auto_clear_reasons = true,
-      max_articles = 100 
-    } = body;
+      max_articles = 100
+    } = c.req.valid('json');
     
     const routeLogger = logger.child({ operation: 'retry-failed-articles' });
     const db = getDb(c.env.HYPERDRIVE);

@@ -3,22 +3,29 @@
 合并了原embeddings.py和embedding_utils.py的核心功能
 """
 
+# 惰性标注：让 torch.Tensor/torch.device 等标注变字符串、不在 import 时求值，
+# 配合下方把 torch/transformers 移进函数体，使 import 本模块从 ~25s 降到 ~0s
+# （uvicorn 才能秒绑 8080，不再撞 CF Container 就绪窗口）。详见 memory: ml-service-cold-start。
+from __future__ import annotations
+
 from functools import lru_cache
 from typing import Any, List, Tuple
 import numpy as np
-import torch
-import torch.nn.functional as F
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer
 
 from .config import settings
 
-# 类型别名
-ModelComponents = tuple[Any, Any, torch.device]
+# 类型别名（torch.device 退化成 Any：这是赋值非标注，__future__ 不惰性化它，
+# 必须避免模块级引用 torch，否则照样触发 eager import）
+ModelComponents = tuple[Any, Any, Any]
 
 @lru_cache(maxsize=1)
 def load_embedding_model() -> ModelComponents:
     """加载嵌入模型组件（带缓存）"""
+    # 重库懒加载：仅在真正加载模型时才 import（首请求或后台预热触发），不拖慢 uvicorn 启动
+    import torch
+    from transformers import AutoModel, AutoTokenizer
+
     model_name = settings.embedding_model_name
     print(f"正在加载嵌入模型: {model_name}")
     
@@ -64,6 +71,9 @@ def compute_embeddings(
     e5_prefix: str | None = None,
 ) -> np.ndarray:
     """计算文本嵌入向量"""
+    import torch
+    import torch.nn.functional as F
+
     tokenizer, model, device = model_components
     all_embeddings: list[np.ndarray] = []
 

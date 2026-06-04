@@ -4,6 +4,8 @@ Meridian ML Service - 精简核心版本
 """
 
 import time
+import asyncio
+from contextlib import asynccontextmanager
 from typing import List, Dict, Any
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,12 +29,32 @@ from .embeddings import compute_embeddings
 # FastAPI应用配置
 # ============================================================================
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 后台预热：fire-and-forget 触发模型加载(含 torch/transformers 的重 import 与权重加载)，
+    # 用 to_thread 不阻塞 uvicorn 绑定/就绪检查。配合 embeddings.py 的懒 import，容器秒监听，
+    # 模型在后台并行加载，首个聚类请求来时多半已就绪——既治"不监听"又不把成本转嫁给首请求。
+    async def _warmup():
+        try:
+            from .embeddings import load_embedding_model
+            from .clustering import _load_clustering_libs
+            # 两个重头(模型权重 + umap/hdbscan 的 ~16s import)都在后台线程预热，
+            # 等首个聚类请求来时多半已就绪。
+            await asyncio.to_thread(_load_clustering_libs)
+            await asyncio.to_thread(load_embedding_model)
+            print("[warmup] 聚类库 + 嵌入模型后台预热完成", flush=True)
+        except Exception as e:
+            print(f"[warmup] 预热失败(首请求会按需重试加载): {e}", flush=True)
+    asyncio.create_task(_warmup())
+    yield
+
 app = FastAPI(
     title="Meridian ML Service",
     description="AI驱动的智能聚类分析服务",
     version="3.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS中间件

@@ -12,15 +12,33 @@ from dataclasses import dataclass
 warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
 warnings.filterwarnings("ignore", category=UserWarning, module="umap")
 
-try:
-    import umap
-    import hdbscan
-    from sklearn.preprocessing import StandardScaler
-    from hdbscan.validity import validity_index
-    CLUSTERING_AVAILABLE = True
-except ImportError:
-    CLUSTERING_AVAILABLE = False
+# 重聚类库(umap→pynndescent/sklearn ~16s)是 uvicorn 冷启动慢的真正大头，改懒加载：
+# 启动时只用 find_spec 快速探测可用性(不执行模块/不付 import 成本)，真正 import 推迟到首次聚类。
+# 详见 memory: ml-service-cold-start。
+import importlib.util
+CLUSTERING_AVAILABLE = all(
+    importlib.util.find_spec(_m) is not None for _m in ("umap", "hdbscan", "sklearn")
+)
+if not CLUSTERING_AVAILABLE:
     logging.warning("聚类依赖未安装: umap-learn, hdbscan, scikit-learn")
+
+# 懒加载占位：首次聚类时由 _load_clustering_libs() 填充为真实模块
+umap = None
+hdbscan = None
+validity_index = None
+
+
+def _load_clustering_libs() -> None:
+    """首次聚类时才 import 重库(~16s)并填模块全局；幂等。把成本从 uvicorn 启动挪到首个聚类请求。"""
+    global umap, hdbscan, validity_index
+    if umap is not None:
+        return
+    import umap as _umap
+    import hdbscan as _hdbscan
+    from hdbscan.validity import validity_index as _validity_index
+    umap = _umap
+    hdbscan = _hdbscan
+    validity_index = _validity_index
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +507,7 @@ def cluster_embeddings_with_optimization(
     Returns:
         包含聚类结果的字典
     """
+    _load_clustering_libs()  # 首次调用付重库 import 成本(~16s),之后幂等返回
     logger.info(f"开始{'优化'if use_optimization else '标准'}聚类流程: {embeddings.shape}")
     
     if use_optimization:
@@ -536,6 +555,7 @@ def cluster_embeddings(
     Returns:
         包含聚类结果的字典
     """
+    _load_clustering_libs()  # 首次调用付重库 import 成本(~16s),之后幂等返回
     if config is None:
         config = ClusteringConfig()
     

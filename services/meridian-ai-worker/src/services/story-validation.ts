@@ -49,36 +49,45 @@ export class StoryValidationService {
     const stories: Story[] = []
     const rejectedClusters: RejectedCluster[] = []
 
-    for (const cluster of clusteringResult.clusters) {
+    // 限并发并行验证：每簇独立(collection 路径的 seen 去重是簇内的、不跨簇共享；
+    // AI 验证的 LLM 调用是大头)，原串行逐簇 await 是次要 wall-clock 来源。并发上限
+    // 保守起步=3，撞 DashScope 限流由 AIGateway 配额退避兜底。按簇顺序合并结果保持确定性。
+    const VALIDATION_CONCURRENCY = 3
+
+    const validateCluster = async (
+      cluster: (typeof clusteringResult.clusters)[number]
+    ): Promise<{ stories: Story[]; rejected: RejectedCluster[] }> => {
+      const outStories: Story[] = []
+      const outRejected: RejectedCluster[] = []
       try {
         // 基本尺寸过滤
         if (cluster.size < 3) {
-          rejectedClusters.push({
+          outRejected.push({
             clusterId: cluster.clusterId,
             rejectionReason: "INSUFFICIENT_ARTICLES",
             originalArticleIds: cluster.articleIds
           })
-          continue
+          return { stories: outStories, rejected: outRejected }
         }
 
         // 对于足够大的聚类，使用AI进行深度验证
         if (useAI && cluster.size >= 3) {
           const validation = await this.performAIValidation(cluster, articlesData, options)
-          
+
           if (validation.answer === 'single_story') {
             const validArticleIds = cluster.articleIds.filter(
               (id: number) => !validation.outliers?.includes(id)
             )
-            
+
             if (validArticleIds.length >= 2) {
-              stories.push({
+              outStories.push({
                 title: validation.title || `Story ${cluster.clusterId}`,
                 importance: this.coerceImportance(validation.importance),
                 articleIds: validArticleIds,
                 storyType: "SINGLE_STORY"
               })
             } else {
-              rejectedClusters.push({
+              outRejected.push({
                 clusterId: cluster.clusterId,
                 rejectionReason: "INSUFFICIENT_ARTICLES",
                 originalArticleIds: cluster.articleIds
@@ -96,7 +105,7 @@ export class StoryValidationService {
                 .filter((id: any) => typeof id === 'number' && clusterIds.has(id) && !seen.has(id))
               if (ids.length >= 2) {
                 ids.forEach((id: number) => seen.add(id))
-                stories.push({
+                outStories.push({
                   title: story.title || `Story ${cluster.clusterId}-${index + 1}`,
                   importance: this.coerceImportance(story.importance),
                   articleIds: ids,
@@ -107,21 +116,21 @@ export class StoryValidationService {
             })
             // 子集过滤后一个有效故事都不剩(全幻觉 / 全单篇 / 全重复)→ 显式拒绝，便于观测
             if (addedFromCollection === 0) {
-              rejectedClusters.push({
+              outRejected.push({
                 clusterId: cluster.clusterId,
                 rejectionReason: "NO_STORIES",
                 originalArticleIds: cluster.articleIds
               })
             }
           } else if (validation.answer === 'pure_noise') {
-            rejectedClusters.push({
+            outRejected.push({
               clusterId: cluster.clusterId,
               rejectionReason: "PURE_NOISE",
               originalArticleIds: cluster.articleIds
             })
           } else {
             // no_stories 或其他情况
-            rejectedClusters.push({
+            outRejected.push({
               clusterId: cluster.clusterId,
               rejectionReason: "NO_STORIES",
               originalArticleIds: cluster.articleIds
@@ -129,7 +138,7 @@ export class StoryValidationService {
           }
         } else {
           // 简单验证：按尺寸分类
-          stories.push({
+          outStories.push({
             title: `Story ${cluster.clusterId}`,
             importance: Math.floor(Math.random() * 10) + 1,
             articleIds: cluster.articleIds,
@@ -139,11 +148,21 @@ export class StoryValidationService {
       } catch (error) {
         console.warn(`[Story Validation] 聚类 ${cluster.clusterId} 验证失败:`, error)
         // 验证失败的聚类标记为拒绝
-        rejectedClusters.push({
+        outRejected.push({
           clusterId: cluster.clusterId,
           rejectionReason: "NO_STORIES",
           originalArticleIds: cluster.articleIds
         })
+      }
+      return { stories: outStories, rejected: outRejected }
+    }
+
+    for (let i = 0; i < clusteringResult.clusters.length; i += VALIDATION_CONCURRENCY) {
+      const batch = clusteringResult.clusters.slice(i, i + VALIDATION_CONCURRENCY)
+      const batchResults = await Promise.all(batch.map(validateCluster))
+      for (const r of batchResults) {
+        stories.push(...r.stories)
+        rejectedClusters.push(...r.rejected)
       }
     }
     

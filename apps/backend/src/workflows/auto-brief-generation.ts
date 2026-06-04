@@ -1017,61 +1017,68 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
                  const aiServices = createAIServices(this.env, workflowId);
-        const reports = [];
+        // 情报分析改限并发并行：各 story 完全独立(各读各的 R2、各落各自 intel-reports/{wf}/{idx}.json key)，
+        // 原串行 for 是端到端 wall-clock 第一大头(N× qwen-long，每次 30-90s)。并发上限保守起步=3，
+        // 撞 DashScope 限流由 AIGateway 的配额退避兜底；不破坏 R2 卸载对 ~1MB step 输出上限的规避。
+        const INTEL_CONCURRENCY = 3;
+        const reports = (await this.batchProcessParallel(
+          storiesForIntelligence,
+          INTEL_CONCURRENCY,
+          async (story: any, idx: number): Promise<{ r2Key: string } | null> => {
+            try {
+              // 为情报分析动态获取相关文章的内容
+              const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
 
-        for (let idx = 0; idx < storiesForIntelligence.length; idx++) {
-          const story = storiesForIntelligence[idx];
-          try {
-            // 为情报分析动态获取相关文章的内容
-            const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
+              // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
+              // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
+              const response = await aiServices.aiWorker.analyzeStoryIntelligence(
+                story,
+                clusterArticles,
+                { analysis_depth: 'detailed' },
+                idx
+              );
 
-            // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
-            // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
-            const response = await aiServices.aiWorker.analyzeStoryIntelligence(
-              story,
-              clusterArticles,
-              { analysis_depth: 'detailed' },
-              idx
-            );
-
-            if (response.status === 200) {
-              const data = await response.json() as any;
-              if (data.success) {
-                // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
-                // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
-                // R2 put 失败会抛 → 被外层 per-story catch 捕获 → 该 story 跳过(可接受的罕见丢失)。
-                const r2Key = `intel-reports/${workflowId}/${idx}.json`;
-                await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
-                reports.push({ r2Key });
-
-                // R2 key 记到 brief_stories(观测;落库失败不致命)
-                try {
-                  const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
-                  const db = getDb(this.env.HYPERDRIVE);
-                  await db
-                    .update($brief_stories)
-                    .set({ intel_report_r2_key: r2Key })
-                    .where(
-                      and(
-                        eq($brief_stories.workflow_id, workflowId),
-                        eq($brief_stories.cluster_id, clusterId)
-                      )
-                    );
-                } catch (persistErr) {
-                  console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
-                }
-              } else {
-                console.error(`[AutoBrief] 情报分析返回 success:false (idx=${idx}, "${story.title}"): ${data.error}`);
+              if (response.status !== 200) {
+                // 非 200 别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断
+                const errBody = await response.text().catch(() => '<unreadable>');
+                console.error(`[AutoBrief] 情报分析 HTTP ${response.status} (idx=${idx}, "${story.title}"): ${errBody.slice(0, 300)}`);
+                return null;
               }
-            } else {
-              // 非 200 别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断
-              const errBody = await response.text().catch(() => '<unreadable>');
-              console.error(`[AutoBrief] 情报分析 HTTP ${response.status} (idx=${idx}, "${story.title}"): ${errBody.slice(0, 300)}`);
+              const data = await response.json() as any;
+              if (!data.success) {
+                console.error(`[AutoBrief] 情报分析返回 success:false (idx=${idx}, "${story.title}"): ${data.error}`);
+                return null;
+              }
+
+              // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
+              // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
+              const r2Key = `intel-reports/${workflowId}/${idx}.json`;
+              await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
+
+              // R2 key 记到 brief_stories(观测;落库失败不致命)
+              try {
+                const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
+                const db = getDb(this.env.HYPERDRIVE);
+                await db
+                  .update($brief_stories)
+                  .set({ intel_report_r2_key: r2Key })
+                  .where(
+                    and(
+                      eq($brief_stories.workflow_id, workflowId),
+                      eq($brief_stories.cluster_id, clusterId)
+                    )
+                  );
+              } catch (persistErr) {
+                console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+              }
+              return { r2Key };
+            } catch (error) {
+              // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
+              console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}):`, error);
+              return null;
             }
-          } catch (error) {
-            console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}):`, error);
           }
-        }
+        )).filter((r): r is { r2Key: string } => r !== null);
 
         // 移除默认报告逻辑 - 现在在故事验证后就会终止工作流
         // 如果执行到这里，说明有有效故事，不需要默认报告

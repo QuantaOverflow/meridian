@@ -44,6 +44,7 @@ const briefGenerateSchema = z.object({
   maxStoriesToGenerate: z.number().int().positive().optional(),
   storyMinImportance: z.number().optional(),
   clusteringOptions: z.any().optional(),
+  skipFaithfulnessGate: z.boolean().optional(), // 测试迭代跳过忠实度门(省 ~3min)
   triggeredBy: z.string().optional(),
 });
 const byIdsSchema = z.object({ ids: z.array(z.number().int()).optional() });
@@ -233,7 +234,8 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       
       // 高级参数（可选）
       clusteringOptions,
-      
+      skipFaithfulnessGate,
+
       // 元数据
       triggeredBy = 'admin'
     } = body;
@@ -261,6 +263,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       minImportance,
       maxStoriesToGenerate,
       storyMinImportance,
+      skipFaithfulnessGate,
       
       // 聚类参数（如果提供）
       clusteringOptions: clusteringOptions || {

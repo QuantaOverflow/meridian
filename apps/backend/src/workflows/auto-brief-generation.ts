@@ -81,6 +81,7 @@ export interface BriefGenerationParams {
   // 业务控制参数
   maxStoriesToGenerate?: number;
   storyMinImportance?: number;
+  skipFaithfulnessGate?: boolean; // 测试迭代跳过忠实度门(省 ~3min);生产 cron 省略=默认跑门
 }
 
 // 简报生成结果接口
@@ -250,7 +251,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       timeRangeDays = 2,
       clusteringOptions,
       maxStoriesToGenerate = 15,
-      storyMinImportance = 0.1
+      storyMinImportance = 0.1,
+      skipFaithfulnessGate = false
     } = event.payload;
 
     // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
@@ -1018,9 +1020,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
                  const aiServices = createAIServices(this.env, workflowId);
         // 情报分析改限并发并行：各 story 完全独立(各读各的 R2、各落各自 intel-reports/{wf}/{idx}.json key)，
-        // 原串行 for 是端到端 wall-clock 第一大头(N× qwen-long，每次 30-90s)。并发上限保守起步=3，
-        // 撞 DashScope 限流由 AIGateway 的配额退避兜底；不破坏 R2 卸载对 ~1MB step 输出上限的规避。
-        const INTEL_CONCURRENCY = 3;
+        // 原串行 for 是端到端 wall-clock 第一大头(N× qwen-long，每次 30-90s)。实测并发=3 把 15 故事
+        // 从 ~18min 压到 ~6min;提到 6 预计 ~3min。撞 DashScope 限流由 AIGateway 配额退避兜底;
+        // 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
+        const INTEL_CONCURRENCY = 6;
         const reports = (await this.batchProcessParallel(
           storiesForIntelligence,
           INTEL_CONCURRENCY,
@@ -1211,75 +1214,82 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 切 enforce：把下方常量翻 true，且需先给 brief_run_status 加 'BLOCKED_FAITHFULNESS' 枚举+migration。
       // =====================================================================
       const FAITHFULNESS_GATE_ENFORCE = false;
-      await observability.logStep('faithfulness_gate', 'started');
-      const faithfulnessVerdict = await step.do('忠实度门检查', defaultStepConfig, async () => {
-        // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
-        const source = (await Promise.all(
-          intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
-            const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
-            return obj ? await obj.text() : null;
-          })
-        )).filter(Boolean).join('\n\n');
-
-        const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-          body: JSON.stringify({ source, brief: briefResult.content }),
-        });
-        const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
-        try {
-          if (checkResponse.status !== 200) {
-            // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
-            console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
-            return null;
-          }
-          const checkData = await checkResponse.json() as any;
-          return checkData.success ? checkData.data : null;
-        } finally {
-          if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
-            (checkResponse as any).dispose();
-          }
-        }
-      });
-
-      if (faithfulnessVerdict) {
-        const v = faithfulnessVerdict;
-        console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=${FAITHFULNESS_GATE_ENFORCE ? 'enforce' : 'shadow'} ` +
-          `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
-          `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
-        await observability.logStep('faithfulness_gate', 'completed', {
-          block: v.block,
-          enforced: FAITHFULNESS_GATE_ENFORCE,
-          block_reasons: v.block_reasons,
-          genuine_unsupported: v.genuine_unsupported,
-          factual_claims: v.factual_claims,
-          unsupported_rate: v.unsupported_rate,
-          contradicted: v.contradicted,
-          analytical_contradicting: v.analytical_contradicting,
-          flagged_factual: v.flagged_factual,
-          flagged_analytical: v.flagged_analytical,
-        });
-
-        // enforce 才真拦；影子模式即使 block 也照常发出(只留记录)
-        if (FAITHFULNESS_GATE_ENFORCE && v.block) {
-          await step.do('persist:brief_run_blocked', dbStepConfig, async () => {
-            const db = getDb(this.env.HYPERDRIVE);
-            await db.update($brief_runs).set({
-              status: 'FAILED', // enforce 上线时改 'BLOCKED_FAITHFULNESS'(需先加枚举+migration)
-              finished_at: new Date(),
-              error: `BLOCKED_FAITHFULNESS: ${v.block_reasons.join('; ')}`,
-              brief_content_length: briefResult.content.length,
-            }).where(eq($brief_runs.workflow_id, workflowId));
-          });
-          console.log(`[AutoBrief] ❌ 简报被忠实度门拦截，未发出: ${v.block_reasons.join('; ')}`);
-          return {
-            success: false,
-            reason: 'BLOCKED_FAITHFULNESS',
-            message: `简报未通过忠实度门: ${v.block_reasons.join('; ')}`,
-          };
-        }
+      // 测试迭代可按 run 跳过门(judge 是 ~100× qwen-max,占 ~3min,影子模式下纯迭代税);
+      // 生产 cron 不传此参=默认跑门攒影子数据。见 memory: faithfulness-runtime-gate。
+      if (skipFaithfulnessGate) {
+        console.log('[AutoBrief] 忠实度门：本次按 skipFaithfulnessGate 跳过(测试迭代,省 ~3min)');
+        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'skip_param' });
       } else {
-        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'check_unavailable' });
+        await observability.logStep('faithfulness_gate', 'started');
+        const faithfulnessVerdict = await step.do('忠实度门检查', defaultStepConfig, async () => {
+          // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
+          const source = (await Promise.all(
+            intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
+              const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
+              return obj ? await obj.text() : null;
+            })
+          )).filter(Boolean).join('\n\n');
+
+          const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
+            body: JSON.stringify({ source, brief: briefResult.content }),
+          });
+          const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
+          try {
+            if (checkResponse.status !== 200) {
+              // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
+              console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
+              return null;
+            }
+            const checkData = await checkResponse.json() as any;
+            return checkData.success ? checkData.data : null;
+          } finally {
+            if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
+              (checkResponse as any).dispose();
+            }
+          }
+        });
+
+        if (faithfulnessVerdict) {
+          const v = faithfulnessVerdict;
+          console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=${FAITHFULNESS_GATE_ENFORCE ? 'enforce' : 'shadow'} ` +
+            `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
+            `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
+          await observability.logStep('faithfulness_gate', 'completed', {
+            block: v.block,
+            enforced: FAITHFULNESS_GATE_ENFORCE,
+            block_reasons: v.block_reasons,
+            genuine_unsupported: v.genuine_unsupported,
+            factual_claims: v.factual_claims,
+            unsupported_rate: v.unsupported_rate,
+            contradicted: v.contradicted,
+            analytical_contradicting: v.analytical_contradicting,
+            flagged_factual: v.flagged_factual,
+            flagged_analytical: v.flagged_analytical,
+          });
+
+          // enforce 才真拦；影子模式即使 block 也照常发出(只留记录)
+          if (FAITHFULNESS_GATE_ENFORCE && v.block) {
+            await step.do('persist:brief_run_blocked', dbStepConfig, async () => {
+              const db = getDb(this.env.HYPERDRIVE);
+              await db.update($brief_runs).set({
+                status: 'FAILED', // enforce 上线时改 'BLOCKED_FAITHFULNESS'(需先加枚举+migration)
+                finished_at: new Date(),
+                error: `BLOCKED_FAITHFULNESS: ${v.block_reasons.join('; ')}`,
+                brief_content_length: briefResult.content.length,
+              }).where(eq($brief_runs.workflow_id, workflowId));
+            });
+            console.log(`[AutoBrief] ❌ 简报被忠实度门拦截，未发出: ${v.block_reasons.join('; ')}`);
+            return {
+              success: false,
+              reason: 'BLOCKED_FAITHFULNESS',
+              message: `简报未通过忠实度门: ${v.block_reasons.join('; ')}`,
+            };
+          }
+        } else {
+          await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'check_unavailable' });
+        }
       }
 
       // =====================================================================

@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { z } from 'zod'
 import { AIGatewayService } from './services/ai-gateway'
+import { runFaithfulnessCheck } from './services/faithfulness-check'
 import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
@@ -601,6 +603,46 @@ app.post('/meridian/generate-brief-tldr', async (c) => {
     return c.json<APIResponse<null>>({ 
       success: false,
       error: 'Failed to generate TLDR',
+      metadata: { details: error.message }
+    }, 500)
+  }
+})
+
+// ============================================================================
+// Faithfulness Check - 运行时忠实度门（fail-closed backstop）
+// 逐句把 brief 对 source 取证 → 套门 F 判据 → 出 block/pass。判据标定见
+// memory: faithfulness-runtime-gate。调用方（workflow）自行决定影子/enforce。
+// ============================================================================
+
+const FaithfulnessCheckSchema = z.object({
+  // source = brief 被允许使用的全部材料（情报报告）；brief = 待检的简报正文
+  source: z.string().min(1),
+  brief: z.string().min(1),
+  options: z.object({ model: z.string().optional() }).optional(),
+})
+
+app.post('/meridian/faithfulness-check', async (c) => {
+  try {
+    // 跨 service 边界必做运行时校验：c.req.json() 是 any，TS 类型不随 JSON 过网线
+    const parsed = FaithfulnessCheckSchema.safeParse(await c.req.json())
+    if (!parsed.success) {
+      const detail = parsed.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
+      return c.json<APIResponse<null>>({ success: false, error: `Invalid payload: ${detail}` }, 400)
+    }
+    const { source, brief, options } = parsed.data
+
+    console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs source(${source.length} chars)`)
+    const verdict = await runFaithfulnessCheck(c.env, source, brief, options?.model || 'qwen-max')
+    console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
+      `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
+      `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)
+
+    return c.json<APIResponse<typeof verdict>>({ success: true, data: verdict })
+  } catch (error: any) {
+    console.error('Faithfulness check error:', error)
+    return c.json<APIResponse<null>>({
+      success: false,
+      error: 'Failed to run faithfulness check',
       metadata: { details: error.message }
     }, 500)
   }

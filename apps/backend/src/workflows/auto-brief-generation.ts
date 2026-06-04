@@ -1197,6 +1197,85 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
 
       // =====================================================================
+      // 步骤 5.5: 忠实度门（运行时 fail-closed backstop）
+      // 逐句把 brief 对情报报告取证，套门 F 判据(率>15% 且 数>=4，或任一事实矛盾)。
+      // 当前=影子模式：算 verdict + 写 observability，但永不拦——零空窗风险，并用真实
+      // 流量复校 0.15/4 拟合线。判据标定见 memory: faithfulness-runtime-gate。
+      // 切 enforce：把下方常量翻 true，且需先给 brief_run_status 加 'BLOCKED_FAITHFULNESS' 枚举+migration。
+      // =====================================================================
+      const FAITHFULNESS_GATE_ENFORCE = false;
+      await observability.logStep('faithfulness_gate', 'started');
+      const faithfulnessVerdict = await step.do('忠实度门检查', defaultStepConfig, async () => {
+        // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
+        const source = (await Promise.all(
+          intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
+            const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
+            return obj ? await obj.text() : null;
+          })
+        )).filter(Boolean).join('\n\n');
+
+        const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
+          body: JSON.stringify({ source, brief: briefResult.content }),
+        });
+        const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
+        try {
+          if (checkResponse.status !== 200) {
+            // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
+            console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
+            return null;
+          }
+          const checkData = await checkResponse.json() as any;
+          return checkData.success ? checkData.data : null;
+        } finally {
+          if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
+            (checkResponse as any).dispose();
+          }
+        }
+      });
+
+      if (faithfulnessVerdict) {
+        const v = faithfulnessVerdict;
+        console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=${FAITHFULNESS_GATE_ENFORCE ? 'enforce' : 'shadow'} ` +
+          `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
+          `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
+        await observability.logStep('faithfulness_gate', 'completed', {
+          block: v.block,
+          enforced: FAITHFULNESS_GATE_ENFORCE,
+          block_reasons: v.block_reasons,
+          genuine_unsupported: v.genuine_unsupported,
+          factual_claims: v.factual_claims,
+          unsupported_rate: v.unsupported_rate,
+          contradicted: v.contradicted,
+          analytical_contradicting: v.analytical_contradicting,
+          flagged_factual: v.flagged_factual,
+          flagged_analytical: v.flagged_analytical,
+        });
+
+        // enforce 才真拦；影子模式即使 block 也照常发出(只留记录)
+        if (FAITHFULNESS_GATE_ENFORCE && v.block) {
+          await step.do('persist:brief_run_blocked', dbStepConfig, async () => {
+            const db = getDb(this.env.HYPERDRIVE);
+            await db.update($brief_runs).set({
+              status: 'FAILED', // enforce 上线时改 'BLOCKED_FAITHFULNESS'(需先加枚举+migration)
+              finished_at: new Date(),
+              error: `BLOCKED_FAITHFULNESS: ${v.block_reasons.join('; ')}`,
+              brief_content_length: briefResult.content.length,
+            }).where(eq($brief_runs.workflow_id, workflowId));
+          });
+          console.log(`[AutoBrief] ❌ 简报被忠实度门拦截，未发出: ${v.block_reasons.join('; ')}`);
+          return {
+            success: false,
+            reason: 'BLOCKED_FAITHFULNESS',
+            message: `简报未通过忠实度门: ${v.block_reasons.join('; ')}`,
+          };
+        }
+      } else {
+        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'check_unavailable' });
+      }
+
+      // =====================================================================
       // 步骤 6: 保存简报到数据库
       // =====================================================================
       await observability.logStep('save_brief', 'started');

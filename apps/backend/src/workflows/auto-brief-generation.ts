@@ -991,10 +991,50 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         timeout: '30 minutes',
       };
 
-      // 按 importance 降序取 top-N，避免把 15 个 story 全部送进 LLM 深度分析（成本/时间爆炸）
-      const storiesForIntelligence = [...validatedStories.stories]
-        .sort((a: any, b: any) => (b.importance ?? 0) - (a.importance ?? 0))
-        .slice(0, maxStoriesToGenerate);
+      // 多源覆盖度客观锚：聚类后每个 story 天然知道来自几个独立源。distinct_source_count 是最强的
+      // 客观显著性信号(GDELT breaking-news 检测同源)——一个事件被多少家独立媒体报道 ≈ 它多重要，
+      // 用来补正 storyValidation 那个一行定义、LLM 纯主观的 importance(1-10)。详见 roadmap 选择层。
+      const sourceCoverage = await step.do('compute:source_coverage', dbStepConfig, async () => {
+        const db = getDb(this.env.HYPERDRIVE);
+        const allIds: number[] = Array.from(new Set(
+          validatedStories.stories.flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []) as number[])
+        ));
+        const cov: Record<number, number> = {};
+        if (allIds.length === 0) return cov;
+        const rows = await db
+          .select({ id: $articles.id, sourceId: $articles.sourceId })
+          .from($articles)
+          .where(inArray($articles.id, allIds));
+        const id2src = new Map(rows.map(r => [r.id, r.sourceId]));
+        validatedStories.stories.forEach((s: any, i: number) => {
+          const srcs = new Set(
+            (Array.isArray(s.articleIds) ? s.articleIds : [])
+              .map((id: number) => id2src.get(id))
+              .filter((x: any) => x != null)
+          );
+          cov[i] = srcs.size;
+        });
+        return cov;
+      });
+
+      // 选择分 = LLM importance + 覆盖度加权。log2(1+源数) 取边际递减(第2个独立源比第6个信息量大)，
+      // COVERAGE_WEIGHT=1.0 让 importance 仍主导、覆盖度只做有界 nudge(满额约 +3)。
+      // 这是无 eval 前的保守默认权重；①NDCG eval 上线后据此校准，故做成单常量便于调。
+      const COVERAGE_WEIGHT = 1.0;
+      const ranked = validatedStories.stories
+        .map((s: any, i: number) => {
+          const srcs = sourceCoverage[i] ?? 0;
+          return { s, srcs, score: (s.importance ?? 0) + COVERAGE_WEIGHT * Math.log2(1 + srcs) };
+        })
+        .sort((a: any, b: any) => b.score - a.score);
+
+      // 按选择分降序取 top-N，避免把全部候选送进 LLM 深度分析（成本/时间爆炸）
+      const storiesForIntelligence = ranked.slice(0, maxStoriesToGenerate).map((x: any) => x.s);
+
+      console.log('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
+      ranked.slice(0, maxStoriesToGenerate).forEach((x: any, rank: number) => console.log(
+        `  ${rank + 1}. imp=${x.s.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.s.title}`
+      ));
 
       // 观测性：标记被选中跑 intel 的 stories
       await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {

@@ -243,6 +243,7 @@ eval-reports/
 scripts/eval/story-validation/node_modules/
 scripts/eval/story-validation/fixtures/
 scripts/eval/faithfulness/node_modules/
+scripts/eval/selection/_rescore-cache.json
 
 # ML model cache - downloaded locally, not for git
 services/meridian-ml-service/model-cache/

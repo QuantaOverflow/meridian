@@ -1,8 +1,13 @@
 // 读已标注的 worklist CSV → 重建模型排序 → 算 NDCG@N。
-// 模型排序 = 选择层当前/历史行为：按 importance 降序(覆盖度排序的对照见末尾说明)。
-// 用法: tsx score.ts --labels worklist.csv [--n 10] [--exp]
+// 模型排序 = 生产选择层排序键：importance + COVERAGE_WEIGHT·log2(1+独立源数)
+//   (对齐 auto-brief-generation.ts:1023；CSV 无 article_ids，独立源数回 backend 现算)。
+// 用法: BACKEND_URL=... tsx score.ts --labels worklist.csv [--n 10] [--exp]
 import { readFile } from 'node:fs/promises';
 import { ndcgAtN, ndcgAtNExp } from './metrics.js';
+import { fetchCandidates, fetchSources } from './fetch.js';
+
+// 生产覆盖度权重(auto-brief-generation.ts:1023)。改这里 = 改 eval 对齐的排序器。
+const COVERAGE_WEIGHT = 1.0;
 
 function parseArgs(argv: string[]) {
   let labels = '';
@@ -68,12 +73,30 @@ async function main() {
   const byWf = new Map<string, Row[]>();
   for (const r of rows) (byWf.get(r.wf) ?? byWf.set(r.wf, []).get(r.wf)!).push(r);
 
+  // 拉各 run 候选(含 article_ids)与 article→source 映射,按生产排序键算独立源数。
+  // CSV 不含 article_ids,故须回 backend 取;与 coverage-compare.ts 同源。
+  const candByWf = new Map<string, Map<number, number[]>>(); // wf → clusterId → articleIds
+  const allIds = new Set<number>();
+  for (const wf of byWf.keys()) {
+    const m = new Map<number, number[]>();
+    for (const c of await fetchCandidates(wf)) {
+      m.set(c.clusterId, c.articleIds);
+      c.articleIds.forEach(id => allIds.add(id));
+    }
+    candByWf.set(wf, m);
+  }
+  const id2src = await fetchSources([...allIds]);
+  const distinct = (ids: number[]) => new Set(ids.map(i => id2src.get(i)).filter(x => x != null)).size;
+  const prodScore = (wf: string, r: Row) =>
+    r.importance + COVERAGE_WEIGHT * Math.log2(1 + distinct(candByWf.get(wf)?.get(r.clusterId) ?? []));
+
   const fn = exp ? ndcgAtNExp : ndcgAtN;
   const scores: number[] = [];
-  console.log(`\n== NDCG@${n}${exp ? ' (指数增益)' : ''} 按 run ==`);
+  console.log(`\n== NDCG@${n}${exp ? ' (指数增益)' : ''} 按 run (生产排序键 importance+${COVERAGE_WEIGHT}·log2(1+源)) ==`);
   for (const [wf, rs] of byWf) {
-    // 模型排序：importance 降序(并列时维持原序，稳定)
-    const ranked = [...rs].sort((a, b) => b.importance - a.importance);
+    // 模型排序：生产选择分降序(并列维持原序，稳定)
+    const sc = new Map<Row, number>(rs.map(r => [r, prodScore(wf, r)]));
+    const ranked = [...rs].sort((a, b) => sc.get(b)! - sc.get(a)!);
     const relsInRankOrder = ranked.map(r => r.rel);
     const s = fn(relsInRankOrder, n);
     scores.push(s);
@@ -81,8 +104,8 @@ async function main() {
   }
   const macro = scores.reduce((a, b) => a + b, 0) / scores.length;
   console.log(`\n== 宏平均 NDCG@${n} = ${macro.toFixed(3)}  (${scores.length} 个 run) ==`);
-  console.log('  这是"按 importance 排序"的选择层质量基线。下一步：再算一遍"按 importance+覆盖度排序"的 NDCG 做对照，');
-  console.log('  两者之差即 ② 覆盖度改动对选择质量的净效果(需把 distinct source 数接进来，story 已带 article_ids)。');
+  console.log('  这是生产选择层(importance+覆盖度)的真·质量基线。');
+  console.log('  覆盖度权重 W 的最优值/净效果对照见 coverage-compare.ts(扫 W，W=0 即纯 importance)。');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

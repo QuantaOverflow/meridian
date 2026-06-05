@@ -1261,35 +1261,51 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'skip_param' });
       } else {
         await observability.logStep('faithfulness_gate', 'started');
-        const faithfulnessVerdict = await step.do('忠实度门检查', defaultStepConfig, async () => {
-          // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
-          const source = (await Promise.all(
-            intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
-              const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
-              return obj ? await obj.text() : null;
-            })
-          )).filter(Boolean).join('\n\n');
+        // 门要对全部 story 跑 ~100× qwen-max judge(~3min)，远超 defaultStepConfig 的 2min；
+        // retries=1 避免一次慢调用被重试放大成多轮超时。
+        const faithfulnessStepConfig: WorkflowStepConfig = {
+          retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
+          timeout: '10 minutes',
+        };
+        // fail-open 兜底：门(检查员)自身任何失败——超时/重试耗尽/异常——都不得连坐已生成的 brief。
+        // step.do 的超时由引擎在回调外层抛 WorkflowTimeoutError，回调内的放行逻辑接不到，
+        // 必须在这里 catch → verdict=null → 后续按"门不可用"放行。
+        let faithfulnessVerdict: any = null;
+        try {
+          faithfulnessVerdict = await step.do('忠实度门检查', faithfulnessStepConfig, async () => {
+            // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
+            const source = (await Promise.all(
+              intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
+                const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
+                return obj ? await obj.text() : null;
+              })
+            )).filter(Boolean).join('\n\n');
 
-          const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-            body: JSON.stringify({ source, brief: briefResult.content }),
+            const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
+              body: JSON.stringify({ source, brief: briefResult.content }),
+            });
+            const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
+            try {
+              if (checkResponse.status !== 200) {
+                // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
+                console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
+                return null;
+              }
+              const checkData = await checkResponse.json() as any;
+              return checkData.success ? checkData.data : null;
+            } finally {
+              if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
+                (checkResponse as any).dispose();
+              }
+            }
           });
-          const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
-          try {
-            if (checkResponse.status !== 200) {
-              // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
-              console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
-              return null;
-            }
-            const checkData = await checkResponse.json() as any;
-            return checkData.success ? checkData.data : null;
-          } finally {
-            if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
-              (checkResponse as any).dispose();
-            }
-          }
-        });
+        } catch (gateError) {
+          // 超时/重试耗尽/任何异常 → fail-open：检查员挂掉，绝不丢弃已生成的 brief
+          console.error(`[AutoBrief] 忠实度门检查步骤失败(${gateError instanceof Error ? gateError.message : String(gateError)})，fail-open 放行 brief`);
+          faithfulnessVerdict = null;
+        }
 
         if (faithfulnessVerdict) {
           const v = faithfulnessVerdict;

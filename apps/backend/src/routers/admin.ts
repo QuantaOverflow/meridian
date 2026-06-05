@@ -499,6 +499,7 @@ app.post('/articles/by-ids', zValidator('json', byIdsSchema), async (c) => {
         id: $articles.id,
         title: $articles.title,
         url: $articles.url,
+        sourceId: $articles.sourceId,
         event_summary_points: $articles.event_summary_points,
       })
       .from($articles)

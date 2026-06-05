@@ -53,6 +53,51 @@ grab-bag.
 For single_story, you MAY exclude clearly unrelated articles via an
 "outliers" array of article ids.
 
+# Importance scoring (rubric + reasoning)
+Score each story (the single_story, or EACH sub-story) on FOUR dimensions of
+PUBLIC CONSEQUENCE, each an integer 0-3 — how much the event matters by its
+consequence to society / states / economy / human welfare, NOT by drama,
+coverage volume, or casualties alone.
+
+For EACH dimension: FIRST write a short "why" (which anchor it matches + the key
+fact), THEN the integer score. Use the FULL 0-3 range. Do NOT default to 2 — real
+events usually score DIFFERENTLY across the four dimensions, and 0 and 3 are
+common. A local crime, a single-city election, or a product launch will have
+several 0s.
+
+- d1 Strategic/policy consequence: 0 none, isolated · 1 local/tactical, no shift ·
+  2 materially shifts one country/region's situation or policy · 3 shifts
+  cross-border power balance or major institutions (war trajectory, ceasefire,
+  regime change, landmark legislation/treaty, alliance realignment)
+- d2 Spillover/systemic reach: 0 confined to where it happened · 1 one neighbor ·
+  2 multiple countries / alliances, sanctions, trade, refugees, regional stability
+  · 3 a global system (energy/financial chokepoint, nuclear threshold, global
+  trade order, great-power direct involvement)
+- d3 Human/scale impact: 0 minimal · 1 limited group or single-digit casualties ·
+  2 nation-scale population / dozens-to-hundreds casualties / civilians targeted ·
+  3 cross-national masses / mass casualties / humanitarian disaster
+- d4 Novelty: 0 day-after-day repetition (another routine strike) · 1 incremental
+  update to a known process · 2 clearly new development · 3 entirely new or crosses
+  a previously-uncrossed threshold
+
+These measure PUBLIC CONSEQUENCE only. A story really about sport, a product
+launch, or cultural resonance SHOULD score low (intended — this ranks
+public-affairs news).
+
+## Worked examples (note dimensions DIFFER, and 0 and 3 are used)
+- "US and Iran exchange direct military strikes; Iran hits US facilities in the Gulf"
+  → d1=3 (direct great-power war, shifts regional trajectory), d2=3 (Strait of
+  Hormuz energy chokepoint, draws US in — global system), d3=2 (strikes, dozens-
+  hundreds, not yet mass-civilian), d4=3 (first direct exchange, crosses threshold)
+- "EU adopts landmark migration and deportation regulations"
+  → d1=3 (cross-border landmark legislation reshaping bloc policy), d2=2 (many
+  countries, migration/refugees; not a global chokepoint), d3=2 (large migrant
+  populations across nations), d4=2 (new regulation)
+- "Murder of a man in one city and its local aftermath"
+  → d1=0 (isolated crime, no policy/strategic consequence), d2=0 (confined to one
+  city), d3=2 (a death + limited local unrest), d4=1 (routine local-crime story)
+  — scores LOW despite a casualty
+
 # Input
 ${articleList}
 
@@ -65,7 +110,12 @@ Single event:
 {
   "answer": "single_story",
   "title": "...",
-  "importance": 1-10,
+  "scoring": {
+    "d1": {"why": "...", "score": 0},
+    "d2": {"why": "...", "score": 0},
+    "d3": {"why": "...", "score": 0},
+    "d4": {"why": "...", "score": 0}
+  },
   "outliers": []
 }
 \`\`\`
@@ -75,8 +125,8 @@ Collection of multiple distinct stories (each with 2+ articles):
 {
   "answer": "collection_of_stories",
   "stories": [
-    {"title": "...", "importance": 1-10, "articles": [12, 34]},
-    {"title": "...", "importance": 1-10, "articles": [56, 78, 90]}
+    {"title": "...", "scoring": {"d1": {"why": "...", "score": 0}, "d2": {"why": "...", "score": 0}, "d3": {"why": "...", "score": 0}, "d4": {"why": "...", "score": 0}}, "articles": [12, 34]},
+    {"title": "...", "scoring": {"d1": {"why": "...", "score": 0}, "d2": {"why": "...", "score": 0}, "d3": {"why": "...", "score": 0}, "d4": {"why": "...", "score": 0}}, "articles": [56, 78, 90]}
   ]
 }
 \`\`\`
@@ -88,6 +138,7 @@ Pure noise:
 
 Note:
 - Article ids MUST be integers, no "#" prefix, no strings.
-- importance: 1 = minor local, 10 = major global impact.
+- scoring: for each of d1-d4, a short "why" THEN an integer "score" 0-3, per the
+  Importance scoring rubric. Reason first, then score; use the full 0-3 range.
 `.trim()
 }

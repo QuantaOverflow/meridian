@@ -82,7 +82,7 @@ export class StoryValidationService {
             if (validArticleIds.length >= 2) {
               outStories.push({
                 title: validation.title || `Story ${cluster.clusterId}`,
-                importance: this.coerceImportance(validation.importance),
+                importance: this.importanceFromDims(validation),
                 articleIds: validArticleIds,
                 storyType: "SINGLE_STORY"
               })
@@ -107,7 +107,7 @@ export class StoryValidationService {
                 ids.forEach((id: number) => seen.add(id))
                 outStories.push({
                   title: story.title || `Story ${cluster.clusterId}-${index + 1}`,
-                  importance: this.coerceImportance(story.importance),
+                  importance: this.importanceFromDims(story),
                   articleIds: ids,
                   storyType: "SINGLE_STORY" // 分解后的每个故事都是单一故事
                 })
@@ -186,6 +186,26 @@ export class StoryValidationService {
    * 裸用 Math.max("high",1) 会得 NaN 污染下游排序。统一成 1-10 整数,无法识别默认 5。
    * prompt 已要求整数,此处为双保险(已观测到 collection 路径吐 "high"/"medium")。
    */
+  /**
+   * 重要性 = 时政硬新闻 rubric 的 4 维加权(LLM 打 d1-d4 ∈ 0-3,权重留此便于金标校准、不改 prompt)。
+   * importance = (0.35·d1 + 0.30·d2 + 0.20·d3 + 0.15·d4) × 3.33 → 1-10。
+   * 维度缺失则回退:有 legacy importance 字段沿用 coerceImportance(过渡期兜底),否则中性 5。
+   */
+  private importanceFromDims(v: any): number {
+    const g = (x: any) => Math.min(Math.max(Math.round(Number(x)) || 0, 0), 3)
+    const s = v?.scoring
+    // 新形态:scoring.dX.score（CoT 后的分）；过渡:dimensions.dX；再退:legacy importance
+    let dims: any = null
+    if (s && typeof s === 'object') dims = { d1: s.d1?.score, d2: s.d2?.score, d3: s.d3?.score, d4: s.d4?.score }
+    else if (v?.dimensions && typeof v.dimensions === 'object') dims = v.dimensions
+    if (dims) {
+      const raw = 0.35 * g(dims.d1) + 0.30 * g(dims.d2) + 0.20 * g(dims.d3) + 0.15 * g(dims.d4)
+      return Math.min(Math.max(Math.round(raw * 3.33), 1), 10)
+    }
+    if (v?.importance !== undefined) return this.coerceImportance(v.importance)
+    return 5
+  }
+
   private coerceImportance(v: any): number {
     if (typeof v === 'number' && Number.isFinite(v)) {
       return Math.min(Math.max(Math.round(v), 1), 10)

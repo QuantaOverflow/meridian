@@ -1,0 +1,15 @@
+{
+  "name": "@meridian/eval-selection",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "worklist": "tsx build-worklist.ts",
+    "score": "tsx score.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "tsx": "^4.19.0",
+    "typescript": "5.8.2"
+  }
+}

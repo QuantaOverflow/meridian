@@ -1273,18 +1273,23 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         let faithfulnessVerdict: any = null;
         try {
           faithfulnessVerdict = await step.do('忠实度门检查', faithfulnessStepConfig, async () => {
-            // source = brief 被允许使用的全部材料(情报报告)，从 R2 读回(与简报生成同源)
-            const source = (await Promise.all(
-              intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
+            // per-story sources：每份情报报告独立传入，避免合并后 ~141K chars 撞 qwen-max 30720 token 上限。
+            // 各故事源 ~7.5K chars，faithfulness-check 逐源短路判定后聚合 verdict。
+            const sources = (await Promise.all(
+              intelligenceReports.map(async ({ r2Key }: { r2Key: string }, idx: number) => {
                 const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
-                return obj ? await obj.text() : null;
+                if (!obj) return null;
+                const content = await obj.text();
+                let storyId = `story-${idx}`;
+                try { const p = JSON.parse(content); if (p.storyId) storyId = p.storyId; } catch {}
+                return { storyId, content };
               })
-            )).filter(Boolean).join('\n\n');
+            )).filter((s): s is { storyId: string; content: string } => s !== null);
 
             const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-              body: JSON.stringify({ source, brief: briefResult.content }),
+              body: JSON.stringify({ sources, brief: briefResult.content }),
             });
             const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
             try {

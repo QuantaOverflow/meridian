@@ -615,8 +615,9 @@ app.post('/meridian/generate-brief-tldr', async (c) => {
 // ============================================================================
 
 const FaithfulnessCheckSchema = z.object({
-  // source = brief 被允许使用的全部材料（情报报告）；brief = 待检的简报正文
-  source: z.string().min(1),
+  // sources = 按故事拆分的情报报告数组；brief = 待检的简报正文。
+  // per-story 拆分避免合并 source 撞 qwen-max 30720 token context 上限（旧合并 ~141K 字符 → 400）。
+  sources: z.array(z.object({ storyId: z.string(), content: z.string().min(1) })).min(1),
   brief: z.string().min(1),
   options: z.object({ model: z.string().optional() }).optional(),
 })
@@ -629,10 +630,11 @@ app.post('/meridian/faithfulness-check', async (c) => {
       const detail = parsed.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
       return c.json<APIResponse<null>>({ success: false, error: `Invalid payload: ${detail}` }, 400)
     }
-    const { source, brief, options } = parsed.data
+    const { sources, brief, options } = parsed.data
+    const totalSourceChars = sources.reduce((s, r) => s + r.content.length, 0)
 
-    console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs source(${source.length} chars)`)
-    const verdict = await runFaithfulnessCheck(c.env, source, brief, options?.model || 'qwen-max')
+    console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs ${sources.length} 个故事源(合计 ${totalSourceChars} chars)`)
+    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max')
     console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
       `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
       `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)

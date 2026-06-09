@@ -30,6 +30,12 @@ export interface FaithClaim {
   type: ClaimType;
 }
 
+// 每个故事对应一份情报报告；per-story 判断时只喂该故事的 source，躲过 context 超限
+export interface StorySource {
+  storyId: string;
+  content: string;
+}
+
 export type FaithVerdict = 'supported' | 'unsupported' | 'contradicted';
 export interface FactualJudgement {
   claim: FaithClaim;
@@ -274,11 +280,45 @@ async function judgeAnalytical(
   return { claim, verdict, reason: (parsed?.reason || '').toString().slice(0, 300) };
 }
 
+// 对单条 factual claim 逐源试判：碰到 supported/contradicted 立即短路，全部 miss 才算 unsupported。
+// 每份故事源 ~7.5K chars，远低于 qwen-max 30720 token 限制（旧合并 source ~141K 会 400）。
+async function judgeFactualMultiSource(
+  ai: AIGatewayService,
+  claim: FaithClaim,
+  sources: StorySource[],
+  model: string,
+): Promise<FactualJudgement> {
+  let lastUnsupported: FactualJudgement = { claim, verdict: 'unsupported', reason: 'no source covers this claim' };
+  for (const { content } of sources) {
+    const result = await judgeFactual(ai, claim, content, model);
+    if (result.verdict === 'contradicted') return result;
+    if (result.verdict === 'supported') return result;
+    lastUnsupported = result;
+  }
+  return lastUnsupported;
+}
+
+// 对单条 analytical claim 逐源试判：碰到 contradicts_facts 立即短路。
+async function judgeAnalyticalMultiSource(
+  ai: AIGatewayService,
+  claim: FaithClaim,
+  sources: StorySource[],
+  model: string,
+): Promise<AnalyticalJudgement> {
+  let last: AnalyticalJudgement = { claim, verdict: 'consistent', reason: 'consistent with available sources' };
+  for (const { content } of sources) {
+    const result = await judgeAnalytical(ai, claim, content, model);
+    if (result.verdict === 'contradicts_facts') return result;
+    last = result;
+  }
+  return last;
+}
+
 // 限并发跑全部 claim，按类型分流
 async function judgeAll(
   ai: AIGatewayService,
   claims: FaithClaim[],
-  source: string,
+  sources: StorySource[],
   model: string,
   concurrency = 5
 ): Promise<{ factual: FactualJudgement[]; analytical: AnalyticalJudgement[] }> {
@@ -289,9 +329,9 @@ async function judgeAll(
     while (next < claims.length) {
       const claim = claims[next++];
       if (claim.type === 'analytical') {
-        analytical.push(await judgeAnalytical(ai, claim, source, model));
+        analytical.push(await judgeAnalyticalMultiSource(ai, claim, sources, model));
       } else {
-        factual.push(await judgeFactual(ai, claim, source, model));
+        factual.push(await judgeFactualMultiSource(ai, claim, sources, model));
       }
     }
   }
@@ -332,14 +372,14 @@ function gateDecision(
 
 export async function runFaithfulnessCheck(
   env: CloudflareEnv,
-  source: string,
+  sources: StorySource[],
   brief: string,
   model = 'qwen-max'
 ): Promise<FaithfulnessVerdict> {
   const ai = new AIGatewayService(env);
 
   const claims = await extractClaims(ai, brief, model);
-  const { factual, analytical } = await judgeAll(ai, claims, source, model);
+  const { factual, analytical } = await judgeAll(ai, claims, sources, model);
 
   const supported = factual.filter((j) => j.verdict === 'supported').length;
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;

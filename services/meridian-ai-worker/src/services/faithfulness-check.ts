@@ -298,20 +298,23 @@ async function judgeFactualMultiSource(
   return lastUnsupported;
 }
 
-// 对单条 analytical claim 逐源试判：碰到 contradicts_facts 立即短路。
+// 对单条 analytical claim 逐源试判：任一源 consistent 立即短路（找到支撑即过）；
+// 全部源都 contradicts_facts 才算真告警。
+// 注：analytical prompt 把"source 中无此实体"也判为 contradicts_facts，所以不能在
+// 第一个 contradicts_facts 短路——跨故事的不相关 source 必然触发该 verdict。
 async function judgeAnalyticalMultiSource(
   ai: AIGatewayService,
   claim: FaithClaim,
   sources: StorySource[],
   model: string,
 ): Promise<AnalyticalJudgement> {
-  let last: AnalyticalJudgement = { claim, verdict: 'consistent', reason: 'consistent with available sources' };
+  let lastContradicting: AnalyticalJudgement = { claim, verdict: 'contradicts_facts', reason: 'no source supports this analytical claim' };
   for (const { content } of sources) {
     const result = await judgeAnalytical(ai, claim, content, model);
-    if (result.verdict === 'contradicts_facts') return result;
-    last = result;
+    if (result.verdict === 'consistent') return result;
+    lastContradicting = result;
   }
-  return last;
+  return lastContradicting;
 }
 
 // 限并发跑全部 claim，按类型分流

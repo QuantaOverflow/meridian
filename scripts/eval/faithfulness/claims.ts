@@ -1,32 +1,7 @@
 import { chat, parseJSON } from './llm.js';
 import type { Claim, ClaimType } from './types.js';
-
-const EXTRACT_PROMPT = (brief: string) => `
-You extract atomic statements from a news brief and classify each, so they can
-be checked appropriately.
-
-# Two types
-- "factual": an assertion about what happened or exists — a checkable event,
-  number, date, name, quote, action, or relationship. ("X announced Y on Z",
-  "Company A acquired B", "the deal centers on facility C").
-- "analytical": the briefer's interpretation, implication, prediction, or
-  strategic assessment — signalled by language like "this signals", "suggests",
-  "gains leverage", "could reshape", "the strategic read is", "hints at".
-  These are meant to extrapolate beyond the literal facts.
-
-# Rules
-- Split compound sentences into separate atomic statements.
-- A statement that blends fact + interpretation: split it. The checkable part
-  is factual, the interpretive part is analytical.
-- Skip pure section headers, transitions, and meta sentences.
-
-# Brief
-${brief}
-
-# Output
-Reply with ONLY a JSON array inside a \`\`\`json fenced block. No prose.
-Each element: {"text": "<atomic statement>", "type": "factual" | "analytical"}
-`.trim();
+// judge prompt 单一真源（与 runtime faithfulness-check.ts 共用同一份）
+import { EXTRACT_PROMPT } from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
 
 // 从可能被截断的 JSON 文本里逐个抠出完整的 {...} 对象
 function salvageObjects(raw: string): Array<{ text?: string; type?: string }> {

@@ -6,41 +6,15 @@ import type {
   AnalyticalJudgement,
   AnalyticalVerdict,
 } from './types.js';
+// judge prompt 单一真源（与 runtime faithfulness-check.ts 共用同一份）
+import {
+  FACTUAL_PROMPT,
+  ANALYTICAL_PROMPT,
+} from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
 
 // ============================================================================
 // 事实通道：强制取证裁决
 // ============================================================================
-
-const FACTUAL_PROMPT = (claim: string, source: string) => `
-You are a strict faithfulness judge. Decide whether a CLAIM is grounded in the
-SOURCE material below. The source is everything the brief was allowed to use.
-
-# Verdicts
-- supported: the source directly states or clearly entails the claim. You MUST
-  return the exact sentence/phrase from the source that supports it.
-- unsupported: the source neither states nor contradicts the claim (an addition
-  not grounded in the source — possible hallucination).
-- contradicted: the source asserts something incompatible with the claim.
-
-# Hard rule
-For "supported", evidence_quote MUST be copied verbatim from the SOURCE (an exact
-substring). If you cannot copy a supporting sentence verbatim, the verdict is
-"unsupported", not "supported".
-
-# CLAIM
-${claim}
-
-# SOURCE
-${source}
-
-# Output
-Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
-{
-  "verdict": "supported" | "unsupported" | "contradicted",
-  "evidence_quote": "<verbatim substring of SOURCE, or empty string>",
-  "reason": "<one short sentence>"
-}
-`.trim();
 
 function normalize(s: string): string {
   return s.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -95,34 +69,8 @@ export async function judgeFactual(
 }
 
 // ============================================================================
-// 分析通道：一致性检查（不要求字面 grounding，只抓与源矛盾的前提）
+// 分析通道：一致性检查（ANALYTICAL_PROMPT 见 faithfulness-prompts.ts，单一真源）
 // ============================================================================
-
-const ANALYTICAL_PROMPT = (claim: string, source: string) => `
-You are judging an ANALYTICAL statement from a news brief — an interpretation,
-implication, or strategic assessment. It is allowed to extrapolate beyond the
-literal facts. Do NOT require it to be stated verbatim in the source.
-
-Decide only whether its underlying premise is consistent with the source:
-- consistent: a defensible reading of facts that ARE in the source (even if the
-  inference itself goes beyond them).
-- contradicts_facts: the inference relies on, or asserts, something the source
-  contradicts, OR it is about an entity/event that does not appear in the source
-  at all (analysis built on a fabricated premise).
-
-# ANALYTICAL STATEMENT
-${claim}
-
-# SOURCE
-${source}
-
-# Output
-Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
-{
-  "verdict": "consistent" | "contradicts_facts",
-  "reason": "<one short sentence>"
-}
-`.trim();
 
 export async function judgeAnalytical(
   claim: Claim,

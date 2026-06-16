@@ -1330,6 +1330,52 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             flagged_analytical: v.flagged_analytical,
           });
 
+          // ---------------------------------------------------------------
+          // 路径 B：忠实度修订——把 flagged 的 factual claim 从 brief 删除/剥离。
+          // 影子/enforce 都跑：发出前先把无源细节洗掉，不依赖门翻 true。修订是检查员的
+          // 下游、保存(步骤6)的上游，改 briefResult.content 即让保存用上修订版。
+          // fail-open：修订任何失败都不得连坐已生成的 brief，保留原文照常走。
+          // 注：v.block 是修订「前」算的；当前 enforce=false 无影响。将来 enforce 翻 true
+          //     时正确序应为 revise→重新 check→仍脏才拦（避免拿旧 verdict 误杀已洗净的 brief）。
+          if (v.flagged_factual && v.flagged_factual.length > 0) {
+            try {
+              const revised: any = await step.do('忠实度修订', faithfulnessStepConfig, async () => {
+                const reviseRequest = new Request(`http://localhost:8786/meridian/faithfulness-revise`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
+                  body: JSON.stringify({ brief: briefResult.content, flaggedFactual: v.flagged_factual }),
+                });
+                const reviseResponse = await this.env.AI_WORKER.fetch(reviseRequest);
+                try {
+                  if (reviseResponse.status !== 200) {
+                    console.error(`[AutoBrief] 忠实度修订调用失败: HTTP ${reviseResponse.status}，保留原 brief`);
+                    return null;
+                  }
+                  const reviseData = await reviseResponse.json() as any;
+                  return reviseData.success ? reviseData.data : null;
+                } finally {
+                  if (reviseResponse && typeof (reviseResponse as any).dispose === 'function') {
+                    (reviseResponse as any).dispose();
+                  }
+                }
+              });
+              if (revised && revised.changed) {
+                console.log(`[AutoBrief] 忠实度修订: applied=${revised.applied.length} skipped=${revised.skipped.length}，替换 brief content`);
+                briefResult.content = revised.revised_brief;
+                await observability.logStep('faithfulness_revise', 'completed', {
+                  changed: true, applied: revised.applied.length, skipped: revised.skipped.length, edits: revised.applied,
+                });
+              } else {
+                await observability.logStep('faithfulness_revise', 'completed', { changed: false });
+              }
+            } catch (reviseError) {
+              console.error(`[AutoBrief] 忠实度修订步骤失败(${reviseError instanceof Error ? reviseError.message : String(reviseError)})，fail-open 保留原 brief`);
+              await observability.logStep('faithfulness_revise', 'failed', {
+                reason: reviseError instanceof Error ? reviseError.message : String(reviseError),
+              });
+            }
+          }
+
           // enforce 才真拦；影子模式即使 block 也照常发出(只留记录)
           if (FAITHFULNESS_GATE_ENFORCE && v.block) {
             await step.do('persist:brief_run_blocked', dbStepConfig, async () => {

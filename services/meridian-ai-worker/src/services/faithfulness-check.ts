@@ -10,6 +10,10 @@
  *         或  (B) unsupported_rate > 0.15 且 genuine_unsupported >= 4  ← 又密又多=崩坏件
  *   warning-only（记录不拦）：analytical contradicts_facts（虚构前提，太吵硬拦会天天空窗）
  *
+ * 【红线】analytical verdict 永不可用于 gate/revision。2026-06-16 meta-eval 实测分析通道
+ * κ=0.27（contradicts_facts 召回仅 0.30，judge 放过 70% 虚构前提）——这把尺不可信。事实
+ * 通道 κ=0.76 可信，门拦截只键在事实。详见 memory: eval-program-direction。
+ *
  * judge 模型默认 qwen-max（与标定同模型，换模型会让 0.15/4 阈值失效）。
  * 注：79298c6 修掉「逐字硬降级」后，judge 的 verdict=unsupported 直接就是干净的真·无源添加，
  * 运行时无需再洗 reason（那层 reason 清洗只为让被污染的旧报告能用作标定集）。
@@ -409,4 +413,106 @@ export async function runFaithfulnessCheck(
     flagged_factual: factual.filter((j) => j.verdict !== 'supported'),
     flagged_analytical: analytical.filter((j) => j.verdict === 'contradicts_facts'),
   };
+}
+
+// ============================================================================
+// ④ Revision（路径 B）：把 flagged 的 factual claim 从 brief 里删除/剥离
+//
+// v1 = source-free 外科修订。只处理事实通道的 unsupported/contradicted（真·无源添加
+// 或与源矛盾），不碰 analytical（warning-only）。不重喂 source —— judge 的 reason 已说明
+// 哪里无源，重喂合并 source 会撞 qwen-max 30720 token 上限（同 per-story 拆源的初衷）。
+//
+// 让 LLM 只回 edit-list（brief 原文片段 → 替换文本，空串=整段删），由本地程序化 apply：
+// 只动 flagged 片段，brief 其余部分逐字不变 —— 可审计、防 LLM 重吐整篇时的漂移。
+// 「按源改写成正确版本」需路由 per-story 源，留作后续增强。
+// ============================================================================
+
+export interface ReviseEdit {
+  brief_span: string; // brief 里待改的 verbatim 子串
+  replacement: string; // 修订后文本；空串 = 删除整段
+  reason: string;
+}
+export interface RevisionResult {
+  revised_brief: string;
+  applied: ReviseEdit[]; // 成功 apply（span 在 brief 里精确命中）
+  skipped: ReviseEdit[]; // span 非 brief 精确子串，未 apply（记录待查）
+  changed: boolean;
+}
+
+const REVISE_PROMPT = (brief: string, flagged: FactualJudgement[]) => `
+You are a careful news editor. A faithfulness check flagged the FACTUAL claims
+below as NOT grounded in the source material (either unsupported additions or
+contradicted by the source). Your job: surgically remove the ungrounded content
+from the BRIEF while keeping everything else intact.
+
+# For each flagged claim, choose:
+- If the claim is an unsupported DETAIL grafted onto an otherwise sound sentence
+  (e.g. an invented location/number/qualifier), rewrite just that sentence to
+  drop the ungrounded detail and keep the supported core.
+- If the whole sentence's point IS the ungrounded claim, delete the sentence.
+
+# Hard rules
+- "brief_span" MUST be an exact verbatim substring of the BRIEF (copy it letter
+  for letter, including punctuation). It is the text you want to change.
+- "replacement" is the corrected text, or an empty string "" to delete the span.
+- Do NOT touch any text that wasn't flagged. Do NOT rephrase for style.
+- Do NOT add any new facts. Removal/trimming only.
+
+# Flagged factual claims
+${flagged.map((j, i) => `${i + 1}. [${j.verdict}] "${j.claim.text}" — ${j.reason}`).join('\n')}
+
+# BRIEF
+${brief}
+
+# Output
+Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
+{
+  "edits": [
+    { "brief_span": "<verbatim substring of BRIEF>", "replacement": "<corrected text or empty>", "reason": "<short>" }
+  ]
+}
+`.trim();
+
+// 删除片段后清理遗留的双空格 / 悬空标点；只做最轻量收尾，不动其它字符。
+function tidyAfterDelete(s: string): string {
+  return s
+    .replace(/ {2,}/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+export async function reviseBrief(
+  env: CloudflareEnv,
+  brief: string,
+  flaggedFactual: FactualJudgement[],
+  model = 'qwen-max'
+): Promise<RevisionResult> {
+  // 只对真正有问题的事实 claim 动刀；supported 的不该出现在 flagged 里，但稳妥起见再过滤一次。
+  const targets = flaggedFactual.filter((j) => j.verdict === 'unsupported' || j.verdict === 'contradicted');
+  if (targets.length === 0) {
+    return { revised_brief: brief, applied: [], skipped: [], changed: false };
+  }
+
+  const ai = new AIGatewayService(env);
+  const raw = await callJudge(ai, REVISE_PROMPT(brief, targets), model, 4000);
+  const parsed = parseJSON<{ edits?: ReviseEdit[] }>(raw);
+  const edits = Array.isArray(parsed?.edits) ? parsed!.edits! : [];
+
+  const applied: ReviseEdit[] = [];
+  const skipped: ReviseEdit[] = [];
+  let revised = brief;
+  for (const e of edits) {
+    if (!e || typeof e.brief_span !== 'string' || e.brief_span.length === 0) continue;
+    const replacement = typeof e.replacement === 'string' ? e.replacement : '';
+    // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤），记入 skipped 待查。
+    if (revised.includes(e.brief_span)) {
+      revised = revised.replace(e.brief_span, replacement);
+      applied.push({ brief_span: e.brief_span, replacement, reason: (e.reason || '').toString().slice(0, 300) });
+    } else {
+      skipped.push({ brief_span: e.brief_span, replacement, reason: (e.reason || '').toString().slice(0, 300) });
+    }
+  }
+  if (applied.some((e) => e.replacement === '')) revised = tidyAfterDelete(revised);
+
+  return { revised_brief: revised, applied, skipped, changed: applied.length > 0 };
 }

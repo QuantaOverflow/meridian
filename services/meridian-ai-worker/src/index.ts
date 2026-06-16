@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { AIGatewayService } from './services/ai-gateway'
-import { runFaithfulnessCheck } from './services/faithfulness-check'
+import { runFaithfulnessCheck, reviseBrief } from './services/faithfulness-check'
 import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
@@ -645,6 +645,47 @@ app.post('/meridian/faithfulness-check', async (c) => {
     return c.json<APIResponse<null>>({
       success: false,
       error: 'Failed to run faithfulness check',
+      metadata: { details: error.message }
+    }, 500)
+  }
+})
+
+// ============================================================================
+// Faithfulness Revise - 路径 B：把 flagged factual claim 从 brief 删除/剥离
+// 输入 = 检查端点产出的 flagged_factual + 原 brief；输出 = 修订后 brief + 应用的 edits。
+// v1 source-free 外科修订，详见 faithfulness-check.ts reviseBrief 注释。
+// ============================================================================
+
+const FaithfulnessReviseSchema = z.object({
+  brief: z.string().min(1),
+  // flaggedFactual 直接复用 /faithfulness-check 返回的 flagged_factual 结构
+  flaggedFactual: z.array(z.object({
+    claim: z.object({ id: z.number(), text: z.string(), type: z.enum(['factual', 'analytical']) }),
+    verdict: z.enum(['supported', 'unsupported', 'contradicted']),
+    reason: z.string(),
+  })).min(1),
+  options: z.object({ model: z.string().optional() }).optional(),
+})
+
+app.post('/meridian/faithfulness-revise', async (c) => {
+  try {
+    const parsed = FaithfulnessReviseSchema.safeParse(await c.req.json())
+    if (!parsed.success) {
+      const detail = parsed.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
+      return c.json<APIResponse<null>>({ success: false, error: `Invalid payload: ${detail}` }, 400)
+    }
+    const { brief, flaggedFactual, options } = parsed.data
+
+    console.log(`[Revise] brief(${brief.length} chars) vs ${flaggedFactual.length} 条 flagged factual`)
+    const result = await reviseBrief(c.env, brief, flaggedFactual, options?.model || 'qwen-max')
+    console.log(`[Revise] changed=${result.changed} applied=${result.applied.length} skipped=${result.skipped.length}`)
+
+    return c.json<APIResponse<typeof result>>({ success: true, data: result })
+  } catch (error: any) {
+    console.error('Faithfulness revise error:', error)
+    return c.json<APIResponse<null>>({
+      success: false,
+      error: 'Failed to revise brief',
       metadata: { details: error.message }
     }, 500)
   }

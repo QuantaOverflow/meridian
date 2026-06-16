@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "score": "tsx score.ts"
+    "score": "tsx score.ts",
+    "meta": "tsx meta-eval.ts",
+    "worklist": "tsx build-judge-worklist.ts"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",

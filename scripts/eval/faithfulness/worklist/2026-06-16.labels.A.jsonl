@@ -1,0 +1,60 @@
+{"id":"admin-brief-1780494276570#76","gold":"unsupported","note":"SCIF redesignation of press office is in source, but added clause 'classification usually reserved for intelligence agencies handling top-secret material' is not"}
+{"id":"admin-brief-1780494276570#87","gold":"unsupported","note":"'disclosure within seven days' is supported, but 'unprecedented in scope and speed' is an added evaluative assertion not in source"}
+{"id":"admin-brief-1780494276570#77","gold":"consistent","note":"defensible reading of facts in source (SCIF redesignation + Irizarry counter-terror appointment)"}
+{"id":"admin-brief-1780494276570#13","gold":"supported","note":"source: Netanyahu issued immediate counterstatement affirming continued operations in Lebanon, contradicting Trump"}
+{"id":"admin-brief-1780494276570#20","gold":"supported","note":"Kuwait International Airport (a GCC state) was struck by Iranian drones/missiles per source"}
+{"id":"admin-brief-1780494276570#10","gold":"supported","note":"decontextualized: Iran refused to continue / suspended negotiations with US — source states Iran suspended all indirect talks"}
+{"id":"admin-brief-1780494276570#81","gold":"supported","note":"source: despite zero Ebola cases in Kenya, residents feared contagion due to community ties with airbase personnel and distrust"}
+{"id":"admin-brief-1780494276570#46","gold":"consistent","note":"grounded: Uthmeier (FL Republican AG), Florida Republican leadership, Trump (Republican president) befriended Altman/loosened AI regs"}
+{"id":"admin-brief-1780494276570#28","gold":"supported","note":"656 drones/73 missiles, ≥22 civilians killed across Kyiv/Dnipro/Kharkiv/Zaporizhzhia, largest single-night since early 2025 — all in source"}
+{"id":"admin-brief-1780494276570#55","gold":"consistent","note":"defensible read of source facts (Nvidia RTX Spark embedding into Windows via Microsoft partnership vs Intel/AMD)"}
+{"id":"admin-brief-1780494276570#67","gold":"unsupported","note":"5 EU states (Germany/Austria/Netherlands/Denmark/Greece) in talks targeting Africa is supported; but named targets Rwanda/Nigeria/Senegal are not in source"}
+{"id":"admin-brief-1780494276570#35","gold":"supported","note":"source: France's ban on Israeli weapons at Eurosatory cited 'political and ethical concerns'"}
+{"id":"admin-brief-1780494276570#56","gold":"consistent","note":"analytical framing of the Nvidia AI-PC story; rests on facts present in source"}
+{"id":"admin-brief-1780494276570#42","gold":"supported","note":"source: Uthmeier filed 83-page suit vs OpenAI/Altman; cluster links ChatGPT to FSU, USF shootings and Tumbler Ridge Canada school attack"}
+{"id":"admin-brief-1780494276570#18","gold":"supported","note":"source: Brent crude surging to $97.44"}
+{"id":"admin-brief-1780494276570#78","gold":"consistent","note":"defensible reading: California race significance + Irizarry appointment both grounded in source"}
+{"id":"admin-brief-1780494276570#2","gold":"supported","note":"source: Iran/IRGC struck Kuwait Int'l Airport (injuries/damage/flight suspensions) and claimed strikes on Bahrain's Fifth Fleet HQ"}
+{"id":"admin-brief-1779944200625#14","gold":"unsupported","note":"Caltech microwave-beaming/DoD test appears only as a forbidden previous-day topic label; no facts in actual curated data"}
+{"id":"admin-brief-1779944200625#0","gold":"supported","note":"source: Pope Leo XIV encyclical 'Magnifica Humanitas' on AI ethics, calls for international laws on AI warfare (arbitration beyond nation-states)"}
+{"id":"admin-brief-1779944200625#21","gold":"unsupported","note":"'truthfulness architecture / invariant subgraphs' only in forbidden previous-day label (Montreal-DeepMind); no facts in curated data"}
+{"id":"admin-brief-1779944200625#71","gold":"unsupported","note":"truthfulness-as-trainable-subsystem topic only in previous-day label; not in actual source data"}
+{"id":"admin-brief-1779944200625#8","gold":"contradicts_facts","note":"SMIC/Shanghai Microelectronics 28nm magnetostrictive event exists only in forbidden topic label, not in source data — analysis built on absent event"}
+{"id":"admin-brief-1779944200625#43","gold":"contradicts_facts","note":"Germany mechatronics/skilled-labor-shortage cluster only in previous-day label; analysis rests on entity/event not in source"}
+{"id":"admin-brief-1779944200625#51","gold":"contradicts_facts","note":"no intelligence-coordination cluster in source; analysis built on event not present in curated data"}
+{"id":"admin-brief-1779944200625#40","gold":"unsupported","note":"Germany PMI/electricity-demand data only in forbidden previous-day label; not in actual source data"}
+{"id":"admin-brief-1779944200625#37","gold":"contradicts_facts","note":"references SMIC magnetostrictive + Caltech beaming 'physics-first' clusters that exist only as forbidden labels, not in source"}
+{"id":"admin-brief-1779944200625#65","gold":"contradicts_facts","note":"'stack sovereignty' synthesis built on the nonexistent-in-source physics-first clusters (only previous-day labels)"}
+{"id":"admin-brief-1779944200625#20","gold":"unsupported","note":"Montreal-DeepMind-MIT / Zhejiang Turing Lab truth-distillation method only in forbidden label; no facts in source data"}
+{"id":"admin-brief-1779944200625#53","gold":"unsupported","note":"France Notary Digital Decree (CNAM/DGFIP/Conservation des Hypothèques) only in previous-day label; not in actual source data"}
+{"id":"admin-brief-1779944200625#50","gold":"contradicts_facts","note":"analysis about a standalone intelligence signal not present anywhere in source curated data"}
+{"id":"admin-brief-1779944200625#78","gold":"unsupported","note":"Zhejiang Turing Lab as CAC/NMPA regulatory sandbox not in source (only label name-drops the lab)"}
+{"id":"admin-brief-1779944200625#77","gold":"contradicts_facts","note":"'adaptive weapons-grade EM control' refers to Caltech beaming, which exists only as a forbidden topic label, not in source"}
+{"id":"admin-brief-1779944200625#74","gold":"consistent","note":"dicastery (Doctrine of Faith + Culture and Education) is in source; China analogy is a defensible inference on a real source fact"}
+{"id":"admin-brief-1779944200625#15","gold":"unsupported","note":"Caltech 'atmosphere as transmission medium / adaptive beamforming' only in previous-day label; no facts in source data"}
+{"id":"admin-brief-1779944200625#60","gold":"contradicts_facts","note":"speculation built on Saudi nuclear + notarial ledgers, which exist only as forbidden labels, not in source curated data"}
+{"id":"admin-brief-1779944200625#76","gold":"unsupported","note":"Caltech-Northrop 2.45 GHz beamforming / >10 kHz control stack only in previous-day label; not in source data"}
+{"id":"admin-brief-1779944200625#41","gold":"unsupported","note":"factory predictive-maintenance/grid-frequency details from Germany cluster that exists only as a forbidden label, not in source"}
+{"id":"admin-brief-1779944200625#9","gold":"unsupported","note":"magnetostrictive-actuator specs (sub-nanometer, bypassing ASML piezo/electrostatic) only in label topic; not in source data"}
+{"id":"admin-brief-1779944200625#36","gold":"contradicts_facts","note":"'spatially resolved molecular computation' refers to Curie-MIT polymer cluster that exists only as a forbidden label, not in source"}
+{"id":"admin-brief-1779944200625#63","gold":"unsupported","note":"SMIC/Zhejiang/CAS 'triad' details exist only as previous-day topic labels; none are facts in the source data"}
+{"id":"admin-brief-1779944200625#4","gold":"consistent","note":"source notes absence of government/corporate reactions to encyclical; the 'vacuum for non-state actors' read is defensible"}
+{"id":"admin-brief-1779944200625#23","gold":"contradicts_facts","note":"'China/EU redefining performance' built on the nonexistent-in-source China/EU tech breakthrough clusters (only labels)"}
+{"id":"admin-brief-1779944200625#29","gold":"unsupported","note":"Saudi nuclear deal terms (fuel-cycle data, enrichment thresholds, IAEA service-layer) only in Orano-Saudi label; not in source data"}
+{"id":"admin-brief-1780036335731#98","gold":"supported","note":"source: ≥52 deaths in FARC dissident clash; 52 figure unverified, from one warring party, no forensic/medical/third-party data"}
+{"id":"admin-brief-1780036335731#20","gold":"consistent","note":"defensible read of source-noted ambiguity over IDF definition of 'control' in Gaza"}
+{"id":"admin-brief-1780036335731#47","gold":"consistent","note":"grounded in source: Pakistan's FM flying to Washington to accelerate US-Iran talks; triangular-mediation read is defensible"}
+{"id":"admin-brief-1780036335731#78","gold":"consistent","note":"Quad leaders' meeting canceled over unspecified US-India tensions (source); strategic-autonomy read defensible given Beijing summits in source"}
+{"id":"admin-brief-1780036335731#51","gold":"supported","note":"source: two Romanian F-16s scrambled & authorized to engage; nationwide air raid alert in Ukraine; NATO condemned actions as 'recklessness'"}
+{"id":"admin-brief-1780036335731#6","gold":"consistent","note":"China-Russia summit strategic coordination coincided with Russia's Kyiv assault in source; 'choreographed signaling' is defensible inference"}
+{"id":"admin-brief-1780036335731#76","gold":"consistent","note":"source: Quad mandate expanded to critical minerals/value chains, Australia's central role; 'offensive supply-chain building' is defensible read"}
+{"id":"admin-brief-1780036335731#65","gold":"supported","note":"source 影响评估 documents exactly these gaps: no grid-strain/AC data, no detail on Bac exams overriding closures/union objections"}
+{"id":"admin-brief-1780036335731#66","gold":"consistent","note":"defensible inference from source facts (Bac exams continued despite extreme heat; reporting gaps signal routinized adaptation)"}
+{"id":"admin-brief-1780036335731#11","gold":"supported","note":"source: Ukrainian intelligence assertions that Chinese dual-use exports (used in drones) fuel Russia"}
+{"id":"admin-brief-1780036335731#92","gold":"consistent","note":"NASA Ignition Moon Base = semi-permanent habitation w/ robotic precursors (source); 'permanent infrastructure vs prestige' is defensible read"}
+{"id":"admin-brief-1780036335731#89","gold":"consistent","note":"€200M = fraction of PDD's $54bn revenue + binding action plan (source); 'first jurisdiction forcing Chinese tech governance' is defensible inference"}
+{"id":"admin-brief-1780036335731#44","gold":"supported","note":"source: US self-defense strikes on Iranian missile sites/mine-laying boats near Hormuz; IRGC ballistic missile intercepted over Kuwait; CENTCOM downed 5 drones, all post-ceasefire"}
+{"id":"admin-brief-1780036335731#7","gold":"unsupported","note":"source names the Joint Declaration but does not quote its text or state it lacks endorsement of Russia's war aims — added detail"}
+{"id":"admin-brief-1780036335731#34","gold":"consistent","note":"defensible read of source facts (New Glenn static-fire explosion + prior April mission failure)"}
+{"id":"admin-brief-1780036335731#1","gold":"supported","note":"source: Xi-Putin summit signed 22 agreements including Joint Declaration on Multipolar World"}
+{"id":"admin-brief-1780036335731#63","gold":"supported","note":"source: UK 34.8°C (highest May ever), France 34°C, Portugal 40.3°C in Mora, French PM convened ministerial heat-readiness meeting"}

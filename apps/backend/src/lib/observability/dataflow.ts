@@ -3,7 +3,7 @@
  * 专门用于监控数据处理流程中的关键指标
  */
 
-import type { Env } from '../index';
+import type { Env } from '../../index';
 
 export interface DataFlowMetric {
   stage: string;

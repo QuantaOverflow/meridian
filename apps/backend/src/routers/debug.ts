@@ -364,7 +364,8 @@ debugRouter.post('/test-story-validation', async (c) => {
         console.log(`[Debug] 聚类分析完成: ${clusteringResult.clusters.length} 个聚类`);
 
         // 步骤2: 故事验证
-        const aiServices = createAIServices(c.env);
+        // 观测性：debug 路由也注入 trace 让 LLM I/O 落 R2；debug- 前缀便于和生产 workflow trace 区分、eval 语料可排除。
+        const aiServices = createAIServices(c.env, `debug-${Date.now()}`);
         
         const articlesData = dataset.articles.map(article => ({
             id: article.id,

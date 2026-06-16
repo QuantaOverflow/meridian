@@ -73,10 +73,13 @@ export class AIWorkerService {
   /**
    * 分析文章内容
    */
-  async analyzeArticle(title: string, content: string, options?: any): Promise<Response> {
+  async analyzeArticle(title: string, content: string, options?: any, callIndex?: number): Promise<Response> {
+    // 观测性：同一 workflow 会并行分析多篇文章，用 call index 避免 R2 LLM 日志 key 互相覆盖。
+    const extra: Record<string, string> = {};
+    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/article/analyze`, {
       method: 'POST',
-      headers: this.buildHeaders(),
+      headers: this.buildHeaders(extra),
       body: JSON.stringify({
         title,
         content,

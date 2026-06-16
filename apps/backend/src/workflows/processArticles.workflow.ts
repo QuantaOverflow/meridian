@@ -8,6 +8,7 @@ import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } f
 import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
 import { handleServiceResponse } from '../lib/services/clustering';
+import { createWorkflowObservability } from '../lib/observability';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {
@@ -81,17 +82,21 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
   async run(_event: WorkflowEvent<ProcessArticlesParams>, step: WorkflowStep) {
     const env = this.env;
     const db = getDb(env.HYPERDRIVE);
+    const workflowId = _event.instanceId;
     
-    // 创建AI服务实例
-    const aiServices = createAIServices(env);
-    
+    // 观测性：注入 workflow instance id，确保 article_analysis 的 LLM I/O 能按 trace 落 R2。
+    const aiServices = createAIServices(env, workflowId);
+    // 观测性：与 auto-brief 对齐，落 R2 observability/{workflowId}.json（每步持久化，mid-flight 崩溃也可查）。
+    const observability = createWorkflowObservability(workflowId, env);
+
     const logger = workflowLogger.child({
-      workflow_id: _event.instanceId,
+      workflow_id: workflowId,
       initial_article_count: _event.payload.articles_id.length,
     });
 
     try {
       logger.info('Starting workflow run');
+      await observability.logStep('workflow_start', 'started', { requestedArticles: _event.payload.articles_id.length });
 
       const articlesDbFetchStartTime = Date.now();
       const articles = await step.do('get articles', dbStepConfig, async () =>
@@ -113,6 +118,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           )
       );
       logger.info('Finished fetching articles from DB', { durationMs: Date.now() - articlesDbFetchStartTime, count: articles.length });
+      await observability.logStep('fetch_articles', 'completed', { requested: _event.payload.articles_id.length, fetched: articles.length });
 
       const fetchLogger = logger.child({ articles_count: articles.length });
       fetchLogger.info('Fetching article contents');
@@ -262,6 +268,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
         }
       }
 
+      await observability.logStep('content_fetch', 'completed', { total: articles.length, success: successCount, failed: failCount });
+
       const processingLogger = logger.child({
         processing_batch_size: articlesToProcess.length,
         fetch_success_count: successCount,
@@ -272,7 +280,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
       const llmAnalysisBatchStartTime = Date.now();
       const analysisResults = await Promise.allSettled(
-        articlesToProcess.map(async article => {
+        articlesToProcess.map(async (article, analysisIndex) => {
           const articleLogger = processingLogger.child({ article_id: article.id });
           articleLogger.info('Analyzing article');
 
@@ -285,7 +293,10 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 // 使用轻量级AI服务进行文章分析
                 const response = await aiServices.aiWorker.analyzeArticle(
                   article.title,
-                  article.text
+                  article.text,
+                  undefined,
+                  // 观测性：传每篇文章在本批次中的序号，和 trace_id 一起组成稳定 R2 key。
+                  analysisIndex
                 );
 
                 try {
@@ -460,17 +471,26 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
         result => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
       ).length;
 
+      await observability.logStep('llm_analysis', 'completed', {
+        total: articlesToProcess.length,
+        success: successfulAnalyses,
+        failed: failedAnalyses,
+      });
+
       logger.info('Workflow completed', {
         total_articles: articlesToProcess.length,
         successful_analyses: successfulAnalyses,
         failed_analyses: failedAnalyses,
         final_duration_ms: Date.now() - articlesDbFetchStartTime // Total workflow duration
       });
+      await observability.complete();
     } catch (error) {
       logger.error('Workflow execution failed with an unhandled exception', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       }, error instanceof Error ? error : new Error(String(error)));
+      // 观测性：失败也落 R2，便于事后排查中断点
+      await observability.fail(error instanceof Error ? error.message : String(error));
       // re-throw the error so Cloudflare Workflow can mark it as failed
       throw error;
     }

@@ -1,4 +1,4 @@
-import type { Env } from '../index';
+import type { Env } from '../../index';
 
 // 可观测性指标类型定义
 export interface WorkflowMetrics {

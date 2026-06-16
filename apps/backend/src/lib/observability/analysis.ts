@@ -3,8 +3,8 @@
  * 专门用于分析故事重要性评估和筛选过程的透明度
  */
 
-import type { Env } from '../index';
-import { WorkflowMetrics, StorySelectionMetrics } from './observability';
+import type { Env } from '../../index';
+import { WorkflowMetrics, StorySelectionMetrics } from './index';
 
 export interface ImportanceEvaluationReport {
   workflowId: string;

@@ -23,7 +23,7 @@ import { AIGatewayService } from './ai-gateway';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
-import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT } from './faithfulness-prompts';
+import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT, suspectSpecifics } from './faithfulness-prompts';
 
 // ============================================================================
 // 类型
@@ -176,8 +176,10 @@ async function judgeFactual(
   source: string,
   model: string
 ): Promise<FactualJudgement> {
+  // Lever A：确定性挑出 claim 里源中找不到的数字/日期，作为注意力提示喂 judge
+  const suspects = suspectSpecifics(claim.text, source);
   // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
-  const raw = await callJudge(ai, FACTUAL_PROMPT(claim.text, source), model, 800);
+  const raw = await callJudge(ai, FACTUAL_PROMPT(claim.text, source, suspects), model, 800);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
   // 解析失败按 unsupported 兜底（fail-closed：宁可多记一条 flag，也不放过潜在脑补）
   const verdict: FaithVerdict =

@@ -176,7 +176,8 @@ async function judgeFactual(
   source: string,
   model: string
 ): Promise<FactualJudgement> {
-  const raw = await callJudge(ai, FACTUAL_PROMPT(claim.text, source), model, 500);
+  // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
+  const raw = await callJudge(ai, FACTUAL_PROMPT(claim.text, source), model, 800);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
   // 解析失败按 unsupported 兜底（fail-closed：宁可多记一条 flag，也不放过潜在脑补）
   const verdict: FaithVerdict =

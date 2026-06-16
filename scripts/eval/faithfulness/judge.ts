@@ -34,7 +34,8 @@ export async function judgeFactual(
   source: string,
   model: string
 ): Promise<FactualJudgement> {
-  const raw = await chat(FACTUAL_PROMPT(claim.text, source), { model, temperature: 0, maxTokens: 500 });
+  // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
+  const raw = await chat(FACTUAL_PROMPT(claim.text, source), { model, temperature: 0, maxTokens: 800 });
   const parsed = parseJSON<{ verdict: string; evidence_quote?: string; reason?: string }>(raw);
 
   if (!parsed || typeof parsed.verdict !== 'string') {

@@ -37,22 +37,35 @@ Reply with ONLY a JSON array inside a \`\`\`json fenced block. No prose.
 Each element: {"text": "<atomic statement>", "type": "factual" | "analytical"}
 `.trim();
 
-// ② 事实通道裁决（强制取证）
+// ② 事实通道裁决（强制取证 + 逐特征比对）
 export const FACTUAL_PROMPT = (claim: string, source: string) => `
 You are a strict faithfulness judge. Decide whether a CLAIM is grounded in the
 SOURCE material below. The source is everything the brief was allowed to use.
 
 # Verdicts
-- supported: the source directly states or clearly entails the claim. You MUST
-  return the exact sentence/phrase from the source that supports it.
-- unsupported: the source neither states nor contradicts the claim (an addition
-  not grounded in the source — possible hallucination).
-- contradicted: the source asserts something incompatible with the claim.
+- supported: the source directly states or clearly entails the claim, AND every
+  checkable specific in the claim matches the source.
+- unsupported: the source neither states nor contradicts the claim — OR the claim
+  adds a specific (a number, name, place, date, qualifier) the source does not
+  contain. An addition not grounded in the source.
+- contradicted: the source asserts something INCOMPATIBLE with the claim — a
+  different number/amount/date, the opposite direction or polarity (rose vs fell,
+  highest vs lowest, approved vs rejected, struck vs spared, will vs will not), a
+  different named actor, or a negation that flips the meaning.
+
+# How to decide — do this BEFORE the verdict
+List the claim's checkable specifics: every number, date, amount, named entity,
+and any direction / polarity / negation word. For EACH, find the matching fact in
+the SOURCE and compare them literally:
+- specific ABSENT from source            -> unsupported
+- specific CONFLICTS with source (different number, opposite direction, flipped
+  negation, different named actor) -> contradicted. A surrounding sentence that
+  otherwise matches does NOT make a conflicting number or direction "supported".
+- only if EVERY specific is present AND matches -> supported
 
 # Hard rule
 For "supported", evidence_quote MUST be copied verbatim from the SOURCE (an exact
-substring). If you cannot copy a supporting sentence verbatim, the verdict is
-"unsupported", not "supported".
+substring). If you cannot copy a supporting sentence verbatim, it is not supported.
 
 # CLAIM
 ${claim}
@@ -63,6 +76,7 @@ ${source}
 # Output
 Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
 {
+  "specifics_checked": "<list each number/direction/negation in the claim and the source's value for it>",
   "verdict": "supported" | "unsupported" | "contradicted",
   "evidence_quote": "<verbatim substring of SOURCE, or empty string>",
   "reason": "<one short sentence>"

@@ -57,11 +57,18 @@ SOURCE material below. The source is everything the brief was allowed to use.
 List the claim's checkable specifics: every number, date, amount, named entity,
 and any direction / polarity / negation word. For EACH, find the matching fact in
 the SOURCE and compare them literally:
-- specific ABSENT from source            -> unsupported
+- specific ABSENT from source (the source does not address it at all) -> unsupported
 - specific CONFLICTS with source (different number, opposite direction, flipped
   negation, different named actor) -> contradicted. A surrounding sentence that
   otherwise matches does NOT make a conflicting number or direction "supported".
 - only if EVERY specific is present AND matches -> supported
+
+# contradicted vs unsupported (do not confuse these)
+If the SOURCE states a DIFFERENT value for the SAME specific the claim makes
+(claim says 57.2%, source says 77.2%; claim says "lowest", source says "highest";
+claim says 16-day, source says 60-day), that is **contradicted** — the source
+asserts the opposite. Use "unsupported" ONLY when the source is silent on that
+specific. "The source says X, not Y" means contradicted, not unsupported.
 
 # Hard rule
 For "supported", evidence_quote MUST be copied verbatim from the SOURCE (an exact

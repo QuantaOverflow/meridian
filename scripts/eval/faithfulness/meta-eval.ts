@@ -23,6 +23,9 @@ const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 const KAPPA_MIN = Number(process.env.KAPPA_MIN ?? '0.6');
 const RECALL_MIN = Number(process.env.RECALL_MIN ?? '0.7');
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? '5');
+// 迭代 prompt 时只对 dev 调；最终 κ/召回只在 heldout(从未参与调参)报，防过拟合。
+// SPLIT=dev|heldout|all（默认 all）。金标行带 split 字段；无 split 字段的行视为 all。
+const SPLIT = (process.env.SPLIT ?? 'all').toLowerCase();
 
 const FACTUAL_CLASSES: FaithVerdict[] = ['supported', 'unsupported', 'contradicted'];
 const ANALYTICAL_CLASSES: AnalyticalVerdict[] = ['consistent', 'contradicts_facts'];
@@ -37,6 +40,8 @@ interface GoldItem {
   gold: FaithVerdict | AnalyticalVerdict;
   strata?: Record<string, string>;
   note?: string;
+  split?: 'dev' | 'heldout';
+  synthetic?: boolean;
 }
 
 interface Pred {
@@ -82,6 +87,8 @@ function loadGold(path: string, sourcesPath: string): GoldItem[] {
     } catch {
       throw new Error(`金标第 ${i + 1} 行不是合法 JSON: ${t.slice(0, 80)}`);
     }
+    // split 过滤：SPLIT=dev|heldout 只取对应切片；无 split 字段的行在非 all 模式下跳过
+    if (SPLIT !== 'all' && o.split !== SPLIT) return;
     const id = o.id ?? `item-${i + 1}`;
     const briefId = o.brief_id ?? String(id).split('#')[0];
     const source = o.source ?? sources[briefId];
@@ -227,7 +234,7 @@ async function main() {
   const goldPath = process.argv[2] || 'gold/judge-gold.example.jsonl';
   // source 旁车默认与 gold 同目录的 sources.jsonl；可用 GOLD_SOURCES 覆盖
   const sourcesPath = process.env.GOLD_SOURCES || goldPath.replace(/[^/]+$/, 'sources.jsonl');
-  console.log(`[judge-meta-eval] gold=${goldPath} sources=${sourcesPath} judge=${JUDGE_MODEL} κ_min=${KAPPA_MIN} recall_min=${RECALL_MIN}`);
+  console.log(`[judge-meta-eval] gold=${goldPath} split=${SPLIT} sources=${sourcesPath} judge=${JUDGE_MODEL} κ_min=${KAPPA_MIN} recall_min=${RECALL_MIN}`);
 
   const gold = loadGold(goldPath, sourcesPath);
   const factualGold = gold.filter((g) => g.type === 'factual');

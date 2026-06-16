@@ -53,6 +53,18 @@
 
 ---
 
+## P2.5 · 情报分析 eval（忠实度门信任的"真相源"，至今零设防）
+
+**业务价值：** 情报分析（`intelligenceAnalysis.ts`）产出每个 story 的情报报告，这正是**忠实度门拿来当"真相"对比 brief 的那个源**。但这一步**从没做过 eval**——忠实度门信任它信得死死的。情报分析编错 → 情报报告错 → brief 照抄 → 门一比"一致"→ 放行（门反而帮上游背书）。整条链最关键的真相源反而没设防。
+
+**为什么紧要：** 它是多阶段 LLM 链里幻觉最易钻入的一步（深度分析、推断、跨文章综合），且其错误对下游不可见。今天修好的是"brief 忠于情报报告"；"情报报告忠于 RSS 原文"这层是空的。逻辑价值不输忠实度门，更治本。
+
+**要做：** 复用刚建好的 faithfulness meta-eval 方法论——情报报告对其输入文章做 claim 级 grounding 验证（judge：情报报告每句在源文章里有据吗）。可直接搬 `scripts/eval/faithfulness/` 的 harness + rubric + 合成扰动 + dev/heldout 切分。
+
+**成本：** 中——方法现成（faithfulness 那套），主要是建情报层金标。
+
+---
+
 ## P3 · brief 别漏大事 / 别把一件事拆三条（聚类表示升级）
 
 **业务价值：** 同一事件分散成多簇或漏掉重要事件 → 读者觉得"不全 / 啰嗦"，brief 显得不专业。覆盖度 + 不重复 = 专业感。
@@ -70,7 +82,8 @@
 - 选择层 NDCG@10 = 0.958，防回归闸 `--baseline 0.958 --tolerance 0.02`
 - 聚类 DBCV 网格搜索调参
 - 忠实度门检测层 + 影子模式 + 判据标定
-- 忠实度 revision step v1（路径 B，source-free 删除/剥离，commit 待提）
+- 忠实度 revision step v1（路径 B，source-free 删除/剥离，commit 3f73878）
+- 忠实度 judge 验证：单一真源 + meta-eval(κ/per-class) + dev/heldout 切分 + 合成 contradicted；数字盲修复(Lever A)→矛盾召回 0→0.769 无偏（commit 33b9694…3219503）
 - 情报报告 R2 卸载（突破 Workflow 1MB step 上限，maxStoriesToGenerate 3→15）
 
 ## 方法论

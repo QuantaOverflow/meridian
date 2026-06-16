@@ -22,6 +22,7 @@
 import { AIGatewayService } from './ai-gateway';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
+import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
 import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT, suspectSpecifics } from './faithfulness-prompts';
 
@@ -84,13 +85,40 @@ export const GATE_UNSUPPORTED_MIN_COUNT = 4;
 // LLM 调用（in-process，复用 AIGatewayService，避免 HTTP 回跳）
 // ============================================================================
 
+interface JudgeCallContext {
+  ai: AIGatewayService;
+  env: CloudflareEnv;
+  traceContext: TraceContext;
+  phase: LLMCallPhase;
+  nextCallIndex: () => number;
+}
+
+function createJudgeCallContext(
+  env: CloudflareEnv,
+  traceContext: TraceContext,
+  phase: LLMCallPhase
+): JudgeCallContext {
+  let next = traceContext.callIndex ?? 0;
+  return {
+    ai: new AIGatewayService(env),
+    env,
+    traceContext,
+    phase,
+    nextCallIndex: () => next++,
+  };
+}
+
 async function callJudge(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   prompt: string,
   model: string,
   maxTokens: number
 ): Promise<string> {
-  const result = await ai.chat({
+  // 观测性：faithfulness 是 in-process LLM 调用，也必须经 loggedChat 才会按 trace 落 R2。
+  const result = await loggedChat(ctx.ai, ctx.env, {
+    ...ctx.traceContext,
+    callIndex: ctx.nextCallIndex(),
+  }, ctx.phase, {
     messages: [{ role: 'user' as const, content: prompt }],
     provider: 'dashscope',
     model,
@@ -150,8 +178,8 @@ function salvageObjects(raw: string): Array<{ text?: string; type?: string }> {
   return out;
 }
 
-async function extractClaims(ai: AIGatewayService, brief: string, model: string): Promise<FaithClaim[]> {
-  const raw = await callJudge(ai, EXTRACT_PROMPT(brief), model, 8000);
+async function extractClaims(ctx: JudgeCallContext, brief: string, model: string): Promise<FaithClaim[]> {
+  const raw = await callJudge(ctx, EXTRACT_PROMPT(brief), model, 8000);
   let arr = parseJSON<Array<{ text?: string; type?: string }>>(raw);
   if (!Array.isArray(arr)) arr = salvageObjects(raw);
   if (!Array.isArray(arr) || arr.length === 0) {
@@ -171,7 +199,7 @@ async function extractClaims(ai: AIGatewayService, brief: string, model: string)
 // ============================================================================
 
 async function judgeFactual(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   claim: FaithClaim,
   source: string,
   model: string
@@ -179,7 +207,7 @@ async function judgeFactual(
   // Lever A：确定性挑出 claim 里源中找不到的数字/日期，作为注意力提示喂 judge
   const suspects = suspectSpecifics(claim.text, source);
   // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
-  const raw = await callJudge(ai, FACTUAL_PROMPT(claim.text, source, suspects), model, 800);
+  const raw = await callJudge(ctx, FACTUAL_PROMPT(claim.text, source, suspects), model, 800);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
   // 解析失败按 unsupported 兜底（fail-closed：宁可多记一条 flag，也不放过潜在脑补）
   const verdict: FaithVerdict =
@@ -194,12 +222,12 @@ async function judgeFactual(
 }
 
 async function judgeAnalytical(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   claim: FaithClaim,
   source: string,
   model: string
 ): Promise<AnalyticalJudgement> {
-  const raw = await callJudge(ai, ANALYTICAL_PROMPT(claim.text, source), model, 300);
+  const raw = await callJudge(ctx, ANALYTICAL_PROMPT(claim.text, source), model, 300);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
   const verdict: AnalyticalVerdict = parsed?.verdict === 'contradicts_facts' ? 'contradicts_facts' : 'consistent';
   return { claim, verdict, reason: (parsed?.reason || '').toString().slice(0, 300) };
@@ -208,14 +236,14 @@ async function judgeAnalytical(
 // 对单条 factual claim 逐源试判：碰到 supported/contradicted 立即短路，全部 miss 才算 unsupported。
 // 每份故事源 ~7.5K chars，远低于 qwen-max 30720 token 限制（旧合并 source ~141K 会 400）。
 async function judgeFactualMultiSource(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   claim: FaithClaim,
   sources: StorySource[],
   model: string,
 ): Promise<FactualJudgement> {
   let lastUnsupported: FactualJudgement = { claim, verdict: 'unsupported', reason: 'no source covers this claim' };
   for (const { content } of sources) {
-    const result = await judgeFactual(ai, claim, content, model);
+    const result = await judgeFactual(ctx, claim, content, model);
     if (result.verdict === 'contradicted') return result;
     if (result.verdict === 'supported') return result;
     lastUnsupported = result;
@@ -228,14 +256,14 @@ async function judgeFactualMultiSource(
 // 注：analytical prompt 把"source 中无此实体"也判为 contradicts_facts，所以不能在
 // 第一个 contradicts_facts 短路——跨故事的不相关 source 必然触发该 verdict。
 async function judgeAnalyticalMultiSource(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   claim: FaithClaim,
   sources: StorySource[],
   model: string,
 ): Promise<AnalyticalJudgement> {
   let lastContradicting: AnalyticalJudgement = { claim, verdict: 'contradicts_facts', reason: 'no source supports this analytical claim' };
   for (const { content } of sources) {
-    const result = await judgeAnalytical(ai, claim, content, model);
+    const result = await judgeAnalytical(ctx, claim, content, model);
     if (result.verdict === 'consistent') return result;
     lastContradicting = result;
   }
@@ -244,7 +272,7 @@ async function judgeAnalyticalMultiSource(
 
 // 限并发跑全部 claim，按类型分流
 async function judgeAll(
-  ai: AIGatewayService,
+  ctx: JudgeCallContext,
   claims: FaithClaim[],
   sources: StorySource[],
   model: string,
@@ -257,9 +285,9 @@ async function judgeAll(
     while (next < claims.length) {
       const claim = claims[next++];
       if (claim.type === 'analytical') {
-        analytical.push(await judgeAnalyticalMultiSource(ai, claim, sources, model));
+        analytical.push(await judgeAnalyticalMultiSource(ctx, claim, sources, model));
       } else {
-        factual.push(await judgeFactualMultiSource(ai, claim, sources, model));
+        factual.push(await judgeFactualMultiSource(ctx, claim, sources, model));
       }
     }
   }
@@ -302,12 +330,14 @@ export async function runFaithfulnessCheck(
   env: CloudflareEnv,
   sources: StorySource[],
   brief: string,
-  model = 'qwen-max'
+  model = 'qwen-max',
+  traceContext: TraceContext = {}
 ): Promise<FaithfulnessVerdict> {
-  const ai = new AIGatewayService(env);
+  // 观测性：复用入口 trace_id，把 claim extract / judge 全部串到同一条 R2 LLM 调用链。
+  const judgeCtx = createJudgeCallContext(env, traceContext, 'faithfulness_check');
 
-  const claims = await extractClaims(ai, brief, model);
-  const { factual, analytical } = await judgeAll(ai, claims, sources, model);
+  const claims = await extractClaims(judgeCtx, brief, model);
+  const { factual, analytical } = await judgeAll(judgeCtx, claims, sources, model);
 
   const supported = factual.filter((j) => j.verdict === 'supported').length;
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;
@@ -406,7 +436,8 @@ export async function reviseBrief(
   env: CloudflareEnv,
   brief: string,
   flaggedFactual: FactualJudgement[],
-  model = 'qwen-max'
+  model = 'qwen-max',
+  traceContext: TraceContext = {}
 ): Promise<RevisionResult> {
   // 只对真正有问题的事实 claim 动刀；supported 的不该出现在 flagged 里，但稳妥起见再过滤一次。
   const targets = flaggedFactual.filter((j) => j.verdict === 'unsupported' || j.verdict === 'contradicted');
@@ -414,8 +445,9 @@ export async function reviseBrief(
     return { revised_brief: brief, applied: [], skipped: [], changed: false };
   }
 
-  const ai = new AIGatewayService(env);
-  const raw = await callJudge(ai, REVISE_PROMPT(brief, targets), model, 4000);
+  // 观测性：修订本身也是 LLM 调用，单独 phase 便于和检查阶段区分。
+  const judgeCtx = createJudgeCallContext(env, traceContext, 'faithfulness_revise');
+  const raw = await callJudge(judgeCtx, REVISE_PROMPT(brief, targets), model, 4000);
   const parsed = parseJSON<{ edits?: ReviseEdit[] }>(raw);
   const edits = Array.isArray(parsed?.edits) ? parsed!.edits! : [];
 

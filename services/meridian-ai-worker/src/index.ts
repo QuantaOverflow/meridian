@@ -634,7 +634,8 @@ app.post('/meridian/faithfulness-check', async (c) => {
     const totalSourceChars = sources.reduce((s, r) => s + r.content.length, 0)
 
     console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs ${sources.length} 个故事源(合计 ${totalSourceChars} chars)`)
-    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max')
+    // 观测性：把 workflow trace 传入 in-process faithfulness LLM 调用，避免绕过 loggedChat。
+    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max', readTraceContext(c.req.raw))
     console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
       `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
       `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)
@@ -677,7 +678,8 @@ app.post('/meridian/faithfulness-revise', async (c) => {
     const { brief, flaggedFactual, options } = parsed.data
 
     console.log(`[Revise] brief(${brief.length} chars) vs ${flaggedFactual.length} 条 flagged factual`)
-    const result = await reviseBrief(c.env, brief, flaggedFactual, options?.model || 'qwen-max')
+    // 观测性：修订 LLM 调用沿用上游 trace，便于和检查 verdict 对齐排查。
+    const result = await reviseBrief(c.env, brief, flaggedFactual, options?.model || 'qwen-max', readTraceContext(c.req.raw))
     console.log(`[Revise] changed=${result.changed} applied=${result.applied.length} skipped=${result.skipped.length}`)
 
     return c.json<APIResponse<typeof result>>({ success: true, data: result })

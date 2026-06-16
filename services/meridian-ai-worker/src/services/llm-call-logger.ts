@@ -10,6 +10,9 @@ export type LLMCallPhase =
   | 'intelligence_analysis'
   | 'brief_generation'
   | 'tldr_generation'
+  // 观测性：运行时忠实度门也走 loggedChat，单独 phase 便于和 brief 生成区分。
+  | 'faithfulness_check'
+  | 'faithfulness_revise'
   | 'other'
 
 export interface TraceContext {

@@ -9,32 +9,45 @@
 //    见到召回/κ 没回退再合（事实通道 κ≥0.6 且幻觉类召回≥0.7）。
 // ============================================================================
 
-// ① 拆原子 claim + 分类（factual / analytical）
+// ① Claimify 式抽取：Selection(筛可验证性) + Disambiguation(消歧) + Decomposition(拆原子)。
+// 只输出"可对源核查的事实原子"。纯解读/评价/动机/象征/预测句不抽——它们留在 brief 里，
+// 但不进忠实度判定链路（不抽 ≠ 删；见 ADR 0001）。真幻觉=捏造的事实，必含可验证原子，
+// 必被 Selection 选中送判，所以滤掉纯解读不开召回洞。设计见 docs/adr/0001-claimify-claim-extraction.md。
 export const EXTRACT_PROMPT = (brief: string) => `
-You extract atomic statements from a news brief and classify each, so they can
-be checked appropriately.
+You extract atomic FACTUAL claims from a news brief so each can be checked against
+the SOURCE the brief was written from. Work in three stages.
 
-# Two types
-- "factual": an assertion about what happened or exists — a checkable event,
-  number, date, name, quote, action, or relationship. ("X announced Y on Z",
-  "Company A acquired B", "the deal centers on facility C").
-- "analytical": the briefer's interpretation, implication, prediction, or
-  strategic assessment — signalled by language like "this signals", "suggests",
-  "gains leverage", "could reshape", "the strategic read is", "hints at".
-  These are meant to extrapolate beyond the literal facts.
+# Stage 1 — Selection (verifiability)
+Keep a sentence ONLY if it makes an assertion a reader could check against the
+source for a concrete event, number, date, name, quote, specific action, or
+specific relationship. Judge by VERIFIABILITY, not by cue words.
+DROP a sentence (do not emit anything) when its main point is meaning,
+significance, motive, symbolism, evaluation, prediction, or general background —
+e.g. "X was a symbolic endpoint", "Iran weaponized its silence", "these players
+were global unifiers", "the US wants to de-escalate", "this reveals a fault line".
+These are interpretation, not checkable facts. When unsure whether a sentence
+carries a checkable fact, prefer to DROP it.
 
-# Rules
-- Split compound sentences into separate atomic statements.
-- A statement that blends fact + interpretation: split it. The checkable part
-  is factual, the interpretive part is analytical.
-- Skip pure section headers, transitions, and meta sentences.
+# Stage 2 — Disambiguation
+Make each kept claim self-contained: resolve pronouns and ellipsis to explicit
+entities. If the correct referent or reading is NOT clear with high confidence,
+DROP the claim rather than guess.
+
+# Stage 3 — Decomposition
+Split compound sentences into separate atomic claims. For a sentence that blends
+a verifiable fact with an interpretation, emit ONLY the verifiable factual
+atom and DISCARD the interpretive wrapper.
+Example: "X died near Marjayoun, a symbolic endpoint to the mission"
+  -> emit "X died near Marjayoun"; do NOT emit "a symbolic endpoint".
 
 # Brief
 ${brief}
 
 # Output
 Reply with ONLY a JSON array inside a \`\`\`json fenced block. No prose.
-Each element: {"text": "<atomic statement>", "type": "factual" | "analytical"}
+Each element: {"text": "<self-contained verifiable factual atom>", "type": "factual"}
+Emit only factual atoms. If the brief contains no verifiable factual claim,
+return [].
 `.trim();
 
 // Lever A：确定性抽取 claim 里的数字/日期，挑出"源里找不到原值"的，作为注意力提示喂给
@@ -109,7 +122,7 @@ export function suspectSpecifics(claim: string, source: string): string[] {
         if (!best || score > best.score) best = { val: sp.val, ctx: sp.ctx, score };
       }
       if (best && best.score >= 2) {
-        out.push(`claim says "${raw}"; the source's value for the same fact is "${best.val}" (in: "${best.ctx.replace(/\s+/g, ' ').trim()}") -> the values differ, so this is contradicted`);
+        out.push(`claim says "${raw}"; a candidate source value for the same fact may be "${best.val}" (in: "${best.ctx.replace(/\s+/g, ' ').trim()}") -> POSSIBLE conflict: first confirm both refer to the SAME fact, then check they are genuinely different. Equivalent dates ("28 February" = "February 28"), rounding/threshold entailments ("3,526" satisfies "over 3,500"), and unit-equivalent values are NOT conflicts. Only a real difference -> contradicted`);
       } else {
         out.push(`claim says "${raw}"; the source states no matching value for this fact -> if the source never mentions this fact, unsupported`);
       }
@@ -155,14 +168,23 @@ ${
   suspects.length
     ? `# Automatic numeric/date check (already aligned to the source for you)
 ${suspects.map((s) => `- ${s}`).join('\n')}
-Trust these alignments. Where the source's value differs from the claim's, the
-verdict is contradicted. Never return "supported" while any flagged value stands.
+Treat these as attention hints, NOT verdicts. For each, first confirm the claim
+value and source value describe the SAME fact, then check they are genuinely
+different — equivalent dates ("28 February" = "February 28"), rounding/threshold
+entailments ("3,526" satisfies "over 3,500"), and unit-equivalent values are NOT
+conflicts. Only a real difference in value, direction, or actor for the same fact
+is contradicted; if the hint's alignment is wrong or the values are equivalent,
+judge the claim normally.
 
 `
     : ''
 }# Hard rule
-For "supported", evidence_quote MUST be copied verbatim from the SOURCE (an exact
-substring). If you cannot copy a supporting sentence verbatim, it is not supported.
+A claim does NOT need to appear verbatim in the SOURCE. A faithful paraphrase,
+summary, or synthesis across sentences IS "supported" when the source clearly
+states or entails it and every checkable specific matches. Mark "unsupported"
+only when the source genuinely lacks the fact — not merely when no single
+sentence matches the claim word-for-word. evidence_quote must still be a verbatim
+SOURCE span (the text that grounds the claim); if nothing grounds it, leave it empty.
 
 # CLAIM
 ${claim}

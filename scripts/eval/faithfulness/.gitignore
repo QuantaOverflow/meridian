@@ -1,6 +1,8 @@
 # worklist 中间产物：blind 表与 packet 内联了全量 source（每份 brief ~100KB），可由
 # build-judge-worklist.ts 从 backend observability 重新生成 —— 不入库。
 worklist/*.blind.jsonl
+worklist/*.annotate.jsonl
+worklist/extract-dump.jsonl
 worklist/*.packet.json
 worklist/smoke.*
 # 保留：worklist/*.labels.*.jsonl（双标注者产出）、worklist/*.judge.jsonl（judge 分层预测）

@@ -172,9 +172,14 @@ function cohensKappa(m: Record<string, Record<string, number>>, classes: string[
   return (po - pe) / (1 - pe);
 }
 
-// per-class TPR(召回) 和 TNR
+// per-class TPR(召回) / TNR / precision
+// precision(c) = tp / (tp+fp) = judge 喊 c 的里头真为 c 的占比 = 1 − 该类误报率。
+// 量「误拦率」就看 precision：precision 低 = judge 乱喊 c = 误拦多。predicted=tp+fp 是 judge 喊 c 的总数(样本量)。
 function perClass(m: Record<string, Record<string, number>>, classes: string[]) {
-  const res: Record<string, { support: number; tpr: number | null; tnr: number | null }> = {};
+  const res: Record<
+    string,
+    { support: number; predicted: number; tpr: number | null; tnr: number | null; precision: number | null }
+  > = {};
   let N = 0;
   for (const g of classes) for (const p of classes) N += m[g][p];
   for (const c of classes) {
@@ -182,12 +187,15 @@ function perClass(m: Record<string, Record<string, number>>, classes: string[]) 
     const fn = classes.reduce((s, p) => s + (p === c ? 0 : m[c][p]), 0); // gold=c 判成别的
     const fp = classes.reduce((s, g) => s + (g === c ? 0 : m[g][c]), 0); // gold≠c 判成 c
     const support = tp + fn;
+    const predicted = tp + fp;
     const negTotal = N - support;
     const tn = negTotal - fp;
     res[c] = {
       support,
+      predicted,
       tpr: support > 0 ? tp / support : null, // 该类无样本 → 召回无定义
       tnr: negTotal > 0 ? tn / negTotal : null,
+      precision: predicted > 0 ? tp / predicted : null, // judge 没喊过 c → 精度无定义
     };
   }
   return res;
@@ -224,7 +232,10 @@ function evalChannel(preds: Pred[], classes: string[], label: string) {
   console.log(`  balanced acc   = ${fmt(bacc)}`);
   console.log(`  per-class:`);
   for (const c of classes) {
-    console.log(`    ${c.padEnd(14)} support=${String(pc[c].support).padStart(3)}  TPR(召回)=${fmt(pc[c].tpr)}  TNR=${fmt(pc[c].tnr)}`);
+    console.log(
+      `    ${c.padEnd(14)} support=${String(pc[c].support).padStart(3)}  TPR(召回)=${fmt(pc[c].tpr)}  TNR=${fmt(pc[c].tnr)}` +
+        `  judge喊=${String(pc[c].predicted).padStart(3)}  precision=${fmt(pc[c].precision)}`
+    );
   }
   return { label, n, kappa: k, balancedAcc: bacc, perClass: pc, confusion: m };
 }

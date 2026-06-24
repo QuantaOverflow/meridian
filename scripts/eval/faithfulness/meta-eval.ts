@@ -25,6 +25,8 @@ const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 const KAPPA_MIN = Number(process.env.KAPPA_MIN ?? '0.6');
 const RECALL_MIN = Number(process.env.RECALL_MIN ?? '0.7');
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? '5');
+// RUNS>1：每条 claim 判 RUNS 次取多数（吸收裁判非确定性），并报翻转率（非一致占比=噪声量）。
+const RUNS = Number(process.env.RUNS ?? '1');
 // 迭代 prompt 时只对 dev 调；最终 κ/召回只在 heldout(从未参与调参)报，防过拟合。
 // SPLIT=dev|heldout|all（默认 all）。金标行带 split 字段；无 split 字段的行视为 all。
 const SPLIT = (process.env.SPLIT ?? 'all').toLowerCase();
@@ -163,6 +165,7 @@ async function runJudge(items: GoldItem[], perStory: Record<string, string[]> = 
   const out: Pred[] = new Array(items.length);
   let next = 0;
   let done = 0;
+  let flips = 0; // RUNS>1 时：RUNS 次判定不一致的 claim 数（量化裁判非确定性）
   async function worker() {
     while (next < items.length) {
       const i = next++;
@@ -170,18 +173,31 @@ async function runJudge(items: GoldItem[], perStory: Record<string, string[]> = 
       const claim: Claim = { id: i, text: it.claim, type: it.type };
       const briefId = (it as any).brief_id ?? String(it.id).split('#')[0];
       const stories = perStory[briefId];
-      let pred: string;
-      let reason: string;
-      if (it.type === 'analytical') {
-        const j = stories?.length
-          ? await judgeAnalyticalMulti(claim, stories)
-          : await judgeAnalytical(claim, it.source, JUDGE_MODEL);
-        pred = j.verdict; reason = j.reason;
-      } else {
+      const single = async (): Promise<{ verdict: string; reason: string }> => {
+        if (it.type === 'analytical') {
+          const j = stories?.length
+            ? await judgeAnalyticalMulti(claim, stories)
+            : await judgeAnalytical(claim, it.source, JUDGE_MODEL);
+          return { verdict: j.verdict, reason: j.reason };
+        }
         const j = stories?.length
           ? await judgeFactualMulti(claim, stories)
           : await judgeFactual(claim, it.source, JUDGE_MODEL);
+        return { verdict: j.verdict, reason: j.reason };
+      };
+      let pred: string;
+      let reason: string;
+      if (RUNS <= 1) {
+        const j = await single();
         pred = j.verdict; reason = j.reason;
+      } else {
+        // 多跑取均：RUNS 次取多数，记翻转（非一致）
+        const verdicts: string[] = [];
+        let lastReason = '';
+        for (let r = 0; r < RUNS; r++) { const j = await single(); verdicts.push(j.verdict); lastReason = j.reason; }
+        pred = majorityVerdict(verdicts);
+        reason = lastReason;
+        if (new Set(verdicts).size > 1) flips++;
       }
       out[i] = { id: it.id, gold: it.gold, pred, reason, strata: it.strata };
       done++;
@@ -191,6 +207,9 @@ async function runJudge(items: GoldItem[], perStory: Record<string, string[]> = 
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, worker));
+  if (RUNS > 1) {
+    console.log(`  [RUNS=${RUNS}] 翻转(${RUNS}次非一致) ${flips}/${items.length} = ${((100 * flips) / items.length).toFixed(0)}% — 裁判非确定性量`);
+  }
   return out;
 }
 

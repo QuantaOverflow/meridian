@@ -251,13 +251,20 @@ async function judgeFactualMultiSource(
 ): Promise<FactualJudgement> {
   let lastUnsupported: FactualJudgement = { claim, verdict: 'unsupported', reason: 'no source covers this claim' };
   // 只对与 claim 最相关的 top-k 源判，躲过跨故事假矛盾（见 rankSourcesByRelevance）
-  for (const i of rankSourcesByRelevance(claim.text, sources.map((s) => s.content))) {
-    const result = await judgeFactual(ctx, claim, sources[i].content, model);
+  const order = rankSourcesByRelevance(claim.text, sources.map((s) => s.content));
+  for (let rank = 0; rank < order.length; rank++) {
+    const result = await judgeFactual(ctx, claim, sources[order[rank]].content, model);
     if (result.verdict === 'supported') return result;
     if (result.verdict === 'contradicted') {
-      // self-consistency：复议坐实才信矛盾，单个抖动假矛盾不一票否决（见 majorityVerdict）
+      // 只采信「最相关源(rank-0)」的矛盾：低排名源常因共享词汇巧合撞上（伊朗导弹 claim 撞
+      // 同主题乌克兰源），其矛盾不可信 → 降级 unsupported，继续找支撑（bug3 修复）。
+      if (rank > 0) {
+        lastUnsupported = { claim, verdict: 'unsupported', reason: `contradiction from lower-ranked source #${rank} downgraded (likely shared-vocabulary cross-story)` };
+        continue;
+      }
+      // rank-0：self-consistency 复议坐实才信，单个抖动假矛盾不一票否决（见 majorityVerdict）
       const votes = [result];
-      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(ctx, claim, sources[i].content, model));
+      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(ctx, claim, sources[order[rank]].content, model));
       const maj = majorityVerdict(votes.map((x) => x.verdict));
       const pick = votes.find((x) => x.verdict === maj);
       if (maj === 'contradicted' && pick) return pick; // 坐实矛盾 → 拦

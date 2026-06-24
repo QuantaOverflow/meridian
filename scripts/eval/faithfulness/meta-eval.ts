@@ -127,13 +127,16 @@ function loadPerStory(path: string): Record<string, string[]> {
 // → 全 miss 才 unsupported（faithfulness-check.ts:236-252）。
 async function judgeFactualMulti(claim: Claim, sources: string[]) {
   let last: { verdict: string; reason: string } = { verdict: 'unsupported', reason: 'no source covers this claim' };
-  for (const i of rankSourcesByRelevance(claim.text, sources)) {
-    const j = await judgeFactual(claim, sources[i], JUDGE_MODEL);
+  const order = rankSourcesByRelevance(claim.text, sources);
+  for (let rank = 0; rank < order.length; rank++) {
+    const j = await judgeFactual(claim, sources[order[rank]], JUDGE_MODEL);
     if (j.verdict === 'supported') return j;
     if (j.verdict === 'contradicted') {
-      // self-consistency：复议坐实才信矛盾（与 runtime 一致）
+      // 只采信最相关源(rank-0)的矛盾;低排名源的矛盾常是共享词汇巧合→降级(与 runtime 一致,bug3)
+      if (rank > 0) { last = { verdict: 'unsupported', reason: `contradiction from lower-ranked source #${rank} downgraded` }; continue; }
+      // rank-0：self-consistency 复议坐实才信
       const votes = [j];
-      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(claim, sources[i], JUDGE_MODEL));
+      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(claim, sources[order[rank]], JUDGE_MODEL));
       const maj = majorityVerdict(votes.map((x) => x.verdict));
       const pick = votes.find((x) => x.verdict === maj);
       if ((maj === 'contradicted' || maj === 'supported') && pick) return pick;

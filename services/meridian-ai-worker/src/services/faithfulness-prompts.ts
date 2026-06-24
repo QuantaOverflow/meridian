@@ -215,6 +215,19 @@ claim says 16-day, source says 60-day), that is **contradicted** — the source
 asserts the opposite. Use "unsupported" ONLY when the source is silent on that
 specific. "The source says X, not Y" means contradicted, not unsupported.
 
+# Same fact only — avoid false contradictions
+Before contradicted, confirm the source value describes the SAME fact as the claim:
+- COMPARISON BASELINES are not the event's own date/value. "largest barrage since
+  early 2025", "worst in a decade", "compared to 2024" — the baseline is a reference
+  point, NOT when the event happened. Do NOT mark contradicted because the event
+  occurred in 2026 while the claim says "since 2025"; if the source states the same
+  baseline phrase ("since early 2025"), that is supported.
+- DERIVED / APPROXIMATE values that round to the source are not conflicts: claim
+  "25 years" vs source "12th term" (~24 years); claim "about 600" vs source "656".
+  A reasonable derivation or rounding of the source value is NOT contradicted (it is
+  supported if entailed, else unsupported) — reserve contradicted for a genuinely
+  incompatible value for the same fact.
+
 ${
   suspects.length
     ? `# Automatic numeric/date check (already aligned to the source for you)

@@ -167,6 +167,21 @@ export function rankSourcesByRelevance(claim: string, sourceTexts: string[], k =
   return cand.sort((a, b) => score[b] - score[a]).slice(0, k);
 }
 
+// self-consistency：contradicted 是门里最危险（contradicted≥1 即拦）又最不稳的判定（裁判
+// 非确定性：同输入偶发假矛盾，见 memory: faithfulness-enforce-blocked-rootcause）。对它复议
+// CONTRA_VOTES 次取多数才采信——单个抖动假矛盾不再一票否决整条 brief。矛盾稀有(一条 brief
+// 0-1 个)，复议成本可忽略。业界 self-consistency 标准做法。
+export const CONTRA_VOTES = 3;
+
+// 多数票：count > 半数才算多数；无严格多数（如 1-1-1）返回 unsupported（既未坐实矛盾、也未
+// 坐实支撑 → 按"无据"的安全默认，不构成拦截理由）。
+export function majorityVerdict(verdicts: string[]): string {
+  const cnt: Record<string, number> = {};
+  for (const v of verdicts) cnt[v] = (cnt[v] ?? 0) + 1;
+  for (const v of Object.keys(cnt)) if (cnt[v] > verdicts.length / 2) return v;
+  return 'unsupported';
+}
+
 // ② 事实通道裁决（强制取证 + 逐特征比对 + Lever A 注意力提示）
 export const FACTUAL_PROMPT = (claim: string, source: string, suspects: string[] = []) => `
 You are a strict faithfulness judge. Decide whether a CLAIM is grounded in the

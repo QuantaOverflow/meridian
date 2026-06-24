@@ -17,8 +17,8 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { judgeFactual, judgeAnalytical } from './judge.js';
-// retrieve-then-verify：与 runtime 单一真源共用同一排序，eval 才忠实量 routed 行为
-import { rankSourcesByRelevance } from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
+// retrieve-then-verify + self-consistency：与 runtime 单一真源共用同一排序/投票，eval 才忠实量
+import { rankSourcesByRelevance, CONTRA_VOTES, majorityVerdict } from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
 import type { Claim, FaithVerdict, AnalyticalVerdict } from './types.js';
 
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
@@ -124,11 +124,20 @@ function loadPerStory(path: string): Record<string, string[]> {
 // 复现运行时 judgeFactualMultiSource：逐源判，contradicted 立即短路 → supported 立即短路
 // → 全 miss 才 unsupported（faithfulness-check.ts:236-252）。
 async function judgeFactualMulti(claim: Claim, sources: string[]) {
-  let last = { verdict: 'unsupported', reason: 'no source covers this claim' };
+  let last: { verdict: string; reason: string } = { verdict: 'unsupported', reason: 'no source covers this claim' };
   for (const i of rankSourcesByRelevance(claim.text, sources)) {
     const j = await judgeFactual(claim, sources[i], JUDGE_MODEL);
-    if (j.verdict === 'contradicted') return j;
     if (j.verdict === 'supported') return j;
+    if (j.verdict === 'contradicted') {
+      // self-consistency：复议坐实才信矛盾（与 runtime 一致）
+      const votes = [j];
+      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(claim, sources[i], JUDGE_MODEL));
+      const maj = majorityVerdict(votes.map((x) => x.verdict));
+      const pick = votes.find((x) => x.verdict === maj);
+      if ((maj === 'contradicted' || maj === 'supported') && pick) return pick;
+      last = { verdict: 'unsupported', reason: `contradiction not corroborated (${votes.map((x) => x.verdict).join('/')})` };
+      continue;
+    }
     last = j;
   }
   return last;

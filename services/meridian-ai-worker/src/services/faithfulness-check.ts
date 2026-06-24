@@ -24,7 +24,15 @@ import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
-import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT, suspectSpecifics, rankSourcesByRelevance } from './faithfulness-prompts';
+import {
+  EXTRACT_PROMPT,
+  FACTUAL_PROMPT,
+  ANALYTICAL_PROMPT,
+  suspectSpecifics,
+  rankSourcesByRelevance,
+  CONTRA_VOTES,
+  majorityVerdict,
+} from './faithfulness-prompts';
 
 // ============================================================================
 // 类型
@@ -245,8 +253,19 @@ async function judgeFactualMultiSource(
   // 只对与 claim 最相关的 top-k 源判，躲过跨故事假矛盾（见 rankSourcesByRelevance）
   for (const i of rankSourcesByRelevance(claim.text, sources.map((s) => s.content))) {
     const result = await judgeFactual(ctx, claim, sources[i].content, model);
-    if (result.verdict === 'contradicted') return result;
     if (result.verdict === 'supported') return result;
+    if (result.verdict === 'contradicted') {
+      // self-consistency：复议坐实才信矛盾，单个抖动假矛盾不一票否决（见 majorityVerdict）
+      const votes = [result];
+      for (let v = 1; v < CONTRA_VOTES; v++) votes.push(await judgeFactual(ctx, claim, sources[i].content, model));
+      const maj = majorityVerdict(votes.map((x) => x.verdict));
+      const pick = votes.find((x) => x.verdict === maj);
+      if (maj === 'contradicted' && pick) return pick; // 坐实矛盾 → 拦
+      if (maj === 'supported' && pick) return pick; // 复议翻 supported → 放
+      // 未坐实：视 unsupported，继续找其他相关源是否支撑
+      lastUnsupported = { claim, verdict: 'unsupported', reason: `contradiction not corroborated (${votes.map((x) => x.verdict).join('/')})` };
+      continue;
+    }
     lastUnsupported = result;
   }
   return lastUnsupported;

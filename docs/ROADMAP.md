@@ -4,6 +4,8 @@
 
 > **2026-06-16 重排**：eval 最佳实践调研（见 `docs/eval-playbook.md`）暴露根本问题——忠实度 judge 是一把**没验证过的尺**。原 P1（enforce + revision）全部建在它之上。验 judge 升为 **P0**，必须先于一切依赖它的动作。revision 已实现但其有效性同样受 judge 召回上限约束。
 
+> **2026-06-23 更新**：把当前裁判（含 06-16/17 全部修复）部署上线（ai-worker `04d26436` + backend `f074c6e1`，仍影子），触发首条真实 brief（report 21）。**enforce 阻塞根因从"judge 笼统未验"具体化为三因叠加**：①跨故事串源（每条 claim 对全部源硬判，缺"按 claim 检索相关证据"步）②Lever A 跨语境数字误触 ③裁判非确定性（同输入偶发假矛盾）；被事实通道"第一个矛盾即短路 + `contradicted≥1` 即拦"放大成误杀整条正确简报。修法对标业界标准管线（分解→检索→投票验证→占比）。详见 memory `faithfulness-enforce-blocked-rootcause` / `llm-judge-faithfulness-industry-patterns`。
+
 ---
 
 ## P0 · 验证忠实度 judge（meta-eval，地基）
@@ -30,14 +32,17 @@
 
 **业务价值：** 可信度是新闻产品命根。brief 会编细节（如 source "以色列空袭贝鲁特" → brief "贝鲁特**南郊**"）。读者抓到一次假话就不再信整个产品。
 
-**现状：** 检测重活已完成——judge（qwen-max）+ 门 F 判据（`contradicted>=1` 或 `unsupported_rate>0.15 且 genuine_unsupported>=4`）+ per-story 喂源。当前影子模式（`FAITHFULNESS_GATE_ENFORCE=false`），算 verdict 但永不拦。**revision step（路径 B）已实现**（2026-06-16，commit 待提）：门后 source-free 删除/剥离 flagged factual claim，影子模式下也跑；其有效性受 judge 召回上限约束（judge 漏判 → revision 收不到 → 删不掉），故 P0 验 judge 同样提升 revision 上限。
+**现状（2026-06-23 实测后）：** 检测层 + per-story 喂源 + revision v1 均已实现并部署（影子）。但首条真实 brief（report 21）即暴露门会**误杀正确简报**——根因三叠加（跨故事串源 + Lever A 跨语境数字误触 + 裁判非确定性），被"第一个矛盾即短路 + `contradicted≥1` 即拦"放大。离线 precision-b2 per-story 实测（κ 0.19、contradicted precision 0、unsupported precision 0.50）在生产复现。**所以 enforce 前置不只是"验 judge"，是先修门的判定机制。** 详见 memory `faithfulness-enforce-blocked-rootcause`。
 
-**要做：**
-1. **enforce 切换**：P0 验完 judge + 影子数据复校 0.15/4 阈值后，翻 `FAITHFULNESS_GATE_ENFORCE=true`。需先给 `brief_run_status` 加 `BLOCKED_FAITHFULNESS` 枚举 + migration。
-2. **enforce 时序修正**：现 `v.block` 是修订前算的；enforce 上线时正确序为 revise→重新 check→仍脏才拦（已在 `auto-brief-generation.ts` 留 TODO 注释）。
-3. **revision 增强（后续）**：v1 只删/剥；"按 source 改写成正确版本"需路由 per-story 源，留后续。
+**要做（修法按性价比，对标业界标准管线——见 memory `llm-judge-faithfulness-industry-patterns`）：**
+1. **加"按 claim 检索相关源"再判**（最该做）：消除跨故事串源，是 FactScore/SAFE/RAGAS 以来的标准管线第②步，我们目前缺。
+2. **弱化"矛盾"一票否决**：借 RAGAS 二元支持占比，或要求矛盾来自相关源 + self-consistency 复判一致；至少先让事实通道别"第一个矛盾就短路"（照搬分析通道已有的防护）。
+3. **判矛盾的 claim 做 self-consistency 多数投票**：吸收裁判非确定性。
+4. **claim decontextualize / Claimify**：ADR 0001 在做，输入侧提质。
+5. **enforce 切换（最后）**：上述修完 + 在当前裁判上复测 precision 达标后，才翻 `FAITHFULNESS_GATE_ENFORCE=true`。需先给 `brief_run_status` 加 `BLOCKED_FAITHFULNESS` 枚举 + migration；时序为 revise→重新 check→仍脏才拦（`auto-brief-generation.ts` 已留 TODO）。
+6. MiniCheck/HHEM 作便宜第二尺（可选，非银弹）。
 
-**成本：** 小——检测层 + revision v1 已完成，剩接 enforce。
+**成本：** 中——检测层/revision 已就绪，但门判定机制要按业界管线重构（检索 + 投票 + 占比），不再是"接个开关"。
 
 ---
 
@@ -83,7 +88,7 @@
 - 聚类 DBCV 网格搜索调参
 - 忠实度门检测层 + 影子模式 + 判据标定
 - 忠实度 revision step v1（路径 B，source-free 删除/剥离，commit 3f73878）
-- 忠实度 judge 验证：单一真源 + meta-eval(κ/per-class) + dev/heldout 切分 + 合成 contradicted；数字盲修复(Lever A)→矛盾召回 0→0.769 无偏（commit 33b9694…3219503）
+- 忠实度 judge 验证：单一真源 + meta-eval(κ/per-class) + dev/heldout 切分 + 合成 contradicted；数字盲修复(Lever A)→矛盾召回 0→0.769（commit 33b9694…3219503）。**注：0.769 是合成/cert 题上的 recall；真实抽取 claim 上 precision 差（contradicted precision≈0、κ≈0.19）——别拿 0.769 当 enforce 可翻的依据，见 P1 现状**
 - 情报报告 R2 卸载（突破 Workflow 1MB step 上限，maxStoriesToGenerate 3→15）
 
 ## 方法论

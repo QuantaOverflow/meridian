@@ -24,7 +24,7 @@ import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
-import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT, suspectSpecifics } from './faithfulness-prompts';
+import { EXTRACT_PROMPT, FACTUAL_PROMPT, ANALYTICAL_PROMPT, suspectSpecifics, rankSourcesByRelevance } from './faithfulness-prompts';
 
 // ============================================================================
 // 类型
@@ -242,8 +242,9 @@ async function judgeFactualMultiSource(
   model: string,
 ): Promise<FactualJudgement> {
   let lastUnsupported: FactualJudgement = { claim, verdict: 'unsupported', reason: 'no source covers this claim' };
-  for (const { content } of sources) {
-    const result = await judgeFactual(ctx, claim, content, model);
+  // 只对与 claim 最相关的 top-k 源判，躲过跨故事假矛盾（见 rankSourcesByRelevance）
+  for (const i of rankSourcesByRelevance(claim.text, sources.map((s) => s.content))) {
+    const result = await judgeFactual(ctx, claim, sources[i].content, model);
     if (result.verdict === 'contradicted') return result;
     if (result.verdict === 'supported') return result;
     lastUnsupported = result;
@@ -262,8 +263,9 @@ async function judgeAnalyticalMultiSource(
   model: string,
 ): Promise<AnalyticalJudgement> {
   let lastContradicting: AnalyticalJudgement = { claim, verdict: 'contradicts_facts', reason: 'no source supports this analytical claim' };
-  for (const { content } of sources) {
-    const result = await judgeAnalytical(ctx, claim, content, model);
+  // 同事实通道：只判 top-k 相关源，去跨故事噪声
+  for (const i of rankSourcesByRelevance(claim.text, sources.map((s) => s.content))) {
+    const result = await judgeAnalytical(ctx, claim, sources[i].content, model);
     if (result.verdict === 'consistent') return result;
     lastContradicting = result;
   }

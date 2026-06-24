@@ -17,6 +17,8 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { judgeFactual, judgeAnalytical } from './judge.js';
+// retrieve-then-verify：与 runtime 单一真源共用同一排序，eval 才忠实量 routed 行为
+import { rankSourcesByRelevance } from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
 import type { Claim, FaithVerdict, AnalyticalVerdict } from './types.js';
 
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
@@ -103,9 +105,52 @@ function loadGold(path: string, sourcesPath: string): GoldItem[] {
 }
 
 // ---------------------------------------------------------------------------
-// 限并发跑 judge
+// per-story 源旁车（保真：运行时门逐 per-story 情报报告判，非 brief 整源）
+// 文件每行 {brief_id, sources: [str,...]}；PERSTORY_SOURCES 给路径即启用 per-story 模式。
 // ---------------------------------------------------------------------------
-async function runJudge(items: GoldItem[]): Promise<Pred[]> {
+function loadPerStory(path: string): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  let raw: string;
+  try { raw = readFileSync(path, 'utf8'); } catch { return map; }
+  for (const line of raw.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const o = JSON.parse(t);
+    if (o.brief_id && Array.isArray(o.sources)) map[o.brief_id] = o.sources;
+  }
+  return map;
+}
+
+// 复现运行时 judgeFactualMultiSource：逐源判，contradicted 立即短路 → supported 立即短路
+// → 全 miss 才 unsupported（faithfulness-check.ts:236-252）。
+async function judgeFactualMulti(claim: Claim, sources: string[]) {
+  let last = { verdict: 'unsupported', reason: 'no source covers this claim' };
+  for (const i of rankSourcesByRelevance(claim.text, sources)) {
+    const j = await judgeFactual(claim, sources[i], JUDGE_MODEL);
+    if (j.verdict === 'contradicted') return j;
+    if (j.verdict === 'supported') return j;
+    last = j;
+  }
+  return last;
+}
+
+// 复现运行时 judgeAnalyticalMultiSource：consistent 立即短路；不在首个 contradicts_facts 短路
+// （跨故事不相关源必触发 contradicts_facts），全部非 consistent 才告警（:258-271）。
+async function judgeAnalyticalMulti(claim: Claim, sources: string[]) {
+  let last = { verdict: 'contradicts_facts', reason: 'no source supports this analytical claim' };
+  for (const i of rankSourcesByRelevance(claim.text, sources)) {
+    const j = await judgeAnalytical(claim, sources[i], JUDGE_MODEL);
+    if (j.verdict === 'consistent') return j;
+    last = j;
+  }
+  return last;
+}
+
+// ---------------------------------------------------------------------------
+// 限并发跑 judge。perStory 非空 → 对有 per-story 源的 brief 用多源短路判（保真运行时）；
+// 否则回退单源（it.source）。
+// ---------------------------------------------------------------------------
+async function runJudge(items: GoldItem[], perStory: Record<string, string[]> = {}): Promise<Pred[]> {
   const out: Pred[] = new Array(items.length);
   let next = 0;
   let done = 0;
@@ -114,16 +159,20 @@ async function runJudge(items: GoldItem[]): Promise<Pred[]> {
       const i = next++;
       const it = items[i];
       const claim: Claim = { id: i, text: it.claim, type: it.type };
+      const briefId = (it as any).brief_id ?? String(it.id).split('#')[0];
+      const stories = perStory[briefId];
       let pred: string;
       let reason: string;
       if (it.type === 'analytical') {
-        const j = await judgeAnalytical(claim, it.source, JUDGE_MODEL);
-        pred = j.verdict;
-        reason = j.reason;
+        const j = stories?.length
+          ? await judgeAnalyticalMulti(claim, stories)
+          : await judgeAnalytical(claim, it.source, JUDGE_MODEL);
+        pred = j.verdict; reason = j.reason;
       } else {
-        const j = await judgeFactual(claim, it.source, JUDGE_MODEL);
-        pred = j.verdict;
-        reason = j.reason;
+        const j = stories?.length
+          ? await judgeFactualMulti(claim, stories)
+          : await judgeFactual(claim, it.source, JUDGE_MODEL);
+        pred = j.verdict; reason = j.reason;
       }
       out[i] = { id: it.id, gold: it.gold, pred, reason, strata: it.strata };
       done++;
@@ -256,9 +305,17 @@ async function main() {
     process.exit(1);
   }
 
+  // per-story 源（保真运行时多源短路判）；PERSTORY_SOURCES 给路径即启用
+  const perStoryPath = process.env.PERSTORY_SOURCES || '';
+  const perStory = perStoryPath ? loadPerStory(perStoryPath) : {};
+  if (perStoryPath) {
+    const n = Object.keys(perStory).length;
+    console.log(`[judge-meta-eval] per-story 模式：${n} briefs 用多源短路判（保真运行时）；缺源的 brief 回退单源`);
+  }
+
   console.log('[judge-meta-eval] 跑 judge...');
-  const factualPreds = await runJudge(factualGold);
-  const analyticalPreds = analyticalGold.length ? await runJudge(analyticalGold) : [];
+  const factualPreds = await runJudge(factualGold, perStory);
+  const analyticalPreds = analyticalGold.length ? await runJudge(analyticalGold, perStory) : [];
 
   const factualRes = evalChannel(factualPreds, FACTUAL_CLASSES, 'factual');
   const analyticalRes = analyticalPreds.length

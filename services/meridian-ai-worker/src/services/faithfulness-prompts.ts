@@ -131,6 +131,42 @@ export function suspectSpecifics(claim: string, source: string): string[] {
   return out;
 }
 
+// 检索（retrieve-then-verify）：按 claim 与各源的词/实体重叠给源排序，只取 top-k 喂 judge。
+// 消除"一条 claim 对全部故事源硬判"造成的跨故事假矛盾——哥伦比亚 90 天 claim 撞伊朗 60 天源、
+// FACTUAL_PROMPT 按"数字不同=contradicted"判矛盾、门 contradicted≥1 即拦误杀正确简报
+// （根因见 memory: faithfulness-enforce-blocked-rootcause）。纯本地词重叠，不加 LLM 调用/依赖。
+// 专名（实体）权重更高，是最强区分信号。返回 top-k 源的下标（按相关性降序）。
+// sources<=k 时原样返回（不改行为）；全 0 分（claim 与任何源无重叠=孤儿）回退前 k，判定必为
+// unsupported，无害。是 FactScore/SAFE/RAGAS 标准管线的"按 claim 检索证据"步，我们此前缺。
+export function rankSourcesByRelevance(claim: string, sourceTexts: string[], k = 3): number[] {
+  const idx = sourceTexts.map((_, i) => i);
+  if (sourceTexts.length <= 1) return idx;
+  const claimWords = contentWords(claim);
+  const entities = new Set(
+    (claim.match(/[A-Z][A-Za-z'-]{2,}/g) || []).map((w) => w.toLowerCase()).filter((w) => !STOP.has(w))
+  );
+  const entHits = sourceTexts.map((src) => {
+    const sw = contentWords(src);
+    let h = 0;
+    for (const e of entities) if (sw.has(e)) h++;
+    return h;
+  });
+  const score = sourceTexts.map((src, i) => {
+    const sw = contentWords(src);
+    let overlap = 0;
+    for (const w of claimWords) if (sw.has(w)) overlap++;
+    return entHits[i] * 3 + overlap; // 实体命中权重更高
+  });
+  // 实体门：只要有源命中 claim 的专名，就只留命中实体的源（踢掉仅靠通用词重叠的不相关源，
+  // 如哥伦比亚 claim 撞伊朗源——后者 entHits=0）。无任何实体命中（无专名 claim）才回退按
+  // overlap 取 top-k。始终丢 0 分源；全 0 分（孤儿 claim）回退全集，判定必 unsupported 无害。
+  const anyEnt = entHits.some((h) => h > 0);
+  let cand = idx.filter((i) => score[i] > 0);
+  if (anyEnt) cand = cand.filter((i) => entHits[i] > 0);
+  if (cand.length === 0) cand = idx;
+  return cand.sort((a, b) => score[b] - score[a]).slice(0, k);
+}
+
 // ② 事实通道裁决（强制取证 + 逐特征比对 + Lever A 注意力提示）
 export const FACTUAL_PROMPT = (claim: string, source: string, suspects: string[] = []) => `
 You are a strict faithfulness judge. Decide whether a CLAIM is grounded in the

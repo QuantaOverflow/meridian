@@ -6,9 +6,15 @@
  * unsupported/contradicted → 汇总套「门 F」判据 → 出 block / pass。
  *
  * 判据（门 F，标定见 memory: faithfulness-runtime-gate）：
- *   BLOCK 当  (A) contradicted >= 1                              ← 事实矛盾，单条即灾难
+ *   BLOCK 当  (A) contradicted >= 2 且 contradicted_rate >= 0.05    ← 占比+绝对量双阈，单条不否决整篇
  *         或  (B) unsupported_rate > 0.15 且 genuine_unsupported >= 4  ← 又密又多=崩坏件
  *   warning-only（记录不拦）：analytical contradicts_facts（虚构前提，太吵硬拦会天天空窗）
+ *
+ * 【2026-06-25 改】(A) 从「contradicted >= 1 单条即拦」改为占比+count>=2 双阈（FActScore/RAGAS
+ * 占比聚合 + RefChecker 三标签分别算 rate 的业界共识）。动因：12 条 held-out 实测误拦 2/12，两条
+ * 都是单条 claim（数字子量消歧 / 转述归属）否决整篇 20K 字简报，且 RUNS=5 确定型。一票否决 = 放大器。
+ * 代价：单条真矛盾（如 FIFA 6/3 vs 源 6/11）暂会漏判——由后续 prompt 修（治 A/B 误判源头）恢复
+ * count=1 灵敏度。阈值 0.05/2 为初值，待双盲 run 级金标扫 P-R 校准（enforce 取 precision>=0.95）。
  *
  * 【红线】analytical verdict 永不可用于 gate/revision。2026-06-16 meta-eval 实测分析通道
  * κ=0.27（contradicts_facts 召回仅 0.30，judge 放过 70% 虚构前提）——这把尺不可信。事实
@@ -88,6 +94,12 @@ export interface FaithfulnessVerdict {
 // 门 F 阈值（标定结论，改动前请回看 memory: faithfulness-runtime-gate）
 export const GATE_UNSUPPORTED_RATE = 0.15;
 export const GATE_UNSUPPORTED_MIN_COUNT = 4;
+// 矛盾通道：占比+绝对量双阈（2026-06-25 反「单条一票否决」，见文件头注）
+export const GATE_CONTRADICTED_RATE = 0.05;
+export const GATE_CONTRADICTED_MIN_COUNT = 2;
+// contradicted 召回：整条 claim 判定跑 K 个 pass 取并集，治裁判非确定性的「首判假阴漏抓真矛盾」
+// （2026-06-26：gold Putin 多错 brief 本有 3 矛盾、单跑只抓 1<count2→漏判）。命中即早停，省成本。
+export const FACTUAL_RECALL_PASSES = 2;
 
 // ============================================================================
 // LLM 调用（in-process，复用 AIGatewayService，避免 HTTP 回跳）
@@ -278,6 +290,29 @@ async function judgeFactualMultiSource(
   return lastUnsupported;
 }
 
+// contradicted 召回包装：跑 FACTUAL_RECALL_PASSES 个独立 pass，跨 pass 取并集——
+// 任一 pass 坐实矛盾即 contradicted（提召回，治裁判首判假阴漏抓真矛盾）。每 pass 内部仍走
+// CONTRA_VOTES 多数坐实（精度不塌）；命中 contradicted 即早停（省成本，union 里矛盾优先）。
+// union 优先级：contradicted > supported > unsupported。
+async function judgeFactualWithRecall(
+  ctx: JudgeCallContext,
+  claim: FaithClaim,
+  sources: StorySource[],
+  model: string,
+): Promise<FactualJudgement> {
+  const passes: FactualJudgement[] = [];
+  for (let p = 0; p < FACTUAL_RECALL_PASSES; p++) {
+    const r = await judgeFactualMultiSource(ctx, claim, sources, model);
+    passes.push(r);
+    if (r.verdict === 'contradicted') break; // 已坐实矛盾，union 必为 contradicted，早停
+  }
+  return (
+    passes.find((x) => x.verdict === 'contradicted') ??
+    passes.find((x) => x.verdict === 'supported') ??
+    passes[passes.length - 1]
+  );
+}
+
 // 对单条 analytical claim 逐源试判：任一源 consistent 立即短路（找到支撑即过）；
 // 全部源都 contradicts_facts 才算真告警。
 // 注：analytical prompt 把"source 中无此实体"也判为 contradicts_facts，所以不能在
@@ -315,7 +350,7 @@ async function judgeAll(
       if (claim.type === 'analytical') {
         analytical.push(await judgeAnalyticalMultiSource(ctx, claim, sources, model));
       } else {
-        factual.push(await judgeFactualMultiSource(ctx, claim, sources, model));
+        factual.push(await judgeFactualWithRecall(ctx, claim, sources, model));
       }
     }
   }
@@ -335,11 +370,14 @@ function gateDecision(
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;
   const factualClaims = factual.length;
   const rate = factualClaims ? genuineUnsupported / factualClaims : 0;
+  const contradictedRate = factualClaims ? contradicted / factualClaims : 0;
 
   const block_reasons: string[] = [];
-  // (A) 事实矛盾，单条即灾难
-  if (contradicted >= 1) {
-    block_reasons.push(`factual_contradiction:count=${contradicted}`);
+  // (A) 事实矛盾：占比+绝对量双阈，单条不否决整篇（防一票否决放大器，见文件头注）
+  if (contradicted >= GATE_CONTRADICTED_MIN_COUNT && contradictedRate >= GATE_CONTRADICTED_RATE) {
+    block_reasons.push(
+      `factual_contradiction:count=${contradicted}(>=${GATE_CONTRADICTED_MIN_COUNT}),rate=${contradictedRate.toFixed(3)}(>=${GATE_CONTRADICTED_RATE})`
+    );
   }
   // (B) 又密又多的无源脑补（率且量合取，防小样本噪声）
   if (rate > GATE_UNSUPPORTED_RATE && genuineUnsupported >= GATE_UNSUPPORTED_MIN_COUNT) {

@@ -7,10 +7,11 @@
 import { z } from 'zod';
 import { AIGatewayService } from './ai-gateway';
 import { loggedChat, TraceContext, LLMCallPhase } from './llm-call-logger';
-import { 
-  getBriefGenerationSystemPrompt, 
-  getBriefGenerationPrompt, 
-  getBriefTitlePrompt 
+import {
+  getBriefGenerationSystemPrompt,
+  getBriefGenerationPrompt,
+  getBriefTitlePrompt,
+  getBriefVerificationPrompt
 } from '../prompts/briefGeneration';
 import { getTldrGenerationPrompt } from '../prompts/tldrGeneration';
 import { CloudflareEnv, ChatResponse } from '../types';
@@ -229,11 +230,14 @@ export class BriefGenerationService {
    * 生成最终简报 - 生产环境版本，直接抛出错误
    */
   async generateBrief(
-    reports: IntelligenceReports, 
-    context?: PreviousBriefContext
+    reports: IntelligenceReports,
+    context?: PreviousBriefContext,
+    options?: { selfCorrect?: boolean }
   ): Promise<{ success: boolean; data?: FinalBrief; error?: string }> {
+    // RARR 式接地校验-改正默认开启（选项2）；eval baseline 臂可传 selfCorrect:false 关掉做对照。
+    const selfCorrect = options?.selfCorrect !== false;
     try {
-      console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告`);
+      console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告（接地自纠=${selfCorrect}）`);
 
       // 增强输入验证
       if (!reports.reports.length) {
@@ -280,6 +284,12 @@ export class BriefGenerationService {
         let content = briefResponse;
         if (content.includes('<final_brief>')) {
           content = content.split('<final_brief>')[1]?.split('</final_brief>')[0]?.trim() || content;
+        }
+
+        // RARR 接地校验-改正：拿 storiesMarkdown(源 oracle)核对草稿、贴源修正。
+        // 在抽取后、标题生成前做，标题基于修正后的正文。
+        if (selfCorrect) {
+          content = await this.verifyAndCorrect(content, storiesMarkdown);
         }
 
         // 生成标题
@@ -442,6 +452,62 @@ export class BriefGenerationService {
     }
   }
 
+  /**
+   * RARR 式接地校验-改正：拿 storiesMarkdown（源报告 = gold-article oracle）逐条核对草稿，
+   * 让模型只回 edit-list（verbatim span → 接地修正，空串=删除），由本地精确子串 apply。
+   * 沿用 faithfulness-check.ts reviseBrief 的防漂移做法：只动命中的 flagged 片段，brief 其余逐字不变，
+   * 不让 LLM 重吐整篇（避免好内容被漂改）。没精确命中的 edit 宁可跳过（防误伤），记入 skipped。
+   * 用 qwen-long：校验要喂全部源，qwen-max 30720 token 装不下多故事源（同 per-story 拆源的初衷）。
+   */
+  private async verifyAndCorrect(draft: string, storiesMarkdown: string): Promise<string> {
+    try {
+      const raw = await this.callAI(getBriefVerificationPrompt(draft, storiesMarkdown), undefined, {
+        model: 'qwen-long',
+        temperature: 0,
+        maxTokens: 4000,
+        phase: 'brief_generation',
+        callIndex: 2,
+      });
+
+      const parsed = this.parseJSONFromResponse(raw);
+      const edits: Array<{ brief_span?: string; replacement?: string; reason?: string }> =
+        Array.isArray(parsed?.edits) ? parsed.edits : [];
+
+      let revised = draft;
+      let applied = 0;
+      let skipped = 0;
+      let deleted = false;
+      for (const e of edits) {
+        if (!e || typeof e.brief_span !== 'string' || e.brief_span.length === 0) continue;
+        const replacement = typeof e.replacement === 'string' ? e.replacement : '';
+        // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤）。
+        if (revised.includes(e.brief_span)) {
+          revised = revised.replace(e.brief_span, replacement);
+          applied++;
+          if (replacement === '') deleted = true;
+        } else {
+          skipped++;
+        }
+      }
+      if (deleted) revised = this.tidyAfterDelete(revised);
+
+      console.log(`[Brief Generation] 接地校验-改正：edits ${edits.length}，applied ${applied}，skipped ${skipped}`);
+      return revised;
+    } catch (error) {
+      // 校验失败不应拖垮整条生成：退回未修订草稿（门仍作末端兜底）。
+      console.error('[Brief Generation] 接地校验-改正失败，退回草稿:', error);
+      return draft;
+    }
+  }
+
+  // 删除片段后清理遗留的双空格/悬空标点；只做最轻量收尾，不动其它字符。
+  private tidyAfterDelete(s: string): string {
+    return s
+      .replace(/ {2,}/g, ' ')
+      .replace(/\s+([.,;:!?])/g, '$1')
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
   private parseJSONFromResponse(response: string): any {
     try {
       // 尝试提取 JSON 代码块
@@ -460,7 +526,19 @@ export class BriefGenerationService {
     return reports.map((report, index) => {
       let markdown = index > 0 ? '\n---\n\n' : '';
       markdown += `# ${report.executiveSummary}\n\n`;
-      
+
+      // 时间线（带时间戳，事件顺序的唯一权威来源）——必须喂给生成器，否则它只能从散文里猜
+      // 事件先后，常把"X 在 Y 之后/之前/数日内"写反、把早发生的事折进晚发生事件的因果链。
+      const timeline = (report as any).timeline;
+      if (Array.isArray(timeline) && timeline.length) {
+        markdown += '## 时间线（事件按此时间戳顺序发生，叙述时序/因果必须与此一致，不得重排）\n';
+        timeline.forEach((ev: any) => {
+          const ts = ev.timestamp || ev.date || '';
+          markdown += `* [${ts}] ${ev.description}\n`;
+        });
+        markdown += '\n';
+      }
+
       if (report.factualBasis?.length) {
         markdown += '## 关键发展\n';
         report.factualBasis.forEach((fact) => {
@@ -468,11 +546,16 @@ export class BriefGenerationService {
         });
         markdown += '\n';
       }
-      
-      if (report.entities?.length) {
-        markdown += '## 相关方\n';
-        report.entities.forEach((entity) => {
-          markdown += `* ${entity.name} (${entity.role})\n`;
+
+      // 相关方（含各自角色/言行描述）——归属"谁说了什么/谁做了什么"的权威来源；
+      // 缺它生成器会把引语或行动安到错误主体上。兼容 entities 与上游原始 keyEntities。
+      const ents = (report.entities && report.entities.length) ? report.entities : (report as any).keyEntities;
+      if (Array.isArray(ents) && ents.length) {
+        markdown += '## 相关方（角色与言行须严格对应，勿张冠李戴）\n';
+        ents.forEach((entity: any) => {
+          const role = entity.role || entity.type || '';
+          const desc = entity.description ? `：${entity.description}` : '';
+          markdown += `* ${entity.name}${role ? ` (${role})` : ''}${desc}\n`;
         });
         markdown += '\n';
       }

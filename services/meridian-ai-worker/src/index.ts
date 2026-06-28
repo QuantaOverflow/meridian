@@ -482,6 +482,15 @@ app.post('/meridian/generate-final-brief', async (c) => {
               role: e.role || 'Stakeholder',
               positions: Array.isArray(e.positions) ? e.positions : [],
             }))
+          // 上游 intel 报告用 keyEntities（name/type/description），不是 entities。
+          // 之前这里漏接 → 相关方在简报输入里整段丢失，归属类错误（引语/行动安错主体）由此而来。
+          : Array.isArray(analysis.keyEntities) && analysis.keyEntities.length
+          ? analysis.keyEntities.map((e: any) => ({
+              name: e.name || 'Unknown Entity',
+              type: e.type || 'Organization',
+              role: e.description || e.role || 'Stakeholder',
+              positions: [],
+            }))
           : (analysis.stakeholders || []).map((name: string) => ({
               name,
               type: 'Organization',
@@ -514,8 +523,11 @@ app.post('/meridian/generate-final-brief', async (c) => {
       coveredTopics: [],
     } : undefined
 
-    // 调用新的简报生成服务
-    const result = await briefService.generateBrief(intelligenceReports, previousContext)
+    // 调用新的简报生成服务。selfCorrect = RARR 接地校验-改正（默认开，选项2）；
+    // eval baseline 臂传 selfCorrect:false 关掉做对照。
+    const result = await briefService.generateBrief(intelligenceReports, previousContext, {
+      selfCorrect: body.selfCorrect,
+    })
 
     if (!result.success) {
       return c.json<APIResponse<null>>({ 

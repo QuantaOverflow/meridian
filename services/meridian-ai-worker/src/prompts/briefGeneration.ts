@@ -91,6 +91,18 @@ ${storiesMarkdown}
    - **No new specifics from memory (even hedged):** analysis may interpret the given facts but MUST NOT introduce specific named companies, organizations, people, places, numbers, party affiliations, or events that are absent from \`<curated_news_data>\` — not even with "likely", "almost certainly", or "presumably". If a specific isn't in the data (who manufactures a chip, which countries are in talks, someone's political party, a court's deadline), OMIT it; do NOT supply it from background knowledge. Naming an unsourced specific is fabrication, however confident the tone.
    - **If the data is thin, the brief is short.** A faithful one-section brief beats a fabricated eight-section one. Do not manufacture content to hit the "20-30 minute read" target. That target is an upper bound, not a quota.
    - **Self-check before writing each sentence:** "can I point to the line in curated_news_data that supports this specific claim?" If no, cut it or reframe it explicitly as your analytical inference.
+0b. **DO NOT GARBLE THE GIVEN FACTS (as important as rule 0)**: not inventing facts is not enough — you must also not MISARRANGE the facts that ARE in the data. The data is faithful; most errors come from re-ordering or re-assigning it. Three hard rules:
+   - **Event order & timing:** the \`## 时间线\` list is the ONLY authority on what happened before/after what. Follow its timestamps exactly. Never say X happened "before / after / within days of / hours before / in retaliation for / following" Y unless the timeline's order supports it. Do NOT fold an earlier-dated event into a later event's cause or consequence (e.g. if a downgrade is dated February and an explosion is dated May, the May explosion did NOT cause the February downgrade).
+   - **Attribution (who said / who did):** keep every quote, statement, and action attached to the exact actor/office named in \`## 相关方\` and the source text. Never move a quote from one person to another, never swap an actor (if the data says Iran declared the closure, do NOT write the US did; if the data says President Dan, do NOT write a different name), and never change someone's office/title.
+   - **Values, scope & status:** keep numbers, rankings, scope, and the status/modality of a claim exactly as given. A target "to expand to 70%" is NOT "has seized 70%"; "Latin America's second-largest" is NOT "the world's second-largest"; an agreement that "awaits formal adoption" is NOT "formally adopted"; a "PHEIC declared" is NOT a lower risk level. Also do not assert a section "has no developments" when you reported relevant facts for it elsewhere.
+   A reversed timeline, a misattributed quote/actor, a wrong office, or an altered value/status is a factual error even though every word came from the data — and it is exactly the kind of error to avoid.
+0c. **COPY, DON'T COMPUTE OR APPROXIMATE (the most common slip)**: when you state a specific concrete token, transcribe it from the data — do not regenerate it from memory or by mental math:
+   - **No arithmetic:** do NOT compute durations, ages, "X years since…", anniversaries, day-counts, or differences yourself. If the data says "last in 1986 (40 years ago)", write 40 — never recompute to "38". If a derived number is not stated in the data, omit it.
+   - **Units & rates verbatim:** "20 litres per day" is NOT "per week"; "per capita" is not "total". Copy the unit exactly.
+   - **Severity verbs verbatim:** if the source says "damaged", do not write "destroyed"; "struck" is not "leveled". Match the intensity the source used.
+   - **Exact dates, digit-for-digit:** copy the day and month from the \`## 时间线\` exactly. Do not shift a date by one day (17th≠18th) or swap a month (April≠May). Before writing "on [date]", find that exact date in the timeline. If an event has no date in the data, don't invent or relocate one onto another day.
+   - **Proper names verbatim:** write the exact name in the data. Never substitute a more famous name (a different athlete, official, or place) for the one given.
+   - **Internal consistency:** never state a chronology that is impossible (an event "four days after" something that the data dates later than it), and never say a section has "no developments" if you reported facts for it.
 1. **MANDATORY ANALYTICAL DEPTH**: Every story in "what matters now" MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient. (But the underlying facts must still be grounded per rule 0.)
 2. **NO EMPTY SECTIONS**: If a section (france focus, china monitor, economic currents, tech & science, etc.) has no meaningful content, **COMPLETELY OMIT THE SECTION AND ITS HEADER**. Do not write "(no significant developments)" or similar placeholder text.
 3. **QUALITY OVER QUANTITY**: Better to have 3-4 sections with substantial content than 8 sections with half empty.
@@ -165,6 +177,49 @@ make sure everything inside the <final_brief></final_brief> tags is the actual b
 *   **leverage your strengths:** process all the info, spot cross-domain patterns, explain clearly, and provide that grounded-yet-insightful analytical layer that makes this brief uniquely valuable. general historical/economic framing is fine to convey *why* something matters, but it must NOT smuggle in specific named entities, orgs, people, figures, or events that aren't in the data (see rule 0 — no new specifics from memory).
 
 give me the brief i couldn't get before ai - one that combines human-like insight with superhuman information processing. focus on deep analysis, strategic implications, and cross-story connections rather than just reporting what happened.
+`.trim()
+}
+
+// RARR 式接地校验-改正提示词。把已生成的草稿拿回到它唯一允许的源（curated_news_data）前逐条核对，
+// 让模型只回 edit-list（verbatim span → 接地修正/删除），由本地程序化 apply（见 brief-generation.ts）。
+// 学术依据：自我纠错在「有外部 oracle」时有效（源在手 = gold-article 最优情形，arXiv 2506.19607），
+// 与「凭记忆自纠无效」（Huang 2023）相反；故这里强制一切修正都贴源、不许引入新事实。
+export function getBriefVerificationPrompt(briefDraft: string, storiesMarkdown: string): string {
+  return `
+You are a meticulous fact-checker correcting a daily intelligence brief against its ONLY permitted source: the curated news data below. The brief was written from this data and must contain no concrete fact the data does not support. Your job is to catch and FIX factual errors — both specifics the data never contained, and (more often) facts that ARE in the data but got GARBLED: wrong attribution, reversed timeline, altered number/scope/status, wrong date/name, bad arithmetic.
+
+<curated_news_data>
+${storiesMarkdown}
+</curated_news_data>
+
+<brief_draft>
+${briefDraft}
+</brief_draft>
+
+# What to flag (CONCRETE FACTS ONLY)
+Check every concrete factual token: names, numbers, dates, quantities, scope/rankings, quotes, who-said / who-did attributions, event order, status/modality ("agreed" vs "proposed", "adopted" vs "awaits adoption"), severity verbs ("damaged" vs "destroyed"). Flag a span when:
+- it CONTRADICTS the data — e.g. data says Iran declared the closure but the brief says the US did; data says "to expand to 70%" but the brief says "has seized 70%"; data dates a downgrade in February but the brief implies a May explosion caused it; data says "60-day" but the brief says "90-day"; OR
+- it states a concrete specific (named org / person / place / number / date) that is ABSENT from the data.
+
+# What NOT to flag (leave untouched)
+- Analytical interpretation — motivations, implications, "this likely signals…". Opinion grounded on real facts is allowed; never touch it.
+- Wording, style, tone. Only factual accuracy matters here.
+- Facts that ARE supported by the data, even if phrased differently. If you are unsure whether a fact is supported, LEAVE IT — flag only clear errors. Precision over zeal: a wrongly-flagged correct sentence is worse than a missed one.
+
+# For each problem, produce one edit
+- "brief_span": an EXACT verbatim substring of the brief draft (copy letter-for-letter, including punctuation) — the SMALLEST span containing the error.
+- "replacement": the corrected text, grounded in the data (fix the number / name / attribution / order to match the data exactly). Use an empty string "" ONLY when the span is an unsupported specific that cannot be corrected from the data and must be removed.
+- "reason": one short phrase citing the data (e.g. 'data says 60-day, not 90-day').
+
+# Output
+Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose. If the brief has no factual errors, return {"edits": []}.
+\`\`\`json
+{
+  "edits": [
+    { "brief_span": "<verbatim substring of brief>", "replacement": "<grounded correction or empty>", "reason": "<short, cite data>" }
+  ]
+}
+\`\`\`
 `.trim()
 }
 

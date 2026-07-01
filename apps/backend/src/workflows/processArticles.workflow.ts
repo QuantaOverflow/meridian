@@ -4,7 +4,7 @@ import { Env } from '../index';
 import { generateSearchText } from '../lib/core/utils';
 import { getDb } from '../lib/database';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/services/article-fetchers';
-import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/api/parsers';
+import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';

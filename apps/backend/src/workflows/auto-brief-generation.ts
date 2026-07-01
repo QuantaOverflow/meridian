@@ -5,7 +5,7 @@ import { createWorkflowObservability, DataQualityAssessor } from '../lib/observa
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices } from '../lib/services/ai-services';
-import { looksLikeExtractionFailure } from '../lib/api/parsers';
+import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
 import type { Env } from '../index';
 
 // ============================================================================

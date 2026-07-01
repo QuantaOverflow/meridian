@@ -4,6 +4,7 @@ import { Env } from '../index';
 import { generateSearchText } from '../lib/core/utils';
 import { getDb } from '../lib/database';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/services/article-fetchers';
+import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/api/parsers';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
@@ -170,12 +171,12 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               if (TRICKY_DOMAINS.includes(domain)) {
                 scrapeLogger.info('Using browser to fetch article (tricky domain)');
                 const browserResult = await getArticleWithBrowser(env, article.url);
-                return { id: article.id, success: true, html: browserResult, used_browser: true };
+                return { id: article.id, url: article.url, success: true, html: browserResult, used_browser: true };
               } else {
                 scrapeLogger.info('Attempting fetch-first approach');
                 try {
                   const fetchResult = await getArticleWithFetch(article.url);
-                  return { id: article.id, success: true, html: fetchResult, used_browser: false };
+                  return { id: article.id, url: article.url, success: true, html: fetchResult, used_browser: false };
                 } catch (fetchError) {
                   // Fetch failed, try browser with jitter
                   scrapeLogger.info('Fetch failed, falling back to browser');
@@ -183,7 +184,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                   await step.sleep(`jitter`, jitterTime);
 
                   const browserResult = await getArticleWithBrowser(env, article.url);
-                  return { id: article.id, success: true, html: browserResult, used_browser: true };
+                  return { id: article.id, url: article.url, success: true, html: browserResult, used_browser: true };
                 }
               }
             }
@@ -220,6 +221,30 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
         const articleLogger = dbUpdateLogger.child({ article_id: result.id });
 
         if (result.success && 'html' in result) {
+          // 抓取成功,但 Readability 抽到的"正文"可能其实是反爬拦截页/视频播放器stub/登录墙/限流页
+          // (非真正文)。机械签名先拦掉(precision~1.0,见 parsers.ts looksLikeExtractionFailure),
+          // 按失败记录、不喂 LLM 分析、不进聚类——省下游成本,且现机械门只逮 6/31、靠签名补 27/31。
+          const urlJunk = result.url ? looksLikeNonArticleUrl(result.url) : null;
+          const textJunk = looksLikeExtractionFailure(result.html.text);
+          if (urlJunk || textJunk.fail) {
+            const junkReason = urlJunk ? `url_${urlJunk}` : textJunk.reason;
+            failCount++;
+            await step.do(`mark extraction-junk article ${result.id}`, dbStepConfig, async () => {
+              articleLogger.warn('Marking article as extraction junk (fetched but no real article body)', {
+                reason: junkReason,
+              });
+              return db
+                .update($articles)
+                .set({
+                  processedAt: new Date(),
+                  failReason: `EXTRACTION_JUNK:${junkReason}`,
+                  status: 'FETCH_FAILED',
+                })
+                .where(eq($articles.id, result.id));
+            });
+            continue;
+          }
+
           successCount++;
           articlesToProcess.push({
             id: result.id,

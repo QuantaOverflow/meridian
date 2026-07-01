@@ -5,6 +5,7 @@ import { createWorkflowObservability, DataQualityAssessor } from '../lib/observa
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices } from '../lib/services/ai-services';
+import { looksLikeExtractionFailure } from '../lib/api/parsers';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -401,7 +402,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             if (content.trim() === article.title.trim()) {
               return { isValid: false, reason: 'TITLE_ONLY' };
             }
-            
+
+            // 抓取/解析失败签名兜底:抽到的是拦截页/视频stub/登录墙/限流页(非真正文)。
+            // processArticles 已在抓取后前置拦截,这里兜历史数据 + 任何残留。
+            const extractionFail = looksLikeExtractionFailure(content);
+            if (extractionFail.fail) {
+              return { isValid: false, reason: `EXTRACTION_JUNK_${extractionFail.reason}` };
+            }
+
             // 检查内容质量标记 - 类型安全检查
             if (article.content_quality && (article.content_quality === 'LOW_QUALITY' || article.content_quality === 'JUNK')) {
               return { isValid: false, reason: 'MARKED_LOW_QUALITY' };

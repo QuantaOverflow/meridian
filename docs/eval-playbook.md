@@ -8,14 +8,19 @@
 
 ## 0. 我们现在的位置
 
-| 环节 | 状态 | 判定 |
-|------|------|------|
-| 选择层 NDCG@10 = 0.958 | 对人工金标的确定性指标 + 防回归闸 | ✅ 教科书级做对 |
-| 聚类 DBCV 调参 | 内禀指标 + pooled gold | ✅ 做对 |
-| 忠实度 LLM-judge（qwen-max） | 无人工金标 meta-eval，6 份报告上方向性拟合阈值 | ❌ **未验证（2025 头号反模式）** |
-| 系统 error analysis | 未做过正式 open/axial coding | ❌ 缺 |
+> 全景与逐 harness 真实状态详见记忆 `eval-program-landscape`（2026-06-28 逐个核实）。下表为快照。
 
-**核心结论：忠实度 judge 是一把没验过的尺。** revision（已实现）、阈值 0.15/4 复校、enforce 切换——全部建在它之上。验 judge 是这条线的地基，不是可选项。
+| 环节(管线步) | harness / 方法 | 真相源 | 状态 |
+|------|------|------|------|
+| 文章质量门 articleAnalysis | `article-quality`(P2) / LLM-judge κ | 人金标 | ❌ 只搭好没跑，judge 未验，gold 仅 example |
+| 聚类 | `clustering` / 机械 **B-cubed**(+DBCV 调参) | LLM产+**人工 calibration+冻结**参考划分 | ✅ 跑透(~30 报告，e5 embedding 多版消融) |
+| 聚类切分/重叠 | `story-validation` / **LLM-judge** | calibration.json(1 brief/19 标) | 🟡 harness+小 fixture，judge 未 κ 验 |
+| 选择/覆盖 | `selection` / 机械 **NDCG@10** | 人标 worklist(140，**silver**) | ✅ 跑了 NDCG 0.958；silver 标略乐观 |
+| 报告 grounding 环1 | `intel-grounding`(P2.5) / LLM-judge κ | 人金标 | ❌ harness only，judge 未验；2026-06-28 方向探 0/12(非验收，下界) |
+| 简报忠实度 环2 | `faithfulness` / LLM-judge κ | 人金标(75+9) | ✅ **κ~0.6 验过**，gate 影子，**RARR 30→4** |
+| 系统 error analysis | open/axial coding | —— | ❌ 缺 |
+
+**核心结论（2026-06-28 更新）：** 机械尺(聚类 B-cubed、选择 NDCG)已跑出数；**忠实度 judge(环2)已 κ~0.6 验过 + RARR 把简报含错率 30→4**（不再是"没验的尺"）。**真实缺口**＝① 其余三条 LLM-judge 尺(article-quality / intel-grounding / story-validation)**未 κ 验**，按铁律读数不可信；② selection silver 标→真金标、story-validation 扩样本；③ 抓取①→②**纯解析正确率**无专评；④ 系统 error analysis 仍缺。
 
 ---
 

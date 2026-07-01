@@ -1,0 +1,43 @@
+[
+  {
+    "_README": "占位模板，非真实样本。每项 = 人从某 story 情报报告里挑的、source 确实支撑的 claim + 一个显式最小扰动意图。生成器会校验 from 逐字在 claim、source_quote 逐字在该 story 的 source。kind ∈ number|negation|direction|entity|misquote。replace 这些占位后用 sources.jsonl(由 worklist 步骤产出旁车) 跑 pnpm perturb。",
+    "base_id": "admin-brief-XXXX#story0#3",
+    "brief_id": "admin-brief-XXXX#story0",
+    "claim": "The intelligence report states Russia launched 656 drones in the overnight barrage",
+    "kind": "number",
+    "from": "656 drones",
+    "to": "356 drones",
+    "source_quote": "656 drones and 73 missiles",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-XXXX#story0#7",
+    "brief_id": "admin-brief-XXXX#story0",
+    "claim": "Kuwait International Airport was struck, causing structural damage",
+    "kind": "negation",
+    "from": "was struck",
+    "to": "was spared any strike",
+    "source_quote": "a drone/missile strike on Kuwait International Airport",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-XXXX#story1#2",
+    "brief_id": "admin-brief-XXXX#story1",
+    "claim": "Oil prices rose sharply following the escalation",
+    "kind": "direction",
+    "from": "rose sharply",
+    "to": "fell sharply",
+    "source_quote": "Brent crude surging",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-XXXX#story1#5",
+    "brief_id": "admin-brief-XXXX#story1",
+    "claim": "Florida Attorney General James Uthmeier filed the lawsuit against OpenAI",
+    "kind": "entity",
+    "from": "James Uthmeier",
+    "to": "Ashley Moody",
+    "source_quote": "Attorney General James Uthmeier filed",
+    "split": "heldout"
+  }
+]

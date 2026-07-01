@@ -1,0 +1,7 @@
+# Intel-grounding 金标示例（格式同 faithfulness/gold/judge-gold.jsonl）。
+# source 解析：行内 source 优先；否则按 brief_id(=story_ref) 从同目录 sources.jsonl 旁车取。
+# gold: factual → supported|unsupported|contradicted；analytical → consistent|contradicts_facts
+# split: dev(调 prompt 用) | heldout(只在最终报 κ) | cert(无偏验收批)
+{"id":"admin-brief-XXXX#story0#3","brief_id":"admin-brief-XXXX#story0","type":"factual","claim":"The report states a ceasefire took effect on May 12","source":"<该 story 输入文章全文或片段>","gold":"unsupported","strata":{"claim_type":"date","field":"timeline"},"note":"源文章没提具体日期，报告自行补了 May 12","split":"dev"}
+{"id":"admin-brief-XXXX#story0#8","brief_id":"admin-brief-XXXX#story0","type":"analytical","claim":"this signals a broader strategic realignment in the region","source":"<同上>","gold":"consistent","strata":{"field":"summary"},"note":"对源里确有的事实的可辩护解读","split":"heldout"}
+{"id":"ctr-intel-01","brief_id":"admin-brief-XXXX#story0","type":"factual","claim":"The intelligence report states Russia launched 356 drones in the overnight barrage","gold":"contradicted","perturb":"number","source_quote":"656 drones and 73 missiles","note":"SYNTHETIC_PERTURBATION(number): \"656 drones\" -> \"356 drones\"","synthetic":true,"split":"dev"}

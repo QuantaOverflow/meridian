@@ -1,0 +1,8 @@
+# worklist 盲标表内联了文章正文（体积大），可由 build-worklist.ts 从候选 JSONL 重新生成 —— 不入库。
+worklist/*.blind.jsonl
+worklist/smoke.*
+# 候选文章 JSONL（用户从 DB+R2 导出，含正文，体积大）也不入库。
+candidates*.jsonl
+# 保留：worklist/*.pred.jsonl（scorer 分层预测，体积小）作金标溯源。
+# gold/ 紧凑金标入库；eval-reports/ 报告不入库。
+eval-reports/*.json

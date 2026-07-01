@@ -1,0 +1,9 @@
+# worklist 中间产物：blind 表内联了全量 source（每个 story 的输入文章 ~数十KB），可由
+# build-judge-worklist.ts 从 backend observability 重新生成 —— 不入库。
+worklist/*.blind.jsonl
+worklist/*.packet.json
+worklist/smoke.*
+node_modules/
+eval-reports/
+# 保留：worklist/*.labels.*.jsonl（双标注者产出）、worklist/*.judge.jsonl（judge 分层预测）、
+# worklist/perturb-base.json（扰动意图，体积小）作金标溯源。gold/ 紧凑版与 sources 旁车入库。

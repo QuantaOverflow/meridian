@@ -1,0 +1,73 @@
+{"id":10108,"content_quality":"OK","completeness":"COMPLETE","note":"完整的技术观点/分析文章，有清晰论证和实质内容。"}
+{"id":30635,"content_quality":"OK","completeness":"COMPLETE","note":"完整新闻报道，包含背景、部署细节和多方引述。"}
+{"id":38713,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到 YouTube 播放器/广告追踪提示和元数据，没有正文。"}
+{"id":43311,"content_quality":"OK","completeness":"COMPLETE","note":"完整政策/能源报道，事实、背景和受访方信息充分。"}
+{"id":43526,"content_quality":"OK","completeness":"COMPLETE","note":"完整软件发布公告和 changelog，信息量充分。"}
+{"id":43828,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 JS/adblock 提示，抓取失败。"}
+{"id":44858,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频加载阻断提示和少量元数据。"}
+{"id":60398,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到 YouTube/广告追踪提示和视频元数据。"}
+{"id":61320,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有播放器阻断提示和时长，没有可用正文。"}
+{"id":68428,"content_quality":"OK","completeness":"COMPLETE","note":"完整国际政治报道，核心事实、背景和引述齐全。"}
+{"id":68738,"content_quality":"OK","completeness":"COMPLETE","note":"完整外交政治报道，事件脉络和双方表态充分。"}
+{"id":80686,"content_quality":"OK","completeness":"COMPLETE","note":"完整贸易/钢铁报道，包含政策背景、数据和多方观点。"}
+{"id":82758,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 JS/adblock 提示，非文章正文。"}
+{"id":85515,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"登录页和站点页脚文本，没有文章内容。"}
+{"id":86447,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"IP blocked 错误页和 newsletter 模板，抓取失败。"}
+{"id":91355,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"可读个人 rant，但重主观抱怨、事实密度低。"}
+{"id":94454,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短视频摘要，核心事实有但正文极薄。"}
+{"id":95689,"content_quality":"OK","completeness":"COMPLETE","note":"完整地方宗教/司法报道，事实链和背景充分。"}
+{"id":100240,"content_quality":"OK","completeness":"COMPLETE","note":"完整技术长文/案例分析，结构清楚且信息量高。"}
+{"id":112482,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"Apple 页脚和播放要求文本，没有新闻正文。"}
+{"id":113165,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短摘要，只有一句核心事实和发布日期。"}
+{"id":124028,"content_quality":"OK","completeness":"COMPLETE","note":"国家安全背景段落完整，事实、数据和引述足够。"}
+{"id":129395,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USEFUL","note":"混入大量导航/live 模板，只保留少量可用突发事实。"}
+{"id":137678,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短摘要，事件可识别但信息很薄。"}
+{"id":141439,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短摘要，提供核心发现但缺少展开报道。"}
+{"id":145733,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USELESS","note":"只有截图评论式短句，几乎无法用于摘要或聚类。"}
+{"id":146230,"content_quality":"OK","completeness":"COMPLETE","note":"完整犯罪/外交报道，含行动细节、背景和争议。"}
+{"id":148132,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到 Politico 导航和搜索入口。"}
+{"id":151321,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 体育短摘要，事实可用但非常薄。"}
+{"id":160512,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USEFUL","note":"互动图表导语和玩法说明，核心主题可识别但正文不完整。"}
+{"id":160791,"content_quality":"OK","completeness":"COMPLETE","note":"完整新闻简报/通讯，虽为合集但事实内容丰富。"}
+{"id":161169,"content_quality":"OK","completeness":"COMPLETE","note":"完整司法报道，案件事实、判决和背景充分。"}
+{"id":161404,"content_quality":"OK","completeness":"COMPLETE","note":"完整 live blog 开头和更新，重复但有实质政治新闻内容。"}
+{"id":165411,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USELESS","note":"只有单句事实，缺少足够上下文和正文展开。"}
+{"id":169064,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频播放器阻断提示和元数据。"}
+{"id":175978,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 France24 视频加载提示和时长/栏目元数据。"}
+{"id":176512,"content_quality":"OK","completeness":"COMPLETE","note":"完整美国政治报道，背景、人物和程序细节充分。"}
+{"id":178690,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频加载阻断提示，没有正文。"}
+{"id":179341,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"产品落地页/营销文案，不是可用新闻文章正文。"}
+{"id":182130,"content_quality":"OK","completeness":"COMPLETE","note":"完整国际政治报道，协议条款、背景和反应充分。"}
+{"id":184832,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 France24 视频阻断提示和元数据。"}
+{"id":189183,"content_quality":"OK","completeness":"COMPLETE","note":"完整体育比赛报道，赛果、过程和后续信息齐全。"}
+{"id":191685,"content_quality":"OK","completeness":"COMPLETE","note":"完整美国政治报道，任命过程和争议背景充分。"}
+{"id":199037,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频播放器/广告追踪提示和元数据。"}
+{"id":200311,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"节目/栏目口播式新闻合集，多个事实可用但每条很薄。"}
+{"id":202583,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"可读评论摘编，重转述和主观评价，事实密度一般。"}
+{"id":209845,"content_quality":"OK","completeness":"COMPLETE","note":"完整个人调查/回忆文章，事实链和解释充分。"}
+{"id":211957,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"第一人称社交帖/UGC，事件可读但主观且未经报道化处理。"}
+{"id":212223,"content_quality":"OK","completeness":"COMPLETE","note":"完整选举报道，结果、反应、背景和后续争议充分。"}
+{"id":213373,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短摘要，核心事件明确但没有完整报道展开。"}
+{"id":214303,"content_quality":"OK","completeness":"COMPLETE","note":"完整科技/安全报道，包含声明、背景和专家引述。"}
+{"id":214992,"content_quality":"OK","completeness":"COMPLETE","note":"完整解释型政治报道，问答结构和背景信息充分。"}
+{"id":215688,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频阻断提示、封面标题和元数据。"}
+{"id":215728,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"Steam 页脚法律链接文本，没有文章正文。"}
+{"id":222738,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有视频播放器阻断提示和封面/时长元数据。"}
+{"id":224960,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USELESS","note":"只有项目提案提示和链接说明，缺少正文内容。"}
+{"id":226721,"content_quality":"LOW_QUALITY","completeness":"PARTIAL_USEFUL","note":"混入导航且只有 NewsFeed 简短摘要，核心事实可识别但正文很薄。"}
+{"id":230712,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频阻断提示和时长，没有正文。"}
+{"id":230933,"content_quality":"OK","completeness":"COMPLETE","note":"完整基础设施/铁路报道，原因、影响和背景充分。"}
+{"id":231867,"content_quality":"OK","completeness":"COMPLETE","note":"完整司法/政策报道，裁决、背景和相关引述齐全。"}
+{"id":234039,"content_quality":"OK","completeness":"COMPLETE","note":"完整财政/战争拨款报道，金额、政治背景和反应充分。"}
+{"id":236211,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频加载阻断提示和少量元数据。"}
+{"id":236778,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"Page not found 错误页。"}
+{"id":237010,"content_quality":"OK","completeness":"COMPLETE","note":"完整政治评论/排名文章，虽偏观点但事实背景和段落完整。"}
+{"id":237656,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 JS/adblock 提示，抓取失败。"}
+{"id":238825,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有 JS/adblock 提示，非文章正文。"}
+{"id":244106,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到 France24 视频阻断提示和节目元数据。"}
+{"id":245590,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"节目介绍/嘉宾列表，主题可用但不是完整报道。"}
+{"id":248300,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只有视频阻断提示、封面标题和元数据。"}
+{"id":249159,"content_quality":"LOW_QUALITY","completeness":"COMPLETE","note":"NewsFeed 短摘要，事件明确但信息量很少。"}
+{"id":254255,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"abuse detection 访问拦截页，没有正文。"}
+{"id":257538,"content_quality":"JUNK","completeness":"PARTIAL_USELESS","note":"只抓到视频播放器阻断提示和元数据。"}
+{"id":258708,"content_quality":"OK","completeness":"COMPLETE","note":"完整体育报道，退役消息、背景和引述充分。"}

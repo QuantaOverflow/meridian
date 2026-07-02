@@ -70,6 +70,73 @@ function intelToProse(raw: string): string {
   }
 }
 
+// ── ⑤ 简报对齐（洞1 工具侧修复）──────────────────────────────────────
+// 旧法「取标题第一个 >4 字符且在正文任意处出现的词」被泛词(building/holds/death)带偏，
+// 常把已丢弃的 story 误配到别的段落，反而掩盖漏报。改为：把简报切块 → 按专有名词加权的
+// 词汇重叠给每块打分 → 取最高分块；无专有名词命中则判「未进简报」（这正是漏报信号）。
+// 纯离线确定性，无嵌入/API 依赖，可跑旧 run。
+const STOP = new Set(
+  ('the a an and or of to in on at as by is are was were be been has have had it its this that these those not no new first ever talks talk meeting meet report reports says said will would can could may might about across against between during than then them they their there here what which who whose why how when where over under after before amid into from with focus response day live crisis ' +
+    'january february march april june july august september october november december 2024 2025 2026 2027').split(
+    /\s+/
+  )
+);
+
+// 标题 → 锚词，保留大小写以识别专有名词（首字母大写且非停用词）
+function anchorTerms(title: string): { term: string; proper: boolean }[] {
+  const seen = new Set<string>();
+  const out: { term: string; proper: boolean }[] = [];
+  for (const raw of title.split(/[^A-Za-z0-9]+/).filter(Boolean)) {
+    const term = raw.toLowerCase();
+    if (term.length <= 3 || STOP.has(term) || seen.has(term)) continue;
+    seen.add(term);
+    out.push({ term, proper: /^[A-Z]/.test(raw) });
+  }
+  return out;
+}
+
+// 简报切块：<u>**标题**</u> 主 story、## / ### 小节头、noteworthy 的 - 项 各自成块
+function segmentBrief(brief: string): string[] {
+  const blocks: string[] = [];
+  let cur: string[] = [];
+  const flush = () => {
+    if (cur.join('').trim()) blocks.push(cur.join('\n'));
+    cur = [];
+  };
+  for (const line of brief.split('\n')) {
+    if (/<u>\s*\*\*/.test(line) || /^\s*#{2,3}\s/.test(line) || /^\s*-\s+\*\*/.test(line)) flush();
+    cur.push(line);
+  }
+  flush();
+  return blocks;
+}
+
+// 给一条 story 对齐到最匹配的简报块。score = Σ 命中词 (专有?3:1)·(1/df)·min(块内出现次数,3)。
+// 要求 ≥1 专有名词命中且 score≥阈值，否则返回 null（=未进简报/漏报）。
+function alignStory(
+  title: string,
+  blocksLow: string[]
+): { idx: number; score: number; hits: string[] } | null {
+  const terms = anchorTerms(title);
+  const df = (t: string) => blocksLow.reduce((n, b) => n + (b.includes(t) ? 1 : 0), 0) || 1;
+  let best = { idx: -1, score: 0, hits: [] as string[] };
+  for (let i = 0; i < blocksLow.length; i++) {
+    let score = 0;
+    let proper = false;
+    const hits: string[] = [];
+    for (const { term, proper: isProper } of terms) {
+      const count = blocksLow[i].split(term).length - 1;
+      if (!count) continue;
+      score += (isProper ? 3 : 1) * (1 / df(term)) * Math.min(count, 3);
+      if (isProper) proper = true;
+      hits.push(term);
+    }
+    if (proper && score > best.score) best = { idx: i, score, hits };
+  }
+  // 阈值 1.0：低于 1.0 = 匹配靠不足一个满权重专有词，判未进简报（宁缺毋误配）
+  return best.idx >= 0 && best.score >= 1.0 ? best : null;
+}
+
 async function main() {
   // ── brief_runs + 最终简报 ──────────────────────────────────────────
   const [run] = await sql`
@@ -91,6 +158,10 @@ async function main() {
     SELECT cluster_id, reason, article_count FROM cluster_rejections
     WHERE workflow_id = ${workflowId} ORDER BY cluster_id`;
 
+  // ⑤ 简报预切块（洞1 对齐用），全小写副本供匹配
+  const briefBlocks = run.brief_content ? segmentBrief(run.brief_content as string) : [];
+  const briefBlocksLow = briefBlocks.map((b) => b.toLowerCase());
+
   const lines: string[] = [];
   lines.push(`# 全链路 trace — ${workflowId}`);
   lines.push(
@@ -110,14 +181,14 @@ async function main() {
     lines.push(`STORY [cluster ${s.cluster_id}] ${s.title}`);
     lines.push(`importance=${s.importance} · 文章 ${s.article_count} · 选入情报=${s.selected_for_intel}`);
 
-    // ⑤ 简报段落（标题/实体粗匹配 —— 简报无显式 story 锚点，取首个命中实体的段）
-    const anchor = (s.title as string).split(/[\s—:]+/).find((w) => w.length > 4 && run.brief_content?.includes(w));
-    if (run.brief_content && anchor) {
-      const p = run.brief_content.indexOf(anchor);
-      lines.push(`\n⑤ 简报段落（锚"${anchor}"，需人工确认对齐）:`);
-      lines.push(`   …${run.brief_content.slice(Math.max(0, p - 80), p + 380).replace(/\n/g, ' ')}…`);
+    // ⑤ 简报段落（专有名词加权对齐，见 alignStory）
+    const hit = alignStory(s.title as string, briefBlocksLow);
+    if (hit) {
+      const block = briefBlocks[hit.idx].replace(/\n+/g, ' ').trim();
+      lines.push(`\n⑤ 简报段落（锚 [${hit.hits.join(', ')}] score=${hit.score.toFixed(2)}）:`);
+      lines.push(`   …${block.slice(0, 420)}${block.length > 420 ? '…' : ''}`);
     } else {
-      lines.push(`\n⑤ 简报段落: [未在简报正文匹配到 —— 可能未进简报/需人工对齐]`);
+      lines.push(`\n⑤ 简报段落: ⚠️ 未进简报（无专有名词命中任何简报块 → 疑似合成层漏报）`);
     }
 
     // ④ 情报报告

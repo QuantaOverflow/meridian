@@ -22,5 +22,10 @@ pnpm trace <workflow_id> --bodies          # 附带每篇文章正文(慢,走 wr
 - **依赖**：`DATABASE_URL`（Neon）+ wrangler 已登录 CF 账号（取 R2 里的情报报告/正文，`--remote` 打生产桶 `meridian-articles-prod`）。
 - 简报正文在 DB（`reports.content`），只有情报报告/文章正文走 R2。
 
+## 归因落盘（取证之后）
+`assemble-trace` 只取证不判断。判决（缺陷→层→性质）open-code 后落 `attributions.jsonl`，格式见 `attributions.schema.md`。
+以前判决只在脑子里 → 上一轮 40 条蒸发，只剩聚合。现在一行一缺陷、可 append 累加。
+**open-code 合成层缺陷前先读 `reports.content` 全文核对**——病历袋的 `⑤ 简报段落（锚"X"）` 是子串启发式，常错配（见 schema 文档"陷阱"节 + 洞1）。
+
 ## 背景
 2026-07 路 2 error-analysis（8 简报/40 缺陷）结论：缺陷 68% 在合成层（漏报/失真为主，编造仅 7.5%），聚类 12.5%、选择 12.5%（15 上限）、分析 7.5%（静默失败）。详见 memory `error-analysis-path2-attribution`（如已写）。

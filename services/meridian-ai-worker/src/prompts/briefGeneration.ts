@@ -223,6 +223,45 @@ Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose. If the
 `.trim()
 }
 
+// 覆盖对账（洞3 方案B）：合成步只吐散文、不留"哪些 story 进了/降级/丢了"的账，
+// 导致合成层漏报(占缺陷 68%)对追踪不可见。这里事后对账——喂"候选 story 清单 + 成品简报"，
+// 让模型逐条判 story 在简报里的去向。不改简报生成 prompt，故简报质量不受影响；
+// 丢弃理由是事后推断(非模型当时真意)，字段语义上标注为 inferred。
+export function getBriefCoverageReconciliationPrompt(storyList: string, finalBrief: string): string {
+  return `
+You are auditing which candidate stories a brief writer actually used. Below are (1) the CANDIDATE STORIES that were fed to the writer, each with a stable id [S1], [S2], …, and (2) the FINAL BRIEF the writer produced. Determine, for EVERY candidate story, its disposition in the final brief.
+
+<candidate_stories>
+${storyList}
+</candidate_stories>
+
+<final_brief>
+${finalBrief}
+</final_brief>
+
+# Disposition for each story (choose exactly one)
+- "headline": covered as its own titled analysis — a \`<u>**…**</u>\` story block, or a dedicated section/sub-section devoted to it.
+- "noteworthy": present only as a brief mention — a bullet under "noteworthy & under-reported", or folded as a secondary detail inside another story (not its own block).
+- "dropped": not present in the final brief at all.
+
+# Rules
+- Judge ONLY from the final brief text above. Match on the specific entities/events of each story (proper nouns, numbers, places) — not on generic topic overlap. If a story's distinctive specifics do not appear anywhere in the brief, it is "dropped", even if a loosely related topic is present.
+- Every candidate id must appear exactly once in your output.
+- "section": the brief heading where it appears (e.g. "what matters now", "france focus", "noteworthy & under-reported"), or null if dropped.
+- "reason": one short phrase. For "dropped"/"noteworthy", this is your INFERENCE of why (e.g. "below the ~8 headline cap", "thin single-source", "duplicate of another story", "lower importance") — infer from the brief's evident priorities; do not fabricate a writer statement.
+
+# Output
+Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
+\`\`\`json
+{
+  "coverage": [
+    { "story": "S1", "disposition": "headline", "section": "what matters now", "reason": "lead story" }
+  ]
+}
+\`\`\`
+`.trim()
+}
+
 export function getBriefTitlePrompt(briefText: string): string {
   return `
 <brief>

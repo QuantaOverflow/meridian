@@ -527,6 +527,7 @@ app.post('/meridian/generate-final-brief', async (c) => {
     // eval baseline 臂传 selfCorrect:false 关掉做对照。
     const result = await briefService.generateBrief(intelligenceReports, previousContext, {
       selfCorrect: body.selfCorrect,
+      reconcileCoverage: body.reconcileCoverage,
     })
 
     if (!result.success) {
@@ -556,6 +557,9 @@ app.post('/meridian/generate-final-brief', async (c) => {
         model_used: result.data!.metadata.model,
         total_articles: result.data!.statistics.totalArticlesProcessed,
         sources_used: result.data!.statistics.totalSourcesUsed,
+        // 覆盖对账清单（洞3 方案B）：每条候选 story 的去向 headline/noteworthy/dropped。
+        // backend 可存入 observability 使合成层漏报可追踪。
+        coverage: result.coverage ?? [],
       }
     })
 

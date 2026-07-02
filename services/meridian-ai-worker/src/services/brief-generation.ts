@@ -11,7 +11,8 @@ import {
   getBriefGenerationSystemPrompt,
   getBriefGenerationPrompt,
   getBriefTitlePrompt,
-  getBriefVerificationPrompt
+  getBriefVerificationPrompt,
+  getBriefCoverageReconciliationPrompt
 } from '../prompts/briefGeneration';
 import { getTldrGenerationPrompt } from '../prompts/tldrGeneration';
 import { CloudflareEnv, ChatResponse } from '../types';
@@ -131,6 +132,18 @@ const FinalBriefSchema = z.object({
   statistics: BriefStatisticsSchema,
 });
 
+// 覆盖对账记录（洞3 方案B）：一条候选 story 在成品简报里的去向。
+// disposition=headline(成篇)/noteworthy(降级)/dropped(丢弃)；section/reason 见对账 prompt。
+// reasonInferred 恒 true——丢弃/降级理由是事后推断，非合成模型当时真意（方案B的固有局限）。
+export type CoverageEntry = {
+  storyId: string;
+  storyLabel: string;
+  disposition: 'headline' | 'noteworthy' | 'dropped';
+  section: string | null;
+  reason: string;
+  reasonInferred: true;
+};
+
 // 类型定义
 export type IntelligenceReports = z.infer<typeof IntelligenceReportsSchema>;
 export type FinalBrief = z.infer<typeof FinalBriefSchema>;
@@ -232,10 +245,12 @@ export class BriefGenerationService {
   async generateBrief(
     reports: IntelligenceReports,
     context?: PreviousBriefContext,
-    options?: { selfCorrect?: boolean }
-  ): Promise<{ success: boolean; data?: FinalBrief; error?: string }> {
+    options?: { selfCorrect?: boolean; reconcileCoverage?: boolean }
+  ): Promise<{ success: boolean; data?: FinalBrief; error?: string; coverage?: CoverageEntry[] }> {
     // RARR 式接地校验-改正默认开启（选项2）；eval baseline 臂可传 selfCorrect:false 关掉做对照。
     const selfCorrect = options?.selfCorrect !== false;
+    // 覆盖对账默认开启（洞3 方案B，observability 应默认开）；传 reconcileCoverage:false 可关。
+    const reconcileCoverage = options?.reconcileCoverage !== false;
     try {
       console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告（接地自纠=${selfCorrect}）`);
 
@@ -303,7 +318,12 @@ export class BriefGenerationService {
         const titleData = this.parseJSONFromResponse(titleResponse);
         const title = titleData?.title || 'Daily Intelligence Brief';
 
-        return { content, title };
+        // 覆盖对账（洞3 方案B）：对最终正文做，拿到每条 story 的去向。best-effort。
+        const coverage = reconcileCoverage
+          ? await this.reconcileCoverage(content, reports.reports)
+          : [];
+
+        return { content, title, coverage };
       };
 
       const result = await BriefErrorHandler.retryWithBackoff(aiOperation);
@@ -330,7 +350,7 @@ export class BriefGenerationService {
       };
 
       console.log(`[Brief Generation] 简报生成完成，标题: "${result.title}"`);
-      return { success: true, data: finalBrief };
+      return { success: true, data: finalBrief, coverage: result.coverage };
 
     } catch (error) {
       console.error('[Brief Generation] 生成失败:', error);
@@ -497,6 +517,72 @@ export class BriefGenerationService {
       // 校验失败不应拖垮整条生成：退回未修订草稿（门仍作末端兜底）。
       console.error('[Brief Generation] 接地校验-改正失败，退回草稿:', error);
       return draft;
+    }
+  }
+
+  /**
+   * 覆盖对账（洞3 方案B）：喂"候选 story 枚举清单 + 成品简报"，让模型逐条判去向。
+   * 用枚举下标 [S1..Sn] 做稳定键（story 短标题取 executiveSummary 前缀），回来按 S{i} 映回 storyId。
+   * best-effort：任何失败返回 []，绝不拖垮简报生成（observability 不反噬主流程，同 verifyAndCorrect）。
+   */
+  private async reconcileCoverage(content: string, reports: IntelligenceReport[]): Promise<CoverageEntry[]> {
+    try {
+      // 候选清单：[S{i}] <短标题>。短标题取 executiveSummary 前 ~160 字（含关键实体，足以在简报里识别）。
+      const labels = reports.map((r) => (r.executiveSummary || '').replace(/\s+/g, ' ').trim().slice(0, 160));
+      const storyList = labels.map((t, i) => `[S${i + 1}] ${t}`).join('\n');
+
+      const raw = await this.callAI(getBriefCoverageReconciliationPrompt(storyList, content), undefined, {
+        model: 'qwen-long', // 需吃全篇简报，与 verify 同用长文本模型
+        temperature: 0,
+        maxTokens: 4000,
+        phase: 'brief_generation',
+        callIndex: 3,
+      });
+
+      const parsed = this.parseJSONFromResponse(raw);
+      const rows: Array<{ story?: string; disposition?: string; section?: string | null; reason?: string }> =
+        Array.isArray(parsed?.coverage) ? parsed.coverage : [];
+
+      const valid = new Set(['headline', 'noteworthy', 'dropped']);
+      const byIdx = new Map<number, CoverageEntry>();
+      for (const row of rows) {
+        const m = /S(\d+)/i.exec(row?.story || '');
+        if (!m) continue;
+        const idx = Number(m[1]) - 1;
+        const report = reports[idx];
+        if (!report) continue;
+        const disposition = valid.has(row.disposition as string)
+          ? (row.disposition as CoverageEntry['disposition'])
+          : 'dropped';
+        byIdx.set(idx, {
+          storyId: report.storyId,
+          storyLabel: labels[idx],
+          disposition,
+          section: typeof row.section === 'string' && row.section.trim() ? row.section.trim() : null,
+          reason: typeof row.reason === 'string' ? row.reason : '',
+          reasonInferred: true,
+        });
+      }
+      // 模型漏判的 story 补一条 dropped（清单必须全覆盖，否则对账留洞失去意义）
+      const coverage: CoverageEntry[] = reports.map((r, i) =>
+        byIdx.get(i) ?? {
+          storyId: r.storyId,
+          storyLabel: labels[i],
+          disposition: 'dropped' as const,
+          section: null,
+          reason: '对账未返回该 story（默认判 dropped）',
+          reasonInferred: true,
+        }
+      );
+
+      const n = (d: string) => coverage.filter((c) => c.disposition === d).length;
+      console.log(
+        `[Brief Generation] 覆盖对账：${coverage.length} story → headline ${n('headline')} / noteworthy ${n('noteworthy')} / dropped ${n('dropped')}`
+      );
+      return coverage;
+    } catch (error) {
+      console.error('[Brief Generation] 覆盖对账失败，返回空:', error);
+      return [];
     }
   }
 

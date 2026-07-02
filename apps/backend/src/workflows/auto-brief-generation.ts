@@ -1063,7 +1063,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      const intelligenceReports = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
+      const { reports: intelligenceReports, failures: intelFailures } = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
         console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
                  const aiServices = createAIServices(this.env, workflowId);
@@ -1072,10 +1072,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 从 ~18min 压到 ~6min;提到 6 预计 ~3min。撞 DashScope 限流由 AIGateway 配额退避兜底;
         // 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
         const INTEL_CONCURRENCY = 6;
-        const reports = (await this.batchProcessParallel(
+        const results = await this.batchProcessParallel(
           storiesForIntelligence,
           INTEL_CONCURRENCY,
-          async (story: any, idx: number): Promise<{ r2Key: string } | null> => {
+          async (story: any, idx: number): Promise<{ r2Key: string } | { failure: { idx: number; title: string; reason: string } }> => {
             try {
               // 为情报分析动态获取相关文章的内容
               const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
@@ -1092,13 +1092,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               if (response.status !== 200) {
                 // 非 200 别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断
                 const errBody = await response.text().catch(() => '<unreadable>');
-                console.error(`[AutoBrief] 情报分析 HTTP ${response.status} (idx=${idx}, "${story.title}"): ${errBody.slice(0, 300)}`);
-                return null;
+                const reason = `HTTP ${response.status}: ${errBody.slice(0, 300)}`;
+                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${reason}`);
+                return { failure: { idx, title: story.title, reason } };
               }
               const data = await response.json() as any;
               if (!data.success) {
-                console.error(`[AutoBrief] 情报分析返回 success:false (idx=${idx}, "${story.title}"): ${data.error}`);
-                return null;
+                const reason = `success:false: ${data.error}`;
+                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${reason}`);
+                return { failure: { idx, title: story.title, reason } };
               }
 
               // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
@@ -1125,26 +1127,38 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               return { r2Key };
             } catch (error) {
               // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
-              console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}):`, error);
-              return null;
+              const reason = error instanceof Error ? error.message : String(error);
+              console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}): ${reason}`);
+              return { failure: { idx, title: story.title, reason } };
             }
           }
-        )).filter((r): r is { r2Key: string } => r !== null);
+        );
+        // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随 step 返回上传，供观测性落库对账。
+        const reports = results.filter((r): r is { r2Key: string } => 'r2Key' in r);
+        const failures = results
+          .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
+          .map((r) => r.failure);
 
-        // 移除默认报告逻辑 - 现在在故事验证后就会终止工作流
-        // 如果执行到这里，说明有有效故事，不需要默认报告
-
-        console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告`);
+        console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告${failures.length ? `，${failures.length} 个故事失败` : ''}`);
         // 全部失败必须在本层显式失败：空报告下传只会以 brief_generation "HTTP 500" 假象冒出，难以诊断
         if (storiesForIntelligence.length > 0 && reports.length === 0) {
           throw new Error(`情报分析对全部 ${storiesForIntelligence.length} 个故事均失败，无可用报告（详见上方各故事错误日志）`);
         }
-        return reports;
+        return { reports, failures };
       });
 
-      await observability.logStep('intelligence_analysis', 'completed', {
-        reportsGenerated: intelligenceReports.length
-      });
+      // 失败对账：选中 N 个 story、实际产出 M 份报告；M<N 记 'degraded' + 落每条失败原因，
+      // 供 /observability/runs/:wf 直接查（防"选了 14 只做出 13、头条静默消失"这类无人对账）。
+      await observability.logStep(
+        'intelligence_analysis',
+        intelFailures.length > 0 ? 'degraded' : 'completed',
+        {
+          expected: storiesForIntelligence.length,
+          reportsGenerated: intelligenceReports.length,
+          failedCount: intelFailures.length,
+          failures: intelFailures,
+        }
+      );
 
       // =====================================================================
       // 步骤 5: 简报生成 (AI Worker)
@@ -1482,13 +1496,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       await observability.logStep('save_brief', 'completed', { reportId });
 
-      // 观测性：标记 brief_runs 为 COMPLETED 并填充全部统计
+      // 观测性：标记 brief_runs 完成状态并填充全部统计。
+      // 有可对账的局部失败（intel 步选中 N 只产出 M<N）→ DEGRADED 而非 COMPLETED，
+      // 使"头条静默消失"这类在 DB status 层就可见（不只在 R2 step metrics），便于监控/巡检。
       await step.do('persist:brief_run_complete', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
         await db
           .update($brief_runs)
           .set({
-            status: 'COMPLETED',
+            status: intelFailures.length > 0 ? 'DEGRADED' : 'COMPLETED',
             finished_at: new Date(),
             report_id: reportId,
             total_articles: briefResult.stats.total_articles,

@@ -6,7 +6,7 @@ export interface WorkflowMetrics {
   stepName: string;
   timestamp: string;
   duration?: number;
-  status: 'started' | 'completed' | 'failed';
+  status: 'started' | 'completed' | 'degraded' | 'failed';
   data?: any;
   error?: string;
 }
@@ -97,7 +97,7 @@ export class WorkflowObservability {
   }
 
   // 记录工作流步骤
-  async logStep(stepName: string, status: 'started' | 'completed' | 'failed', data?: any, error?: string) {
+  async logStep(stepName: string, status: 'started' | 'completed' | 'degraded' | 'failed', data?: any, error?: string) {
     const metric: WorkflowMetrics = {
       workflowId: this.workflowId,
       stepName,

@@ -104,7 +104,9 @@ export const $newsletter = pgTable('newsletter', {
 export const briefRunStatusEnum = pgEnum('brief_run_status', [
   'RUNNING',
   'COMPLETED',
+  'DEGRADED', // 完成但有可对账的局部失败（如选中 N story 只产出 M<N 份情报报告）——见 auto-brief intel 步失败对账
   'FAILED',
+  'BLOCKED_FAITHFULNESS', // 忠实度门 enforce 拦截（枚举先备好，enforce 上线翻开关即用；见 auto-brief ~1406）
   'TERMINATED_NO_STORIES',
 ]);
 

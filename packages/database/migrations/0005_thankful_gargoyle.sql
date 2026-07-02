@@ -1,0 +1,2 @@
+ALTER TYPE "public"."brief_run_status" ADD VALUE 'DEGRADED' BEFORE 'FAILED';--> statement-breakpoint
+ALTER TYPE "public"."brief_run_status" ADD VALUE 'BLOCKED_FAITHFULNESS' BEFORE 'TERMINATED_NO_STORIES';

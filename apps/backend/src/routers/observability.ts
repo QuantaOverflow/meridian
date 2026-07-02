@@ -482,6 +482,31 @@ app.get('/runs/:workflowId/clustering', async (c) => {
 });
 
 /**
+ * 取某次 run 的覆盖对账清单（简报步落的 R2 快照，洞3 方案B）。
+ * 记录每条候选 story 在成品简报里的去向 headline/noteworthy/dropped + 推断理由，
+ * error-analysis 用它把合成层漏报对上 selected_for_intel（选了却没进简报=合成漏报）。
+ */
+app.get('/runs/:workflowId/coverage', async (c) => {
+  try {
+    const workflowId = c.req.param('workflowId');
+    const obj = await c.env.ARTICLES_BUCKET.get(`observability/coverage/${workflowId}.json`);
+    if (!obj) {
+      return c.json({ success: false, error: 'coverage snapshot not found' }, 404);
+    }
+    return new Response(obj.body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('/observability/runs/:workflowId/coverage 失败:', error);
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      500
+    );
+  }
+});
+
+/**
  * 业务质量趋势：按天聚合最近 N 天的 brief_runs / brief_stories 指标
  */
 app.get('/trends', async (c) => {

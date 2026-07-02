@@ -1209,6 +1209,39 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
           console.log(`[AutoBrief] 成功生成简报: ${briefData.data.title}`);
 
+          // 观测性：落一份覆盖对账清单到 R2（洞3 方案B）。合成步会静默丢弃已分析的 story
+          // （占缺陷 68% 的合成层漏报），此清单记录每条候选 story 的去向 headline/noteworthy/
+          // dropped，使合成层漏报事后可追踪、可对账 selected_for_intel。best-effort，不拖垮生成。
+          const coverage = Array.isArray(briefData.metadata?.coverage) ? briefData.metadata.coverage : [];
+          if (coverage.length) {
+            try {
+              const tally = (d: string) => coverage.filter((c: any) => c?.disposition === d).length;
+              await this.env.ARTICLES_BUCKET.put(
+                `observability/coverage/${workflowId}.json`,
+                JSON.stringify(
+                  {
+                    workflowId,
+                    createdAt: new Date().toISOString(),
+                    summary: {
+                      total: coverage.length,
+                      headline: tally('headline'),
+                      noteworthy: tally('noteworthy'),
+                      dropped: tally('dropped'),
+                    },
+                    coverage,
+                  },
+                  null,
+                  2
+                )
+              );
+              console.log(
+                `[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')}, noteworthy ${tally('noteworthy')})`
+              );
+            } catch (persistErr) {
+              console.warn(`[AutoBrief] 覆盖对账落盘失败 (workflow=${workflowId}):`, persistErr);
+            }
+          }
+
           // 生成TLDR
           const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
             method: 'POST',

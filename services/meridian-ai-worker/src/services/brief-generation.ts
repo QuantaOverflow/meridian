@@ -249,8 +249,10 @@ export class BriefGenerationService {
   ): Promise<{ success: boolean; data?: FinalBrief; error?: string; coverage?: CoverageEntry[] }> {
     // RARR 式接地校验-改正默认开启（选项2）；eval baseline 臂可传 selfCorrect:false 关掉做对照。
     const selfCorrect = options?.selfCorrect !== false;
-    // 覆盖对账默认开启（洞3 方案B，observability 应默认开）；传 reconcileCoverage:false 可关。
-    const reconcileCoverage = options?.reconcileCoverage !== false;
+    // 覆盖对账默认【关闭】（洞3 方案B）：它给每篇简报加一次 qwen-long 调用+延迟，
+    // 但同样的合成漏报可用离线 assemble-trace 免费查到，不值得焊进每次生产。
+    // 需要时显式传 reconcileCoverage:true（如 eval/调查按需触发）。
+    const reconcileCoverage = options?.reconcileCoverage === true;
     try {
       console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告（接地自纠=${selfCorrect}）`);
 

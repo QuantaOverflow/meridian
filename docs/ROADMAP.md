@@ -6,9 +6,17 @@
 
 > **2026-06-23 更新**：把当前裁判（含 06-16/17 全部修复）部署上线（ai-worker `04d26436` + backend `f074c6e1`，仍影子），触发首条真实 brief（report 21）。**enforce 阻塞根因从"judge 笼统未验"具体化为三因叠加**：①跨故事串源（每条 claim 对全部源硬判，缺"按 claim 检索相关证据"步）②Lever A 跨语境数字误触 ③裁判非确定性（同输入偶发假矛盾）；被事实通道"第一个矛盾即短路 + `contradicted≥1` 即拦"放大成误杀整条正确简报。修法对标业界标准管线（分解→检索→投票验证→占比）。详见 memory `faithfulness-enforce-blocked-rootcause` / `llm-judge-faithfulness-industry-patterns`。
 
+> **2026-06-25 更新**：P0/P1 大幅推进，06-23 那批读数（κ 0.19、contradicted precision 0、误杀正确简报）**已被推翻为"坏尺假象"**。三件事改变结论：① 旧 precision-b2 金标双盲复标发现 **34% 标错**（`626abd4` 清洗）；② 金标扩到 75 条随机采样 + 多跑取均（RUNS）→ **κ 0.19→0.60（≈验收线），翻转率仅 1%**（裁判在真实 claim 上其实稳，`2960c3d`）；③ P1 三根因修补全部落地并部署（影子 `1c216315`）：检索路由 slice1 `0f176a3` / self-consistency 弱化一票否决 slice2 `4770f0d` / run 级定位的 3 个确定型误拦 bug 修复 `b4235b6`+`db6a083`，**run 级误拦率 33%→11%（已复测）**。**enforce 头号阻塞已从"修判定机制"变为"扩样本"**——run 级 n=9、contradicted n=5，所有"率"非决策级，需扩到几十条标注 brief 才能谈翻开关。enforce 仍影子。详见下方 P0/P1 现状。
+
 ---
 
 ## P0 · 验证忠实度 judge（meta-eval，地基）
+
+**现状（2026-06-25）：基本达成事实通道验收，已解锁 P1。** meta-eval 脚本（`scripts/eval/faithfulness/meta-eval.ts`）+ 人工金标已建并迭代到位：
+- 金标 75 条（contra5/unsup23/sup47），双盲 co-label（Claude 子 agent + codex，98% 一致），**随机采样真实分布**（非挑刺）；旧 precision-b2 金标曾 34% 标错，已清洗（`626abd4`）。
+- 读数（75 条 RUNS=3）：**κ=0.60（≈验收闸 0.6）**；supported P0.86/R0.92、unsupported P0.73/R0.70、**翻转率 1%**（裁判在真实 claim 上稳，非确定性真但小）。
+- **唯一软肋：contradicted 仅 n=5、recall 0.40**（漏极性/否定矛盾如 "wasn't symbolic"）。矛盾在真实简报里稀有，随机采样凑不够 → 需定向/合成补样后，contradicted 通道才算也验过（挪到 P1 剩余项）。
+- **未做：self-preference 仍在**——qwen-max 判 Qwen brief 同家族，κ≥0.6 已达但虚高风险未除（换异家族 judge / MiniCheck 第二尺，作 P1 期间次级关注）。
 
 **为什么最优先：** 忠实度 judge（qwen-max 判 claim supported/unsupported/contradicted）从未做人工金标 meta-eval。门阈值 0.15/4 是在 6 份**未验裁判**的输出上方向性拟合的。judge 没验 → 离线 eval、运行时门、revision、enforce **全部建在沙上**。这是 2025 头号 eval 反模式（"未验证的 judge = 加了延迟的 vibe"）。
 
@@ -32,17 +40,21 @@
 
 **业务价值：** 可信度是新闻产品命根。brief 会编细节（如 source "以色列空袭贝鲁特" → brief "贝鲁特**南郊**"）。读者抓到一次假话就不再信整个产品。
 
-**现状（2026-06-23 实测后）：** 检测层 + per-story 喂源 + revision v1 均已实现并部署（影子）。但首条真实 brief（report 21）即暴露门会**误杀正确简报**——根因三叠加（跨故事串源 + Lever A 跨语境数字误触 + 裁判非确定性），被"第一个矛盾即短路 + `contradicted≥1` 即拦"放大。离线 precision-b2 per-story 实测（κ 0.19、contradicted precision 0、unsupported precision 0.50）在生产复现。**所以 enforce 前置不只是"验 judge"，是先修门的判定机制。** 详见 memory `faithfulness-enforce-blocked-rootcause`。
+**现状（2026-06-25）：三根因修补全部落地并部署（影子，version `1c216315`），run 级误拦率 33%→11%（已复测）；头号限制已变为"样本量太小、读数非决策级"。** 06-23 report 21 暴露的"误杀正确简报"三根因，按业界 retrieve-then-verify 管线逐一修：
+- **slice1 检索路由**（`0f176a3`，`rankSourcesByRelevance` 实体门，单一真源 `faithfulness-prompts.ts`）：按 claim 与源词/实体重叠排序取 top-k，哥伦比亚 claim 结构性踢出伊朗源。补上 FactScore/SAFE/RAGAS 标准管线缺的"检索"第②步。
+- **slice2 弱化一票否决**（`4770f0d`）：rank-0 矛盾要 self-consistency 多数投票（`CONTRA_VOTES=3`）坐实才拦；低排名源的矛盾降级 unsupported（`db6a083`，bug3 修同主题跨故事误拦——伊朗导弹 claim 撞共享战争词汇的乌克兰源）。
+- **run 级金标定位的 3 个确定型误拦全治**：bug1 比较基准误读 + bug2 约数过判（`b4235b6`）、bug3 同主题跨故事路由（`db6a083`）。run 级金标 9 brief（3 should-block / 6 not），真错抓捕 3/3、无漏判。复测 **误拦率 33%→11%（1/9）**。
+- **数字诚实（关键）**：3 个 bug 是**确定性修好**的（具体案例 + 无回归，不需大 n）；但 run 级 n=9（误拦 1/9，95%CI≈0.3–48%）、claim 级 contradicted 仅 n=5——**所有"率"都不是决策级**，撑不起"能不能开闸"。残留 1/9 是**第 4 模式**（同源内"累计 vs 单次"两个数字，裁判挑错去比 → 假矛盾，近 bug2 数字消歧）。
 
-**要做（修法按性价比，对标业界标准管线——见 memory `llm-judge-faithfulness-industry-patterns`）：**
-1. **加"按 claim 检索相关源"再判**（最该做）：消除跨故事串源，是 FactScore/SAFE/RAGAS 以来的标准管线第②步，我们目前缺。
-2. **弱化"矛盾"一票否决**：借 RAGAS 二元支持占比，或要求矛盾来自相关源 + self-consistency 复判一致；至少先让事实通道别"第一个矛盾就短路"（照搬分析通道已有的防护）。
-3. **判矛盾的 claim 做 self-consistency 多数投票**：吸收裁判非确定性。
-4. **claim decontextualize / Claimify**：ADR 0001 在做，输入侧提质。
-5. **enforce 切换（最后）**：上述修完 + 在当前裁判上复测 precision 达标后，才翻 `FAITHFULNESS_GATE_ENFORCE=true`。需先给 `brief_run_status` 加 `BLOCKED_FAITHFULNESS` 枚举 + migration；时序为 revise→重新 check→仍脏才拦（`auto-brief-generation.ts` 已留 TODO）。
-6. MiniCheck/HHEM 作便宜第二尺（可选，非银弹）。
+**剩余要做（按顺序，瓶颈=扩样本而非再修判定）：**
+1. **扩样本到决策级**（头号阻塞，用户已点出）：run 级金标到 ~50–100 条标注 brief（误拦率 ±5–10% 才可信）；contradicted 补到 ~30–50 个矛盾样本（组织上稀有、随机凑不够 → 定向/合成，但合成会高估）；抓捕率需含真错的 brief（也稀有，或合成注入）。标注靠已成型的 co-label 双盲法（Claude 子 agent + codex 异家族）。
+2. **治 contradicted 极性/否定盲 + 第 4 模式**：裁判清洗后唯一真软肋是漏极性/否定矛盾（"wasn't symbolic" vs 源 symbolic）；外加第 4 模式源内数字消歧。修前先有 #1 的可信尺。
+3. **Lever A 单位感知**：bug2 残留（"25 years" 对齐源 "12th term" ≈24y，Lever A 同 number 类不分单位、prompt 压不全）——单独评估。
+4. **enforce 工程前置**：`brief_run_status` 加 `BLOCKED_FAITHFULNESS` 枚举 + migration；时序 revise→重新 check→仍脏才拦（`auto-brief-generation.ts` 已留 TODO）；补 revision 对 contradicted 的处理（report 21 里 `changed=false`，v1 疑只删 unsupported 不动 contradicted）。
+5. **enforce 切换（最后）**：#1 扩样本后误拦/抓捕率稳了 + 复校阈值，才翻 `FAITHFULNESS_GATE_ENFORCE=true`。
+6. claim decontextualize / Claimify（ADR 0001 在做，输入侧提质）；MiniCheck/HHEM 第二尺（可选，非银弹）。
 
-**成本：** 中——检测层/revision 已就绪，但门判定机制要按业界管线重构（检索 + 投票 + 占比），不再是"接个开关"。
+**成本：** 中——检测层/revision/路由/投票/3 bug 修均已就绪并部署（影子），剩余主要是**人工扩样本**（标注 brief + 补矛盾/含真错样本）把"率"做到决策级，再校阈值翻开关，不再是"重构判定机制"。
 
 ---
 
@@ -70,15 +82,21 @@
 
 ---
 
-## P3 · brief 别漏大事 / 别把一件事拆三条（聚类表示升级）
+## P3 · brief 别漏大事 / 别把一件事拆三条
 
-**业务价值：** 同一事件分散成多簇或漏掉重要事件 → 读者觉得"不全 / 啰嗦"，brief 显得不专业。覆盖度 + 不重复 = 专业感。
+**业务价值：** 漏掉重要事件或同一事件拆散 → 读者觉得"不全 / 啰嗦"，brief 显得不专业。覆盖度 + 不重复 = 专业感。
 
-**现状：** 聚类已用 DBCV 网格搜索调参，但表示仍是通用 multilingual-E5-Small。行业共识（TDT 新闻事件检测，见 session e2484c23）：问题主要在"表示"而非"聚类算法"，通用 embedding 在故事粒度分辨力不足。
+**根因修正（2026-07，error-analysis 路2）：** "漏大事"的头号来源**不是聚类**——8 简报 40 缺陷归因：**68% 在合成层**（④→⑤ 写简报时静默丢故事/失真），聚类只占 12.5%。原 P3 押"聚类表示升级"押错了主战场。
 
-**要做：** 给聚类补 entity + 时间特征，提升故事粒度分辨力。
+**现状（2026-07-07）：合成层漏报已修一轮并双尺复测。** 19 条确证漏报 open-code 归因（`scripts/eval/error-analysis/synthesis-omission-opencode.md`）：noteworthy 兜底通道失效（被元评论占用）37%+37%、被宏观叙事吸收 26%、"in random order" 谎言致重要性倒挂（37 死地震被丢、裁判签证进头条）；"7-8 条上限"假设证伪。修法=覆盖契约（每 story 必有去向：深析/折叠保特异性/noteworthy 一句）+ 如实告知重要性降序（导详略不导取舍）+ `[story k/N]` 标记 + noteworthy 重定义为落选安置区。**A/B 复测（8 期重放，`scripts/eval/coverage-judge/regen-ab.ts`）：dropped 13.4%→6.2%，gold 19 条救回 15（2 条升 headline）**。
+- **代价（已确证非判官噪声）**：contradicted 6→14（重跑稳定），主为日期挪移/归属反转型失真（June 3→4、2026→2023、"Xi 主办阅兵"写成"出席 Putin 阅兵"），多在正文分析块——机制=单篇织入更多故事、事实密度升高。RARR 没接住 → 下一杠杆是 P1 的裁判/RARR **日期与归属专项**，不是继续堆合成 prompt。
+- **残留漏报**（7/112）：吸收类（A3C 拉美）+ 体育/突发在 temp0.7 下偶发契约失守（1782322639966 一 run noteworthy 回退元评论、密苏里坠机仍丢）——prompt 契约压均值不保单次，**硬保证需两遍法**（生成后 reconcileCoverage 对账→dropped 补录），已有判官（κ0.965）可直接做，待评估延迟/成本。
 
-**成本：** 大——放在 P1/P2 之后。
+**要做（剩余）：**
+1. 两遍法覆盖保证（上述）——把 6.2% 压到 ~0 且不靠模型自觉。
+2. 聚类表示升级（entity + 时间特征）降级为次项：只占缺陷 12.5%，放两遍法之后。
+
+**成本：** 中——两遍法组件全就绪（判官已 κ 验、端点已有 reconcileCoverage flag）；聚类表示升级仍大。
 
 ---
 
@@ -88,7 +106,7 @@
 - 聚类 DBCV 网格搜索调参
 - 忠实度门检测层 + 影子模式 + 判据标定
 - 忠实度 revision step v1（路径 B，source-free 删除/剥离，commit 3f73878）
-- 忠实度 judge 验证：单一真源 + meta-eval(κ/per-class) + dev/heldout 切分 + 合成 contradicted；数字盲修复(Lever A)→矛盾召回 0→0.769（commit 33b9694…3219503）。**注：0.769 是合成/cert 题上的 recall；真实抽取 claim 上 precision 差（contradicted precision≈0、κ≈0.19）——别拿 0.769 当 enforce 可翻的依据，见 P1 现状**
+- 忠实度 judge 验证：单一真源 + meta-eval(κ/per-class) + dev/heldout 切分 + 合成 contradicted；数字盲修复(Lever A)→合成题矛盾召回 0→0.769。**真实 claim 上：清洗金标(75 条)+多跑取均后 κ=0.60、翻转率 1%（2026-06-25，commit `626abd4`…`db6a083`）——此前 κ≈0.19/precision 0 系坏尺(34% 标错)+单跑假象，已推翻。** 仍缺：contradicted 稀有类(n=5)定向补样、self-preference 换异家族 judge。
 - 情报报告 R2 卸载（突破 Workflow 1MB step 上限，maxStoriesToGenerate 3→15）
 
 ## 方法论

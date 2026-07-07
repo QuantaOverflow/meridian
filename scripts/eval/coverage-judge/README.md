@@ -71,6 +71,32 @@ gold=112（77 三尺一致 + 16 grounded + 2 人裁 + 17 headline↔noteworthy �
 - 错配仅 2/112，均为判官「偏松/over-covered」方向，与 qwen 同家族 self-preference 一致 → 漏报读数偏保守而非偏高。
 报告见 `eval-reports/coverage-meta-*.json`。**结论：判官逻辑可信，可据 dropped 说合成漏报——但先修下条的可靠性缺陷。**
 
+## regen-ab：合成漏报修复的离线 A/B 复测（2026-07-07）
+
+19 条确证漏报的 open-code 归因（`../error-analysis/synthesis-omission-opencode.md`）→
+改 `getBriefGenerationPrompt`（覆盖契约/如实告知重要性排序/noteworthy 兜底）后，用本尺+忠实度尺双向复测：
+
+```bash
+# 前置：本地 ai-worker（生产链路含 RARR）
+cd services/meridian-ai-worker && pnpm wrangler dev --port 8787
+
+# baseline 臂 = 旧 prompt（git stash 掉 prompt 改动，wrangler 热重载）；treatment 臂 = 新 prompt
+AI_WORKER_URL=http://localhost:8787 ARM=baseline  pnpm regen-ab
+AI_WORKER_URL=http://localhost:8787 ARM=treatment pnpm regen-ab
+# 可选：RUNS=3(判官多数决) GEN_RUNS=1(每期生成份数) ONLY=<wf>(单期调试)
+```
+
+要点：原 8 期生产简报生成于 bc3f8a9(RARR+输入修复)之前，**不能当对照**——两臂都在 HEAD
+重放生成，唯一变量=prompt。coverage 尺复用 fixture 的 storyList（story 集与序不变），
+faithfulness 尺打 `/meridian/faithfulness-check`（源=同一渲染的 per-story 报告，两臂恒定）。
+产出 `eval-reports/ab/<arm>/`。辅助开关：`SKIP_EXISTING=1` 断点续跑、`FAITH_ONLY=1` 只重跑门。
+
+**结果（2026-07-07）**：dropped 13.4%→6.2%，gold 19 条漏报救回 15；代价 contradicted 6→14
+（重跑稳定=真失真，日期挪移/归属反转型）。明细与结论见
+`../error-analysis/synthesis-omission-opencode.md`。
+两坑：AI Gateway 缓存相同生成请求（GEN_RUNS>1 测方差需绕）；最老 run 旧 schema 源渲染要
+legacy 兜底（已修，否则 faithfulness 全 claim 假 unsupported）。
+
 ## 坑
 - **判官可靠性缺陷（本轮实测，头号）**：`reconcileCoverage` 兜底「漏判/坏响应→dropped」会把**一次间歇 API 空响应**
   变成「整篇 story 全判 dropped」的假漏报。生产无重试、无 RUNS，单次坏响应即一整篇假合成漏报（本轮 8 简报里

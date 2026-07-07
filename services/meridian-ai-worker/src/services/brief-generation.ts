@@ -625,9 +625,12 @@ export class BriefGenerationService {
   }
 
   private convertReportsToMarkdown(reports: IntelligenceReport[]): string {
+    // [story k/N] 序号标记：k 即重要性排名（backend 已按 importance+覆盖度降序喂入），
+    // 供 prompt 的覆盖契约（每条 story 必须有去向）做"全部安置"自查；N 让模型能数总数。
+    const total = reports.length;
     return reports.map((report, index) => {
       let markdown = index > 0 ? '\n---\n\n' : '';
-      markdown += `# ${report.executiveSummary}\n\n`;
+      markdown += `# [story ${index + 1}/${total}] ${report.executiveSummary}\n\n`;
 
       // 时间线（带时间戳，事件顺序的唯一权威来源）——必须喂给生成器，否则它只能从散文里猜
       // 事件先后，常把"X 在 Y 之后/之前/数日内"写反、把早发生的事折进晚发生事件的因果链。

@@ -6,6 +6,7 @@
   "scripts": {
     "worklist": "tsx build-worklist.ts",
     "judge": "tsx run-judge.ts",
+    "regen-ab": "tsx regen-ab.ts",
     "colabel": "tsx build-colabel.ts",
     "meta": "tsx meta-eval.ts"
   },

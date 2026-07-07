@@ -42,6 +42,7 @@ You are an elite intelligence analyst and briefer with exceptional analytical ca
 **CRITICAL INSTRUCTIONS:**
 
 - **NO EMPTY SECTIONS**: If you don't have substantial content for a section, completely omit it. Do not write "(no significant developments)" or similar placeholders.
+- **NO SILENT DROPS**: Every story in the input data must be accounted for in the brief — as a full analysis, folded into a related story (keeping its distinctive specifics), or as a brief noteworthy entry. Omitting a SECTION for lack of substance is good editing; omitting a STORY entirely is a coverage failure.
 - **MANDATORY ANALYSIS**: Every story in "what matters now" must include your analytical take on motivations, implications, and strategic significance.
 - **CROSS-STORY SYNTHESIS**: Look for connections between different stories and broader patterns.
 - **GROUNDED SPECULATION**: Base all analysis on provided facts, but don't shy away from drawing logical conclusions about implications and motivations.
@@ -54,7 +55,7 @@ Your goal: Deliver a brief that combines superhuman information processing with 
 
 export function getBriefGenerationPrompt(storiesMarkdown: string, previousContext: string = ''): string {
   return `
-hey, i have a bunch of news reports (in random order) derived from detailed analyses of news clusters from the last 30h. could you give me my personalized daily intelligence brief? aim for something comprehensive yet engaging, roughly a 20-30 minute read.
+hey, i have a bunch of news reports derived from detailed analyses of news clusters from the last 30h. they are **ordered by assessed importance, most significant first** (each tagged \`[story k/N]\`). use that order to decide **depth** — how much analysis each story gets — NOT whether a story gets included at all: inclusion was already decided upstream, every story must land somewhere in the brief (see coverage rule 5 below). could you give me my personalized daily intelligence brief? aim for something comprehensive yet engaging, roughly a 20-30 minute read.
 
 my interests are: significant world news (geopolitics, politics, finance, economics), us news, france news (i'm french/live in france), china news (especially policy, economy, tech - seeking insights often missed in western media), and technology/science (ai/llms, biomed, space, real breakthroughs). also include a section for noteworthy items that don't fit neatly elsewhere.
 
@@ -107,6 +108,11 @@ ${storiesMarkdown}
 2. **NO EMPTY SECTIONS**: If a section (france focus, china monitor, economic currents, tech & science, etc.) has no meaningful content, **COMPLETELY OMIT THE SECTION AND ITS HEADER**. Do not write "(no significant developments)" or similar placeholder text.
 3. **QUALITY OVER QUANTITY**: Better to have 3-4 sections with substantial content than 8 sections with half empty.
 4. **SYNTHESIS REQUIREMENT**: Look for cross-story connections, patterns, and broader implications. Don't just report isolated events.
+5. **FULL COVERAGE CONTRACT (every story must land somewhere)**: the stories in \`<curated_news_data>\` were ALREADY selected as brief-worthy by upstream triage — your job is to decide each story's FORM, not its existence. every \`[story k/N]\` must appear in the brief in exactly one of three ways:
+   - its own analysis block (\`<u>**title**</u>\`) in a main section; or
+   - folded into another story's coverage — ONLY if you keep its distinctive specifics (place, casualty figures, key actors, what actually happened). a generic thematic mention ("israeli strikes continued") does NOT count as covering a specific event (an airstrike on jabalia killing four); or
+   - a one-to-two sentence entry in "noteworthy & under-reported", grounded in that story's own data.
+   silently dropping a story is the one failure mode this brief cannot have. if you judge a story low-value (a routine match, a local incident, an anniversary), that judgment is expressed by giving it a short noteworthy entry — not by omitting it. disasters and attacks with casualty figures are never "not strategic enough" to mention. before finishing, count the input stories and verify each one landed (do this check silently — the \`[story k/N]\` tags must not appear in the brief text).
 
 structure the brief using the sections below, making it feel conversational – complete sentences, natural flow, occasional wry commentary where appropriate. **ONLY INCLUDE SECTIONS THAT HAVE ACTUAL SUBSTANTIAL CONTENT**.
 
@@ -144,8 +150,7 @@ market movements signaling underlying trends, impactful policy decisions, trade/
 focus on ai/llms, space, biomed, real breakthroughs. separate signal from noise.
 
 ## noteworthy & under-reported
-**ONLY include if there are genuinely interesting items worth highlighting**
-important stories flying under the radar, emerging patterns with specific indicators, slow-burning developments, or other interesting items you think i should see (up to 5 items max).
+this section is the coverage catch-all: EVERY input story that did not get its own analysis block above (and was not folded into one with its specifics intact) MUST get a one-to-two sentence entry here, grounded in that story's own data — there is no cap on these entries. once all unplaced stories are accounted for, you may add up to 2 genuinely under-reported observations or emerging patterns if they carry real signal.
 
 ## positive developments
 **ONLY include if there are genuinely positive developments with measurable outcomes - do NOT force content here**

@@ -533,17 +533,31 @@ export class BriefGenerationService {
       const labels = reports.map((r) => (r.executiveSummary || '').replace(/\s+/g, ' ').trim().slice(0, 160));
       const storyList = labels.map((t, i) => `[S${i + 1}] ${t}`).join('\n');
 
-      const raw = await this.callAI(getBriefCoverageReconciliationPrompt(storyList, content), undefined, {
-        model: 'qwen-long', // 需吃全篇简报，与 verify 同用长文本模型
-        temperature: 0,
-        maxTokens: 4000,
-        phase: 'brief_generation',
-        callIndex: 3,
-      });
-
-      const parsed = this.parseJSONFromResponse(raw);
-      const rows: Array<{ story?: string; disposition?: string; section?: string | null; reason?: string }> =
-        Array.isArray(parsed?.coverage) ? parsed.coverage : [];
+      // 可靠性加固：区分「0 行解析」与「个别 story 漏判」。
+      //   - 0 行 = 空/坏响应（间歇 API 抖动）= **call 失败，不是判决**。若直接走下面的兜底，会把整篇
+      //     story 全判 dropped → 一次抖动 = 一整篇假合成漏报（无重试、无 RUNS 的单次调用尤其脆）。
+      //   - ≥1 行 = 有效判决，此时个别未列出的 story 才兜底 dropped（正常语义）。
+      // 故 0 行时重试；重试仍 0 行 → 返回 []（宁可这次不记覆盖账，也不记假漏报）。
+      let rows: Array<{ story?: string; disposition?: string; section?: string | null; reason?: string }> = [];
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const raw = await this.callAI(getBriefCoverageReconciliationPrompt(storyList, content), undefined, {
+          model: 'qwen-long', // 需吃全篇简报，与 verify 同用长文本模型
+          temperature: 0,
+          maxTokens: 4000,
+          phase: 'brief_generation',
+          callIndex: 3,
+        });
+        const parsed = this.parseJSONFromResponse(raw);
+        rows = Array.isArray(parsed?.coverage) ? parsed.coverage : [];
+        if (rows.length > 0) break;
+        console.warn(
+          `[Brief Generation] 覆盖对账返回 0 行(空/坏响应)，第 ${attempt}/3 次重试（避免把 call 失败误记为整篇漏报）`
+        );
+      }
+      if (rows.length === 0) {
+        console.error('[Brief Generation] 覆盖对账重试后仍 0 行，返回空（不记假漏报账）');
+        return [];
+      }
 
       const valid = new Set(['headline', 'noteworthy', 'dropped']);
       const byIdx = new Map<number, CoverageEntry>();

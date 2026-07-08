@@ -307,11 +307,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 补算缺失 embedding（成本优化 2026-07-08）：进稿侧不再逐篇实时算——那会让 ml-service
       // 容器的 10min sleepAfter 被全天进稿反复重置而 24/7 常驻（账单实证 ~$31/月）。embedding
       // 的唯一消费者就是本工作流的聚类，故聚类前在此批量补算，容器每天只醒这几分钟。
-      // 窗口口径与下方"准备文章数据集"一致，仅多 embedding IS NULL；分批调用、逐批写库，
-      // step 只返回计数（数百篇 × 384 维 JSON 会撞 CF Workflow 单 step ~1MB 输出上限）。
-      // 单批失败跳过不中断（该批文章仍为 NULL，被数据集查询天然排除——与旧 EMBEDDING_FAILED
-      // 语义等价的优雅降级）；step 重试时已写库的批次被 isNull 过滤，不会重复计算。
-      await step.do('补算缺失 embedding', defaultStepConfig, async (): Promise<{ backfilled: number; failed: number }> => {
+      // 结构：清单查询一个轻 step（只回 id，防 1MB step 输出上限）+ 每批一个独立 step——
+      // 0.5 vCPU 容器上百篇批量推理 + 首批冷启动会超默认 2min step 超时（生产首跑实测
+      // WorkflowTimeoutError），故每批 50 篇、批 step 单独给 5min 超时。
+      // 单批重试后仍失败则 catch 跳过不拖垮工作流（该批文章保持 NULL，被数据集查询天然排除
+      // ——与旧 EMBEDDING_FAILED 语义等价的降级）；批内先按 isNull 复查保证重试幂等。
+      const pendingIds: number[] = await step.do('补算:查缺失清单', dbStepConfig, async (): Promise<number[]> => {
         const db = getDb(this.env.HYPERDRIVE);
         const timeConditions = [];
         if (article_ids.length === 0) {
@@ -321,17 +322,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             timeConditions.push(gte($articles.publishDate, new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000)));
           }
         }
-        const pending = await db
-          .select({
-            id: $articles.id,
-            title: $articles.title,
-            primary_location: $articles.primary_location,
-            event_summary_points: $articles.event_summary_points,
-            thematic_keywords: $articles.thematic_keywords,
-            topic_tags: $articles.topic_tags,
-            key_entities: $articles.key_entities,
-            content_focus: $articles.content_focus,
-          })
+        const rows = await db
+          .select({ id: $articles.id })
           .from($articles)
           .innerJoin($sources, eq($articles.sourceId, $sources.id))
           .where(
@@ -346,62 +338,88 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           )
           .orderBy(desc($articles.publishDate))
           .limit(articleLimit || 100);
-
-        if (!pending.length) {
-          console.log('[AutoBrief] embedding 补算：窗口内无缺失，跳过');
-          return { backfilled: 0, failed: 0 };
-        }
-
-        const aiServices = createAIServices(this.env, workflowId);
-        const BATCH = 100;
-        let backfilled = 0;
-        let failed = 0;
-        for (let i = 0; i < pending.length; i += BATCH) {
-          const batch = pending.slice(i, i + BATCH);
-          const texts = batch.map(a =>
-            generateSearchText({
-              title: a.title ?? '',
-              primary_location: a.primary_location,
-              event_summary_points: a.event_summary_points,
-              thematic_keywords: a.thematic_keywords,
-              topic_tags: a.topic_tags,
-              key_entities: a.key_entities,
-              content_focus: a.content_focus,
-            } as Parameters<typeof generateSearchText>[0])
-          );
-          const response = await aiServices.aiWorker.generateEmbedding(texts);
-          try {
-            const result = await handleServiceResponse<{
-              success: boolean;
-              data: { embeddings: Array<{ embedding: number[] }> };
-              error?: string;
-            }>(response, 'AI embedding generation');
-            const embeddings = result.data?.data?.embeddings;
-            if (!result.success || !result.data?.success || !Array.isArray(embeddings) || embeddings.length !== batch.length) {
-              throw new Error(`批量 embedding 返回异常: ${result.error || result.data?.error || `期望 ${batch.length} 条，实得 ${embeddings?.length ?? 0}`}`);
-            }
-            for (let j = 0; j < batch.length; j++) {
-              const emb = embeddings[j]?.embedding;
-              if (!Array.isArray(emb) || emb.length !== 384) {
-                failed++;
-                console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 384，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
-                continue;
-              }
-              await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
-              backfilled++;
-            }
-          } catch (error) {
-            failed += batch.length;
-            console.error(`[AutoBrief] embedding 批次失败(${batch.length} 篇，跳过不中断): ${String(error)}`);
-          } finally {
-            if (response && typeof (response as any).dispose === 'function') {
-              (response as any).dispose();
-            }
-          }
-        }
-        console.log(`[AutoBrief] embedding 补算完成: 成功 ${backfilled} / 失败 ${failed} / 待补 ${pending.length}`);
-        return { backfilled, failed };
+        console.log(`[AutoBrief] embedding 补算：窗口内缺失 ${rows.length} 篇`);
+        return rows.map(r => r.id);
       });
+
+      const EMBED_BATCH = 50;
+      const embedBatchStepConfig: WorkflowStepConfig = {
+        retries: { limit: 2, delay: '5 seconds', backoff: 'exponential' },
+        timeout: '5 minutes', // 0.5 vCPU 批量推理 + 首批含容器冷启动，2min 不够（生产实测）
+      };
+      let embedBackfilled = 0;
+      let embedFailed = 0;
+      for (let i = 0; i < pendingIds.length; i += EMBED_BATCH) {
+        const batchIds = pendingIds.slice(i, i + EMBED_BATCH);
+        const batchNo = Math.floor(i / EMBED_BATCH) + 1;
+        try {
+          const written = await step.do(`补算 embedding 批次 ${batchNo}`, embedBatchStepConfig, async (): Promise<number> => {
+            const db = getDb(this.env.HYPERDRIVE);
+            // isNull 复查保证重试幂等（前次尝试已写库的文章不再重算）
+            const batch = await db
+              .select({
+                id: $articles.id,
+                title: $articles.title,
+                primary_location: $articles.primary_location,
+                event_summary_points: $articles.event_summary_points,
+                thematic_keywords: $articles.thematic_keywords,
+                topic_tags: $articles.topic_tags,
+                key_entities: $articles.key_entities,
+                content_focus: $articles.content_focus,
+              })
+              .from($articles)
+              .where(and(inArray($articles.id, batchIds), isNull($articles.embedding)));
+            if (!batch.length) return 0;
+
+            const texts = batch.map(a =>
+              generateSearchText({
+                title: a.title ?? '',
+                primary_location: a.primary_location,
+                event_summary_points: a.event_summary_points,
+                thematic_keywords: a.thematic_keywords,
+                topic_tags: a.topic_tags,
+                key_entities: a.key_entities,
+                content_focus: a.content_focus,
+              } as Parameters<typeof generateSearchText>[0])
+            );
+            const aiServices = createAIServices(this.env, workflowId);
+            const response = await aiServices.aiWorker.generateEmbedding(texts);
+            try {
+              const result = await handleServiceResponse<{
+                success: boolean;
+                data: { embeddings: Array<{ embedding: number[] }> };
+                error?: string;
+              }>(response, 'AI embedding generation');
+              const embeddings = result.data?.data?.embeddings;
+              if (!result.success || !result.data?.success || !Array.isArray(embeddings) || embeddings.length !== batch.length) {
+                throw new Error(`批量 embedding 返回异常: ${result.error || result.data?.error || `期望 ${batch.length} 条，实得 ${embeddings?.length ?? 0}`}`);
+              }
+              let ok = 0;
+              for (let j = 0; j < batch.length; j++) {
+                const emb = embeddings[j]?.embedding;
+                if (!Array.isArray(emb) || emb.length !== 384) {
+                  console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 384，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
+                  continue;
+                }
+                await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
+                ok++;
+              }
+              return ok;
+            } finally {
+              if (response && typeof (response as any).dispose === 'function') {
+                (response as any).dispose();
+              }
+            }
+          });
+          embedBackfilled += written;
+        } catch (error) {
+          embedFailed += batchIds.length;
+          console.error(`[AutoBrief] embedding 批次 ${batchNo} 重试后仍失败(${batchIds.length} 篇，跳过不中断): ${String(error)}`);
+        }
+      }
+      if (pendingIds.length > 0) {
+        console.log(`[AutoBrief] embedding 补算完成: 成功 ${embedBackfilled} / 失败 ${embedFailed} / 待补 ${pendingIds.length}`);
+      }
 
       const dataset: LightweightArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<LightweightArticleDataset> => {
         try {

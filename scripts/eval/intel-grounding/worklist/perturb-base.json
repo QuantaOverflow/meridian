@@ -1,43 +1,152 @@
 [
   {
-    "_README": "占位模板，非真实样本。每项 = 人从某 story 情报报告里挑的、source 确实支撑的 claim + 一个显式最小扰动意图。生成器会校验 from 逐字在 claim、source_quote 逐字在该 story 的 source。kind ∈ number|negation|direction|entity|misquote。replace 这些占位后用 sources.jsonl(由 worklist 步骤产出旁车) 跑 pnpm perturb。",
-    "base_id": "admin-brief-XXXX#story0#3",
-    "brief_id": "admin-brief-XXXX#story0",
-    "claim": "The intelligence report states Russia launched 656 drones in the overnight barrage",
+    "base_id": "admin-brief-1780494276570#story2#7",
+    "brief_id": "admin-brief-1780494276570#story2",
+    "claim": "Over 90 people were injured nationwide",
+    "kind": "number",
+    "from": "90 people",
+    "to": "40 people",
+    "source_quote": "more than 90 people were injured across both cities",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story10#2",
+    "brief_id": "admin-brief-1780469057139#story10",
+    "claim": "Breel Embolo has 24 goals in 86 caps for Switzerland.",
+    "kind": "number",
+    "from": "24 goals",
+    "to": "14 goals",
+    "source_quote": "24 goals in 86 internationals",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story1#10",
+    "brief_id": "admin-brief-1780036335731#story1",
+    "claim": "Al Jazeera reported an Israeli air raid killed at least 10 people, including four children, hours before Netanyahu's announcement.",
+    "kind": "number",
+    "from": "10 people",
+    "to": "40 people",
+    "source_quote": "israeli air raid killed at least 10 people, including four children",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story2#1",
+    "brief_id": "admin-brief-1780036335731#story2",
+    "claim": "There are over 1,000 suspected cases and 220–246 suspected deaths from the Ebola outbreak in Ituri province, DRC.",
+    "kind": "number",
+    "from": "1,000 suspected",
+    "to": "5,000 suspected",
+    "source_quote": "more than 1,000 suspected ebola cases",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story13#6",
+    "brief_id": "admin-brief-1780469057139#story13",
+    "claim": "Defence Minister Richard Marles commits to publicly outlining a process for identifying a permanent nuclear waste storage site within 12 months.",
+    "kind": "number",
+    "from": "12 months",
+    "to": "36 months",
+    "source_quote": "within 12 months",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story13#7",
+    "brief_id": "admin-brief-1780494276570#story13",
+    "claim": "Rwanda and the UK exchanged diplomatic notes in which Rwanda agreed to forgo the April 2025 and April 2026 £50 million payments, per the PCA tribunal's finding.",
+    "kind": "number",
+    "from": "50 million",
+    "to": "90 million",
+    "source_quote": "two tranches of 50 million pounds",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story0#9",
+    "brief_id": "admin-brief-1780036335731#story0",
+    "claim": "Xi and Putin hold summit in Beijing; sign 22 agreements including Joint Declaration on Multipolar World and extension of 2001 Treaty of Good-Neighbourliness.",
+    "kind": "number",
+    "from": "22 agreements",
+    "to": "32 agreements",
+    "source_quote": "22 agreements were signed",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story9#23",
+    "brief_id": "admin-brief-1780036335731#story9",
+    "claim": "No independent audit or third-party verification of the 18 million children vaccinated claim is available",
+    "kind": "number",
+    "from": "18 million",
+    "to": "80 million",
+    "source_quote": "18 million children have been immunized",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story7#11",
+    "brief_id": "admin-brief-1780469057139#story7",
+    "claim": "The United States proposed and plans to fund ($13.5M) and staff (30 medical personnel) the quarantine facility.",
+    "kind": "number",
+    "from": "30 medical",
+    "to": "60 medical",
+    "source_quote": "send 30 medical personnel to staff the nanyuki facility",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story2#1",
+    "brief_id": "admin-brief-1780494276570#story2",
+    "claim": "Russia deployed 656 drones and 73 missiles across at least six regions, including Kyiv, Dnipro, Kharkiv, and Zaporizhzhia",
     "kind": "number",
     "from": "656 drones",
     "to": "356 drones",
-    "source_quote": "656 drones and 73 missiles",
+    "source_quote": "656 drones and 73 missiles at ukraine overnight",
     "split": "dev"
   },
   {
-    "base_id": "admin-brief-XXXX#story0#7",
-    "brief_id": "admin-brief-XXXX#story0",
-    "claim": "Kuwait International Airport was struck, causing structural damage",
-    "kind": "negation",
-    "from": "was struck",
-    "to": "was spared any strike",
-    "source_quote": "a drone/missile strike on Kuwait International Airport",
-    "split": "dev"
-  },
-  {
-    "base_id": "admin-brief-XXXX#story1#2",
-    "brief_id": "admin-brief-XXXX#story1",
-    "claim": "Oil prices rose sharply following the escalation",
-    "kind": "direction",
-    "from": "rose sharply",
-    "to": "fell sharply",
-    "source_quote": "Brent crude surging",
+    "base_id": "admin-brief-1780494276570#story2#1",
+    "brief_id": "admin-brief-1780494276570#story2",
+    "claim": "Russia deployed 656 drones and 73 missiles across at least six regions, including Kyiv, Dnipro, Kharkiv, and Zaporizhzhia",
+    "kind": "number",
+    "from": "73 missiles",
+    "to": "173 missiles",
+    "source_quote": "656 drones and 73 missiles at ukraine overnight",
     "split": "heldout"
   },
   {
-    "base_id": "admin-brief-XXXX#story1#5",
-    "brief_id": "admin-brief-XXXX#story1",
-    "claim": "Florida Attorney General James Uthmeier filed the lawsuit against OpenAI",
+    "base_id": "admin-brief-1780494276570#story9#2",
+    "brief_id": "admin-brief-1780494276570#story9",
+    "claim": "Ed Husic and Peter Garrett question the deal's feasibility, sovereignty implications, and lack of parliamentary oversight.",
     "kind": "entity",
-    "from": "James Uthmeier",
-    "to": "Ashley Moody",
-    "source_quote": "Attorney General James Uthmeier filed",
+    "from": "Ed Husic",
+    "to": "Penny Wong",
+    "source_quote": "labor mp ed husic, who has called for a rethink",
     "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story8#6",
+    "brief_id": "admin-brief-1780036335731#story8",
+    "claim": "The Philippines formally withdrew from the Rome Statute, terminating ICC jurisdiction effective 17 March 2019.",
+    "kind": "entity",
+    "from": "Rome Statute",
+    "to": "Geneva Conventions",
+    "source_quote": "pulled out of the rome statute",
+    "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story8#2",
+    "brief_id": "admin-brief-1780469057139#story8",
+    "claim": "Acting Attorney General Todd Blanche declared the fund 'dead' on June 2, reversing a May 18 announcement.",
+    "kind": "entity",
+    "from": "Todd Blanche",
+    "to": "Merrick Garland",
+    "source_quote": "acting attorney general todd blanche has said",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story0#8",
+    "brief_id": "admin-brief-1780494276570#story0",
+    "claim": "NPR reports CENTCOM confirms two Iranian missiles fired at Kuwait fell apart en route, three aimed at Bahrain were intercepted; US struck Iranian ground control station on Qeshm Island.",
+    "kind": "negation",
+    "from": "fell apart en route",
+    "to": "struck their targets on impact",
+    "source_quote": "fell short or broke apart in flight",
+    "split": "dev"
   }
 ]

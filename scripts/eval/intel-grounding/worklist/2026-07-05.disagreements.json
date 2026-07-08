@@ -1,0 +1,194 @@
+[
+  {
+    "id": "admin-brief-1780469057139#story11#2",
+    "claim": "Mandelson maintained undisclosed ties to sanctioned foreign actors",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Mandelson maintaining undisclosed ties to sanctioned foreign actors.",
+    "claude_reason": "Source: ties to Deripaska, 'sanctioned by the FCDO', concerns publicly undisclosed until revealed"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#25",
+    "claim": "Netanyahu publicly affirmed to Trump that Israel would strike Beirut if Hezbollah attacks continue.",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Netanyahu publicly affirming to Trump that Israel would strike Beirut if Hezbollah attacks continue.",
+    "claude_reason": "Netanyahu statement: will strike Beirut if Hezbollah keeps attacking cities/citizens"
+  },
+  {
+    "id": "admin-brief-1780036335731#story8#6",
+    "claim": "The Philippines formally withdrew from the Rome Statute, terminating ICC jurisdiction effective 17 March 2019.",
+    "qwen": "unsupported",
+    "claude": "contradicted",
+    "qwen_reason": "judge parse failed; raw: ```json\n{\n  \"specifics_checked\": \"17 March 2019\",\n  \"verdict\": \"supported\",\n  \"evidence_quote\": \"when he withdrew the Ph",
+    "claude_reason": "Source states withdrawal/period end date 16 March 2019, not 17 March"
+  },
+  {
+    "id": "admin-brief-1780036335731#story9#4",
+    "claim": "An interim official categorically denies any procedural change occurred",
+    "qwen": "contradicted",
+    "claude": "supported",
+    "qwen_reason": "The source indicates that an interim official claimed no change was implemented, but it also states that there were delays in vaccine procurement, implying a pr",
+    "claude_reason": "Md Sayedur Rahman: 'no change was implemented in the vaccine procurement process'"
+  },
+  {
+    "id": "admin-brief-1780036335731#story5#37",
+    "claim": "Iran insists on sovereign right to peaceful enrichment",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Iran's stance on its sovereign right to peaceful enrichment.",
+    "claude_reason": "Source: Iran says programme peaceful only; Iranians demand enrichment"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#12",
+    "claim": "Third round of US-hosted direct Israel-Lebanon talks were held in Washington, with Hezbollah involved indirectly via intermediaries includin",
+    "qwen": "unsupported",
+    "claude": "contradicted",
+    "qwen_reason": "The source does not mention the third round of talks or the involvement of Hezbollah via intermediaries including Parliament Speaker Nabih Berri.",
+    "claude_reason": "Source calls Tue/Wed talks the fourth round, not third"
+  },
+  {
+    "id": "admin-brief-1780036335731#story9#22",
+    "claim": "No verified breakdown of deaths by age, geography, or comorbidity status is available",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not provide any information about the availability of a verified breakdown of deaths by age, geography, or comorbidity status.",
+    "claude_reason": "Source gives only aggregate ('most children'); no age/geography/comorbidity breakdown provided"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#37",
+    "claim": "UNIFIL mandate expires December 2026.",
+    "qwen": "supported",
+    "claude": "unsupported",
+    "qwen_reason": "The source directly states that the UNIFIL mandate expires on December 31, 2026, which matches the claim.",
+    "claude_reason": "No mention of UNIFIL mandate or December 2026 expiry in source"
+  },
+  {
+    "id": "admin-brief-1780494276570#story9#7",
+    "claim": "Pentagon conducts internal inquiry into AUKUS; US President Donald Trump agrees to support the pact.",
+    "qwen": "contradicted",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention a Pentagon internal inquiry, and the agreement by Trump is stated to have occurred in 2025, not the present.",
+    "claude_reason": "Source: 'after an inquiry by the Pentagon in 2025, US President Donald Trump agreed to support it.'"
+  },
+  {
+    "id": "admin-brief-1780036335731#story9#7",
+    "claim": "Diagnostic delays are common",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention diagnostic delays.",
+    "claude_reason": "Source: repeated missed diagnoses (Akira 5 admissions; 20-day fever) show delays"
+  },
+  {
+    "id": "admin-brief-1780494276570#story14#2",
+    "claim": "Two federal court rulings temporarily blocked the implementation of the fund",
+    "qwen": "supported",
+    "claude": "unsupported",
+    "qwen_reason": "The source mentions two instances of federal court rulings that led to the temporary suspension of the fund.",
+    "claude_reason": "Source shows only one blocking ruling (Brinkema/Virginia); Miami ruling reopened IRS case, not a block"
+  },
+  {
+    "id": "admin-brief-1780469057139#story1#6",
+    "claim": "Hezbollah rejected a partial ceasefire, demanding full Israeli withdrawal first.",
+    "qwen": "supported",
+    "claude": "contradicted",
+    "qwen_reason": "The source indicates that Hezbollah is demanding a full ceasefire and Israeli withdrawal before agreeing to stop fighting, which matches the claim.",
+    "claude_reason": "Source: Hezbollah wants ceasefire as 'prelude to withdrawal'; claim inverts to withdrawal-first"
+  },
+  {
+    "id": "admin-brief-1780036335731#story9#23",
+    "claim": "No independent audit or third-party verification of the 18 million children vaccinated claim is available",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention any independent audit or third-party verification of the 18 million children vaccinated claim.",
+    "claude_reason": "18M figure attributed to one IRC rep; no audit/verification mentioned in source"
+  },
+  {
+    "id": "admin-brief-1780036335731#story5#35",
+    "claim": "Strait of Hormuz is subject to Iranian mining, US blockade, and competing sovereignty claims over navigation rights and fees",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Iranian mining, US blockade, or competing sovereignty claims over navigation rights and fees in the Strait of Hormuz.",
+    "claude_reason": "Source: mines, US naval blockade, Oman/IRGC toll and navigation disputes"
+  },
+  {
+    "id": "admin-brief-1780494276570#story6#9",
+    "claim": "Judge Patricia Nyaundi issued successive conservatory orders on 31 May and 2 June halting the facility's establishment and admission of expo",
+    "qwen": "supported",
+    "claude": "contradicted",
+    "qwen_reason": "The source confirms that Judge Patricia Nyaundi issued orders halting the establishment of the facility and the admission of exposed individuals, and the timing",
+    "claude_reason": "First order came 'Friday' (=29 May), not 31 May; 2 June extension correct."
+  },
+  {
+    "id": "admin-brief-1780469057139#story11#14",
+    "claim": "Peter Mandelson was the former UK ambassador to the US (Jan–Sept 2025)",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "judge parse failed; raw: ```json\n{\n  \"specifics_checked\": \"former UK ambassador to the US (Jan–Sept 2025)\",\n  \"verdict\": \"supported\",\n  \"evidence",
+    "claude_reason": "Source: took ambassador role Jan 2025, sacked September/autumn 2025"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#17",
+    "claim": "The strikes killed at least 11 civilians and injured over 130, including hospital staff.",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not provide a specific number for civilian deaths, and the total number of injured is 127, which includes 39 hospital staff.",
+    "claude_reason": "Hospital 4 killed/127 injured plus other strikes; 39 staff among injured"
+  },
+  {
+    "id": "admin-brief-1780469057139#story8#9",
+    "claim": "The DOJ announced it would 'abide by' Judge Brinkema's injunction, pausing the fund.",
+    "qwen": "supported",
+    "claude": "unsupported",
+    "qwen_reason": "The source directly states that the DOJ will abide by the court ruling, which paused the fund.",
+    "claude_reason": "Source says DoJ 'abide by' ruling by unnamed Virginia judge; name Brinkema absent"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#7",
+    "claim": "Iran suspended negotiations with the US, declaring Lebanon an inseparable part of its ceasefire terms.",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Iran suspending negotiations with the US or declaring Lebanon as an inseparable part of its ceasefire terms.",
+    "claude_reason": "Iran suspended talks; insists Lebanon covered by ceasefire on all fronts"
+  },
+  {
+    "id": "admin-brief-1780494276570#story1#6",
+    "claim": "Hezbollah denied responsibility for cross-border strikes into northern Israel.",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention Hezbollah denying responsibility for cross-border strikes into northern Israel.",
+    "claude_reason": "Hezbollah has not claimed cross-border strikes, says it only hit troops in Lebanon"
+  },
+  {
+    "id": "admin-brief-1780036335731#story0#5",
+    "claim": "China exercises decisive leverage over Russia.",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not explicitly state that China exercises decisive leverage over Russia.",
+    "claude_reason": "Source: China holds all leverage, dominant position, growing leverage to shape cooperation limits."
+  },
+  {
+    "id": "admin-brief-1780469057139#story13#7",
+    "claim": "Pentagon conducts internal inquiry into AUKUS; Labor national conference holds heated debate on the pact; Ed Husic is removed from cabinet i",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not mention the Pentagon conducting an internal inquiry into AUKUS.",
+    "claude_reason": "Source: Pentagon inquiry 2025; heated ALP conference debate; Husic dumped in Marles factional deal"
+  },
+  {
+    "id": "admin-brief-1780469057139#story0#8",
+    "claim": "Reporting is robust on verifiable, observable events (CENTCOM X posts, Kuwaiti military statements, timing of explosions/sirens) and consist",
+    "qwen": "unsupported",
+    "claude": "supported",
+    "qwen_reason": "The source does not provide specific information about the robustness or consistency of reporting across Al Jazeera, NPR, BBC, and The Guardian.",
+    "claude_reason": "Bundle contains AJ/NPR/BBC/Guardian all reporting CENTCOM posts, Kuwaiti statements, sirens consistently"
+  },
+  {
+    "id": "admin-brief-1780469057139#story4#14",
+    "claim": "US–Iran ceasefire formally entered into force after three weeks of active conflict",
+    "qwen": "unsupported",
+    "claude": "contradicted",
+    "qwen_reason": "The source does not provide any information about the duration of the active conflict before the ceasefire.",
+    "claude_reason": "Source: strikes 28 Feb, ceasefire in force 8 April (~6 weeks), conflicts with 'three weeks'"
+  }
+]

@@ -3,10 +3,14 @@ const AI_WORKER_URL = process.env.AI_WORKER_URL || 'https://meridian-ai-worker.s
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function chat(
+// qwen-max 输出上限 ~8192，留余量作为截断重试的天花板
+const OUTPUT_CAP = 8000;
+
+// 单次调用：返回 content + finish_reason（'length' = 输出撞 max_tokens 被截断）
+async function chatOnce(
   prompt: string,
-  options: { model?: string; temperature?: number; maxTokens?: number } = {}
-): Promise<string> {
+  options: { model?: string; temperature?: number; maxTokens?: number }
+): Promise<{ content: string; finishReason: string }> {
   const body = {
     messages: [{ role: 'user', content: prompt }],
     options: {
@@ -32,15 +36,34 @@ export async function chat(
         throw new Error(`chat call failed: ${resp.status} ${txt.slice(0, 200)}`);
       }
       const data = (await resp.json()) as {
-        data?: { choices?: Array<{ message?: { content?: string } }> };
+        data?: { choices?: Array<{ message?: { content?: string }; finish_reason?: string }> };
       };
-      return data?.data?.choices?.[0]?.message?.content || '';
+      const choice = data?.data?.choices?.[0];
+      return { content: choice?.message?.content || '', finishReason: choice?.finish_reason || 'stop' };
     } catch (e) {
       lastErr = e;
       if (attempt < maxAttempts) await sleep(1500 * attempt);
     }
   }
   throw new Error(`chat failed after ${maxAttempts} attempts: ${lastErr instanceof Error ? lastErr.message : lastErr}`);
+}
+
+// 截断即重试：finish_reason==='length' 表示输出撞 max_tokens 被截断 → JSON 残缺 →
+// 上游 parseJSON 失败 → judge 静默回退 unsupported（坏尺假象的一大来源，见 memory:
+// intel-grounding-judge-validated 病根之二）。检测到就放大预算重问，直到自然收尾或触及
+// 模型输出上限。放大而非一律高预算：常见短输出仍走小预算省 token，只有真被截断的尾部升级。
+export async function chat(
+  prompt: string,
+  options: { model?: string; temperature?: number; maxTokens?: number } = {}
+): Promise<string> {
+  let maxTokens = options.maxTokens ?? 1500;
+  for (;;) {
+    const { content, finishReason } = await chatOnce(prompt, { ...options, maxTokens });
+    const bumped = Math.min(maxTokens * 3, OUTPUT_CAP);
+    // 未截断，或已到输出上限无法再放大 → 返回（后者交由上游 salvage/兜底处理）
+    if (finishReason !== 'length' || bumped <= maxTokens) return content;
+    maxTokens = bumped;
+  }
 }
 
 // 从可能带 ```json fenced / 前后噪声的 LLM 输出里抠出 JSON

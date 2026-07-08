@@ -37,7 +37,8 @@ export async function judgeFactual(
 ): Promise<FactualJudgement> {
   // Lever A：确定性挑出 claim 里源中找不到的数字/日期，作为注意力提示喂 judge
   const suspects = suspectSpecifics(claim.text, source);
-  // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
+  // 800 是初始预算(FACTUAL_PROMPT 先输出 specifics_checked 再 verdict)；真被截断的长输出
+  // 由 chat() 检测 finish_reason==='length' 后放大重问，不再静默截断成假 unsupported。
   const raw = await chat(FACTUAL_PROMPT(claim.text, source, suspects), { model, temperature: 0, maxTokens: 800 });
   const parsed = parseJSON<{ verdict: string; evidence_quote?: string; reason?: string }>(raw);
 

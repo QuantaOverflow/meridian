@@ -128,28 +128,43 @@ function createJudgeCallContext(
   };
 }
 
+// qwen-max 输出上限 ~8192，留余量作为截断重试的天花板
+const JUDGE_OUTPUT_CAP = 8000;
+
 async function callJudge(
   ctx: JudgeCallContext,
   prompt: string,
   model: string,
   maxTokens: number
 ): Promise<string> {
-  // 观测性：faithfulness 是 in-process LLM 调用，也必须经 loggedChat 才会按 trace 落 R2。
-  const result = await loggedChat(ctx.ai, ctx.env, {
-    ...ctx.traceContext,
-    callIndex: ctx.nextCallIndex(),
-  }, ctx.phase, {
-    messages: [{ role: 'user' as const, content: prompt }],
-    provider: 'dashscope',
-    model,
-    temperature: 0,
-    max_tokens: maxTokens,
-    metadata: createRequestMetadata({ req: { header: () => 'faithfulness-check' } }),
-  });
-  if (result.capability !== 'chat') {
-    throw new Error('Unexpected response type from chat service');
+  // 截断即重试：finish_reason==='length' 表示输出撞 max_tokens 被截断 → JSON 残缺 →
+  // parseJSON 失败 → judgeFactual 静默回退 unsupported（把裁判"话多"误记成脑补，虚增
+  // unsupported）。检测到就放大预算重问，直到自然收尾或触及输出上限。放大而非一律高预算：
+  // 常见短输出仍走小预算省 token，只有真被截断的尾部升级。
+  let budget = maxTokens;
+  for (;;) {
+    // 观测性：faithfulness 是 in-process LLM 调用，也必须经 loggedChat 才会按 trace 落 R2。
+    const result = await loggedChat(ctx.ai, ctx.env, {
+      ...ctx.traceContext,
+      callIndex: ctx.nextCallIndex(),
+    }, ctx.phase, {
+      messages: [{ role: 'user' as const, content: prompt }],
+      provider: 'dashscope',
+      model,
+      temperature: 0,
+      max_tokens: budget,
+      metadata: createRequestMetadata({ req: { header: () => 'faithfulness-check' } }),
+    });
+    if (result.capability !== 'chat') {
+      throw new Error('Unexpected response type from chat service');
+    }
+    const choice = (result as ChatResponse).choices?.[0];
+    const content = choice?.message?.content || '';
+    const bumped = Math.min(budget * 3, JUDGE_OUTPUT_CAP);
+    // 未截断，或已到输出上限无法再放大 → 返回（后者交由上游 salvage/兜底处理）
+    if (choice?.finish_reason !== 'length' || bumped <= budget) return content;
+    budget = bumped;
   }
-  return (result as ChatResponse).choices?.[0]?.message?.content || '';
 }
 
 // 从带 ```json fenced / 前后噪声的 LLM 输出里抠 JSON（与 eval llm.ts parseJSON 同策略）
@@ -226,7 +241,8 @@ async function judgeFactual(
 ): Promise<FactualJudgement> {
   // Lever A：确定性挑出 claim 里源中找不到的数字/日期，作为注意力提示喂 judge
   const suspects = suspectSpecifics(claim.text, source);
-  // 800(原 500)：新 FACTUAL_PROMPT 先输出 specifics_checked 再 verdict，留窗口防截断
+  // 800 是初始预算(FACTUAL_PROMPT 先输出 specifics_checked 再 verdict)；真被截断的长输出
+  // 由 callJudge 检测 finish_reason==='length' 后放大重问，不再静默截断成假 unsupported。
   const raw = await callJudge(ctx, FACTUAL_PROMPT(claim.text, source, suspects), model, 800);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
   // 解析失败按 unsupported 兜底（fail-closed：宁可多记一条 flag，也不放过潜在脑补）

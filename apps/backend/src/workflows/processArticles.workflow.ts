@@ -1,7 +1,6 @@
 import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
 import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';
-import { generateSearchText } from '../lib/core/utils';
 import { getDb } from '../lib/database';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/services/article-fetchers';
 import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
@@ -353,71 +352,23 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
             articleLogger.info('Updating article info in DB');
 
-            // run embedding and upload in parallel
-            const embeddingUploadParallelStartTime = Date.now();
-            const [embeddingResult, uploadResult] = await Promise.allSettled([
-              step.do(`generate embedding for article ${article.id}`, async (): Promise<number[]> => {
-                if (!articleAnalysis) {
-                  throw new Error('Article analysis is required for embedding generation');
-                }
-                
-                const searchText = generateSearchText({ title: article.title, ...articleAnalysis });
-                
-                // 使用轻量级AI服务生成嵌入向量
-                const response = await aiServices.aiWorker.generateEmbedding(searchText);
-                
-                try {
-                  const result = await handleServiceResponse<{success: boolean; data: {embeddings: Array<{embedding: number[]}>}; error?: string}>(response, 'AI embedding generation');
-                  
-                  if (!result.success || !result.data?.success || !result.data.data?.embeddings?.[0]?.embedding) {
-                    throw new Error(`Embedding generation failed: ${result.error || result.data?.error || 'Unknown error'}`);
-                  }
-
-                  // 验证嵌入向量维度
-                  const embeddingData = result.data.data.embeddings[0].embedding;
-                  if (!Array.isArray(embeddingData) || embeddingData.length !== 384) {
-                    throw new Error(`Invalid embedding dimensions: expected 384, got ${Array.isArray(embeddingData) ? embeddingData.length : 'non-array'}`);
-                  }
-
-                  return embeddingData;
-                } finally {
-                  // 确保释放 RPC stub
-                  if (response && typeof (response as any).dispose === 'function') {
-                    (response as any).dispose();
-                  }
-                }
-              }),
+            // embedding 不再在进稿时逐篇实时算（成本：每次调用都会重置 ml-service 容器的
+            // 10min sleepAfter，账单实证容器因此 24/7 常驻，~$31/月）。embedding 的唯一
+            // 消费者是 auto-brief-generation 的每日聚类，已改为该工作流聚类前批量补算。
+            const uploadStartTime = Date.now();
+            const [uploadResult] = await Promise.allSettled([
               step.do(`upload article contents to R2 for article ${article.id}`, async () => {
                 articleLogger.info('Uploading article contents to R2');
                 await env.ARTICLES_BUCKET.put(fileKey, article.text);
                 return fileKey;
               }),
             ]);
-            articleLogger.info('Embedding generation and R2 upload parallel tasks completed', { durationMs: Date.now() - embeddingUploadParallelStartTime });
+            articleLogger.info('R2 upload completed', { durationMs: Date.now() - uploadStartTime });
 
             // handle results in a separate step
             const finalDbUpdateStartTime = Date.now();
             await step.do(`update article ${article.id} status`, async () => {
               // check for failures
-              if (embeddingResult.status === 'rejected') {
-                const error = embeddingResult.reason;
-                articleLogger.error(
-                  'Embedding generation failed',
-                  { reason: String(error) },
-                  error instanceof Error ? error : new Error(String(error))
-                );
-
-                await db
-                  .update($articles)
-                  .set({
-                    processedAt: new Date(),
-                    failReason: `Embedding generation failed: ${String(error)}`,
-                    status: 'EMBEDDING_FAILED',
-                  })
-                  .where(eq($articles.id, article.id));
-                return;
-              }
-
               if (uploadResult.status === 'rejected') {
                 const error = uploadResult.reason;
                 articleLogger.error(
@@ -454,7 +405,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                   topic_tags: articleAnalysis?.topic_tags || [],
                   key_entities: articleAnalysis?.key_entities || [],
                   content_focus: articleAnalysis?.content_focus || [],
-                  embedding: embeddingResult.value,
+                  // embedding 留空，由 auto-brief-generation 聚类前批量补算
                   status: 'PROCESSED',
                 })
                 .where(eq($articles.id, article.id));

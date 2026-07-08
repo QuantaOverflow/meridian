@@ -27,6 +27,8 @@ import type { Disposition } from './align.js';
 
 const AI_WORKER_URL = process.env.AI_WORKER_URL || 'http://localhost:8787';
 const ARM = process.env.ARM || 'treatment';
+// 两遍法覆盖补录臂：REPAIR=1 开启（服务端默认开，其余臂必须显式关掉保持可比）
+const REPAIR = process.env.REPAIR === '1';
 const RUNS = Number(process.env.RUNS ?? '3');
 const GEN_RUNS = Number(process.env.GEN_RUNS ?? '1');
 const ONLY = process.env.ONLY;
@@ -166,7 +168,7 @@ async function main() {
       }
       const t0 = Date.now();
       console.log(`\n[${ARM}] ${fx.workflow_id} run${k}: 生成简报（${reports.length} 报告）…`);
-      const gen = await post('/meridian/generate-final-brief', { analysisData: reports, reconcileCoverage: true });
+      const gen = await post('/meridian/generate-final-brief', { analysisData: reports, reconcileCoverage: true, coverageRepair: REPAIR });
       if (!gen?.success) throw new Error(`生成失败: ${JSON.stringify(gen).slice(0, 300)}`);
       const brief: string = gen.data.content;
       const endpointCoverage = gen.metadata?.coverage ?? [];

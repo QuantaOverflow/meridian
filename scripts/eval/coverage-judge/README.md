@@ -91,8 +91,9 @@ AI_WORKER_URL=http://localhost:8787 ARM=treatment pnpm regen-ab
 faithfulness 尺打 `/meridian/faithfulness-check`（源=同一渲染的 per-story 报告，两臂恒定）。
 产出 `eval-reports/ab/<arm>/`。辅助开关：`SKIP_EXISTING=1` 断点续跑、`FAITH_ONLY=1` 只重跑门。
 
-**结果（2026-07-07）**：dropped 13.4%→6.2%，gold 19 条漏报救回 15；代价 contradicted 6→14
-（重跑稳定=真失真，日期挪移/归属反转型）。明细与结论见
+**结果（2026-07-07/08 三臂）**：dropped 13.4%(baseline)→6.2%(仅 prompt)→**0.0%(两遍法补录,
+REPAIR=1)**，gold 19 条全救回；忠实度 twopass contradicted 7≈基线 6、unsupported 1.1% 全场最低。
+注：twopass 批草稿全自覆盖、补录 0 次触发（尾部保险），插入路径已离线实测。明细与诚实注记见
 `../error-analysis/synthesis-omission-opencode.md`。
 两坑：AI Gateway 缓存相同生成请求（GEN_RUNS>1 测方差需绕）；最老 run 旧 schema 源渲染要
 legacy 兜底（已修，否则 faithfulness 全 claim 假 unsupported）。

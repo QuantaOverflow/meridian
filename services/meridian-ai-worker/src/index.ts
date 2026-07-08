@@ -528,6 +528,8 @@ app.post('/meridian/generate-final-brief', async (c) => {
     const result = await briefService.generateBrief(intelligenceReports, previousContext, {
       selfCorrect: body.selfCorrect,
       reconcileCoverage: body.reconcileCoverage,
+      // 两遍法覆盖补录（默认开）；eval 对照臂传 false 关掉
+      coverageRepair: body.coverageRepair,
     })
 
     if (!result.success) {

@@ -245,13 +245,16 @@ export class BriefGenerationService {
   async generateBrief(
     reports: IntelligenceReports,
     context?: PreviousBriefContext,
-    options?: { selfCorrect?: boolean; reconcileCoverage?: boolean }
+    options?: { selfCorrect?: boolean; reconcileCoverage?: boolean; coverageRepair?: boolean }
   ): Promise<{ success: boolean; data?: FinalBrief; error?: string; coverage?: CoverageEntry[] }> {
     // RARR 式接地校验-改正默认开启（选项2）；eval baseline 臂可传 selfCorrect:false 关掉做对照。
     const selfCorrect = options?.selfCorrect !== false;
-    // 覆盖对账默认【关闭】（洞3 方案B）：它给每篇简报加一次 qwen-long 调用+延迟，
-    // 但同样的合成漏报可用离线 assemble-trace 免费查到，不值得焊进每次生产。
-    // 需要时显式传 reconcileCoverage:true（如 eval/调查按需触发）。
+    // 两遍法覆盖补录默认【开启】（与 selfCorrect 同款语义）：对账找 dropped → 程序化补插
+    // noteworthy。这是合成漏报的硬保证（prompt 契约只压均值），代价=每篇一次 qwen-long
+    // 对账调用。eval 对照臂传 coverageRepair:false 关掉。
+    const coverageRepair = options?.coverageRepair !== false;
+    // 纯覆盖对账（洞3 方案B，只记账不补录）默认关闭；coverageRepair 开时对账自然会跑。
+    // 单独需要观测数据时显式传 reconcileCoverage:true。
     const reconcileCoverage = options?.reconcileCoverage === true;
     try {
       console.log(`[Brief Generation] 开始生成简报，输入 ${reports.reports.length} 个报告（接地自纠=${selfCorrect}）`);
@@ -309,21 +312,32 @@ export class BriefGenerationService {
           content = await this.verifyAndCorrect(content, storiesMarkdown);
         }
 
-        // 生成标题
+        // 两遍法覆盖补录（治合成漏报的硬保证）：对账判官找出 dropped 的 story，
+        // 程序化从该 story 自己的 executiveSummary 取首句补插 noteworthy 区。
+        // 顺序有讲究（对标 uMedSum）：RARR 去编造在前、补漏在后——补录内容是上游
+        // 报告原文逐字拷贝(by-construction 零新编造)，不需要也不应再过 RARR。
+        // prompt 覆盖契约只能压均值（A/B 13.4%→6.2%），temp0.7 下偶发整期失守，
+        // 这一步用程序强制把残余漏报兜住。best-effort：对账失败则跳过，不拖垮主流程。
+        let coverage: CoverageEntry[] = [];
+        if (coverageRepair || reconcileCoverage) {
+          coverage = await this.reconcileCoverage(content, reports.reports);
+        }
+        if (coverageRepair && coverage.length) {
+          const repaired = this.repairCoverage(content, coverage, reports.reports);
+          content = repaired.content;
+          coverage = repaired.coverage;
+        }
+
+        // 生成标题（基于补录后的最终正文）
         const titlePrompt = getBriefTitlePrompt(content);
         const titleResponse = await this.callAI(titlePrompt, undefined, {
           temperature: 0,
           phase: 'brief_generation',
           callIndex: 1
         });
-        
+
         const titleData = this.parseJSONFromResponse(titleResponse);
         const title = titleData?.title || 'Daily Intelligence Brief';
-
-        // 覆盖对账（洞3 方案B）：对最终正文做，拿到每条 story 的去向。best-effort。
-        const coverage = reconcileCoverage
-          ? await this.reconcileCoverage(content, reports.reports)
-          : [];
 
         return { content, title, coverage };
       };
@@ -600,6 +614,78 @@ export class BriefGenerationService {
       console.error('[Brief Generation] 覆盖对账失败，返回空:', error);
       return [];
     }
+  }
+
+  /**
+   * 两遍法第二遍：覆盖补录。对账判 dropped 的 story，从其 executiveSummary 逐字取首句
+   * 补插 noteworthy 区——纯程序拼装(不经 LLM)，by-construction 不引入新编造，
+   * 这正是选它而非"让模型重写"的原因（A/B 已证补覆盖会推高失真）。
+   * 局限：文风比模型写的生硬；判官 precision=1.0(κ验)故误补极少，最坏=多一条冗余 bullet。
+   */
+  private repairCoverage(
+    content: string,
+    coverage: CoverageEntry[],
+    reports: IntelligenceReport[]
+  ): { content: string; coverage: CoverageEntry[] } {
+    const dropped = coverage.filter((c) => c.disposition === 'dropped');
+    if (!dropped.length) return { content, coverage };
+
+    const byId = new Map(reports.map((r) => [r.storyId, r]));
+    const patchedIds = new Set<string>();
+    const bullets: string[] = [];
+    for (const entry of dropped) {
+      const report = byId.get(entry.storyId);
+      const sentence = this.firstSentence(report?.executiveSummary || entry.storyLabel);
+      if (!sentence) continue;
+      bullets.push(`- ${sentence}`);
+      patchedIds.add(entry.storyId);
+    }
+    if (!bullets.length) return { content, coverage };
+    const block = bullets.join('\n');
+
+    // 有 noteworthy 区 → 追加到该区末尾（下一个 ## 头之前）；没有 → 建区，
+    // 插在 positive developments 之前（若有），否则追加文末。
+    let newContent: string;
+    const noteHeader = /^##\s*noteworthy[^\n]*$/im.exec(content);
+    if (noteHeader) {
+      const sectionStart = noteHeader.index + noteHeader[0].length;
+      const nextHeaderOffset = content.slice(sectionStart).search(/\n##\s/);
+      const insertAt = nextHeaderOffset === -1 ? content.length : sectionStart + nextHeaderOffset;
+      newContent =
+        content.slice(0, insertAt).replace(/\s*$/, '') + '\n' + block + '\n' + content.slice(insertAt);
+    } else {
+      const section = `\n\n## noteworthy & under-reported\n${block}\n`;
+      const posDev = content.search(/^##\s*positive developments/im);
+      newContent =
+        posDev === -1
+          ? content.replace(/\s*$/, '') + section
+          : content.slice(0, posDev).replace(/\s*$/, '') + section + '\n\n' + content.slice(posDev);
+    }
+
+    const updatedCoverage = coverage.map((c) =>
+      patchedIds.has(c.storyId)
+        ? {
+            ...c,
+            disposition: 'noteworthy' as const,
+            section: 'noteworthy & under-reported',
+            reason: `覆盖补录：对账判 dropped(${c.reason})，程序从该 story 摘要首句逐字补插`,
+          }
+        : c
+    );
+    console.log(
+      `[Brief Generation] 覆盖补录：${bullets.length}/${dropped.length} 条 dropped story 补插 noteworthy（程序拼装，零新编造）`
+    );
+    return { content: newContent, coverage: updatedCoverage };
+  }
+
+  // 取一段文本的首句（逐字，不改写）。句末=[.!?]后跟空格且前面不是大写缩写字母（防 "U.S." 误切）；
+  // 找不到句界或过长时按词边界截断加省略号。补录 bullet 用。
+  private firstSentence(text: string, cap = 320): string {
+    const t = (text || '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    const m = t.match(/^.{20,}?(?<![A-Z])[.!?](?=\s)/);
+    const s = m ? m[0] : t;
+    return s.length <= cap ? s : s.slice(0, cap).replace(/\s+\S*$/, '') + '…';
   }
 
   // 删除片段后清理遗留的双空格/悬空标点；只做最轻量收尾，不动其它字符。

@@ -108,3 +108,28 @@ prompt 契约压均值、不保单次；硬保证走两遍法（生成后 reconc
 注意事项：AI Gateway 会缓存相同生成请求（同 payload 重放 5s 返回同一简报）——GEN_RUNS>1
 测方差需绕缓存；最老一期（1780036335731）R2 报告为旧 schema，faithfulness 源渲染须走
 legacy 兜底链（regen-ab.ts 已修，否则全 claim 假 unsupported）。
+
+## 两遍法补录（第三臂 twopass，2026-07-08）
+
+对标 uMedSum 顺序（RARR 去编造在前、补漏在后）：`generateBrief` 里 reconcileCoverage 找
+dropped → **程序化**从该 story 的 executiveSummary 逐字取首句补插 noteworthy 区
+（`repairCoverage`，不经 LLM——by-construction 零新编造，正因 A/B 已证补覆盖会推高失真）。
+`coverageRepair` 选项默认开（同 selfCorrect 语义），eval 对照臂显式传 false。
+
+| 尺 | baseline | treatment(仅prompt) | twopass(prompt+补录) |
+|----|------|------|------|
+| dropped 率 | 13.4% | 6.2% | **0.0% (0/112)** |
+| gold 19 条 | — | 救回 15 | **救回 19/19** |
+| contradicted | 6 | 16 | **7** |
+| unsupported 率 | 2.2% | 3.5% | **1.1%** |
+| block | 1/8 | 2/8 | 2/8（其一在 baseline 同样 block） |
+
+**诚实注记**：
+1. twopass 这批 8 期的草稿全部自覆盖，**补录一次都没触发**——0/112 归功于 prompt 契约在这批
+   抽样全中；补录是尾部保险。插入路径已用 treatment 失守简报（丢 4 条）离线实测：4 条 bullet
+   全带特异性、插位正确（noteworthy 末、positive developments 前）、原文无损。
+2. 同一新 prompt 两批抽样 contradicted=16 与 7——**批间方差很大**，此前"6→14 恶化"结论需软化为
+   "新 prompt 均值升高（两批合并 ~11.5 vs 基线 6）但单批噪声大"；日期挪移/归属反转的失真模式
+   仍真实存在（对那两篇门重跑稳定），RARR 日期+归属专项仍值得做，但紧迫度降一级。
+3. 判官对补录 bullet 的识别无虞：bullet 即 executiveSummary 首句 = 判官 storyList 的 label 前缀，
+   词汇必然对齐。

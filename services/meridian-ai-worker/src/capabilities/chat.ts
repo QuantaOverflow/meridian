@@ -50,10 +50,10 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       }
     } else if (model.name.startsWith('claude')) {
       // Anthropic models
+      // 不传 temperature：Claude 4.7+/Sonnet 5 对非默认采样参数直接 400
       return {
         model: model.name,
         max_tokens: baseRequest.max_tokens,
-        temperature: baseRequest.temperature,
         messages: request.messages.filter(msg => msg.role !== 'system'),
         system: request.messages.find(msg => msg.role === 'system')?.content,
         stream: baseRequest.stream

@@ -108,6 +108,22 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     default_model: 'claude-3-haiku-20240307',
     models: [
       {
+        // grounding/faithfulness 判官跨家族通道（治 qwen 数字/日期/极性签名盲区）。
+        // cache_ttl: 0 → cf-aig-skip-cache：judge 多数决(RUNS)靠独立采样，网关缓存会让
+        // 同 body 重问拿到同一份答案，投票退化成单票（见 memory: 缓存答案循环虚高）。
+        name: 'claude-sonnet-5',
+        capabilities: ['chat'],
+        endpoint: '/messages',
+        max_tokens: 16000,
+        supports_streaming: true,
+        cost_per_token: { input: 0.000003, output: 0.000015 },
+        ai_gateway_config: {
+          cache_ttl: 0,
+          enable_cost_tracking: true,
+          custom_tags: ['judge', 'claude-sonnet-5']
+        }
+      },
+      {
         name: 'claude-3-opus-20240229',
         capabilities: ['chat', 'vision'],
         endpoint: '/messages',

@@ -733,7 +733,8 @@ app.post('/meridian/chat', async (c) => {
       messages: body.messages,
       provider: body.options?.provider || 'dashscope',
       model: body.options?.model || 'qwen-plus',
-      temperature: body.options?.temperature || 0.7,
+      // ?? 而非 ||：调用方显式传 temperature: 0（judge 场景）时必须生效，|| 会吞成 0.7
+      temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
       stream: body.options?.stream || false,
       metadata: createRequestMetadata(c)

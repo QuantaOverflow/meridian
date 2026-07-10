@@ -47,7 +47,7 @@ export class AIGatewayEnhancementService {
     await this.addCostTrackingHeaders(headers, request, enhancedConfig, modelConfig)
 
     // 3. 智能缓存策略 - 官方缓存头部
-    await this.addCacheHeaders(headers, request, enhancedConfig)
+    await this.addCacheHeaders(headers, request, enhancedConfig, modelConfig)
 
     // 4. 自定义元数据 - 官方元数据头部
     await this.addMetadataHeaders(headers, request, enhancedConfig)
@@ -142,12 +142,14 @@ export class AIGatewayEnhancementService {
   private async addCacheHeaders(
     headers: Record<string, string>,
     request: AIRequest,
-    enhancedConfig?: AIGatewayEnhancedConfig
+    enhancedConfig?: AIGatewayEnhancedConfig,
+    modelConfig?: ModelConfig
   ): Promise<void> {
     const cacheConfig = enhancedConfig?.cache
 
-    // 跳过缓存
-    if (cacheConfig?.skipCache) {
+    // 跳过缓存：显式 skipCache，或模型配置 cache_ttl: 0（judge 模型——多数决重问
+    // 必须独立采样，缓存会让同 body 重问拿回同一份答案）
+    if (cacheConfig?.skipCache || modelConfig?.ai_gateway_config?.cache_ttl === 0) {
       headers['cf-aig-skip-cache'] = 'true'
       return
     }

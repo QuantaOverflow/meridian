@@ -299,9 +299,10 @@ export class AIGatewayService {
    * Execute universal request with enhanced metadata headers
    */
   private async executeUniversalRequestWithMetadata(requests: any[], metadata?: RequestMetadata): Promise<any> {
+    // 缓存策略不在外层设：每个 request item 的 headers 已由 enhancement service
+    // 按模型配置带上 cf-aig-cache-ttl / cf-aig-skip-cache，外层硬编码会盖掉 skip
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'cf-aig-cache-ttl': '3600'
+      'Content-Type': 'application/json'
     }
 
     // Add AI Gateway authentication if available

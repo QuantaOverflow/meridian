@@ -25,7 +25,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { scoreArticle } from './scorer.js';
 import { deriveGate, CONTENT_QUALITY_CLASSES, COMPLETENESS_CLASSES } from './types.js';
 import type { GoldItem, ContentQuality, Completeness, GateDecision } from './types.js';
-import { evalChannel, fmt, type Pred } from './metrics.js';
+// 指标统一在共享模块(原本地 metrics.ts 已并入)，见 docs/adr/0002。
+import { evalChannel, fmt, type Pred } from '../_shared/metrics.js';
 
 const KAPPA_MIN = Number(process.env.KAPPA_MIN ?? '0.6');
 const RECALL_MIN = Number(process.env.RECALL_MIN ?? '0.7');

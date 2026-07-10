@@ -20,6 +20,8 @@ import { judgeFactual, judgeAnalytical } from './judge.js';
 // retrieve-then-verify + self-consistency：与 runtime 单一真源共用同一排序/投票，eval 才忠实量
 import { rankSourcesByRelevance, CONTRA_VOTES, majorityVerdict } from '../../../services/meridian-ai-worker/src/services/faithfulness-prompts.js';
 import type { Claim, FaithVerdict, AnalyticalVerdict } from './types.js';
+// 指标(混淆矩阵/κ/per-class 召回·精确率·FPR·Fβ/balanced acc)统一在共享模块，见 docs/adr/0002。
+import { evalChannel, fmt } from '../_shared/metrics.js';
 
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 const KAPPA_MIN = Number(process.env.KAPPA_MIN ?? '0.6');
@@ -216,109 +218,8 @@ async function runJudge(items: GoldItem[], perStory: Record<string, string[]> = 
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// 指标
-// ---------------------------------------------------------------------------
-// 混淆矩阵：confusion[gold][pred] = 计数
-function confusion(preds: Pred[], classes: string[]): Record<string, Record<string, number>> {
-  const m: Record<string, Record<string, number>> = {};
-  for (const g of classes) {
-    m[g] = {};
-    for (const p of classes) m[g][p] = 0;
-  }
-  for (const r of preds) {
-    if (!(r.gold in m)) continue; // 未知 gold 类跳过
-    const p = r.pred in m[r.gold] ? r.pred : r.gold; // pred 落到非法类时计为一次错配的兜底
-    m[r.gold][p] = (m[r.gold][p] ?? 0) + 1;
-  }
-  return m;
-}
-
-// Cohen's κ（多类）：po=对角/N；pe=Σ (行和/N)·(列和/N)；κ=(po-pe)/(1-pe)
-function cohensKappa(m: Record<string, Record<string, number>>, classes: string[]): number {
-  let N = 0;
-  for (const g of classes) for (const p of classes) N += m[g][p];
-  if (N === 0) return NaN;
-  let po = 0;
-  for (const c of classes) po += m[c][c];
-  po /= N;
-  let pe = 0;
-  for (const c of classes) {
-    const rowTotal = classes.reduce((s, p) => s + m[c][p], 0);
-    const colTotal = classes.reduce((s, g) => s + m[g][c], 0);
-    pe += (rowTotal / N) * (colTotal / N);
-  }
-  if (pe === 1) return 1; // 完全退化
-  return (po - pe) / (1 - pe);
-}
-
-// per-class TPR(召回) / TNR / precision
-// precision(c) = tp / (tp+fp) = judge 喊 c 的里头真为 c 的占比 = 1 − 该类误报率。
-// 量「误拦率」就看 precision：precision 低 = judge 乱喊 c = 误拦多。predicted=tp+fp 是 judge 喊 c 的总数(样本量)。
-function perClass(m: Record<string, Record<string, number>>, classes: string[]) {
-  const res: Record<
-    string,
-    { support: number; predicted: number; tpr: number | null; tnr: number | null; precision: number | null }
-  > = {};
-  let N = 0;
-  for (const g of classes) for (const p of classes) N += m[g][p];
-  for (const c of classes) {
-    const tp = m[c][c];
-    const fn = classes.reduce((s, p) => s + (p === c ? 0 : m[c][p]), 0); // gold=c 判成别的
-    const fp = classes.reduce((s, g) => s + (g === c ? 0 : m[g][c]), 0); // gold≠c 判成 c
-    const support = tp + fn;
-    const predicted = tp + fp;
-    const negTotal = N - support;
-    const tn = negTotal - fp;
-    res[c] = {
-      support,
-      predicted,
-      tpr: support > 0 ? tp / support : null, // 该类无样本 → 召回无定义
-      tnr: negTotal > 0 ? tn / negTotal : null,
-      precision: predicted > 0 ? tp / predicted : null, // judge 没喊过 c → 精度无定义
-    };
-  }
-  return res;
-}
-
-function balancedAccuracy(perClassRes: ReturnType<typeof perClass>, classes: string[]): number {
-  const recalls = classes.map((c) => perClassRes[c].tpr).filter((x): x is number => x !== null);
-  return recalls.length ? recalls.reduce((s, x) => s + x, 0) / recalls.length : NaN;
-}
-
-function fmt(x: number | null): string {
-  return x === null ? ' n/a ' : x.toFixed(3);
-}
-
-function printMatrix(m: Record<string, Record<string, number>>, classes: string[]) {
-  const short = (c: string) => c.slice(0, 7).padStart(8);
-  console.log(`  gold\\pred ${classes.map(short).join('')}`);
-  for (const g of classes) {
-    console.log(`  ${g.slice(0, 9).padEnd(9)} ${classes.map((p) => String(m[g][p]).padStart(8)).join('')}`);
-  }
-}
-
-// 评估单个通道，返回 {kappa, balancedAcc, perClass, n}
-function evalChannel(preds: Pred[], classes: string[], label: string) {
-  const m = confusion(preds, classes);
-  const k = cohensKappa(m, classes);
-  const pc = perClass(m, classes);
-  const bacc = balancedAccuracy(pc, classes);
-  const n = preds.length;
-
-  console.log(`\n=== ${label} 通道 (n=${n}) ===`);
-  printMatrix(m, classes);
-  console.log(`  Cohen's κ      = ${fmt(k)}`);
-  console.log(`  balanced acc   = ${fmt(bacc)}`);
-  console.log(`  per-class:`);
-  for (const c of classes) {
-    console.log(
-      `    ${c.padEnd(14)} support=${String(pc[c].support).padStart(3)}  TPR(召回)=${fmt(pc[c].tpr)}  TNR=${fmt(pc[c].tnr)}` +
-        `  judge喊=${String(pc[c].predicted).padStart(3)}  precision=${fmt(pc[c].precision)}`
-    );
-  }
-  return { label, n, kappa: k, balancedAcc: bacc, perClass: pc, confusion: m };
-}
+// 指标函数(confusion/cohensKappa/perClass/balancedAccuracy/fmt/printMatrix/evalChannel)
+// 已抽到 ../_shared/metrics.ts 复用，见 docs/adr/0002。此处不再各抄一份。
 
 // ---------------------------------------------------------------------------
 async function main() {

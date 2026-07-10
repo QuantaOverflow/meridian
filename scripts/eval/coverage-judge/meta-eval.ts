@@ -14,6 +14,8 @@
 // ============================================================================
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Disposition } from './align.js';
+// 指标(混淆矩阵/κ/per-class 召回·精确率·FPR·Fβ/balanced acc)统一在共享模块，见 docs/adr/0002。
+import { evalChannel, fmt } from '../_shared/metrics.js';
 
 const KAPPA_MIN = Number(process.env.KAPPA_MIN ?? '0.6');
 const DROPPED_PREC_MIN = Number(process.env.DROPPED_PREC_MIN ?? '0.8');
@@ -31,80 +33,8 @@ function loadJsonl(path: string): any[] {
     .map((l) => JSON.parse(l));
 }
 
-// ---- 指标（移植 faithfulness/meta-eval.ts）----
-function confusion(preds: Pred[], classes: string[]) {
-  const m: Record<string, Record<string, number>> = {};
-  for (const g of classes) { m[g] = {}; for (const p of classes) m[g][p] = 0; }
-  for (const r of preds) {
-    if (!(r.gold in m)) continue;
-    const p = r.pred in m[r.gold] ? r.pred : r.gold;
-    m[r.gold][p] = (m[r.gold][p] ?? 0) + 1;
-  }
-  return m;
-}
-function cohensKappa(m: Record<string, Record<string, number>>, classes: string[]): number {
-  let N = 0;
-  for (const g of classes) for (const p of classes) N += m[g][p];
-  if (N === 0) return NaN;
-  let po = 0;
-  for (const c of classes) po += m[c][c];
-  po /= N;
-  let pe = 0;
-  for (const c of classes) {
-    const rowTotal = classes.reduce((s, p) => s + m[c][p], 0);
-    const colTotal = classes.reduce((s, g) => s + m[g][c], 0);
-    pe += (rowTotal / N) * (colTotal / N);
-  }
-  if (pe === 1) return 1;
-  return (po - pe) / (1 - pe);
-}
-function perClass(m: Record<string, Record<string, number>>, classes: string[]) {
-  const res: Record<string, { support: number; predicted: number; tpr: number | null; tnr: number | null; precision: number | null }> = {};
-  let N = 0;
-  for (const g of classes) for (const p of classes) N += m[g][p];
-  for (const c of classes) {
-    const tp = m[c][c];
-    const fn = classes.reduce((s, p) => s + (p === c ? 0 : m[c][p]), 0);
-    const fp = classes.reduce((s, g) => s + (g === c ? 0 : m[g][c]), 0);
-    const support = tp + fn;
-    const predicted = tp + fp;
-    const negTotal = N - support;
-    const tn = negTotal - fp;
-    res[c] = {
-      support, predicted,
-      tpr: support > 0 ? tp / support : null,
-      tnr: negTotal > 0 ? tn / negTotal : null,
-      precision: predicted > 0 ? tp / predicted : null,
-    };
-  }
-  return res;
-}
-function balancedAccuracy(pc: ReturnType<typeof perClass>, classes: string[]): number {
-  const rs = classes.map((c) => pc[c].tpr).filter((x): x is number => x !== null);
-  return rs.length ? rs.reduce((s, x) => s + x, 0) / rs.length : NaN;
-}
-const fmt = (x: number | null) => (x === null ? ' n/a ' : x.toFixed(3));
-function printMatrix(m: Record<string, Record<string, number>>, classes: string[]) {
-  console.log(`  gold\\pred ${classes.map((c) => c.slice(0, 7).padStart(8)).join('')}`);
-  for (const g of classes) {
-    console.log(`  ${g.slice(0, 9).padEnd(9)} ${classes.map((p) => String(m[g][p]).padStart(8)).join('')}`);
-  }
-}
-function evalChannel(preds: Pred[], classes: string[], label: string) {
-  const m = confusion(preds, classes);
-  const k = cohensKappa(m, classes);
-  const pc = perClass(m, classes);
-  const bacc = balancedAccuracy(pc, classes);
-  console.log(`\n=== ${label} 通道 (n=${preds.length}) ===`);
-  printMatrix(m, classes);
-  console.log(`  Cohen's κ    = ${fmt(k)}`);
-  console.log(`  balanced acc = ${fmt(bacc)}`);
-  for (const c of classes) {
-    const r = pc[c];
-    console.log(`    ${c.padEnd(11)} support=${String(r.support).padStart(3)}  TPR(召回)=${fmt(r.tpr)}  TNR=${fmt(r.tnr)}  judge喊=${String(r.predicted).padStart(3)}  precision=${fmt(r.precision)}`);
-  }
-  return { label, n: preds.length, kappa: k, balancedAcc: bacc, perClass: pc, confusion: m };
-}
+// 指标函数(confusion/cohensKappa/perClass/balancedAccuracy/fmt/printMatrix/evalChannel)
+// 已抽到 ../_shared/metrics.ts 复用，见 docs/adr/0002。此处不再各抄一份。
 
 function main() {
   const goldPath = process.argv[2] || 'gold.jsonl';

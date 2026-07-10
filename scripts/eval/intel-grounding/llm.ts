@@ -11,11 +11,13 @@ async function chatOnce(
   prompt: string,
   options: { model?: string; temperature?: number; maxTokens?: number }
 ): Promise<{ content: string; finishReason: string }> {
+  const model = options.model || 'qwen-max';
   const body = {
     messages: [{ role: 'user', content: prompt }],
     options: {
-      provider: 'dashscope',
-      model: options.model || 'qwen-max',
+      // JUDGE_MODEL=claude-* 时走 anthropic（跨家族判官通道），其余仍走 dashscope
+      provider: model.startsWith('claude') ? 'anthropic' : 'dashscope',
+      model,
       temperature: options.temperature ?? 0,
       max_tokens: options.maxTokens ?? 1500,
     },
@@ -60,8 +62,10 @@ export async function chat(
   for (;;) {
     const { content, finishReason } = await chatOnce(prompt, { ...options, maxTokens });
     const bumped = Math.min(maxTokens * 3, OUTPUT_CAP);
+    // 截断信号跨家族：OpenAI 兼容(qwen)='length'，Anthropic='max_tokens'
+    const truncated = finishReason === 'length' || finishReason === 'max_tokens';
     // 未截断，或已到输出上限无法再放大 → 返回（后者交由上游 salvage/兜底处理）
-    if (finishReason !== 'length' || bumped <= maxTokens) return content;
+    if (!truncated || bumped <= maxTokens) return content;
     maxTokens = bumped;
   }
 }

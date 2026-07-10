@@ -148,5 +148,115 @@
     "to": "struck their targets on impact",
     "source_quote": "fell short or broke apart in flight",
     "split": "dev"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story0#6",
+    "brief_id": "admin-brief-1780036335731#story0",
+    "claim": "China refused to commit to Power of Siberia 2.",
+    "kind": "negation",
+    "from": "refused to commit to",
+    "to": "committed to",
+    "source_quote": "major projects such as Power of Siberia 2 remain stalled",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story6#17",
+    "brief_id": "admin-brief-1780036335731#story6",
+    "claim": "Families in Tyre refused to leave bombed homes, declaring intent to live on rubble",
+    "kind": "negation",
+    "from": "refused to leave bombed homes",
+    "to": "agreed to evacuate their bombed homes",
+    "source_quote": "Defiant Lebanese families refuse to leave Tyre after homes bombed",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story9#4",
+    "brief_id": "admin-brief-1780036335731#story9",
+    "claim": "An interim official categorically denies any procedural change occurred",
+    "kind": "negation",
+    "from": "categorically denies any procedural change occurred",
+    "to": "confirmed that procedural changes occurred",
+    "source_quote": "no change was implemented in the vaccine procurement process",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story1#6",
+    "brief_id": "admin-brief-1780494276570#story1",
+    "claim": "Hezbollah denied responsibility for cross-border strikes into northern Israel.",
+    "kind": "negation",
+    "from": "denied responsibility for",
+    "to": "claimed responsibility for",
+    "source_quote": "Hezbollah has not claimed any recent strikes in Israel",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story1#7",
+    "brief_id": "admin-brief-1780494276570#story1",
+    "claim": "Iran suspended negotiations with the US, declaring Lebanon an inseparable part of its ceasefire terms.",
+    "kind": "direction",
+    "from": "suspended negotiations with the US",
+    "to": "resumed negotiations with the US",
+    "source_quote": "it would suspend peace talks with the US",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story7#12",
+    "brief_id": "admin-brief-1780469057139#story7",
+    "claim": "William Ruto, President of Kenya, approved the facility and defended it as a 'mutual agreement' with the US.",
+    "kind": "negation",
+    "from": "approved the facility and defended it",
+    "to": "rejected the facility and criticised it",
+    "source_quote": "William Ruto, defended the plan, saying it was being politicised",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story10#7",
+    "brief_id": "admin-brief-1780036335731#story10",
+    "claim": "Paxton defeated Cornyn in the Republican runoff election, ending Cornyn's Senate career after 23 years.",
+    "kind": "direction",
+    "from": "Paxton defeated Cornyn",
+    "to": "Cornyn defeated Paxton",
+    "source_quote": "Ken Paxton wins Texas Senate primary, defeating Cornyn",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story0#12",
+    "brief_id": "admin-brief-1780469057139#story0",
+    "claim": "Kuwait reports seven Iranian drones entered its airspace, straining ceasefire two days after it began",
+    "kind": "direction",
+    "from": "two days after it began",
+    "to": "two days before it began",
+    "source_quote": "seven drones entered its airspace on April 10, two days after it had begun",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780469057139#story4#23",
+    "brief_id": "admin-brief-1780469057139#story4",
+    "claim": "Trump posted on Truth Social claiming a 'productive call' with Netanyahu and a 'good call with Hezbollah' resulting in mutual cessation of fire and halted troop movements toward Beirut",
+    "kind": "misquote",
+    "from": "'productive call' with Netanyahu",
+    "to": "'tense call' with Netanyahu",
+    "source_quote": "I had a very productive call with Prime Minister Bibi Netanyahu",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780494276570#story13#7",
+    "brief_id": "admin-brief-1780494276570#story13",
+    "claim": "Rwanda and the UK exchanged diplomatic notes in which Rwanda agreed to forgo the April 2025 and April 2026 £50 million payments, per the PCA tribunal's finding.",
+    "kind": "negation",
+    "from": "agreed to forgo",
+    "to": "refused to forgo",
+    "source_quote": "to forgo any additional payments by the United Kingdom in April 2025 and April 2026",
+    "split": "heldout"
+  },
+  {
+    "base_id": "admin-brief-1780036335731#story1#10",
+    "brief_id": "admin-brief-1780036335731#story1",
+    "claim": "Al Jazeera reported an Israeli air raid killed at least 10 people, including four children, hours before Netanyahu's announcement.",
+    "kind": "direction",
+    "from": "hours before Netanyahu's announcement",
+    "to": "hours after Netanyahu's announcement",
+    "source_quote": "Earlier on Thursday, health authorities said an Israeli air raid killed at least 10 people, including four children",
+    "split": "heldout"
   }
 ]

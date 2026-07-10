@@ -38,6 +38,32 @@
 
 ---
 
+## 人裁终裁政策（2026-07-10 定稿，标注/复审必须遵守——此前两个 session 对同批样本裁出过相反结果，根因就是本节缺失）
+
+1. **缺口/元断言类 claim（informationGaps / signalStrength reasoning 里的 "no X is available"、"reporting is consistent across A/B/C" 等）**：
+   把它当**对源覆盖状态的可核验断言**判——源包完整在手，缺口是否真实存在可机械核验；
+   核验为真 → `supported`（被源整体蕴含），核验为假（源里其实有 X）→ `contradicted`。
+   **不采用**"必须源里明说'不存在'才算 supported"的字面派裁法：现实中没有报道会写
+   "本文未提供分层数据"，那条规则会把整个 informationGaps 字段判死刑，让 enforce
+   专门拦掉报告最诚实的自我限定（误拦方向）。
+   终裁样例：`#story9#22`（无死亡分层）、`#story9#23`（18M 无第三方核证）、`#story0#8`
+   （四家媒体交叉印证）→ 均 supported。
+
+2. **日期/时间可源内推算解析时按解析值判**：源给相对时间（"Friday"、"last week"）而
+   文章发布时间戳也在源内 → 解析出的具体日期视为"源给了日期"；claim 与之冲突 →
+   `contradicted`（适用 faithfulness rubric "源给的是别的日期→contradicted"），
+   **不是** unsupported。判官该抓的恰是"具体日期写错"，裁成轻罪会让尺子对日期错误降敏
+   （日期正是 qwen 已知盲区）。
+   终裁样例：`#story6#9`（源 Friday+发布日 6/1–6/2 → 首令 5/29，claim 写 31 May，
+   且 2026-05-31 为周日）→ contradicted。
+
+3. **复合 claim 按"逐成分核源"后再定**，不许凭"太长/绑了多件事"直接判 unsupported——
+   `#story13#7`（AUKUS 三成分）曾因 22k 长源漏检被误维持 unsupported，逐字核后三成分
+   全在源里 → supported。时态改写（源过去事件、claim 历史现在时）与 "internal" 级
+   修饰词属可容改写，不构成无源细节。
+
+---
+
 ## self-preference 泄漏（本线同样存在，且更隐蔽）
 
 情报报告由 `qwen-long` 生成，judge 是 `qwen-max`——同家族，grounding 分数可能系统性虚高。faithfulness 已记录此风险；本线因被评对象是 qwen 的深度综合输出，泄漏风险只多不少。κ 验收若临界，优先考虑换非 Qwen judge。

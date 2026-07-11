@@ -107,6 +107,9 @@ export interface FaithfulnessVerdict {
   // 需要人看的明细
   flagged_factual: FactualJudgement[];
   flagged_analytical: AnalyticalJudgement[];
+  // 仅 mode='full' 返回：全部 factual 判决（含 supported）。离线预筛用——审计抽样
+  // 要从 supported 堆里随机抽一把兜预筛器的系统性盲区（极性类会被盖章 supported）。
+  all_factual?: FactualJudgement[];
 }
 
 // 门 F 阈值（标定结论，改动前请回看 memory: faithfulness-runtime-gate）
@@ -534,6 +537,7 @@ export async function runFaithfulnessCheck(
     analytical_contradicting: analyticalContradicting,
     flagged_factual: factual.filter((j) => j.verdict !== 'supported'),
     flagged_analytical: analytical.filter((j) => j.verdict === 'contradicts_facts'),
+    ...(mode === 'full' ? { all_factual: factual } : {}),
   };
 }
 

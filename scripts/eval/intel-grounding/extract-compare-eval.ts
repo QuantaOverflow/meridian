@@ -201,6 +201,13 @@ function selfTest() {
     ['June2 vs 2June', false, () => datesConflict('June 2', '2 June')],
     // weekday 无时间戳 → 无法比对 → 不冲突（保守）
     ['Friday no-ts', false, () => datesConflict('31 May', 'on Friday')],
+    // 线上实测修复（2026-07-12 预筛冒烟暴露）：
+    // 报警号 "000" 不是数量 → 不冲突
+    ['000 not a number', false, () => numbersConflict('over 300 welfare checks', 'failed 000 calls')],
+    // 日期区间包含 claim 日 → 不冲突
+    ['7Jul in 7-8Jul', false, () => datesConflict('2026-07-07', '7–8 July 2026')],
+    // 日期区间不含 claim 日 → 冲突
+    ['5Jul vs 7-8Jul', true, () => datesConflict('2026-07-05', '7–8 July 2026')],
   ];
   let fail = 0;
   for (const [name, want, fn] of cases) {

@@ -121,6 +121,9 @@ export function parseNumInterval(raw: string): { lo: number; hi: number } | null
   const s = raw.toLowerCase().replace(/[,，]/g, '');
   const m = s.match(/(\d+(?:\.\d+)?)\s*(million|billion|thousand|bn|m\b|k\b)?/);
   if (!m) return null;
+  // 前导零整数（"000" 报警号/编号类）不是数量，解析成 0 会制造假冲突（线上实测：
+  // "failed 000 calls" 撞 "over 300 welfare checks"）
+  if (/^0\d/.test(m[1])) return null;
   let v = parseFloat(m[1]);
   const mag = m[2];
   if (mag === 'million' || mag === 'm') v *= 1e6;
@@ -183,9 +186,27 @@ export function resolveWeekday(weekdayRaw: string, articleISO: string): ParsedDa
   return null;
 }
 
+// 日期区间（"7–8 July" / "July 7-8"）：取两端日。线上实测 claim "07-07" 撞源 "7–8 July"
+// 被误判冲突——7 在区间内不是冲突。
+function parseDayRange(raw: string): { d1: number; d2: number; m: number; y?: number } | null {
+  const s = raw.toLowerCase();
+  const a = s.match(/(\d{1,2})\s*[–—-]\s*(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/);
+  if (a) return { d1: +a[1], d2: +a[2], m: MONTHS[a[3]], y: yearIn(s) };
+  const b = s.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})\s*[–—-]\s*(\d{1,2})/);
+  if (b) return { d1: +b[2], d2: +b[3], m: MONTHS[b[1]], y: yearIn(s) };
+  return null;
+}
+
 export function datesConflict(claimVal: string, sourceVal: string, articleISO?: string): boolean {
   const c = parseExplicitDate(claimVal);
   if (!c) return false;
+  // 源给的是日期区间：claim 日落在区间内（同月、年不冲突）→ 不是冲突
+  const range = parseDayRange(sourceVal || '');
+  if (range) {
+    const sameYear = !c.y || !range.y || c.y === range.y;
+    const inRange = c.m === range.m && c.d >= Math.min(range.d1, range.d2) && c.d <= Math.max(range.d1, range.d2);
+    return !(sameYear && inRange);
+  }
   let s = parseExplicitDate(sourceVal || '');
   if (!s && sourceVal && articleISO) s = resolveWeekday(sourceVal, articleISO);
   if (!s) return false;

@@ -20,6 +20,7 @@
  *   cd services/meridian-ai-worker && pnpm wrangler dev --port 8787   # 判官打本地 worker
  *   DATABASE_URL=postgres://... AI_WORKER_URL=http://localhost:8787 \
  *     pnpm prefilter [--days 14] [--wf <id>[,<id>...]] [--audit 0.1] [--limit 10]
+ *   （DATABASE_URL 本地在 apps/frontend/.env 的 NUXT_DATABASE_URL；packages/database/.env 不存在）
  *
  * 输出：
  *   worklist/<日期>.worklist.jsonl   待审清单（盲判输入；claim+判决+理由，不含源全文）
@@ -52,6 +53,13 @@ function seededPick(key: string, rate: number): boolean {
     h ^= key.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
+  // murmur3 终混：裸 FNV 对"长共享前缀+短变化后缀"雪崩不足（实测 0/200 命中 10% 抽样），
+  // 终混把尾字节熵扩散到全 32 位后分布才均匀。
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return (h >>> 0) / 0xffffffff < rate;
 }
 
@@ -85,8 +93,8 @@ async function main() {
   const runs: { workflow_id: string; report_id: number }[] = WF_LIST
     ? await sql`SELECT workflow_id, report_id FROM brief_runs WHERE workflow_id IN ${sql(WF_LIST)} AND report_id IS NOT NULL`
     : await sql`SELECT workflow_id, report_id FROM brief_runs
-                WHERE report_id IS NOT NULL AND created_at > now() - ${DAYS + ' days'}::interval
-                ORDER BY created_at DESC LIMIT ${LIMIT}`;
+                WHERE report_id IS NOT NULL AND started_at > now() - ${DAYS + ' days'}::interval
+                ORDER BY started_at DESC LIMIT ${LIMIT}`;
   console.log(`[prefilter] 选中 ${runs.length} 个 run（${WF_LIST ? '--wf 显式指定' : `最近 ${DAYS} 天，上限 ${LIMIT}`}）`);
   if (!runs.length) {
     await sql.end();

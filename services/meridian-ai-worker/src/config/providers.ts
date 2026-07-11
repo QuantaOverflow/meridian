@@ -632,6 +632,24 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
         },
       },
       {
+        // 跨家族判官通道：与 qwen 异家族，百炼托管，用于 grounding 判官 meta 实验
+        // （dashscope custom 路径不带缓存头，cache_ttl 实际不生效，仅作声明）
+        name: 'deepseek-v3',
+        capabilities: ['chat'],
+        endpoint: '/chat/completions',
+        max_tokens: 8192,
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.000002,   // ~¥0.002 / 1K tokens
+          output: 0.000008,
+        },
+        ai_gateway_config: {
+          cache_ttl: 0,
+          enable_cost_tracking: true,
+          custom_tags: ['dashscope', 'deepseek', 'judge'],
+        },
+      },
+      {
         // 长文本模型，最大上下文 10M tokens，专为文档摘要/情报合成类任务设计
         name: 'qwen-long',
         capabilities: ['chat'],

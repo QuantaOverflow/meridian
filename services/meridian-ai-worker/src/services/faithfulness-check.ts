@@ -5,9 +5,17 @@
  * 逐句把 brief 拆成原子 claim → 比对 source（brief 被允许使用的全部材料）→ 判 supported/
  * unsupported/contradicted → 汇总套「门 F」判据 → 出 block / pass。
  *
+ * 【2026-07-11 方向定案】线上只标记、离线审阅、成果回流生成端（memory:
+ * intel-grounding-judge-validated）。默认 mode='code_only'：只跑拆 claim + extract-compare
+ * 代码通道（确定性、~¥0.3/篇），LLM 判官（~100× qwen-max、判决噪声大）整体撤出线上、
+ * 保留 mode='full' 给离线批跑当预筛。backend 路径 B（按 flagged 删句）已同步关闭。
+ *
  * 判据（门 F，标定见 memory: faithfulness-runtime-gate）：
  *   BLOCK 当  (A) contradicted >= 2 且 contradicted_rate >= 0.05    ← 占比+绝对量双阈，单条不否决整篇
  *         或  (B) unsupported_rate > 0.15 且 genuine_unsupported >= 4  ← 又密又多=崩坏件
+ *         或  (C) code_verified 矛盾 >= 1                            ← 最高危险层：代码坐实的数字/日期
+ *                硬冲突（extract-compare 通道），确定性证据允许单票否决——离线实测修 6 弄坏 0、
+ *                精度 0.833~1.0，恢复 6-25 双阈牺牲掉的孤条真矛盾灵敏度（见 extract-compare.ts）
  *   warning-only（记录不拦）：analytical contradicts_facts（虚构前提，太吵硬拦会天天空窗）
  *
  * 【2026-06-25 改】(A) 从「contradicted >= 1 单条即拦」改为占比+count>=2 双阈（FActScore/RAGAS
@@ -39,6 +47,8 @@ import {
   CONTRA_VOTES,
   majorityVerdict,
 } from './faithfulness-prompts';
+// 抽取+程序比对通道（数字/日期硬冲突的确定性证据层），单一真源、eval 同 import
+import { extractCompareClaim } from './extract-compare';
 
 // ============================================================================
 // 类型
@@ -62,6 +72,8 @@ export interface FactualJudgement {
   claim: FaithClaim;
   verdict: FaithVerdict;
   reason: string;
+  // extract-compare 通道代码坐实的硬冲突（确定性证据，门 F 条款 C 的单票否决依据）
+  code_verified?: boolean;
 }
 
 export type AnalyticalVerdict = 'consistent' | 'contradicts_facts';
@@ -71,10 +83,14 @@ export interface AnalyticalJudgement {
   reason: string;
 }
 
+// code_only=线上传感器形态(拆claim+代码比对,无LLM判官);full=全量判官(离线批跑用)
+export type FaithfulnessMode = 'code_only' | 'full';
+
 export interface FaithfulnessVerdict {
   block: boolean;
   block_reasons: string[];
   judge_model: string;
+  mode: FaithfulnessMode;
   total_claims: number;
   factual_claims: number;
   analytical_claims: number;
@@ -82,6 +98,8 @@ export interface FaithfulnessVerdict {
   supported: number;
   genuine_unsupported: number;
   contradicted: number;
+  // contradicted 中由 extract-compare 代码坐实的条数（门 F 条款 C）
+  code_verified_conflicts: number;
   unsupported_rate: number;
   // 分析通道（次级信号，warning-only）
   analytical_consistent: number;
@@ -97,6 +115,8 @@ export const GATE_UNSUPPORTED_MIN_COUNT = 4;
 // 矛盾通道：占比+绝对量双阈（2026-06-25 反「单条一票否决」，见文件头注）
 export const GATE_CONTRADICTED_RATE = 0.05;
 export const GATE_CONTRADICTED_MIN_COUNT = 2;
+// 代码坐实硬冲突（条款 C）：确定性证据层，单条即拦（见文件头注与 extract-compare.ts）
+export const GATE_CODE_CONFLICT_MIN_COUNT = 1;
 // contradicted 召回：整条 claim 判定跑 K 个 pass 取并集，治裁判非确定性的「首判假阴漏抓真矛盾」
 // （2026-06-26：gold Putin 多错 brief 本有 3 矛盾、单跑只抓 1<count2→漏判）。命中即早停，省成本。
 export const FACTUAL_RECALL_PASSES = 2;
@@ -349,6 +369,57 @@ async function judgeAnalyticalMultiSource(
   return lastContradicting;
 }
 
+// extract-compare 前置通道：LLM 抽取 + 代码比对数字/日期。代码坐实硬冲突 → 直接
+// contradicted + code_verified（确定性证据比 LLM 判官精度高，还省掉该 claim 后续
+// 2 pass × 3 票的裁决成本）；没坐实 → 返回 null 交给原判官。只打 rank-0 最相关源
+// （与 bug3 修复同理：低排名源的"同一事实"配对不可信，misses 无害、误配有害）。
+async function codeVerifiedConflict(
+  ctx: JudgeCallContext,
+  claim: FaithClaim,
+  sources: StorySource[],
+  model: string
+): Promise<FactualJudgement | null> {
+  const order = rankSourcesByRelevance(claim.text, sources.map((s) => s.content));
+  if (order.length === 0) return null;
+  const conflicts = await extractCompareClaim(
+    claim.text,
+    sources[order[0]].content,
+    (prompt, maxTokens) => callJudge(ctx, prompt, model, maxTokens),
+    parseJSON
+  );
+  if (conflicts.length === 0) return null;
+  return {
+    claim,
+    verdict: 'contradicted',
+    code_verified: true,
+    reason: `code-verified conflict: ${conflicts.map((c) => c.why).join('; ')}`.slice(0, 300),
+  };
+}
+
+// code_only 形态：只跑代码比对通道。factual 里只留代码坐实的冲突（其余 claim 未经
+// LLM 判定，不伪造 supported 标签——诚实起见干脆不进列表，计数字段同理只反映本通道）；
+// analytical 整体跳过。
+async function judgeCodeOnly(
+  ctx: JudgeCallContext,
+  claims: FaithClaim[],
+  sources: StorySource[],
+  model: string,
+  concurrency = 5
+): Promise<{ factual: FactualJudgement[]; analytical: AnalyticalJudgement[] }> {
+  const factual: FactualJudgement[] = [];
+  const factualClaims = claims.filter((c) => c.type !== 'analytical');
+  let next = 0;
+  async function worker() {
+    while (next < factualClaims.length) {
+      const claim = factualClaims[next++];
+      const conflict = await codeVerifiedConflict(ctx, claim, sources, model);
+      if (conflict) factual.push(conflict);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, factualClaims.length || 1) }, worker));
+  return { factual, analytical: [] };
+}
+
 // 限并发跑全部 claim，按类型分流
 async function judgeAll(
   ctx: JudgeCallContext,
@@ -366,7 +437,10 @@ async function judgeAll(
       if (claim.type === 'analytical') {
         analytical.push(await judgeAnalyticalMultiSource(ctx, claim, sources, model));
       } else {
-        factual.push(await judgeFactualWithRecall(ctx, claim, sources, model));
+        factual.push(
+          (await codeVerifiedConflict(ctx, claim, sources, model)) ??
+            (await judgeFactualWithRecall(ctx, claim, sources, model))
+        );
       }
     }
   }
@@ -380,13 +454,15 @@ async function judgeAll(
 
 function gateDecision(
   factual: FactualJudgement[],
-  analytical: AnalyticalJudgement[]
+  analytical: AnalyticalJudgement[],
+  // 率的分母 = 抽取出的 factual claim 总数。code_only 模式下 factual 列表只含冲突条目，
+  // 用 factual.length 当分母会把占比虚算成 1.0，必须由调用方传真实总数。
+  totalFactualClaims: number
 ): { block: boolean; block_reasons: string[] } {
   const contradicted = factual.filter((j) => j.verdict === 'contradicted').length;
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;
-  const factualClaims = factual.length;
-  const rate = factualClaims ? genuineUnsupported / factualClaims : 0;
-  const contradictedRate = factualClaims ? contradicted / factualClaims : 0;
+  const rate = totalFactualClaims ? genuineUnsupported / totalFactualClaims : 0;
+  const contradictedRate = totalFactualClaims ? contradicted / totalFactualClaims : 0;
 
   const block_reasons: string[] = [];
   // (A) 事实矛盾：占比+绝对量双阈，单条不否决整篇（防一票否决放大器，见文件头注）
@@ -401,6 +477,12 @@ function gateDecision(
       `hallucination_density:rate=${rate.toFixed(3)}(>${GATE_UNSUPPORTED_RATE}),count=${genuineUnsupported}(>=${GATE_UNSUPPORTED_MIN_COUNT})`
     );
   }
+  // (C) 代码坐实的硬冲突：确定性证据（非 LLM 判定），精度实测 0.833~1.0 → 允许单票否决。
+  // (A) 的双阈是给 LLM 判官噪声设计的减震器，不适用于确定性证据层。
+  const codeVerified = factual.filter((j) => j.verdict === 'contradicted' && j.code_verified);
+  if (codeVerified.length >= GATE_CODE_CONFLICT_MIN_COUNT) {
+    block_reasons.push(`code_verified_conflict:count=${codeVerified.length}(>=${GATE_CODE_CONFLICT_MIN_COUNT})`);
+  }
   return { block: block_reasons.length > 0, block_reasons };
 }
 
@@ -413,33 +495,40 @@ export async function runFaithfulnessCheck(
   sources: StorySource[],
   brief: string,
   model = 'qwen-max',
-  traceContext: TraceContext = {}
+  traceContext: TraceContext = {},
+  mode: FaithfulnessMode = 'code_only'
 ): Promise<FaithfulnessVerdict> {
   // 观测性：复用入口 trace_id，把 claim extract / judge 全部串到同一条 R2 LLM 调用链。
   const judgeCtx = createJudgeCallContext(env, traceContext, 'faithfulness_check');
 
   const claims = await extractClaims(judgeCtx, brief, model);
-  const { factual, analytical } = await judgeAll(judgeCtx, claims, sources, model);
+  // 率的分母固定用抽取总数（code_only 下 factual 列表只含冲突条目，见 gateDecision 注）
+  const factualClaims = claims.filter((c) => c.type !== 'analytical').length;
+  const { factual, analytical } =
+    mode === 'full'
+      ? await judgeAll(judgeCtx, claims, sources, model)
+      : await judgeCodeOnly(judgeCtx, claims, sources, model);
 
   const supported = factual.filter((j) => j.verdict === 'supported').length;
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;
   const contradicted = factual.filter((j) => j.verdict === 'contradicted').length;
   const analyticalContradicting = analytical.filter((j) => j.verdict === 'contradicts_facts').length;
-  const factualClaims = factual.length;
   const rate = factualClaims ? genuineUnsupported / factualClaims : 0;
 
-  const { block, block_reasons } = gateDecision(factual, analytical);
+  const { block, block_reasons } = gateDecision(factual, analytical, factualClaims);
 
   return {
     block,
     block_reasons,
     judge_model: model,
+    mode,
     total_claims: claims.length,
     factual_claims: factualClaims,
     analytical_claims: analytical.length,
     supported,
     genuine_unsupported: genuineUnsupported,
     contradicted,
+    code_verified_conflicts: factual.filter((j) => j.verdict === 'contradicted' && j.code_verified).length,
     unsupported_rate: rate,
     analytical_consistent: analytical.length - analyticalContradicting,
     analytical_contradicting: analyticalContradicting,

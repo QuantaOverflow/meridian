@@ -637,7 +637,9 @@ const FaithfulnessCheckSchema = z.object({
   // per-story 拆分避免合并 source 撞 qwen-max 30720 token context 上限（旧合并 ~141K 字符 → 400）。
   sources: z.array(z.object({ storyId: z.string(), content: z.string().min(1) })).min(1),
   brief: z.string().min(1),
-  options: z.object({ model: z.string().optional() }).optional(),
+  // mode: code_only(默认)=只跑拆claim+代码比对通道(线上传感器形态,LLM判官旁路);
+  //       full=全量LLM判官(离线批跑/预筛用)。方向定案见 memory: intel-grounding-judge-validated。
+  options: z.object({ model: z.string().optional(), mode: z.enum(['code_only', 'full']).optional() }).optional(),
 })
 
 app.post('/meridian/faithfulness-check', async (c) => {
@@ -653,7 +655,7 @@ app.post('/meridian/faithfulness-check', async (c) => {
 
     console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs ${sources.length} 个故事源(合计 ${totalSourceChars} chars)`)
     // 观测性：把 workflow trace 传入 in-process faithfulness LLM 调用，避免绕过 loggedChat。
-    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max', readTraceContext(c.req.raw))
+    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max', readTraceContext(c.req.raw), options?.mode)
     console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
       `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
       `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)

@@ -1427,6 +1427,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 切 enforce：把下方常量翻 true，且需先给 brief_run_status 加 'BLOCKED_FAITHFULNESS' 枚举+migration。
       // =====================================================================
       const FAITHFULNESS_GATE_ENFORCE = false;
+      // 2026-07-11 方向定案「线上只标记、离线审阅、成果回流生成端」：路径 B（发布前按
+      // flagged 删句）关闭——它是线上干预，且其信号(unsupported)精度仅~0.2、净效应从未
+      // 审计过。离线评估首轮会回放历史 flagged 记录补这笔账，若证实净收益再考虑重开。
+      const FAITHFULNESS_REVISE_ENABLED = false;
       // 测试迭代可按 run 跳过门(judge 是 ~100× qwen-max,占 ~3min,影子模式下纯迭代税);
       // 生产 cron 不传此参=默认跑门攒影子数据。见 memory: faithfulness-runtime-gate。
       if (skipFaithfulnessGate) {
@@ -1510,7 +1514,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // fail-open：修订任何失败都不得连坐已生成的 brief，保留原文照常走。
           // 注：v.block 是修订「前」算的；当前 enforce=false 无影响。将来 enforce 翻 true
           //     时正确序应为 revise→重新 check→仍脏才拦（避免拿旧 verdict 误杀已洗净的 brief）。
-          if (v.flagged_factual && v.flagged_factual.length > 0) {
+          if (FAITHFULNESS_REVISE_ENABLED && v.flagged_factual && v.flagged_factual.length > 0) {
             try {
               const revised: any = await step.do('忠实度修订', faithfulnessStepConfig, async () => {
                 const reviseRequest = new Request(`http://localhost:8786/meridian/faithfulness-revise`, {

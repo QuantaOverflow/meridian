@@ -119,7 +119,8 @@ export interface AlignPair {
 // 阈值蕴含 "over 3,500" ∋ 3,526 不算冲突;"about" 给 15% 容差;裸数字给 0.5% 容差吸收四舍五入）
 export function parseNumInterval(raw: string): { lo: number; hi: number } | null {
   const s = raw.toLowerCase().replace(/[,，]/g, '');
-  const m = s.match(/(\d+(?:\.\d+)?)\s*(million|billion|thousand|bn|m\b|k\b)?/);
+  // 量级缩写含单字母 b（"$3.8B" 线上实测撞 "billion" 解析成 3.8 假冲突）
+  const m = s.match(/(\d+(?:\.\d+)?)\s*(million|billion|thousand|bn|b\b|m\b|k\b)?(\+)?/);
   if (!m) return null;
   // 前导零整数（"000" 报警号/编号类）不是数量，解析成 0 会制造假冲突（线上实测：
   // "failed 000 calls" 撞 "over 300 welfare checks"）
@@ -127,8 +128,10 @@ export function parseNumInterval(raw: string): { lo: number; hi: number } | null
   let v = parseFloat(m[1]);
   const mag = m[2];
   if (mag === 'million' || mag === 'm') v *= 1e6;
-  else if (mag === 'billion' || mag === 'bn') v *= 1e9;
+  else if (mag === 'billion' || mag === 'bn' || mag === 'b') v *= 1e9;
   else if (mag === 'thousand' || mag === 'k') v *= 1e3;
+  // 尾缀 "+"（"$3.8B+" = 3.8B 或更多）＝ at least 语义
+  if (m[3]) return { lo: v, hi: Infinity };
   if (/\b(over|more than|above|exceed(?:s|ing)?)\b/.test(s)) return { lo: v * (1 + 1e-9), hi: Infinity };
   if (/\b(at least|no fewer than|minimum)\b/.test(s)) return { lo: v, hi: Infinity };
   if (/\b(under|less than|fewer than|below)\b/.test(s)) return { lo: 0, hi: v * (1 - 1e-9) };

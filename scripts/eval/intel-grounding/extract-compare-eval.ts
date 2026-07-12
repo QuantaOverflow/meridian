@@ -208,6 +208,10 @@ function selfTest() {
     ['7Jul in 7-8Jul', false, () => datesConflict('2026-07-07', '7–8 July 2026')],
     // 日期区间不含 claim 日 → 冲突
     ['5Jul vs 7-8Jul', true, () => datesConflict('2026-07-05', '7–8 July 2026')],
+    // 首个生产 run 实测（2026-07-12）："$3.8B+" = 3.8 billion 或更多 → 与 "$3.8 billion" 不冲突
+    ['3.8B+ vs 3.8billion', false, () => numbersConflict('$3.8 billion', '$3.8B+')],
+    // "B" 单字母量级识别 + 真差异仍要抓："$5B" vs "$3.8 billion" → 冲突
+    ['5B vs 3.8billion', true, () => numbersConflict('$3.8 billion', '$5B')],
   ];
   let fail = 0;
   for (const [name, want, fn] of cases) {

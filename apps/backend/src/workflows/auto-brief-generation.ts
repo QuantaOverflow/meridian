@@ -1491,6 +1491,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=mark-only ` +
             `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
             `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
+          // 观测性：verdict 全量落 R2（含 all_claims 抽取全集）。step 日志只存 flagged，
+          // 但离线全量审计的「待判对象」是 claim 全集——不落盘就得重拆，非确定性对不齐
+          // 生产编号。best-effort，不拖垮发布。
+          try {
+            await this.env.ARTICLES_BUCKET.put(
+              `observability/faithfulness/${workflowId}.json`,
+              JSON.stringify({ workflowId, createdAt: new Date().toISOString(), verdict: v }, null, 2)
+            );
+          } catch (persistErr) {
+            console.warn(`[AutoBrief] 忠实度 verdict 落盘失败 (workflow=${workflowId}):`, persistErr);
+          }
           await observability.logStep('faithfulness_gate', 'completed', {
             block: v.block,
             block_reasons: v.block_reasons,

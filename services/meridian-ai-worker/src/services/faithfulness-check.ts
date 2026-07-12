@@ -111,6 +111,9 @@ export interface FaithfulnessVerdict {
   // 需要人看的明细
   flagged_factual: FactualJudgement[];
   flagged_analytical: AnalyticalJudgement[];
+  // 抽取出的 claim 全集（含未被 flag 的）。离线全量审计的「待判对象」——若只落 flagged，
+  // supported 堆不可见、审计就无法逐条复用生产的切分与编号（得重拆、非确定性对不齐）。
+  all_claims: FaithClaim[];
   // 仅 mode='full' 返回：全部 factual 判决（含 supported）。离线预筛用——审计抽样
   // 要从 supported 堆里随机抽一把兜预筛器的系统性盲区（极性类会被盖章 supported）。
   all_factual?: FactualJudgement[];
@@ -540,6 +543,7 @@ export async function runFaithfulnessCheck(
     analytical_contradicting: analyticalContradicting,
     flagged_factual: factual.filter((j) => j.verdict !== 'supported'),
     flagged_analytical: analytical.filter((j) => j.verdict === 'contradicts_facts'),
+    all_claims: claims,
     ...(mode === 'full' ? { all_factual: factual } : {}),
   };
 }

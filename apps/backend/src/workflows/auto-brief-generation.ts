@@ -1420,25 +1420,22 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
 
       // =====================================================================
-      // 步骤 5.5: 忠实度门（运行时 fail-closed backstop）
-      // 逐句把 brief 对情报报告取证，套门 F 判据(率>15% 且 数>=4，或任一事实矛盾)。
-      // 当前=影子模式：算 verdict + 写 observability，但永不拦——零空窗风险，并用真实
-      // 流量复校 0.15/4 拟合线。判据标定见 memory: faithfulness-runtime-gate。
-      // 切 enforce：把下方常量翻 true，且需先给 brief_run_status 加 'BLOCKED_FAITHFULNESS' 枚举+migration。
+      // 步骤 5.5: 忠实度门（线上只标记、离线审阅）
+      // 逐句把 brief 对情报报告取证，生产默认 code_only 纯传感器（只跑拆 claim + 代码
+      // 比对，~10 秒量级）；full 判官（~qwen-max judge）只在离线预筛显式传 mode='full'
+      // 时运行。线上只记录 verdict 到 observability，永不拦截、不改稿——判定结果离线
+      // 审阅、成果回流生成端。方向定案见 memory: faithfulness-runtime-gate /
+      // intel-grounding-judge-validated。路径 B（发布前删句）与 enforce 拦截均已关闭
+      // 且方向上永不重开。
       // =====================================================================
-      const FAITHFULNESS_GATE_ENFORCE = false;
-      // 2026-07-11 方向定案「线上只标记、离线审阅、成果回流生成端」：路径 B（发布前按
-      // flagged 删句）关闭——它是线上干预，且其信号(unsupported)精度仅~0.2、净效应从未
-      // 审计过。离线评估首轮会回放历史 flagged 记录补这笔账，若证实净收益再考虑重开。
-      const FAITHFULNESS_REVISE_ENABLED = false;
-      // 测试迭代可按 run 跳过门(judge 是 ~100× qwen-max,占 ~3min,影子模式下纯迭代税);
-      // 生产 cron 不传此参=默认跑门攒影子数据。见 memory: faithfulness-runtime-gate。
+      // 测试迭代可按 run 跳过门(省本次 code_only 检查耗时);
+      // 生产 cron 不传此参=默认跑门攒观测数据。见 memory: faithfulness-runtime-gate。
       if (skipFaithfulnessGate) {
-        console.log('[AutoBrief] 忠实度门：本次按 skipFaithfulnessGate 跳过(测试迭代,省 ~3min)');
+        console.log('[AutoBrief] 忠实度门：本次按 skipFaithfulnessGate 跳过(测试迭代)');
         await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'skip_param' });
       } else {
         await observability.logStep('faithfulness_gate', 'started');
-        // 门要对全部 story 跑 ~100× qwen-max judge(~3min)，远超 defaultStepConfig 的 2min；
+        // code_only 传感器耗时远低于 defaultStepConfig 的 2min，但仍留足余量防偶发慢调用；
         // retries=1 避免一次慢调用被重试放大成多轮超时。
         const faithfulnessStepConfig: WorkflowStepConfig = {
           retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
@@ -1491,12 +1488,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         if (faithfulnessVerdict) {
           const v = faithfulnessVerdict;
-          console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=${FAITHFULNESS_GATE_ENFORCE ? 'enforce' : 'shadow'} ` +
+          console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=mark-only ` +
             `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
             `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
           await observability.logStep('faithfulness_gate', 'completed', {
             block: v.block,
-            enforced: FAITHFULNESS_GATE_ENFORCE,
             block_reasons: v.block_reasons,
             genuine_unsupported: v.genuine_unsupported,
             factual_claims: v.factual_claims,
@@ -1506,71 +1502,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             flagged_factual: v.flagged_factual,
             flagged_analytical: v.flagged_analytical,
           });
-
-          // ---------------------------------------------------------------
-          // 路径 B：忠实度修订——把 flagged 的 factual claim 从 brief 删除/剥离。
-          // 影子/enforce 都跑：发出前先把无源细节洗掉，不依赖门翻 true。修订是检查员的
-          // 下游、保存(步骤6)的上游，改 briefResult.content 即让保存用上修订版。
-          // fail-open：修订任何失败都不得连坐已生成的 brief，保留原文照常走。
-          // 注：v.block 是修订「前」算的；当前 enforce=false 无影响。将来 enforce 翻 true
-          //     时正确序应为 revise→重新 check→仍脏才拦（避免拿旧 verdict 误杀已洗净的 brief）。
-          if (FAITHFULNESS_REVISE_ENABLED && v.flagged_factual && v.flagged_factual.length > 0) {
-            try {
-              const revised: any = await step.do('忠实度修订', faithfulnessStepConfig, async () => {
-                const reviseRequest = new Request(`http://localhost:8786/meridian/faithfulness-revise`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-                  body: JSON.stringify({ brief: briefResult.content, flaggedFactual: v.flagged_factual }),
-                });
-                const reviseResponse = await this.env.AI_WORKER.fetch(reviseRequest);
-                try {
-                  if (reviseResponse.status !== 200) {
-                    console.error(`[AutoBrief] 忠实度修订调用失败: HTTP ${reviseResponse.status}，保留原 brief`);
-                    return null;
-                  }
-                  const reviseData = await reviseResponse.json() as any;
-                  return reviseData.success ? reviseData.data : null;
-                } finally {
-                  if (reviseResponse && typeof (reviseResponse as any).dispose === 'function') {
-                    (reviseResponse as any).dispose();
-                  }
-                }
-              });
-              if (revised && revised.changed) {
-                console.log(`[AutoBrief] 忠实度修订: applied=${revised.applied.length} skipped=${revised.skipped.length}，替换 brief content`);
-                briefResult.content = revised.revised_brief;
-                await observability.logStep('faithfulness_revise', 'completed', {
-                  changed: true, applied: revised.applied.length, skipped: revised.skipped.length, edits: revised.applied,
-                });
-              } else {
-                await observability.logStep('faithfulness_revise', 'completed', { changed: false });
-              }
-            } catch (reviseError) {
-              console.error(`[AutoBrief] 忠实度修订步骤失败(${reviseError instanceof Error ? reviseError.message : String(reviseError)})，fail-open 保留原 brief`);
-              await observability.logStep('faithfulness_revise', 'failed', {
-                reason: reviseError instanceof Error ? reviseError.message : String(reviseError),
-              });
-            }
-          }
-
-          // enforce 才真拦；影子模式即使 block 也照常发出(只留记录)
-          if (FAITHFULNESS_GATE_ENFORCE && v.block) {
-            await step.do('persist:brief_run_blocked', dbStepConfig, async () => {
-              const db = getDb(this.env.HYPERDRIVE);
-              await db.update($brief_runs).set({
-                status: 'FAILED', // enforce 上线时改 'BLOCKED_FAITHFULNESS'(需先加枚举+migration)
-                finished_at: new Date(),
-                error: `BLOCKED_FAITHFULNESS: ${v.block_reasons.join('; ')}`,
-                brief_content_length: briefResult.content.length,
-              }).where(eq($brief_runs.workflow_id, workflowId));
-            });
-            console.log(`[AutoBrief] ❌ 简报被忠实度门拦截，未发出: ${v.block_reasons.join('; ')}`);
-            return {
-              success: false,
-              reason: 'BLOCKED_FAITHFULNESS',
-              message: `简报未通过忠实度门: ${v.block_reasons.join('; ')}`,
-            };
-          }
         } else {
           await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'check_unavailable' });
         }

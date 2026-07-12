@@ -86,7 +86,7 @@ interface WorkItem {
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL) throw new Error('需 DATABASE_URL（见 packages/database/.env）');
+  if (!process.env.DATABASE_URL) throw new Error('需 DATABASE_URL（本地在 apps/frontend/.env 的 NUXT_DATABASE_URL）');
   const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 
   // 1. 选 run：显式 --wf 或最近 N 天成功 run

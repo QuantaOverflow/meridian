@@ -1,9 +1,10 @@
 /**
- * 运行时忠实度门（fail-closed backstop）
+ * 忠实度传感器（mark-only）：线上默认 code_only 只标记不拦截不改稿；mode='full' 全量
+ * LLM 判官仅供离线预筛批跑。
  *
- * 把已标定的离线 eval（scripts/eval/faithfulness/）移进 brief 发出路径上的运行时关卡：
  * 逐句把 brief 拆成原子 claim → 比对 source（brief 被允许使用的全部材料）→ 判 supported/
- * unsupported/contradicted → 汇总套「门 F」判据 → 出 block / pass。
+ * unsupported/contradicted → 汇总套「门 F」判据 → 出 verdict（block 字段实为 would_block，
+ * 只记录不执行，见下）。
  *
  * 【2026-07-11 方向定案】线上只标记、离线审阅、成果回流生成端（memory:
  * intel-grounding-judge-validated）。默认 mode='code_only'：只跑拆 claim + extract-compare
@@ -17,6 +18,8 @@
  *                硬冲突（extract-compare 通道），确定性证据允许单票否决——离线实测修 6 弄坏 0、
  *                精度 0.833~1.0，恢复 6-25 双阈牺牲掉的孤条真矛盾灵敏度（见 extract-compare.ts）
  *   warning-only（记录不拦）：analytical contradicts_facts（虚构前提，太吵硬拦会天天空窗）
+ *   注：(A)(B) 只在 mode='full' 下有意义——code_only 下 unsupported 恒 0、contradicted
+ *   全部来自 code_verified，判据实际由 (C) 主导。
  *
  * 【2026-06-25 改】(A) 从「contradicted >= 1 单条即拦」改为占比+count>=2 双阈（FActScore/RAGAS
  * 占比聚合 + RefChecker 三标签分别算 rate 的业界共识）。动因：12 条 held-out 实测误拦 2/12，两条
@@ -87,6 +90,7 @@ export interface AnalyticalJudgement {
 export type FaithfulnessMode = 'code_only' | 'full';
 
 export interface FaithfulnessVerdict {
+  // 语义实为 would_block：线上只标记不拦截，调用方（backend）不据此拒发/删稿。
   block: boolean;
   block_reasons: string[];
   judge_model: string;
@@ -113,16 +117,16 @@ export interface FaithfulnessVerdict {
 }
 
 // 门 F 阈值（标定结论，改动前请回看 memory: faithfulness-runtime-gate）
-export const GATE_UNSUPPORTED_RATE = 0.15;
-export const GATE_UNSUPPORTED_MIN_COUNT = 4;
+const GATE_UNSUPPORTED_RATE = 0.15;
+const GATE_UNSUPPORTED_MIN_COUNT = 4;
 // 矛盾通道：占比+绝对量双阈（2026-06-25 反「单条一票否决」，见文件头注）
-export const GATE_CONTRADICTED_RATE = 0.05;
-export const GATE_CONTRADICTED_MIN_COUNT = 2;
+const GATE_CONTRADICTED_RATE = 0.05;
+const GATE_CONTRADICTED_MIN_COUNT = 2;
 // 代码坐实硬冲突（条款 C）：确定性证据层，单条即拦（见文件头注与 extract-compare.ts）
-export const GATE_CODE_CONFLICT_MIN_COUNT = 1;
+const GATE_CODE_CONFLICT_MIN_COUNT = 1;
 // contradicted 召回：整条 claim 判定跑 K 个 pass 取并集，治裁判非确定性的「首判假阴漏抓真矛盾」
 // （2026-06-26：gold Putin 多错 brief 本有 3 矛盾、单跑只抓 1<count2→漏判）。命中即早停，省成本。
-export const FACTUAL_RECALL_PASSES = 2;
+const FACTUAL_RECALL_PASSES = 2;
 
 // ============================================================================
 // LLM 调用（in-process，复用 AIGatewayService，避免 HTTP 回跳）
@@ -457,7 +461,6 @@ async function judgeAll(
 
 function gateDecision(
   factual: FactualJudgement[],
-  analytical: AnalyticalJudgement[],
   // 率的分母 = 抽取出的 factual claim 总数。code_only 模式下 factual 列表只含冲突条目，
   // 用 factual.length 当分母会把占比虚算成 1.0，必须由调用方传真实总数。
   totalFactualClaims: number
@@ -518,7 +521,7 @@ export async function runFaithfulnessCheck(
   const analyticalContradicting = analytical.filter((j) => j.verdict === 'contradicts_facts').length;
   const rate = factualClaims ? genuineUnsupported / factualClaims : 0;
 
-  const { block, block_reasons } = gateDecision(factual, analytical, factualClaims);
+  const { block, block_reasons } = gateDecision(factual, factualClaims);
 
   return {
     block,
@@ -539,108 +542,4 @@ export async function runFaithfulnessCheck(
     flagged_analytical: analytical.filter((j) => j.verdict === 'contradicts_facts'),
     ...(mode === 'full' ? { all_factual: factual } : {}),
   };
-}
-
-// ============================================================================
-// ④ Revision（路径 B）：把 flagged 的 factual claim 从 brief 里删除/剥离
-//
-// v1 = source-free 外科修订。只处理事实通道的 unsupported/contradicted（真·无源添加
-// 或与源矛盾），不碰 analytical（warning-only）。不重喂 source —— judge 的 reason 已说明
-// 哪里无源，重喂合并 source 会撞 qwen-max 30720 token 上限（同 per-story 拆源的初衷）。
-//
-// 让 LLM 只回 edit-list（brief 原文片段 → 替换文本，空串=整段删），由本地程序化 apply：
-// 只动 flagged 片段，brief 其余部分逐字不变 —— 可审计、防 LLM 重吐整篇时的漂移。
-// 「按源改写成正确版本」需路由 per-story 源，留作后续增强。
-// ============================================================================
-
-export interface ReviseEdit {
-  brief_span: string; // brief 里待改的 verbatim 子串
-  replacement: string; // 修订后文本；空串 = 删除整段
-  reason: string;
-}
-export interface RevisionResult {
-  revised_brief: string;
-  applied: ReviseEdit[]; // 成功 apply（span 在 brief 里精确命中）
-  skipped: ReviseEdit[]; // span 非 brief 精确子串，未 apply（记录待查）
-  changed: boolean;
-}
-
-const REVISE_PROMPT = (brief: string, flagged: FactualJudgement[]) => `
-You are a careful news editor. A faithfulness check flagged the FACTUAL claims
-below as NOT grounded in the source material (either unsupported additions or
-contradicted by the source). Your job: surgically remove the ungrounded content
-from the BRIEF while keeping everything else intact.
-
-# For each flagged claim, choose:
-- If the claim is an unsupported DETAIL grafted onto an otherwise sound sentence
-  (e.g. an invented location/number/qualifier), rewrite just that sentence to
-  drop the ungrounded detail and keep the supported core.
-- If the whole sentence's point IS the ungrounded claim, delete the sentence.
-
-# Hard rules
-- "brief_span" MUST be an exact verbatim substring of the BRIEF (copy it letter
-  for letter, including punctuation). It is the text you want to change.
-- "replacement" is the corrected text, or an empty string "" to delete the span.
-- Do NOT touch any text that wasn't flagged. Do NOT rephrase for style.
-- Do NOT add any new facts. Removal/trimming only.
-
-# Flagged factual claims
-${flagged.map((j, i) => `${i + 1}. [${j.verdict}] "${j.claim.text}" — ${j.reason}`).join('\n')}
-
-# BRIEF
-${brief}
-
-# Output
-Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
-{
-  "edits": [
-    { "brief_span": "<verbatim substring of BRIEF>", "replacement": "<corrected text or empty>", "reason": "<short>" }
-  ]
-}
-`.trim();
-
-// 删除片段后清理遗留的双空格 / 悬空标点；只做最轻量收尾，不动其它字符。
-function tidyAfterDelete(s: string): string {
-  return s
-    .replace(/ {2,}/g, ' ')
-    .replace(/\s+([.,;:!?])/g, '$1')
-    .replace(/\n{3,}/g, '\n\n');
-}
-
-export async function reviseBrief(
-  env: CloudflareEnv,
-  brief: string,
-  flaggedFactual: FactualJudgement[],
-  model = 'qwen-max',
-  traceContext: TraceContext = {}
-): Promise<RevisionResult> {
-  // 只对真正有问题的事实 claim 动刀；supported 的不该出现在 flagged 里，但稳妥起见再过滤一次。
-  const targets = flaggedFactual.filter((j) => j.verdict === 'unsupported' || j.verdict === 'contradicted');
-  if (targets.length === 0) {
-    return { revised_brief: brief, applied: [], skipped: [], changed: false };
-  }
-
-  // 观测性：修订本身也是 LLM 调用，单独 phase 便于和检查阶段区分。
-  const judgeCtx = createJudgeCallContext(env, traceContext, 'faithfulness_revise');
-  const raw = await callJudge(judgeCtx, REVISE_PROMPT(brief, targets), model, 4000);
-  const parsed = parseJSON<{ edits?: ReviseEdit[] }>(raw);
-  const edits = Array.isArray(parsed?.edits) ? parsed!.edits! : [];
-
-  const applied: ReviseEdit[] = [];
-  const skipped: ReviseEdit[] = [];
-  let revised = brief;
-  for (const e of edits) {
-    if (!e || typeof e.brief_span !== 'string' || e.brief_span.length === 0) continue;
-    const replacement = typeof e.replacement === 'string' ? e.replacement : '';
-    // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤），记入 skipped 待查。
-    if (revised.includes(e.brief_span)) {
-      revised = revised.replace(e.brief_span, replacement);
-      applied.push({ brief_span: e.brief_span, replacement, reason: (e.reason || '').toString().slice(0, 300) });
-    } else {
-      skipped.push({ brief_span: e.brief_span, replacement, reason: (e.reason || '').toString().slice(0, 300) });
-    }
-  }
-  if (applied.some((e) => e.replacement === '')) revised = tidyAfterDelete(revised);
-
-  return { revised_brief: revised, applied, skipped, changed: applied.length > 0 };
 }

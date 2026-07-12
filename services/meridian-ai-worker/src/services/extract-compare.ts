@@ -9,9 +9,9 @@
  * 只在代码坐实硬冲突且抽取自报 high confidence 时产出 conflict（单向信号，只用于把
  * 判定推向 contradicted，绝不反向"洗白"）。离线验证（2026-07-11，intel-grounding 金标）：
  * 真金标修 3 弄坏 0（contra 召回 0.25→0.625、supported 精度反升），合成集修 3 弄坏 0、
- * 精度保 1.0。详见 memory: intel-grounding-judge-validated / eval: _extract_compare.ts。
+ * 精度保 1.0。详见 memory: intel-grounding-judge-validated / eval: extract-compare-eval.ts。
  *
- * 单一真源：eval（scripts/eval/intel-grounding/_extract_compare.ts）与 runtime
+ * 单一真源：eval（scripts/eval/intel-grounding/extract-compare-eval.ts）与 runtime
  * （faithfulness-check.ts）都 import 这里，与 faithfulness-prompts.ts 同惯例。
  */
 

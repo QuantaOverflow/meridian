@@ -10,8 +10,8 @@
 //
 // 用法：
 //   AI_WORKER_URL=http://localhost:8787 BASELINE_REPORT=eval-reports/judge-meta/meta-xxx.json \
-//     pnpm tsx _extract_compare.ts gold/judge-gold.jsonl
-//   SELFTEST=1 pnpm tsx _extract_compare.ts   # 零 LLM 自测比对逻辑
+//     pnpm tsx extract-compare-eval.ts gold/judge-gold.jsonl
+//   SELFTEST=1 pnpm tsx extract-compare-eval.ts   # 零 LLM 自测比对逻辑
 // baseline 从已有 meta 报告复原（mismatches 里的 pred + 其余 pred=gold），省一轮重跑。
 // 实测读数（2026-07-11）：真金标修3弄坏0 κ0.407→0.531；合成修3弄坏0 精度保1.0。
 // ============================================================================

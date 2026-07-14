@@ -84,7 +84,7 @@ export class AIResponseParser {
       .map(article => {
         return `## [${article.title}](${article.url}) (#${article.id})
 
-> ${article.publishDate}
+> Published: ${article.publishDate} (this is when the article was filed, NOT the date of the events it describes)
 
 \`\`\`
 ${article.content}

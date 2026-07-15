@@ -45,7 +45,11 @@ export const ValidatedStoriesSchema = z.object({
 
 // 情报分析数据结构
 export const TimelineEventSchema = z.object({
-  date: z.string().datetime(),
+  date: z.string(),
+  // 该事件日期所依据的原文逐字引用（Tier1 证据锚定）：把「日期↔证据」的支持关系
+  // 在生成时固定，使离线核验退化为「date 与本引用是否自洽」的确定性比对（无需事后
+  // 重建事件共指）。见 memory: intel-grounding-judge-validated「证据锚定生成」。
+  dateSource: z.string().optional(),
   description: z.string(),
   importance: z.enum(["HIGH", "MEDIUM", "LOW"]),
 });

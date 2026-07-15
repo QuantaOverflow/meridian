@@ -201,7 +201,11 @@ function parseDayRange(raw: string): { d1: number; d2: number; m: number; y?: nu
 }
 
 export function datesConflict(claimVal: string, sourceVal: string, articleISO?: string): boolean {
-  const c = parseExplicitDate(claimVal);
+  // claim 侧也要解析周几（与下方 source 侧对称）：报告/简报把事件日期写成裸周几
+  // （"Friday"）时，parseExplicitDate 返回 null 会直接漏判「周五 vs 周六」这类冲突。
+  // 环1 日期传感器（报告 vs 原文）的核心场景就是两边都是周几，缺此对称即全漏。
+  let c = parseExplicitDate(claimVal);
+  if (!c && claimVal && articleISO) c = resolveWeekday(claimVal, articleISO);
   if (!c) return false;
   // 源给的是日期区间：claim 日落在区间内（同月、年不冲突）→ 不是冲突
   const range = parseDayRange(sourceVal || '');
@@ -242,9 +246,16 @@ export function findHardConflicts(pairs: AlignPair[]): HardConflict[] {
   return out;
 }
 
-// 通道触发门：claim 里得有数字或月份词，否则本通道无事可做
+// 通道触发门：claim 里得有数字、月份词或周几，否则本通道无事可做。
+// 周几也算日期线索——否则「事件发生在 Friday」这类纯周几 claim 会被静默跳过，
+// 漏掉「报告周五 vs 原文周六」的冲突（run 52 环1 story4/5 即此因，datesConflict
+// 对称修复也白搭：门都进不来）。
 export function hasSpecifics(claim: string): boolean {
-  return /\d/.test(claim) || new RegExp(`\\b(${Object.keys(MONTHS).join('|')})\\b`, 'i').test(claim);
+  return (
+    /\d/.test(claim) ||
+    new RegExp(`\\b(${Object.keys(MONTHS).join('|')})\\b`, 'i').test(claim) ||
+    new RegExp(`\\b(${WEEKDAYS.join('|')})\\b`, 'i').test(claim)
+  );
 }
 
 // ============================================================================

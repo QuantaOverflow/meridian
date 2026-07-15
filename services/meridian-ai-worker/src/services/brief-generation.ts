@@ -725,7 +725,9 @@ export class BriefGenerationService {
         markdown += '## 时间线（事件按此时间戳顺序发生，叙述时序/因果必须与此一致，不得重排）\n';
         timeline.forEach((ev: any) => {
           const ts = ev.timestamp || ev.date || '';
-          markdown += `* [${ts}] ${ev.description}\n`;
+          // date 为空（LLM 未给绝对日期）时不渲染 [] 空壳，避免生成器把空时间戳当权威；
+          // 事件日期改由 description 文本承载（其中含"周四/9 July"等原文措辞）。
+          markdown += ts ? `* [${ts}] ${ev.description}\n` : `* ${ev.description}\n`;
         });
         markdown += '\n';
       }

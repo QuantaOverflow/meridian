@@ -121,7 +121,12 @@ export class IntelligenceReportBuilder {
   private static buildTimeline(analysis: any): TimelineEvent[] {
     if (Array.isArray(analysis.timeline)) {
       return analysis.timeline.map((event: any) => ({
-        date: event.date || new Date().toISOString(),
+        // 不拿 new Date() 兜底：生成时刻会被下游简报生成器当成事件"权威时间戳"，
+        // 把所有事件盖成同一个当天日期（run 52 环1审计头号缺陷）。LLM 没给就留空，
+        // 下游按"无权威日期"处理，从 description 文本取真实日期，而非编造。
+        date: event.date || "",
+        // Tier1 证据锚定：透传日期所依据的原文引用，供离线自洽核验（date↔quote）。
+        dateSource: event.date_source || event.dateSource || "",
         description: event.description || "Timeline event",
         importance: this.mapTimelineImportance(event.importance),
       }));

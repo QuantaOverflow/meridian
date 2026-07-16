@@ -1,6 +1,6 @@
 import { AIGatewayService } from './ai-gateway';
 import { loggedChat, TraceContext } from './llm-call-logger';
-import { getIntelligenceAnalysisPrompt } from '../prompts/intelligenceAnalysis';
+import { getIntelligenceAnalysisPrompt, getIntelReportVerificationPrompt } from '../prompts/intelligenceAnalysis';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { 
   ArticleDataset, 
@@ -32,10 +32,23 @@ export type {
 export class IntelligenceService {
   private aiGatewayService: AIGatewayService;
   private traceContext: TraceContext;
+  // RARR 式接地校验-改正开关：默认开（与环2 简报生成的 selfCorrect 同款语义），
+  // eval baseline 臂传 false 关掉做对照。
+  private selfCorrect: boolean;
+  // 跳过 AI Gateway 缓存：默认 false（生产照常，且每 story 文章不同→缓存键本就不撞）。
+  // eval 重问同一 story 必须传 true：否则 n 次采样静默退化成 1 次（见 memory:
+  // ai-gateway-cache-eval-trap；本轮实测 B/C 臂 4 次输出逐字节相同即此因）。
+  private skipCache: boolean;
 
-  constructor(private env: CloudflareEnv, traceContext: TraceContext = {}) {
+  constructor(
+    private env: CloudflareEnv,
+    traceContext: TraceContext = {},
+    options: { selfCorrect?: boolean; skipCache?: boolean } = {}
+  ) {
     this.aiGatewayService = new AIGatewayService(env);
     this.traceContext = traceContext;
+    this.selfCorrect = options.selfCorrect !== false;
+    this.skipCache = options.skipCache === true;
   }
 
   /**
@@ -235,6 +248,7 @@ export class IntelligenceService {
         model: 'qwen-long',
         temperature: 0.1,
         max_tokens: 8192,
+        skipCache: this.skipCache,
         metadata: {
           requestId: `intel-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
           timestamp: Date.now(),
@@ -262,7 +276,92 @@ export class IntelligenceService {
     // 解析AI响应为标准情报报告结构
     const analysis = AIResponseParser.parseIntelligenceResponse(responseText);
     console.log(`[Intelligence] 解析结果状态: ${analysis?.status || 'unknown'}`);
-    
+
+    // RARR 式接地校验-改正（默认开；eval baseline 臂传 selfCorrect:false 关掉做对照）
+    if (this.selfCorrect !== false && analysis && analysis.status !== 'incomplete') {
+      return await this.verifyAndCorrect(analysis, storyArticleMd);
+    }
     return analysis;
+  }
+
+  // 报告里「对事实有断言」的可核字段。纯枚举/分类标签（importance/score 之类）不进校验，
+  // 它们不是对源的事实断言。口径对齐 scripts/eval/intel-grounding/intel-source.ts 的 prose 摊平。
+  private static readonly CHECKABLE: Array<{ path: string; get: (r: any) => string | undefined; set: (r: any, v: string) => void }> = [
+    { path: 'executiveSummary', get: (r) => r.executiveSummary, set: (r, v) => { r.executiveSummary = v; } },
+    { path: 'significance.reasoning', get: (r) => r.significance?.reasoning, set: (r, v) => { if (r.significance) r.significance.reasoning = v; } },
+    { path: 'signalStrength.reasoning', get: (r) => r.signalStrength?.reasoning, set: (r, v) => { if (r.signalStrength) r.signalStrength.reasoning = v; } },
+  ];
+
+  /**
+   * 拿报告回到它唯一允许的源（RSS 原文）前逐条核对，模型只回 edit-list，本地程序化 apply。
+   * 强制力留在代码里：模型只提议，替换由此处执行；没精确命中的 edit 宁可跳过（防误伤）。
+   * ——这正是「生成时证据账本」失败的反面：那里强制力交给了模型，它建完账本就绕过。
+   */
+  private async verifyAndCorrect(analysis: any, storyArticleMd: string): Promise<any> {
+    try {
+      // 摊平可核字段（含 timeline/entities 的文本项），每行带路径标记供模型定位
+      const lines: string[] = [];
+      const targets: Array<{ get: () => string; set: (v: string) => void }> = [];
+      for (const f of IntelligenceService.CHECKABLE) {
+        const v = f.get(analysis);
+        if (typeof v === 'string' && v.trim()) {
+          lines.push(`[${f.path}] ${v}`);
+          targets.push({ get: () => f.get(analysis) as string, set: (nv) => f.set(analysis, nv) });
+        }
+      }
+      const tl = Array.isArray(analysis.timeline) ? analysis.timeline : [];
+      tl.forEach((e: any, i: number) => {
+        if (typeof e?.description === 'string' && e.description.trim()) {
+          lines.push(`[timeline[${i}].description] ${e.description}`);
+          targets.push({ get: () => e.description, set: (nv) => { e.description = nv; } });
+        }
+      });
+      const ents = Array.isArray(analysis.keyEntities) ? analysis.keyEntities : (analysis.keyEntities?.list ?? []);
+      ents.forEach((e: any, i: number) => {
+        const d = e?.description ?? e?.role;
+        if (typeof d === 'string' && d.trim()) {
+          lines.push(`[keyEntities[${i}].description] ${d}`);
+          targets.push({ get: () => (e.description ?? e.role) as string, set: (nv) => { if (e.description !== undefined) e.description = nv; else e.role = nv; } });
+        }
+      });
+      if (!targets.length) return analysis;
+
+      const raw = await loggedChat(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis', {
+        messages: [{ role: 'user' as const, content: getIntelReportVerificationPrompt(lines.join('\n'), storyArticleMd) }],
+        provider: 'dashscope',
+        // 与生成同款长上下文模型：校验要同时装下原文与报告
+        model: 'qwen-long',
+        temperature: 0,
+        max_tokens: 4000,
+        skipCache: this.skipCache,
+        metadata: { requestId: `intel-rarr-${Date.now()}`, timestamp: Date.now() },
+      });
+      const text = (raw as ChatResponse).choices?.[0]?.message?.content || '';
+      // 容忍 ```json 围栏 / 裸对象两种形态（与 AIResponseParser 同款容错思路）
+      const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const body = fenced ? fenced[1] : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      const parsed = JSON.parse(body);
+      const edits: Array<{ span?: string; replacement?: string; reason?: string }> = Array.isArray(parsed?.edits) ? parsed.edits : [];
+
+      let applied = 0, skipped = 0;
+      for (const e of edits) {
+        if (!e || typeof e.span !== 'string' || !e.span.length) continue;
+        const rep = typeof e.replacement === 'string' ? e.replacement : '';
+        // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤）。逐字段试，改第一个命中的。
+        const hit = targets.find((t) => (t.get() || '').includes(e.span!));
+        if (hit) {
+          hit.set((hit.get() || '').replace(e.span, rep).replace(/\s{2,}/g, ' ').trim());
+          applied++;
+        } else {
+          skipped++;
+        }
+      }
+      console.log(`[Intelligence] 接地校验-改正：edits ${edits.length}，applied ${applied}，skipped ${skipped}`);
+      return analysis;
+    } catch (error) {
+      // 校验失败不应拖垮整条生成：退回未修订报告（下游忠实度门仍作末端兜底）。
+      console.error('[Intelligence] 接地校验-改正失败，退回原报告:', error);
+      return analysis;
+    }
   }
 }

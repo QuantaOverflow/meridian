@@ -81,4 +81,54 @@ Return your complete response, including your preliminary analysis/thinking in a
 `.trim()
 
   return prePrompt + '\n\n' + storyArticleMd + '\n\n' + postPrompt
+}
+
+// RARR 式接地校验-改正（环1 版）。与 briefGeneration.ts 的 getBriefVerificationPrompt 同构，
+// 但源是 RSS 原文而非已压缩过一道的情报报告 —— 即文献里的 gold-article 最优情形
+// （RARR+gold-article=83 vs RARR+Bing=73，arXiv 2506.19607），环1 天然占这一档。
+//
+// 为什么放在生成之后而不是生成之中：生成时引用（G-Cite）全面劣于事后引用（P-Cite）——
+// 覆盖 27-37% vs 75%、人评正确率 69% vs 78%（arXiv 2509.21557）；且生成时约束的强制力
+// 只能交给模型（实测它会建出 94% 逐字属实的引用清单后照样在正文编造 = post-rationalization,
+// arXiv 2412.18004 量化 57% 引用系事后贴）。事后范式才能做到「模型只提议、代码执行」。
+//
+// 模型只回 edit-list（verbatim span → 接地修正/删除），由本地程序化 apply。
+export function getIntelReportVerificationPrompt(reportFields: string, storyArticleMd: string): string {
+  return `
+You are a meticulous fact-checker correcting an intelligence report against its ONLY permitted source: the news articles below. The report was written from these articles and must contain no concrete fact the articles do not support. Your job is to catch and FIX factual errors — both specifics the articles never contained, and facts that ARE in the articles but got GARBLED: wrong attribution, reversed order, altered number/scope/status, wrong date/name, bad arithmetic.
+
+<articles>
+${storyArticleMd}
+</articles>
+
+<report_fields>
+${reportFields}
+</report_fields>
+
+# What to flag (CONCRETE FACTS ONLY)
+Check every concrete factual token: names, numbers, dates, quantities, scope/rankings, superlatives ("first since X", "third consecutive"), quotes, who-said / who-did attributions, event order, status/modality ("agreed" vs "proposed"), severity verbs ("damaged" vs "destroyed"). Flag a span when:
+- it CONTRADICTS the articles — e.g. articles say "third time in four years" but the report says "third consecutive year"; articles say "14.5 km (nine miles)" but the report says "9–14.5 km"; articles attribute a claim to two former Air Force officials but the report attributes it to the Secret Service; OR
+- it states a concrete specific (named org / person / place / number / year / precedent) that is ABSENT from the articles. **This applies even when the specific is true in the real world**: a report reader needs to know what THIS REPORTING said, so a correct-but-unsourced figure (e.g. an annual aid amount the articles never mention) is an error of the same kind as an invented one.
+
+# What NOT to flag (leave untouched)
+- Analytical interpretation — motivations, implications, "this likely signals…". Opinion grounded on real facts is allowed; never touch it.
+- Wording, style, tone. Only factual accuracy matters here.
+- Relative time wording ("Thursday", "a day earlier") deliberately copied from the articles — that is correct behaviour, not an error. Never "fix" it into a calendar date.
+- Facts that ARE supported by the articles, even if phrased differently. If unsure whether a fact is supported, LEAVE IT — flag only clear errors. Precision over zeal: a wrongly-flagged correct sentence is worse than a missed one.
+
+# For each problem, produce one edit
+- "span": an EXACT verbatim substring of the report fields above (copy letter-for-letter, including punctuation) — the SMALLEST span containing the error.
+- "replacement": the corrected text, grounded in the articles (fix the number / name / attribution / order to match the articles exactly). Use an empty string "" ONLY when the span is an unsupported specific that cannot be corrected from the articles and must be removed.
+- "reason": one short phrase citing the articles (e.g. 'articles say third time in four years, not consecutive').
+
+# Output
+Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose. If the report has no factual errors, return {"edits": []}.
+\`\`\`json
+{
+  "edits": [
+    { "span": "<verbatim substring of report fields>", "replacement": "<grounded correction or empty>", "reason": "<short, cite articles>" }
+  ]
+}
+\`\`\`
+`.trim()
 } 

@@ -7,7 +7,7 @@ import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
-import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
+import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem, BriefContent } from './types/api'
 import { ValidatedStories } from './types/story-validation'
@@ -217,6 +217,16 @@ app.post('/meridian/article/analyze', async (c) => {
 
         console.log(`[Article Analysis] 第 ${attempt} 次尝试成功解析 JSON`)
         console.log(`[Article Analysis] 成功完成分析: ${JSON.stringify(analysisResult).substring(0, 200)}...`)
+
+        // 字段契约校验：此前只校验"能否解析成 object"，{} 或缺字段照样当 success 返回
+        // （articleAnalysisSchema 定义了却从未用于校验端点输出）。用 safeParse 让契约违背可见。
+        // 仍放行不阻断：下游 processArticles 对缺字段有 `?? default` 兜底，且生产实测此类全默认输出
+        // 0 发作；硬拒有过严风险（如 language.length(2) 误伤 "eng"）。留痕不改行为，与其它功能层修法一致。
+        const contractCheck = articleAnalysisSchema.safeParse(analysisResult)
+        if (!contractCheck.success) {
+          console.warn(`[Article Analysis] 输出未通过 articleAnalysisSchema 字段契约（仍放行，下游有兜底）: ` +
+            contractCheck.error.issues.map(i => `${i.path.join('.') || '(root)'}=${i.code}`).join(', '))
+        }
 
         return c.json({
           success: true,

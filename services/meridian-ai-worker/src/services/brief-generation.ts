@@ -337,6 +337,10 @@ export class BriefGenerationService {
         });
 
         const titleData = this.parseJSONFromResponse(titleResponse);
+        // 解析失败/缺 title → 用通用标题兜底（轻微）。留痕以区分"模型没给标题"与"静默套通用名"。
+        if (!titleData?.title) {
+          console.warn('[Brief Generation] 标题解析失败或缺 title 字段 → 用通用标题 "Daily Intelligence Brief"（非模型生成）');
+        }
         const title = titleData?.title || 'Daily Intelligence Brief';
 
         return { content, title, coverage };
@@ -509,6 +513,12 @@ export class BriefGenerationService {
       });
 
       const parsed = this.parseJSONFromResponse(raw);
+      // 区分「解析失败/无 edits 字段」与「模型判定 0 处要改」：两者都会走成 edits=[]（0 修正、发原草稿），
+      // 但前者是"没校验成、草稿未被 RARR 核过"、后者是"核过且干净"。不区分则一次坏响应=静默发布未校验草稿。
+      // 仍返回草稿不阻断（门作末端兜底，同 catch 分支），只让"未校验"可见——参照隔壁 reconcileCoverage 的做法。
+      if (!parsed || !Array.isArray(parsed.edits)) {
+        console.warn('[Brief Generation] 接地校验响应解析失败或无 edits 字段 → 未做任何修正、发布未经 RARR 核验的草稿（非"模型判定 0 处要改"）');
+      }
       const edits: Array<{ brief_span?: string; replacement?: string; reason?: string }> =
         Array.isArray(parsed?.edits) ? parsed.edits : [];
 

@@ -211,7 +211,9 @@ export class AIGatewayEnhancementService {
     return {
       cache: {
         ttl: this.getDefaultCacheTTL(request),
-        key: await this.generateCacheKey(request)
+        key: await this.generateCacheKey(request),
+        // 调用方显式要求独立采样时透传（addCacheHeaders 据此下 cf-aig-skip-cache）
+        skipCache: request.skipCache,
       },
       metrics: {
         collectMetrics: true,

@@ -138,6 +138,10 @@ export interface BaseAIRequest {
   temperature?: number
   max_tokens?: number
   stream?: boolean
+  // 跳过 AI Gateway 缓存。默认 false（生产走缓存）。
+  // 离线 eval 需要独立采样：同 prompt 重问若吃缓存会拿回同一份答案，
+  // 把"模型稳定"和"缓存命中"混为一谈，A/B 的真实样本量退化成 1（见 judge 模型 cache_ttl:0 同因）。
+  skipCache?: boolean
   // Authentication and metadata
   auth?: AuthenticationConfig
   metadata?: Partial<RequestMetadata>

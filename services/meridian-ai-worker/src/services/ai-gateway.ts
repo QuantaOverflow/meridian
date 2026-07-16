@@ -652,6 +652,13 @@ export class AIGatewayService {
     if (this.env.AI_GATEWAY_TOKEN) {
       headers['cf-aig-authorization'] = `Bearer ${this.env.AI_GATEWAY_TOKEN}`
     }
+    // 本路径绕开 enhancementService（custom provider 不走 Universal Endpoint），故缓存头
+    // 必须在此自行下发——providers.ts 的 ai_gateway_config.cache_ttl 对 DashScope 从未生效。
+    // 只处理 skipCache：离线 eval 重问需独立采样，缓存会让 n 次采样退化成 1 次。
+    // 不下发 cache-ttl，保持生产现状（走 AI Gateway dashboard 的默认缓存策略）。
+    if (request.skipCache) {
+      headers['cf-aig-skip-cache'] = 'true'
+    }
 
     this.logger.log('debug', 'Custom provider via CF Gateway', {
       url,

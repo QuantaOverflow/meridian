@@ -697,6 +697,8 @@ app.post('/meridian/chat', async (c) => {
       temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
       stream: body.options?.stream || false,
+      // 离线 eval 的 A/B 需要独立采样：默认 false（生产照常走缓存），显式传 true 才跳过
+      skipCache: body.options?.skipCache === true,
       metadata: createRequestMetadata(c)
     }
 

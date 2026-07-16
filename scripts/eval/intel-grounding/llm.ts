@@ -20,6 +20,8 @@ async function chatOnce(
       model,
       temperature: options.temperature ?? 0,
       max_tokens: options.maxTokens ?? 1500,
+      // eval 判官须独立采样：绕开 Gateway 默认缓存，否则重问逐字复读=样本量退化成 1（见 hygiene.ts checkIndependentSamples）
+      skipCache: true,
     },
   };
 

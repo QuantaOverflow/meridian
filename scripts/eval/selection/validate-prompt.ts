@@ -13,7 +13,8 @@ async function chat(prompt: string): Promise<string> {
     try {
       const r = await fetch(`${AIW}/meridian/chat`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], options: { provider: 'dashscope', model: 'qwen-max', temperature: 0, max_tokens: 1400 } }),
+        // skipCache: eval 判官须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], options: { provider: 'dashscope', model: 'qwen-max', temperature: 0, max_tokens: 1400, skipCache: true } }),
       });
       if (!r.ok) throw new Error(`${r.status}`);
       const d: any = await r.json();

@@ -117,7 +117,8 @@ export async function judgeRejected(
   const model = options.model || 'qwen-plus';
   const body = {
     messages: [{ role: 'user', content: REJECTION_JUDGE_PROMPT(cluster, articles) }],
-    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 200 },
+    // skipCache: eval 判官须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
+    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 200, skipCache: true },
   };
   const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
     method: 'POST',
@@ -153,7 +154,7 @@ async function judgeStorySinglePass(
 ): Promise<JudgeResult> {
   const body = {
     messages: [{ role: 'user', content: JUDGE_PROMPT(story, articles) }],
-    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 300 },
+    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 300, skipCache: true },
   };
 
   const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {

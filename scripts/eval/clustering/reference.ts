@@ -76,7 +76,8 @@ async function runOnce(articles: ArticleInfo[], model: string): Promise<Story[] 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'user', content: PROMPT(articles) }],
-        options: { provider: 'dashscope', model, temperature: 0, max_tokens: 8000 },
+        // skipCache: eval 须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
+        options: { provider: 'dashscope', model, temperature: 0, max_tokens: 8000, skipCache: true },
       }),
     });
     if (!resp.ok) return null;

@@ -444,7 +444,10 @@ export class BriefGenerationService {
       messages,
       provider: options.provider || 'dashscope',
       model: options.model || 'qwen-plus',
-      temperature: options.temperature || 0.1,
+      // ?? 而非 ||：本文件有 5 个调用点显式传 temperature: 0（标题/覆盖对账/RARR 校验等
+      // 需确定性的场景），|| 会把 0 吞成 0.1 → 这些"校验/对账"判决全跑在非确定性上。
+      // 与 /meridian/chat 的同款 bug 同源（那处已修，此处漏网）。
+      temperature: options.temperature ?? 0.1,
       max_tokens: options.maxTokens || 8000,
       metadata: {
         requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,

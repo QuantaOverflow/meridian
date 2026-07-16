@@ -59,7 +59,8 @@ async function callAI(
     messages,
     provider: options.provider || 'dashscope',
     model: options.model || 'qwen-plus',
-    temperature: options.temperature || 0.1,
+    // ?? 而非 ||：调用方显式传 temperature: 0（需确定性的判定场景）时必须生效，|| 会吞成 0.1
+    temperature: options.temperature ?? 0.1,
     max_tokens: options.maxTokens || 8000,
     metadata: createRequestMetadata({ req: { header: () => 'ai-worker' } })
   }
@@ -407,7 +408,12 @@ app.post('/meridian/intelligence/analyze-single-story', async (c) => {
 
     console.log(`[Intelligence] 分析单个故事: ${storyParse.data.title}`)
 
-    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
+    // selfCorrect = RARR 接地校验-改正（默认开）；eval baseline 臂传 false 关掉做对照。
+    // skipCache 默认 false（生产照常走缓存）；eval 重问同一 story 须传 true 保证独立采样。
+    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw), {
+      selfCorrect: body.selfCorrect,
+      skipCache: body.skipCache === true,
+    })
     const result = await intelligenceService.analyzeSingleStory(storyParse.data, body.articleData)
     
     if (result.success) {

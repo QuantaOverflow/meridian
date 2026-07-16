@@ -282,7 +282,8 @@ export class StoryValidationService {
       messages,
       provider: options.provider || 'dashscope',
       model: options.model || 'qwen-plus',
-      temperature: options.temperature || 0.1,
+      // ?? 而非 ||：performAIValidation 显式传 temperature: 0（故事验证需确定性），|| 会吞成 0.1
+      temperature: options.temperature ?? 0.1,
       max_tokens: options.maxTokens || 4000,
       metadata: this.createRequestMetadata()
     }

@@ -108,6 +108,11 @@ export interface FaithfulnessVerdict {
   // 分析通道（次级信号，warning-only）
   analytical_consistent: number;
   analytical_contradicting: number;
+  // 降级放行的次数：extract=ALIGN 解析失败(code_only 主路径)、analytical=判官未给有效 verdict。
+  // >0 表示本次判决含【没核成却当作干净】的 claim，读数须按此折价——这两个数存在的唯一理由，
+  // 就是让「静默全绿」与「真全绿」可区分。
+  extract_failures: number;
+  analytical_failures: number;
   // 需要人看的明细
   flagged_factual: FactualJudgement[];
   flagged_analytical: AnalyticalJudgement[];
@@ -141,6 +146,10 @@ interface JudgeCallContext {
   traceContext: TraceContext;
   phase: LLMCallPhase;
   nextCallIndex: () => number;
+  // 判官/抽取的解析失败次数。这些失败仍会降级放行（不拖垮链路），但必须落进 verdict：
+  // 否则「传感器没看成」与「传感器看了没发现」读数完全相同 = 静默全绿。
+  extractFailures: number;
+  analyticalFailures: number;
 }
 
 function createJudgeCallContext(
@@ -155,6 +164,8 @@ function createJudgeCallContext(
     traceContext,
     phase,
     nextCallIndex: () => next++,
+    extractFailures: 0,
+    analyticalFailures: 0,
   };
 }
 
@@ -295,6 +306,12 @@ async function judgeAnalytical(
 ): Promise<AnalyticalJudgement> {
   const raw = await callJudge(ctx, ANALYTICAL_PROMPT(claim.text, source), model, 300);
   const parsed = parseJSON<{ verdict: string; reason?: string }>(raw);
+  // 解析失败 / 未知枚举 仍降级为 consistent（保持既有容错，不拖垮链路），但必须留痕：
+  // 否则「判官没给出有效答案」与「判官说没问题」读数相同 = 静默放行。
+  if (!parsed || (parsed.verdict !== 'contradicts_facts' && parsed.verdict !== 'consistent')) {
+    ctx.analyticalFailures++;
+    console.warn(`[Faithfulness] analytical judge 未给出有效 verdict(${parsed?.verdict ?? 'parse-fail'})，降级为 consistent: ${claim.text.slice(0, 80)}`);
+  }
   const verdict: AnalyticalVerdict = parsed?.verdict === 'contradicts_facts' ? 'contradicts_facts' : 'consistent';
   return { claim, verdict, reason: (parsed?.reason || '').toString().slice(0, 300) };
 }
@@ -395,7 +412,14 @@ async function codeVerifiedConflict(
     claim.text,
     sources[order[0]].content,
     (prompt, maxTokens) => callJudge(ctx, prompt, model, maxTokens),
-    parseJSON
+    parseJSON,
+    // 抽取失败计入 ctx，最终落 verdict.extract_failures。仍然降级放行（不拖垮链路），
+    // 但让「传感器没看成」与「传感器看了没发现」在读数上可区分——否则 code_only 模式下
+    // 一次 ALIGN 解析失败就等于一句静默"这条干净"。
+    (stage, c) => {
+      ctx.extractFailures++;
+      console.warn(`[Faithfulness] extract-compare ${stage} 解析失败，该 claim 降级为无冲突: ${c.slice(0, 80)}`);
+    }
   );
   if (conflicts.length === 0) return null;
   return {
@@ -539,6 +563,10 @@ export async function runFaithfulnessCheck(
     contradicted,
     code_verified_conflicts: factual.filter((j) => j.verdict === 'contradicted' && j.code_verified).length,
     unsupported_rate: rate,
+    // 解析失败计数：>0 表示本次判决里有 claim 是被【降级放行】而非【核查通过】的，
+    // 读数需按此折价。缺了它，「传感器没看成」与「传感器看了没发现」完全同形（静默全绿）。
+    extract_failures: judgeCtx.extractFailures,
+    analytical_failures: judgeCtx.analyticalFailures,
     analytical_consistent: analytical.length - analyticalContradicting,
     analytical_contradicting: analyticalContradicting,
     flagged_factual: factual.filter((j) => j.verdict !== 'supported'),

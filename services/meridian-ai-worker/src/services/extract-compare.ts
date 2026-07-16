@@ -268,12 +268,20 @@ export async function extractCompareClaim(
   claim: string,
   source: string,
   chatFn: (prompt: string, maxTokens: number) => Promise<string>,
-  parseFn: <T>(raw: string) => T | null
+  parseFn: <T>(raw: string) => T | null,
+  // 抽取失败回调（可选）。不传时行为与从前完全一致——降级仍然发生，只是无人知晓。
+  // 存在理由：本函数返回 [] 时，「真的没冲突」与「ALIGN 没解析成」在类型上不可区分，
+  // 而 code_only 是生产默认模式 → 传感器的失败模式是【静默全绿】。降级要留痕，
+  // 不能把失败写成数据（见 memory: ai-gateway-cache-eval-trap 同类教训）。
+  onExtractFailure?: (stage: 'align', claim: string) => void
 ): Promise<HardConflict[]> {
   if (!hasSpecifics(claim)) return [];
   const raw = await chatFn(ALIGN_PROMPT(claim, source), 1200);
   const parsed = parseFn<{ pairs: AlignPair[] }>(raw);
-  if (!parsed?.pairs) return [];
+  if (!parsed?.pairs) {
+    onExtractFailure?.('align', claim);
+    return [];
+  }
   // 定向补抽：absent/low 的对（数字和日期都补）追问一次
   for (const p of parsed.pairs) {
     if (p.source_status === 'same_fact' && p.confidence === 'high') continue;

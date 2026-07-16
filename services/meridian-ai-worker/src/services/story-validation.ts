@@ -53,6 +53,8 @@ export class StoryValidationService {
     // AI 验证的 LLM 调用是大头)，原串行逐簇 await 是次要 wall-clock 来源。并发上限
     // 保守起步=3，撞 DashScope 限流由 AIGateway 配额退避兜底。按簇顺序合并结果保持确定性。
     const VALIDATION_CONCURRENCY = 3
+    // 解析失败降级丢簇计数（Node 单线程，await 间自增原子安全）。落进 metadata + summary 日志，让静默丢簇可观测。
+    let validationParseFailures = 0
 
     const validateCluster = async (
       cluster: (typeof clusteringResult.clusters)[number]
@@ -129,7 +131,8 @@ export class StoryValidationService {
               originalArticleIds: cluster.articleIds
             })
           } else {
-            // no_stories 或其他情况
+            // no_stories 或其他情况。区分：parseFailed 时这是解析失败的兜底降级，非模型判定 → 计数留痕。
+            if (validation.parseFailed) validationParseFailures++
             outRejected.push({
               clusterId: cluster.clusterId,
               rejectionReason: "NO_STORIES",
@@ -166,8 +169,9 @@ export class StoryValidationService {
       }
     }
     
-    console.log(`[Story Validation] 验证完成: ${stories.length} 个有效故事, ${rejectedClusters.length} 个拒绝聚类`)
-    
+    console.log(`[Story Validation] 验证完成: ${stories.length} 个有效故事, ${rejectedClusters.length} 个拒绝聚类` +
+      (validationParseFailures > 0 ? `（其中 ${validationParseFailures} 个因验证响应解析失败被降级丢弃，非模型判定）` : ''))
+
     return {
       stories,
       rejectedClusters,
@@ -176,6 +180,7 @@ export class StoryValidationService {
         totalArticlesProvided: articlesData.length,
         validatedStories: stories.length,
         rejectedClusters: rejectedClusters.length,
+        validationParseFailures,
         processingStatistics: clusteringResult.statistics
       }
     }
@@ -259,7 +264,13 @@ export class StoryValidationService {
     })
     
     const validation = this.parseJSONFromResponse(response)
-    return validation || { answer: 'no_stories' }
+    if (!validation) {
+      // 解析失败：仍降级为 no_stories（不改丢弃行为），但打 parseFailed 标记 + 具名日志，
+      // 让"解析失败伪装的没故事"可被调用方/指标区分，不再与"模型真判没故事"静默合流。
+      console.warn(`[Story Validation] 聚类 ${cluster.clusterId} 验证响应解析失败 → 降级 no_stories（非模型判定，整簇将被丢弃）`)
+      return { answer: 'no_stories', parseFailed: true }
+    }
+    return validation
   }
 
   /**

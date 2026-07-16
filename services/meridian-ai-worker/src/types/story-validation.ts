@@ -77,12 +77,17 @@ export interface StoryValidationResult {
     totalArticlesProvided: number
     validatedStories: number
     rejectedClusters: number
+    // 因验证响应解析失败而被降级丢弃的聚类数（非模型判定 no_stories）。失败留痕进指标，便于观测静默丢簇。
+    validationParseFailures?: number
     processingStatistics: ClusteringStatistics
   }
 }
 
 export interface AIValidationResponse {
   answer: 'single_story' | 'collection_of_stories' | 'pure_noise' | 'no_stories'
+  // 解析失败降级标记：为 true 时 answer='no_stories' 系响应解析失败的兜底、非模型判定。
+  // 让调用方/指标区分"解析失败伪装的没故事"与"模型真判没故事"（否则整簇被静默丢弃）。
+  parseFailed?: boolean
   title?: string
   importance?: number
   outliers?: number[]

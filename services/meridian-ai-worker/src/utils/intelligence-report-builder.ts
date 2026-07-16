@@ -73,14 +73,6 @@ export class IntelligenceReportBuilder {
     return `story-${title.toLowerCase().replace(/\s+/g, "-")}`;
   }
 
-  private static createDefaultTimeline(): TimelineEvent[] {
-    return [{
-      date: new Date().toISOString(),
-      description: "Initial event",
-      importance: "HIGH",
-    }];
-  }
-
   private static mapStoryStatus(status: string): "DEVELOPING" | "ESCALATING" | "DE_ESCALATING" | "CONCLUDING" | "STATIC" {
     const statusMap: Record<string, any> = {
       'developing': 'DEVELOPING',
@@ -131,8 +123,12 @@ export class IntelligenceReportBuilder {
         importance: this.mapTimelineImportance(event.importance),
       }));
     }
-    
-    return this.createDefaultTimeline();
+
+    // LLM 未产出 timeline 数组：返回空(诚实)而非编造一条 date=now 的 "Initial event" 假事件。
+    // 缺失 timeline 是合法的"这条 story 没有时间线"，下游 briefGeneration 对空 timeline 有 .length 守卫；
+    // 兄弟路径 intelligence.ts / index.ts 缺失时同样返回 []。留痕以便 wrangler tail 可见，不把失败兜进数据。
+    console.warn('[IntelligenceReportBuilder] analysis 缺少 timeline 数组 → 返回空时间线（不编造 Initial event）');
+    return [];
   }
 
   private static mapTimelineImportance(importance: string): "HIGH" | "MEDIUM" | "LOW" {

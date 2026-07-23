@@ -8,6 +8,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ArticleInfo, ReferencePartition } from './types.js';
+import { chat, parseJSON as extractJSON } from '../_shared/judge-llm.js';
 
 const AI_WORKER_URL =
   process.env.AI_WORKER_URL || 'https://meridian-ai-worker.swj299792458.workers.dev';
@@ -50,39 +51,17 @@ Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
 }
 `.trim();
 
+// JSON 抠取走共享层；本 harness 特有的 stories-数组守卫保留在此（无 stories 视为解析失败）。
 function parseJSON(raw: string): { stories: Story[] } | null {
-  const candidates: string[] = [];
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) candidates.push(fenced[1]);
-  const f = raw.indexOf('{');
-  const l = raw.lastIndexOf('}');
-  if (f >= 0 && l > f) candidates.push(raw.slice(f, l + 1));
-  for (const c of candidates) {
-    try {
-      const o = JSON.parse(c.replace(/,(\s*[}\]])/g, '$1').trim());
-      if (Array.isArray(o?.stories)) return o;
-    } catch {
-      /* next */
-    }
-  }
-  return null;
+  const o = extractJSON<{ stories?: Story[] }>(raw);
+  return o && Array.isArray(o.stories) ? (o as { stories: Story[] }) : null;
 }
 
 // 单次 qwen 分组调用。失败/解析失败返回 null(由 consensus 容忍部分失败)。
 async function runOnce(articles: ArticleInfo[], model: string): Promise<Story[] | null> {
   try {
-    const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: PROMPT(articles) }],
-        // skipCache: eval 须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
-        options: { provider: 'dashscope', model, temperature: 0, max_tokens: 8000, skipCache: true },
-      }),
-    });
-    if (!resp.ok) return null;
-    const data = (await resp.json()) as { data?: { choices?: Array<{ message?: { content?: string } }> } };
-    const content = data?.data?.choices?.[0]?.message?.content || '';
+    // 传输走共享层（skipCache + 网络重试内建）；失败/解析失败仍返回 null，由 consensus 容忍。
+    const content = await chat(PROMPT(articles), { model, maxTokens: 8000, baseUrl: AI_WORKER_URL });
     return parseJSON(content)?.stories ?? null;
   } catch {
     return null;

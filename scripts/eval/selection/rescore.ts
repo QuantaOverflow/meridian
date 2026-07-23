@@ -6,6 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { fetchCandidates, fetchSources } from './fetch.js';
 import { ndcgAtN } from './metrics.js';
 import { getStoryValidationPrompt } from '../../../services/meridian-ai-worker/src/prompts/storyValidation.ts';
+import { chat as sharedChat, parseJSON } from '../_shared/judge-llm.js';
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -40,27 +41,8 @@ function impFromDims(d: any): number {
   const raw = 0.35 * g(d?.d1) + 0.30 * g(d?.d2) + 0.20 * g(d?.d3) + 0.15 * g(d?.d4);
   return Math.min(Math.max(Math.round(raw * 3.33), 1), 10);
 }
-function parseJSON(raw: string): any {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const cands = [fenced?.[1], raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)].filter(Boolean) as string[];
-  for (const c of cands) { try { return JSON.parse(c); } catch {} }
-  return null;
-}
-async function chat(prompt: string): Promise<string> {
-  for (let a = 1; a <= 4; a++) {
-    try {
-      const r = await fetch(`${AIW}/meridian/chat`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        // skipCache: eval 判官须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], options: { provider: 'dashscope', model: 'qwen-max', temperature: 0, max_tokens: 1400, skipCache: true } }),
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-      const d: any = await r.json();
-      return d?.data?.choices?.[0]?.message?.content || '';
-    } catch (e) { if (a < 4) await new Promise(s => setTimeout(s, 1500 * a)); else throw e; }
-  }
-  return '';
-}
+// JSON 抠取 + judge LLM 传输走共享层 ../_shared/judge-llm.ts；本脚本绑定 qwen-max / max_tokens 1400。
+const chat = (prompt: string) => sharedChat(prompt, { model: 'qwen-max', maxTokens: 1400, baseUrl: AIW });
 async function fetchArticleInfo(ids: number[]): Promise<Map<number, { title: string; points: string[] }>> {
   const m = new Map<number, { title: string; points: string[] }>();
   if (ids.length === 0) return m;

@@ -7,7 +7,9 @@ import type {
   RejectionJudgeResult,
   RejectionVerdict,
 } from './types.js';
+import { chat, parseJSON as extractJSON } from '../_shared/judge-llm.js';
 
+// story-validation 本地跑常打 localhost:8788（未部署 ai-worker 时）；共享 chat 支持 baseUrl 覆盖。
 const AI_WORKER_URL = process.env.AI_WORKER_URL || 'http://localhost:8788';
 
 const JUDGE_PROMPT = (story: Story, articles: ArticleInfo[]) => `
@@ -47,29 +49,12 @@ Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose.
 }
 `.trim();
 
+// JSON 抠取/清洗走共享层；本 harness 特有的两处保留在此：①行注释清洗（共享层不做，避免
+// 破坏含 // 的字符串值）②verdict 字段守卫（无 verdict 视为解析失败，供调用点回退）。
 function parseJSON(raw: string): JudgeResult | null {
-  const candidates: string[] = [];
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) candidates.push(fenced[1]);
-  const f = raw.indexOf('{');
-  const l = raw.lastIndexOf('}');
-  if (f >= 0 && l > f) candidates.push(raw.slice(f, l + 1));
-  candidates.push(raw);
-
-  for (const c of candidates) {
-    const cleaned = c
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/(^|[^:"'])\/\/[^\n]*/g, '$1')
-      .replace(/,(\s*[}\]])/g, '$1')
-      .trim();
-    try {
-      const obj = JSON.parse(cleaned);
-      if (obj && typeof obj.verdict === 'string') return obj as JudgeResult;
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
+  const deLined = raw.replace(/(^|[^:"'])\/\/[^\n]*/g, '$1');
+  const obj = extractJSON<any>(deLined);
+  return obj && typeof obj.verdict === 'string' ? (obj as JudgeResult) : null;
 }
 
 function clamp(n: unknown, lo: number, hi: number): number {
@@ -115,22 +100,11 @@ export async function judgeRejected(
   options: { model?: string } = {}
 ): Promise<RejectionJudgeResult> {
   const model = options.model || 'qwen-plus';
-  const body = {
-    messages: [{ role: 'user', content: REJECTION_JUDGE_PROMPT(cluster, articles) }],
-    // skipCache: eval 判官须独立采样，绕开 Gateway 默认缓存（重问逐字复读=样本量退化成 1）
-    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 200, skipCache: true },
-  };
-  const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  const content = await chat(REJECTION_JUDGE_PROMPT(cluster, articles), {
+    model,
+    maxTokens: 200,
+    baseUrl: AI_WORKER_URL,
   });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`Rejection-judge call failed: ${resp.status} ${txt.slice(0, 200)}`);
-  }
-  const data = (await resp.json()) as { data?: { choices?: Array<{ message?: { content?: string } }> } };
-  const content = data?.data?.choices?.[0]?.message?.content || '';
   const parsed = parseJSON(content);
   if (!parsed || typeof (parsed as any).verdict !== 'string') {
     return {
@@ -152,22 +126,11 @@ async function judgeStorySinglePass(
   articles: ArticleInfo[],
   model: string
 ): Promise<JudgeResult> {
-  const body = {
-    messages: [{ role: 'user', content: JUDGE_PROMPT(story, articles) }],
-    options: { provider: 'dashscope', model, temperature: 0, max_tokens: 300, skipCache: true },
-  };
-
-  const resp = await fetch(`${AI_WORKER_URL}/meridian/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  const content = await chat(JUDGE_PROMPT(story, articles), {
+    model,
+    maxTokens: 300,
+    baseUrl: AI_WORKER_URL,
   });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`Judge call failed: ${resp.status} ${txt.slice(0, 200)}`);
-  }
-  const data = (await resp.json()) as { data?: { choices?: Array<{ message?: { content?: string } }> } };
-  const content = data?.data?.choices?.[0]?.message?.content || '';
   const parsed = parseJSON(content);
   if (!parsed) {
     return {

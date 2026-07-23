@@ -383,7 +383,7 @@ debugRouter.post('/test-story-validation', async (c) => {
             articlesCount: articlesData.length
         }, null, 2));
 
-        const validationResponse = await aiServices.aiWorker.validateStory(
+        const validation = await aiServices.aiWorker.validateStory(
             clusteringResult,
             articlesData,
             {
@@ -395,17 +395,14 @@ debugRouter.post('/test-story-validation', async (c) => {
             }
         );
 
-        if (validationResponse.status !== 200) {
-            const errorText = await validationResponse.text();
+        if (!validation.ok) {
             return c.json({
                 success: false,
-                message: `故事验证失败: HTTP ${validationResponse.status}`,
-                error: errorText
+                message: `故事验证失败: ${validation.error}`,
+                error: validation.error
             });
         }
 
-        const validationData = await validationResponse.json() as any;
-        
         return c.json({
             success: true,
             data: {
@@ -416,16 +413,16 @@ debugRouter.post('/test-story-validation', async (c) => {
                     clusters: clusteringResult.clusters.map(c => ({
                         clusterId: c.clusterId,
                         size: c.articleIds.length,
-                        articleTitles: c.articleIds.map((aid: number) => 
+                        articleTitles: c.articleIds.map((aid: number) =>
                             articles.find(a => a.id === aid)?.title || `Article ${aid}`
                         )
                     }))
                 },
                 validation: {
-                    success: validationData.success,
-                    validStories: validationData.data?.stories?.length || 0,
-                    rejectedClusters: validationData.data?.rejectedClusters?.length || 0,
-                    details: validationData.data || validationData.error
+                    success: true,
+                    validStories: validation.value?.stories?.length || 0,
+                    rejectedClusters: validation.value?.rejectedClusters?.length || 0,
+                    details: validation.value
                 }
             },
             note: '故事验证测试完成'

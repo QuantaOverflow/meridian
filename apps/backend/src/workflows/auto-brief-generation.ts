@@ -3,7 +3,7 @@ import { getDb } from '../lib/database';
 import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
-import { createClusteringService, handleServiceResponse, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
+import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
@@ -383,33 +383,25 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               } as Parameters<typeof generateSearchText>[0])
             );
             const aiServices = createAIServices(this.env, workflowId);
-            const response = await aiServices.aiWorker.generateEmbedding(texts);
-            try {
-              const result = await handleServiceResponse<{
-                success: boolean;
-                data: { embeddings: Array<{ embedding: number[] }> };
-                error?: string;
-              }>(response, 'AI embedding generation');
-              const embeddings = result.data?.data?.embeddings;
-              if (!result.success || !result.data?.success || !Array.isArray(embeddings) || embeddings.length !== batch.length) {
-                throw new Error(`批量 embedding 返回异常: ${result.error || result.data?.error || `期望 ${batch.length} 条，实得 ${embeddings?.length ?? 0}`}`);
-              }
-              let ok = 0;
-              for (let j = 0; j < batch.length; j++) {
-                const emb = embeddings[j]?.embedding;
-                if (!Array.isArray(emb) || emb.length !== 384) {
-                  console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 384，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
-                  continue;
-                }
-                await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
-                ok++;
-              }
-              return ok;
-            } finally {
-              if (response && typeof (response as any).dispose === 'function') {
-                (response as any).dispose();
-              }
+            const embResult = await aiServices.aiWorker.generateEmbedding(texts);
+            if (!embResult.ok) {
+              throw new Error(`批量 embedding 返回异常: ${embResult.error}`);
             }
+            const embeddings = embResult.value.embeddings;
+            if (!Array.isArray(embeddings) || embeddings.length !== batch.length) {
+              throw new Error(`批量 embedding 返回异常: 期望 ${batch.length} 条，实得 ${embeddings?.length ?? 0}`);
+            }
+            let ok = 0;
+            for (let j = 0; j < batch.length; j++) {
+              const emb = embeddings[j]?.embedding;
+              if (!Array.isArray(emb) || emb.length !== 384) {
+                console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 384，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
+                continue;
+              }
+              await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
+              ok++;
+            }
+            return ok;
           });
           embedBackfilled += written;
         } catch (error) {
@@ -858,7 +850,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         console.log(`[AutoBrief] 发送数据：聚类结果包含 ${clusteringResult.clusters.length} 个聚类，文章数据包含 ${articlesData.length} 个条目`);
         
         // 使用真正的AI Worker故事验证服务
-        const validationResponse = await aiServices.aiWorker.validateStory(
+        const validation = await aiServices.aiWorker.validateStory(
           clusteringResult, // ClusteringResult 对象
           articlesData,     // MinimalArticleInfo[] 数组
           {
@@ -870,21 +862,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
         );
 
-        if (validationResponse.status !== 200) {
-          const errorText = await validationResponse.text();
-          console.error(`[AutoBrief] 故事验证失败，HTTP状态: ${validationResponse.status}`);
-          console.error(`[AutoBrief] 错误详情: ${errorText}`);
-          throw new Error(`故事验证失败: HTTP ${validationResponse.status} - ${errorText}`);
+        if (!validation.ok) {
+          console.error(`[AutoBrief] 故事验证失败: ${validation.error}`);
+          throw new Error(`故事验证失败: ${validation.error}`);
         }
 
-        const validationData = await validationResponse.json() as any;
-        
-        if (!validationData.success) {
-          console.error(`[AutoBrief] 故事验证业务逻辑失败: ${validationData.error}`);
-          throw new Error(`故事验证业务逻辑失败: ${validationData.error}`);
-        }
-
-        const validatedStories = validationData.data;
+        const validatedStories = validation.value;
         console.log(`[AutoBrief] 故事验证成功: ${validatedStories.stories.length} 个有效故事, ${validatedStories.rejectedClusters.length} 个拒绝聚类`);
         
         // 记录验证结果详情
@@ -1200,31 +1183,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
               // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
               // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
-              const response = await aiServices.aiWorker.analyzeStoryIntelligence(
+              const result = await aiServices.aiWorker.analyzeStoryIntelligence(
                 story,
                 clusterArticles,
                 { analysis_depth: 'detailed' },
                 idx
               );
 
-              if (response.status !== 200) {
-                // 非 200 别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断
-                const errBody = await response.text().catch(() => '<unreadable>');
-                const reason = `HTTP ${response.status}: ${errBody.slice(0, 300)}`;
-                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${reason}`);
-                return { failure: { idx, title: story.title, reason } };
-              }
-              const data = await response.json() as any;
-              if (!data.success) {
-                const reason = `success:false: ${data.error}`;
-                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${reason}`);
-                return { failure: { idx, title: story.title, reason } };
+              if (!result.ok) {
+                // 非成功别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断。
+                // result.error 保留原措辞（非200="HTTP <s>: <body>"、success:false="success:false: <e>"）。
+                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${result.error}`);
+                return { failure: { idx, title: story.title, reason: result.error } };
               }
 
               // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
               // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
               const r2Key = `intel-reports/${workflowId}/${idx}.json`;
-              await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(data.data, null, 2));
+              await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
 
               // R2 key 记到 brief_stories(观测;落库失败不致命)
               try {
@@ -1299,122 +1275,78 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           })
         )).filter(Boolean);
 
-        // 调用AI Worker的简报生成端点
-        const briefRequest = new Request(`http://localhost:8786/meridian/generate-final-brief`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-          body: JSON.stringify({
-            analysisData: analysisData,
-            previousBrief: previousBrief,
-            options: {
-              provider: 'dashscope',
-              model: 'qwen-long'
-            }
-          })
+        // 调用 AI Worker 生成简报。接缝返回 domain result——status/parse/success/dispose 收进
+        // ai-services 的 callJson，此处只按结果 throw（生成失败即整步失败）。
+        const aiServices = createAIServices(this.env, workflowId);
+        const brief = await aiServices.aiWorker.generateFinalBrief(analysisData, previousBrief, {
+          provider: 'dashscope',
+          model: 'qwen-long',
         });
+        if (!brief.ok) {
+          throw new Error(`简报生成失败: ${brief.error}`);
+        }
 
-        const briefResponse = await this.env.AI_WORKER.fetch(briefRequest);
-        
-        try {
-          if (briefResponse.status !== 200) {
-            throw new Error(`简报生成失败: HTTP ${briefResponse.status}`);
-          }
+        console.log(`[AutoBrief] 成功生成简报: ${brief.value.title}`);
 
-          const briefData = await briefResponse.json() as any;
-          if (!briefData.success) {
-            throw new Error(`简报生成失败: ${briefData.error}`);
-          }
-
-          console.log(`[AutoBrief] 成功生成简报: ${briefData.data.title}`);
-
-          // 观测性：落一份覆盖对账清单到 R2（洞3 方案B）。合成步会静默丢弃已分析的 story
-          // （占缺陷 68% 的合成层漏报），此清单记录每条候选 story 的去向 headline/noteworthy/
-          // dropped，使合成层漏报事后可追踪、可对账 selected_for_intel。best-effort，不拖垮生成。
-          const coverage = Array.isArray(briefData.metadata?.coverage) ? briefData.metadata.coverage : [];
-          if (coverage.length) {
-            try {
-              const tally = (d: string) => coverage.filter((c: any) => c?.disposition === d).length;
-              await this.env.ARTICLES_BUCKET.put(
-                `observability/coverage/${workflowId}.json`,
-                JSON.stringify(
-                  {
-                    workflowId,
-                    createdAt: new Date().toISOString(),
-                    summary: {
-                      total: coverage.length,
-                      headline: tally('headline'),
-                      noteworthy: tally('noteworthy'),
-                      dropped: tally('dropped'),
-                    },
-                    coverage,
-                  },
-                  null,
-                  2
-                )
-              );
-              console.log(
-                `[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')}, noteworthy ${tally('noteworthy')})`
-              );
-            } catch (persistErr) {
-              console.warn(`[AutoBrief] 覆盖对账落盘失败 (workflow=${workflowId}):`, persistErr);
-            }
-          }
-
-          // 生成TLDR
-          const tldrRequest = new Request(`http://localhost:8786/meridian/generate-brief-tldr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-            body: JSON.stringify({
-              briefTitle: briefData.data.title,
-              briefContent: briefData.data.content,
-              options: {
-                provider: 'dashscope',
-                model: 'qwen-plus'
-              }
-            })
-          });
-
-          const tldrResponse = await this.env.AI_WORKER.fetch(tldrRequest);
-          
+        // 观测性：落一份覆盖对账清单到 R2（洞3 方案B）。合成步会静默丢弃已分析的 story
+        // （占缺陷 68% 的合成层漏报），此清单记录每条候选 story 的去向 headline/noteworthy/
+        // dropped，使合成层漏报事后可追踪、可对账 selected_for_intel。best-effort，不拖垮生成。
+        const coverage = Array.isArray(brief.metadata?.coverage) ? brief.metadata.coverage : [];
+        if (coverage.length) {
           try {
-            if (tldrResponse.status !== 200) {
-              throw new Error(`TLDR生成失败: HTTP ${tldrResponse.status}`);
-            }
-
-            const tldrData = await tldrResponse.json() as any;
-            if (!tldrData.success) {
-              throw new Error(`TLDR生成失败: ${tldrData.error}`);
-            }
-
-            console.log(`[AutoBrief] 成功生成TLDR`);
-
-            return {
-              title: briefData.data.title,
-              content: briefData.data.content,
-              tldr: tldrData.data.tldr,
-              model_author: 'meridian-ai-worker',
-              stats: {
-                total_articles: dataset.articles.length,
-                used_articles: intelligenceReports.length,
-                clusters_found: clusteringResult.clusters.length,
-                stories_identified: validatedStories.stories.length,
-                intelligence_analyses: intelligenceReports.length,
-                content_length: briefData.data.content.length,
-                model_used: briefData.data.metadata?.model_used || 'qwen-long'
-              }
-            };
-          } finally {
-            // 确保释放 TLDR 响应的 RPC stub
-            if (tldrResponse && typeof (tldrResponse as any).dispose === 'function') {
-              (tldrResponse as any).dispose();
-            }
-          }
-        } finally {
-          // 确保释放简报响应的 RPC stub
-          if (briefResponse && typeof (briefResponse as any).dispose === 'function') {
-            (briefResponse as any).dispose();
+            const tally = (d: string) => coverage.filter((c: any) => c?.disposition === d).length;
+            await this.env.ARTICLES_BUCKET.put(
+              `observability/coverage/${workflowId}.json`,
+              JSON.stringify(
+                {
+                  workflowId,
+                  createdAt: new Date().toISOString(),
+                  summary: {
+                    total: coverage.length,
+                    headline: tally('headline'),
+                    noteworthy: tally('noteworthy'),
+                    dropped: tally('dropped'),
+                  },
+                  coverage,
+                },
+                null,
+                2
+              )
+            );
+            console.log(
+              `[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')}, noteworthy ${tally('noteworthy')})`
+            );
+          } catch (persistErr) {
+            console.warn(`[AutoBrief] 覆盖对账落盘失败 (workflow=${workflowId}):`, persistErr);
           }
         }
+
+        // 生成 TLDR
+        const tldr = await aiServices.aiWorker.generateBriefTldr(brief.value.title, brief.value.content, {
+          provider: 'dashscope',
+          model: 'qwen-plus',
+        });
+        if (!tldr.ok) {
+          throw new Error(`TLDR生成失败: ${tldr.error}`);
+        }
+
+        console.log(`[AutoBrief] 成功生成TLDR`);
+
+        return {
+          title: brief.value.title,
+          content: brief.value.content,
+          tldr: tldr.value.tldr,
+          model_author: 'meridian-ai-worker',
+          stats: {
+            total_articles: dataset.articles.length,
+            used_articles: intelligenceReports.length,
+            clusters_found: clusteringResult.clusters.length,
+            stories_identified: validatedStories.stories.length,
+            intelligence_analyses: intelligenceReports.length,
+            content_length: brief.value.content.length,
+            model_used: brief.value.metadata?.model_used || 'qwen-long'
+          }
+        };
       });
 
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
@@ -1460,25 +1392,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               })
             )).filter((s): s is { storyId: string; content: string } => s !== null);
 
-            const checkRequest = new Request(`http://localhost:8786/meridian/faithfulness-check`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-trace-id': workflowId },
-              body: JSON.stringify({ sources, brief: briefResult.content }),
-            });
-            const checkResponse = await this.env.AI_WORKER.fetch(checkRequest);
-            try {
-              if (checkResponse.status !== 200) {
-                // 门本身故障不连坐 brief(fail-open on infra error)：记一条、放行
-                console.error(`[AutoBrief] 忠实度门调用失败: HTTP ${checkResponse.status}，放行 brief`);
-                return null;
-              }
-              const checkData = await checkResponse.json() as any;
-              return checkData.success ? checkData.data : null;
-            } finally {
-              if (checkResponse && typeof (checkResponse as any).dispose === 'function') {
-                (checkResponse as any).dispose();
-              }
+            // 接缝返回 domain result；仪式/dispose 收进 ai-services。门本身故障不连坐 brief
+            // (fail-open on infra error)：记一条、放行(返 null)。
+            const aiServices = createAIServices(this.env, workflowId);
+            const check = await aiServices.aiWorker.faithfulnessCheck(sources, briefResult.content);
+            if (!check.ok) {
+              console.error(`[AutoBrief] 忠实度门调用失败: ${check.error}，放行 brief`);
+              return null;
             }
+            return check.value;
           });
         } catch (gateError) {
           // 超时/重试耗尽/任何异常 → fail-open：检查员挂掉，绝不丢弃已生成的 brief

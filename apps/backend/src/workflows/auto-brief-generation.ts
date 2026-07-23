@@ -7,6 +7,7 @@ import { createClusteringService, type ArticleDataset, type ClusteringResult } f
 import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
+import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -1126,23 +1127,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         return cov;
       });
 
-      // 选择分 = LLM importance + 覆盖度加权。log2(1+源数) 取边际递减(第2个独立源比第6个信息量大)，
-      // COVERAGE_WEIGHT=1.0 让 importance 仍主导、覆盖度只做有界 nudge(满额约 +3)。
-      // 这是无 eval 前的保守默认权重；①NDCG eval 上线后据此校准，故做成单常量便于调。
+      // 选择分 = LLM importance + 覆盖度加权。打分/排序/取 top-N 抽到 lib/core/story-ranking
+      // （纯函数，可独立测）；COVERAGE_WEIGHT 是 NDCG eval 上线前的保守默认，做成参数便于校准。
       const COVERAGE_WEIGHT = 1.0;
-      const ranked = validatedStories.stories
-        .map((s: any, i: number) => {
-          const srcs = sourceCoverage[i] ?? 0;
-          return { s, srcs, score: (s.importance ?? 0) + COVERAGE_WEIGHT * Math.log2(1 + srcs) };
-        })
-        .sort((a: any, b: any) => b.score - a.score);
-
-      // 按选择分降序取 top-N，避免把全部候选送进 LLM 深度分析（成本/时间爆炸）
-      const storiesForIntelligence = ranked.slice(0, maxStoriesToGenerate).map((x: any) => x.s);
+      const { ranked, selected: storiesForIntelligence } = rankStoriesForIntelligence(
+        validatedStories.stories,
+        sourceCoverage,
+        { coverageWeight: COVERAGE_WEIGHT, maxStories: maxStoriesToGenerate }
+      );
 
       console.log('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
-      ranked.slice(0, maxStoriesToGenerate).forEach((x: any, rank: number) => console.log(
-        `  ${rank + 1}. imp=${x.s.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.s.title}`
+      ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => console.log(
+        `  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`
       ));
 
       // 观测性：标记被选中跑 intel 的 stories

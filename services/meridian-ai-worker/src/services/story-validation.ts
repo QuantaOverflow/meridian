@@ -1,5 +1,6 @@
 import { AIGatewayService } from './ai-gateway'
-import { loggedChat, TraceContext } from './llm-call-logger'
+import { TraceContext } from './llm-call-logger'
+import { callLLM } from './call-llm'
 import { getStoryValidationPrompt } from '../prompts/storyValidation'
 import {
   StoryValidationRequest,
@@ -288,18 +289,15 @@ export class StoryValidationService {
         ]
       : [{ role: 'user' as const, content: prompt }]
 
-    const chatRequest = {
-      capability: 'chat' as const,
-      messages,
-      provider: options.provider || 'dashscope',
-      model: options.model || 'qwen-plus',
-      // ?? 而非 ||：performAIValidation 显式传 temperature: 0（故事验证需确定性），|| 会吞成 0.1
-      temperature: options.temperature ?? 0.1,
-      max_tokens: options.maxTokens || 4000,
-      metadata: this.createRequestMetadata()
-    }
-
-    const result = await loggedChat(this.aiGateway, this.env, this.traceContext, 'story_validation', chatRequest)
+    // 配置（provider/model/temperature/skipCache）走 call-llm 单一入口按 phase 定默认；
+    // temperature 仍 ?? 语义（performAIValidation 显式 0 不被吞）。
+    const result = await callLLM(this.aiGateway, this.env, this.traceContext, 'story_validation', messages, {
+      provider: options.provider,
+      model: options.model,
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+      metadata: this.createRequestMetadata(),
+    })
     if (result.capability !== 'chat') {
       throw new Error('Unexpected response type from chat service')
     }

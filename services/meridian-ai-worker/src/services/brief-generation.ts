@@ -6,7 +6,8 @@
 
 import { z } from 'zod';
 import { AIGatewayService } from './ai-gateway';
-import { loggedChat, TraceContext, LLMCallPhase } from './llm-call-logger';
+import { TraceContext, LLMCallPhase } from './llm-call-logger';
+import { callLLM } from './call-llm';
 import {
   getBriefGenerationSystemPrompt,
   getBriefGenerationPrompt,
@@ -443,33 +444,25 @@ export class BriefGenerationService {
         ]
       : [{ role: 'user' as const, content: prompt }];
 
-    const chatRequest = {
-      capability: 'chat' as const,
-      messages,
-      provider: options.provider || 'dashscope',
-      model: options.model || 'qwen-plus',
-      // ?? 而非 ||：本文件有 5 个调用点显式传 temperature: 0（标题/覆盖对账/RARR 校验等
-      // 需确定性的场景），|| 会把 0 吞成 0.1 → 这些"校验/对账"判决全跑在非确定性上。
-      // 与 /meridian/chat 的同款 bug 同源（那处已修，此处漏网）。
-      temperature: options.temperature ?? 0.1,
-      max_tokens: options.maxTokens || 8000,
-      metadata: {
-        requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        timestamp: Date.now(),
-      }
-    };
-
     try {
-      const phaseTrace: TraceContext = {
-        ...this.traceContext,
-        callIndex: options.callIndex ?? this.traceContext.callIndex,
-      };
-      const result = await loggedChat(
+      // 配置走 call-llm 单一入口按 phase 定默认；temperature ?? 语义保留（5 处显式 0 不被吞）。
+      const result = await callLLM(
         this.aiGatewayService,
         this.env,
-        phaseTrace,
+        this.traceContext,
         options.phase ?? 'brief_generation',
-        chatRequest
+        messages,
+        {
+          provider: options.provider,
+          model: options.model,
+          temperature: options.temperature,
+          maxTokens: options.maxTokens,
+          callIndex: options.callIndex ?? this.traceContext.callIndex,
+          metadata: {
+            requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+            timestamp: Date.now(),
+          },
+        }
       );
       
       // 检查结果是否存在

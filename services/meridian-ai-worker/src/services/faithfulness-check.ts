@@ -39,7 +39,8 @@
 import { AIGatewayService } from './ai-gateway';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
-import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
+import { type LLMCallPhase, type TraceContext } from './llm-call-logger';
+import { callLLM } from './call-llm';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
 import {
   EXTRACT_PROMPT,
@@ -184,18 +185,18 @@ async function callJudge(
   // 常见短输出仍走小预算省 token，只有真被截断的尾部升级。
   let budget = maxTokens;
   for (;;) {
-    // 观测性：faithfulness 是 in-process LLM 调用，也必须经 loggedChat 才会按 trace 落 R2。
-    const result = await loggedChat(ctx.ai, ctx.env, {
-      ...ctx.traceContext,
-      callIndex: ctx.nextCallIndex(),
-    }, ctx.phase, {
-      messages: [{ role: 'user' as const, content: prompt }],
-      provider: 'dashscope',
-      model,
-      temperature: 0,
-      max_tokens: budget,
-      metadata: createRequestMetadata({ req: { header: () => 'faithfulness-check' } }),
-    });
+    // 配置走 call-llm（faithfulness phase 默认 dashscope/temp0/skipCache:true——原 callJudge
+    // 忘传 skipCache，此处填对）；model 每次由 caller 传（判官模型）、maxTokens=budget 截断重试用。
+    const result = await callLLM(ctx.ai, ctx.env, ctx.traceContext, ctx.phase,
+      [{ role: 'user' as const, content: prompt }],
+      {
+        model,
+        temperature: 0,
+        maxTokens: budget,
+        callIndex: ctx.nextCallIndex(),
+        metadata: createRequestMetadata({ req: { header: () => 'faithfulness-check' } }),
+      }
+    );
     if (result.capability !== 'chat') {
       throw new Error('Unexpected response type from chat service');
     }

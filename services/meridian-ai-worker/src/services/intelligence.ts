@@ -1,5 +1,6 @@
 import { AIGatewayService } from './ai-gateway';
-import { loggedChat, TraceContext } from './llm-call-logger';
+import { TraceContext } from './llm-call-logger';
+import { callLLM } from './call-llm';
 import { getIntelligenceAnalysisPrompt, getIntelReportVerificationPrompt } from '../prompts/intelligenceAnalysis';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { 
@@ -240,22 +241,18 @@ export class IntelligenceService {
     
     // 使用重试策略进行AI分析
     const aiOperation = async () => {
-      const chatRequest = {
-        capability: 'chat' as const,
-        messages: [{ role: 'user' as const, content: limitedPrompt }],
-        provider: 'dashscope',
-        // 单故事深度分析：输入可达 850k 字符 (~200k tokens)，需要长上下文模型
-        model: 'qwen-long',
-        temperature: 0.1,
-        max_tokens: 8192,
-        skipCache: this.skipCache,
-        metadata: {
-          requestId: `intel-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-          timestamp: Date.now(),
+      // 配置走 call-llm（intelligence_analysis 默认 dashscope/qwen-long/temp0.1/8192）；
+      // skipCache 保留 this.skipCache 覆盖（eval 注入用）。
+      const result = await callLLM(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis',
+        [{ role: 'user' as const, content: limitedPrompt }],
+        {
+          skipCache: this.skipCache,
+          metadata: {
+            requestId: `intel-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            timestamp: Date.now(),
+          },
         }
-      };
-
-      const result = await loggedChat(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis', chatRequest);
+      );
 
       if (result.capability !== 'chat') {
         throw new Error('Unexpected response type from chat service');
@@ -326,16 +323,16 @@ export class IntelligenceService {
       });
       if (!targets.length) return analysis;
 
-      const raw = await loggedChat(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis', {
-        messages: [{ role: 'user' as const, content: getIntelReportVerificationPrompt(lines.join('\n'), storyArticleMd) }],
-        provider: 'dashscope',
-        // 与生成同款长上下文模型：校验要同时装下原文与报告
-        model: 'qwen-long',
-        temperature: 0,
-        max_tokens: 4000,
-        skipCache: this.skipCache,
-        metadata: { requestId: `intel-rarr-${Date.now()}`, timestamp: Date.now() },
-      });
+      // 与生成同款长上下文模型（default qwen-long）；temp 0 + maxTokens 4000 覆盖。
+      const raw = await callLLM(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis',
+        [{ role: 'user' as const, content: getIntelReportVerificationPrompt(lines.join('\n'), storyArticleMd) }],
+        {
+          temperature: 0,
+          maxTokens: 4000,
+          skipCache: this.skipCache,
+          metadata: { requestId: `intel-rarr-${Date.now()}`, timestamp: Date.now() },
+        }
+      );
       const text = (raw as ChatResponse).choices?.[0]?.message?.content || '';
       // 容忍 ```json 围栏 / 裸对象两种形态（与 AIResponseParser 同款容错思路）
       const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);

@@ -28,6 +28,18 @@ import { RetryService, createRetryConfigFromEnv } from './retry'
 import { MetadataService } from './metadata'
 import { AIGatewayEnhancementService } from './ai-gateway-enhancement'
 
+/**
+ * env.AI（Workers AI binding）的最小结构。CloudflareEnv 的索引签名限定为 string，
+ * 无法在其上声明对象属性，故单独定义、在取用处断言。
+ */
+interface WorkersAIBinding {
+  run(
+    model: string,
+    inputs: Record<string, unknown>,
+    options?: { gateway?: { id: string; skipCache?: boolean; cacheTtl?: number } }
+  ): Promise<any>
+}
+
 export class AIGatewayService {
   private gatewayUrl: string
   private providers: Map<string, BaseProvider>
@@ -70,7 +82,11 @@ export class AIGatewayService {
       this.providers.set('openai', new OpenAIProvider(env.OPENAI_API_KEY))
     }
     
-    if (env.CLOUDFLARE_API_TOKEN) {
+    // workers-ai 有两条通道：env.AI binding（预认证，生产走这条）与 REST + API token。
+    // 注册条件必须涵盖两者——生产 ai-worker 只绑了 AI，没有 CLOUDFLARE_API_TOKEN secret，
+    // 旧条件会让该 provider 从未注册，兜底档直接报 "not available"。
+    const workersAIBinding = (env as unknown as { AI?: { run?: unknown } }).AI
+    if (env.CLOUDFLARE_API_TOKEN || typeof workersAIBinding?.run === 'function') {
       this.providers.set('workers-ai', new WorkersAIProvider(env.CLOUDFLARE_API_TOKEN, env))
     }
     
@@ -240,6 +256,36 @@ export class AIGatewayService {
           { capability: request.capability, model: request.model }
         )
         throw new Error(`Custom provider via gateway failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    // Workers AI 走 env.AI binding 而非 HTTP：binding 的凭证由 Worker 部署关系授予，
+    // 不依赖 CLOUDFLARE_API_TOKEN（生产 ai-worker 没有该 secret，旧的 Universal Endpoint
+    // 路径必然 401 Authentication error，且模型名在转换中丢失回落 default_model）。
+    // 传 gateway.id 使流量仍经 AI Gateway，观测/缓存/计费不丢。
+    if (requestedProvider === 'workers-ai') {
+      try {
+        const mappedResponse = await this.executeWorkersAIViaBinding(request)
+        if (request.metadata && request.metadata.requestId) {
+          mappedResponse.metadata = this.metadataService.addPerformanceMetrics(request.metadata as RequestMetadata, {
+            tokenUsage: {
+              promptTokens: mappedResponse.usage?.prompt_tokens || 0,
+              completionTokens: mappedResponse.usage?.completion_tokens || 0,
+              totalTokens: mappedResponse.usage?.total_tokens || 0,
+            },
+            latency: { totalLatency: Date.now() - startTime, providerLatency: Date.now() - startTime, gatewayLatency: 0 },
+          })
+          mappedResponse.processingTime = Date.now() - startTime
+        }
+        return mappedResponse
+      } catch (error) {
+        this.logger.logProviderError(
+          request.metadata?.requestId || 'unknown',
+          requestedProvider,
+          error as Error,
+          { capability: request.capability, model: request.model }
+        )
+        throw new Error(`Workers AI binding failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
@@ -631,6 +677,53 @@ export class AIGatewayService {
    *     cf-aig-authorization: Bearer <cf-token>   (CF Gateway 自己鉴权)
    *   Body: 原生 provider 格式 (本例为 OpenAI 兼容 chat completion)
    */
+  /**
+   * Workers AI 经 env.AI binding 调用。认证来自 binding 本身（无 API token 依赖），
+   * options.gateway 让请求仍走 AI Gateway，保留日志/缓存/成本追踪。
+   */
+  private async executeWorkersAIViaBinding(request: AIRequest): Promise<AIResponse> {
+    const ai = (this.env as unknown as { AI?: WorkersAIBinding }).AI
+    if (!ai || typeof ai.run !== 'function') {
+      throw new Error('Workers AI binding (env.AI) 未配置')
+    }
+
+    const provider = this.providers.get('workers-ai')
+    if (!provider) {
+      throw new Error('Provider workers-ai not registered')
+    }
+
+    if (request.capability !== 'chat') {
+      throw new Error(`Workers AI binding 目前只接 chat capability，收到: ${request.capability}`)
+    }
+
+    const modelName = request.model || provider.getDefaultModel(request.capability)
+    if (!modelName) {
+      throw new Error(`No workers-ai model available for capability: ${request.capability}`)
+    }
+
+    const chatRequest = request as ChatRequest
+    const inputs: Record<string, unknown> = { messages: chatRequest.messages }
+    if (chatRequest.max_tokens != null) inputs.max_tokens = chatRequest.max_tokens
+    if (chatRequest.temperature != null) inputs.temperature = chatRequest.temperature
+
+    // 不传 gateway 参数：实测 binding + 本账号 authenticated gateway（meridian-ai）会
+    // 无限挂起——不是 401 也不是超时报错，是静默卡死（本地与生产各复现一次，240s 无响应）。
+    // 二分坐实：同模型同 max_tokens 走 REST 经同一 gateway 8s 正常返回，去掉 gateway 参数
+    // 后 binding 26s 正常返回。官方文档称 binding 请求"预认证、无需 cf-aig-authorization"，
+    // 与实测不符，疑为平台侧缺陷。代价：兜底流量不进 AI Gateway 日志/缓存/成本统计。
+    // 若后续要恢复 gateway 观测，先在 dashboard 关掉该 gateway 的 Authentication 再验证。
+    const options = undefined
+
+    this.logger.log('debug', 'Workers AI via binding', {
+      model: modelName,
+      viaGateway: false, // 见上：binding + authenticated gateway 会静默挂起
+      requestId: request.metadata?.requestId,
+    })
+
+    const body = await ai.run(modelName, inputs, options)
+    return provider.mapResponse(body, { ...request, model: modelName })
+  }
+
   private async executeCustomProviderViaGateway(request: AIRequest, providerName: string): Promise<AIResponse> {
     const provider = this.providers.get(providerName)
     if (!provider) {

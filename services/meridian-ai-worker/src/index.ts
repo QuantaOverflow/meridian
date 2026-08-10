@@ -166,11 +166,16 @@ app.post('/meridian/article/analyze', async (c) => {
 
     const analysisPrompt = getArticleAnalysisPrompt(title, truncatedContent)
 
-    // 分级重试策略，优先使用性能较好的模型
+    // 分级重试策略，优先使用性能较好的模型。
+    // 末档跨 provider：前三档同属 DashScope，该供应商整体不可用时（鉴权失效/欠费/限流）
+    // 三次重试必然全挂——2026-07-29 起 DashScope key 401 invalid_api_key，3425 篇文章
+    // 连续 12 天全部 AI_ANALYSIS_FAILED，重试机制提供的防护为零。故末档换 Workers AI
+    // （CF 原生 binding 侧凭证，与 DashScope 凭证相互独立）。
     const analysisStrategies = [
-      { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1 },
-      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0.1 },
-      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0 }
+      { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 2000 },
+      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0.1, maxTokens: 2000 },
+      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0, maxTokens: 2000 },
+      { provider: 'workers-ai', model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0.1, maxTokens: 4000 }
     ]
 
     let lastError: Error | null = null
@@ -189,7 +194,7 @@ app.post('/meridian/article/analyze', async (c) => {
           provider: strategy.provider,
           model: strategy.model,
           temperature: strategy.temperature,
-          max_tokens: strategy.model === '@cf/meta/llama-3.3-70b-instruct-fp8-fast' ? 6000 : Math.min(2000, 2048), // Llama 3.3 70B 支持更大的输出
+          max_tokens: strategy.maxTokens, // 每档自带（原特判写死的 llama-3.3-70b 分支已无对应策略档）
           metadata: requestMetadata
         })
 

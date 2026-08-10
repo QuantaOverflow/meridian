@@ -89,16 +89,20 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       }
       id = `gemini-${Date.now()}`
     } else if (model.name.startsWith('@cf')) {
-      // Workers AI format
+      // Workers AI format：新模型（qwen3 / glm 等）返回 OpenAI 兼容格式（choices + usage，
+      // 且 response 字段为 null），老模型（llama-2-7b 等）返回 { response: "..." }。
+      // 另：REST /ai/run 多包一层 result，env.AI binding 直接返回内容——两者都兼容。
+      const cfBody = response.result ?? response
+      const cfChoice = cfBody.choices?.[0]
       choices = [{
         message: {
           role: 'assistant' as const,
-          content: response.result?.response || response.response || ''
+          content: cfChoice?.message?.content ?? cfBody.response ?? ''
         },
-        finish_reason: 'stop'
+        finish_reason: cfChoice?.finish_reason || 'stop'
       }]
-      usage = undefined
-      id = `chatcmpl-${Date.now()}`
+      usage = cfBody.usage
+      id = cfBody.id || `chatcmpl-${Date.now()}`
     } else if (model.name.startsWith('claude')) {
       // Anthropic format
       choices = [{

@@ -264,6 +264,22 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
           enable_cost_tracking: true, // Enable cost tracking for paid model
           custom_tags: ['paid', 'workers-ai', 'llama', '3.3', '70b', 'instruct', 'fp8', 'function-calling']
         }
+      },
+      {
+        name: '@cf/qwen/qwen3-30b-a3b-fp8',
+        capabilities: ['chat'],
+        endpoint: '/ai/run/@cf/qwen/qwen3-30b-a3b-fp8',
+        max_tokens: 32768, // Context window: 32,768 tokens
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.000000051,  // $0.051 per 1M input tokens
+          output: 0.00000034   // $0.34 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['paid', 'workers-ai', 'qwen3', '30b', 'moe', 'fp8']
+        }
       }
     ]
   },

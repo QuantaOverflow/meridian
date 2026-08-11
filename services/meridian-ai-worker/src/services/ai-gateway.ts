@@ -706,12 +706,14 @@ export class AIGatewayService {
     if (chatRequest.max_tokens != null) inputs.max_tokens = chatRequest.max_tokens
     if (chatRequest.temperature != null) inputs.temperature = chatRequest.temperature
 
-    // 不传 gateway 参数：实测 binding + 本账号 authenticated gateway（meridian-ai）会
-    // 无限挂起——不是 401 也不是超时报错，是静默卡死（本地与生产各复现一次，240s 无响应）。
-    // 二分坐实：同模型同 max_tokens 走 REST 经同一 gateway 8s 正常返回，去掉 gateway 参数
-    // 后 binding 26s 正常返回。官方文档称 binding 请求"预认证、无需 cf-aig-authorization"，
-    // 与实测不符，疑为平台侧缺陷。代价：兜底流量不进 AI Gateway 日志/缓存/成本统计。
-    // 若后续要恢复 gateway 观测，先在 dashboard 关掉该 gateway 的 Authentication 再验证。
+    // 不传 gateway 参数。当前形态经生产日志验证可靠：2026-08-11 真实文章流量
+    // "尝试分析 (4/4)" 37 次 → "成功完成分析" 37 次（100%）。
+    //
+    // ⚠️ 关于 gateway 参数：曾观测到"带 gateway.id 则 240s 无响应"，但该结论建立在
+    // **从本机 curl 生产端点**这一种测量上，而那条回程本身不可靠——同一时段本机 curl
+    // 屡屡超时的请求，服务端日志显示 worker 早已正常完成。故"带 gateway 会挂起"未经
+    // 服务端证据确认，不可当作事实。若要恢复 gateway 观测（日志/缓存/成本统计），
+    // 加回参数后**必须用 worker 日志（而非客户端响应）判定成败**。
     const options = undefined
 
     this.logger.log('debug', 'Workers AI via binding', {

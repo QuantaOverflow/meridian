@@ -280,6 +280,28 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
           enable_cost_tracking: true,
           custom_tags: ['paid', 'workers-ai', 'qwen3', '30b', 'moe', 'fp8']
         }
+      },
+      {
+        // 2026-08-11 备选，未启用。已知：成功耗时 36-48s（同 prompt 下 qwen3-30b 为 19-26s）；
+        // 语言一致性优于 qwen3-30b（3/3 全英文标签，与生产历史 qwen-plus 惯例一致）。
+        // ⚠️ 当时另记录了"56% 超时"，该数据作废——它来自从本机 curl 的观测，而那条回程
+        // 本身不可靠（同法测 qwen3 也"超时"，服务端日志却是 37/37 成功）。glm 的真实
+        // 可用性未知，要用**服务端日志**重测。131k 上下文对 intelligence_analysis 这类
+        // 低频长上下文场景仍有价值。
+        name: '@cf/zai-org/glm-4.7-flash',
+        capabilities: ['chat'],
+        endpoint: '/ai/run/@cf/zai-org/glm-4.7-flash',
+        max_tokens: 131072, // Context window: 131,072 tokens
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.0000000605, // $0.0605 per 1M input tokens
+          output: 0.0000004    // $0.40 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['paid', 'workers-ai', 'glm', 'flash', 'long-context']
+        }
       }
     ]
   },

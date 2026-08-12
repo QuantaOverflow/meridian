@@ -16,6 +16,7 @@ import {
   getBriefCoverageReconciliationPrompt
 } from '../prompts/briefGeneration';
 import { getTldrGenerationPrompt } from '../prompts/tldrGeneration';
+import { checkBriefHygiene } from '../utils/brief-hygiene';
 import { CloudflareEnv, ChatResponse } from '../types';
 
 // ============================================================================
@@ -349,6 +350,15 @@ export class BriefGenerationService {
           coverage = repaired.coverage;
         }
 
+        // 简报卫生检查（确定性传感器，零 LLM）。放在补录之后 = 检查真正交付给读者的那份正文。
+        // 覆盖的是忠实度判官结构上抓不到的一类：专名拼写损坏、整句重复、元标签泄漏、缺主区标题。
+        // 只报不改——误报由人一眼判掉，静默修正才是真风险。
+        const hygiene = checkBriefHygiene(content, storiesMarkdown);
+        if (hygiene.length) {
+          console.warn(`[Brief Generation] BRIEF_HYGIENE ${hygiene.length} 条：` +
+            hygiene.map((h) => `${h.kind}(${h.detail})`).join(' | '));
+        }
+
         // 生成标题（基于补录后的最终正文）
         const titlePrompt = getBriefTitlePrompt(content);
         const titleResponse = await this.callAI(titlePrompt, undefined, {
@@ -648,6 +658,22 @@ export class BriefGenerationService {
    * 这正是选它而非"让模型重写"的原因（A/B 已证补覆盖会推高失真）。
    * 局限：文风比模型写的生硬；判官 precision=1.0(κ验)故误补极少，最坏=多一条冗余 bullet。
    */
+  /**
+   * 剥掉情报报告的内部措辞，再放进给人读的简报。
+   *
+   * 情报 prompt 要求每句都能读回「According to these articles, …」——那是治世界知识注入的
+   * 手段(941c827，unsupported 56%→6%)，只对情报报告这一层有意义。补录逐字拷贝摘要首句，
+   * 于是这个内部措辞被原样印到读者眼前：2026-08-12 的 report 55 里 noteworthy 四条**全部**
+   * 以 "According to these articles," 开头，且是 Title Case，与简报全小写文风割裂。
+   * 一个修复的产物成了另一个修复的输入——剥前缀是纯字符串处理，不改事实，by-construction 安全。
+   */
+  private stripReportVoice(sentence: string): string {
+    const stripped = sentence.replace(/^\s*according to (?:these|the) articles,?\s*/i, '');
+    if (stripped === sentence) return sentence;
+    // 剥掉前缀后原句的首词是小写(它本在从句里)，与简报的小写文风一致，无需再动大小写。
+    return stripped;
+  }
+
   private repairCoverage(
     content: string,
     coverage: CoverageEntry[],
@@ -663,7 +689,7 @@ export class BriefGenerationService {
       const report = byId.get(entry.storyId);
       const sentence = this.firstSentence(report?.executiveSummary || entry.storyLabel);
       if (!sentence) continue;
-      bullets.push(`- ${sentence}`);
+      bullets.push(`- ${this.stripReportVoice(sentence)}`);
       patchedIds.add(entry.storyId);
     }
     if (!bullets.length) return { content, coverage };

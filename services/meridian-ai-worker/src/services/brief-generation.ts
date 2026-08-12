@@ -732,12 +732,20 @@ export class BriefGenerationService {
 
   // 取一段文本的首句（逐字，不改写）。句末=[.!?]后跟空格且前面不是大写缩写字母（防 "U.S." 误切）；
   // 找不到句界或过长时按词边界截断加省略号。补录 bullet 用。
-  private firstSentence(text: string, cap = 320): string {
+  private firstSentence(text: string, cap = 600): string {
     const t = (text || '').replace(/\s+/g, ' ').trim();
     if (!t) return '';
     const m = t.match(/^.{20,}?(?<![A-Z])[.!?](?=\s)/);
     const s = m ? m[0] : t;
-    return s.length <= cap ? s : s.slice(0, cap).replace(/\s+\S*$/, '') + '…';
+    if (s.length <= cap) return s;
+    // 超限时按**子句边界**断开并补句号，不再产生 "…" 残句。
+    // 旧值 cap=320 太紧：2026-08-12 生产 report 54 的 WHO 那条首句约 330 字符，被切成
+    //「…the Health Secretary's promotion of the disproven…」印在读者眼前。补录的全部价值
+    // 在于"逐字拷贝、零编造"，截断成残句把这个价值直接抵消掉。
+    const head = s.slice(0, cap);
+    const lastClause = Math.max(head.lastIndexOf(', '), head.lastIndexOf('; '));
+    if (lastClause > cap * 0.5) return head.slice(0, lastClause) + '.';
+    return head.replace(/\s+\S*$/, '') + '…'; // 无子句边界的超长句：保留旧行为作最后兜底
   }
 
   // 删除片段后清理遗留的双空格/悬空标点；只做最轻量收尾，不动其它字符。

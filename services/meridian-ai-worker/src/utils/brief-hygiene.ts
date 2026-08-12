@@ -15,7 +15,8 @@
  */
 
 export interface HygieneFinding {
-  kind: 'proper_noun_variant' | 'duplicate_sentence' | 'meta_label_leak' | 'missing_section' | 'story_tag_leak';
+  kind: 'proper_noun_variant' | 'duplicate_sentence' | 'meta_label_leak' | 'missing_section'
+    | 'story_tag_leak' | 'broken_punctuation' | 'truncated_text';
   detail: string;
   /** 同一处缺陷被多条嵌套短语命中时的归并键（仅 proper_noun_variant 用） */
   dedupeKey?: string;
@@ -208,6 +209,57 @@ function findStoryTagLeaks(brief: string): HygieneFinding[] {
   }));
 }
 
+/**
+ * 标点/断句损坏。全部来自 2026-08-12 生产 report 54 的实证，非预设：
+ *   `the real overlooked angle is the psychological warfare aspect:.`  ← 冒号后直接句号
+ *   `...carries significant diplomatic and operational risks..`        ← 双句号
+ *   `...the Health Secretary's promotion of the disproven…`            ← 补录截断成残句
+ *   `the us-moU points to...`                                          ← MoU 被写成 moU
+ */
+function findBrokenPunctuation(brief: string): HygieneFinding[] {
+  const findings: HygieneFinding[] = [];
+  for (const m of brief.matchAll(/[:;,]\s*[.。]/g)) {
+    findings.push({ kind: 'broken_punctuation', detail: `标点断裂: "…${brief.slice(Math.max(0, m.index! - 40), m.index! + 3)}"` });
+  }
+  for (const m of brief.matchAll(/(?<!\.)\.\.(?!\.)/g)) {
+    findings.push({ kind: 'broken_punctuation', detail: `双句号: "…${brief.slice(Math.max(0, m.index! - 40), m.index! + 2)}"` });
+  }
+  // 省略号收尾 = 句子被截断（正常行文里简报不使用省略号；补录 firstSentence 曾产出）
+  for (const m of brief.matchAll(/…\s*$/gm)) {
+    findings.push({ kind: 'truncated_text', detail: `省略号截断: "…${brief.slice(Math.max(0, m.index! - 60), m.index! + 1)}"` });
+  }
+  // 词内大小写损坏：小写起头却夹大写（moU / omAn）。散文里没有 camelCase，误报面很小。
+  for (const m of brief.matchAll(/\b[a-z]+[A-Z][a-zA-Z]*\b/g)) {
+    findings.push({ kind: 'broken_punctuation', detail: `词内大小写损坏: "${m[0]}"` });
+  }
+  return findings;
+}
+
+/**
+ * 元评论泄漏：模型对**输入数据本身**的评述被写进给读者的正文。
+ * report 55 是 `irrelevant context:`，report 54 是 `while the provided data for this
+ * section was minimal, …`——措辞每次不同，故按语义模式匹配而非固定词串。
+ */
+function findMetaCommentary(brief: string): HygieneFinding[] {
+  const patterns = [
+    /\b(the )?(provided|available|given|input|supplied) (data|articles?|reports?|information|context)\b/gi,
+    /\b(this|the) (section|story|cluster) (was|is|has) (minimal|empty|sparse|limited|insufficient)\b/gi,
+    /\b(no|insufficient|limited) (data|information) (was )?(provided|available) (for|in) (this|the)\b/gi,
+  ];
+  // 三条模式会命中同一处的重叠片段（"the provided data" 与 "this section was minimal"
+  // 在同一句里），按位置邻近归并，否则一处缺陷报两次。
+  const hits = new Map<number, string>();
+  for (const re of patterns) {
+    for (const m of brief.matchAll(re)) {
+      const near = [...hits.keys()].find((i) => Math.abs(i - m.index!) < 80);
+      if (near === undefined) {
+        hits.set(m.index!, `对输入数据的元评论: "…${brief.slice(Math.max(0, m.index! - 30), m.index! + m[0].length + 30)}…"`);
+      }
+    }
+  }
+  return [...hits.entries()].sort((a, b) => a[0] - b[0]).map(([, detail]) => ({ kind: 'meta_label_leak' as const, detail }));
+}
+
 function findMissingSections(brief: string): HygieneFinding[] {
   // 只查唯一的必需区：prompt 里其余各节都明确「没内容就整节省略」，缺失是合法编辑决策。
   return /^##\s*what matters now/im.test(brief)
@@ -223,6 +275,8 @@ export function checkBriefHygiene(brief: string, sourceText: string): HygieneFin
   return [
     ...findMissingSections(brief),
     ...findMetaLabelLeaks(brief),
+    ...findMetaCommentary(brief),
+    ...findBrokenPunctuation(brief),
     ...findStoryTagLeaks(brief),
     ...findDuplicateSentences(brief),
     ...findProperNounVariants(brief, extractProperPhrases(sourceText)),

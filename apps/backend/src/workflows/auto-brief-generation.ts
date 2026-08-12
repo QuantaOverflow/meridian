@@ -1350,9 +1350,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             stories_identified: validatedStories.stories.length,
             intelligence_analyses: intelligenceReports.length,
             content_length: brief.value.content.length,
-            // 上报 ai-worker 实际用的模型；取不到就说不知道，别硬编一个名字（旧值 'qwen-long'
-            // 在 model_used 恒 undefined 时会把每次统计都写成 qwen-long，与实际脱节）
-            model_used: brief.value.metadata?.model_used || (brief.value.metadata as any)?.model || 'unknown'
+            // 路径是 brief.metadata（跨 service 响应的 metadata），不是 brief.value.metadata
+            // （domain 数据）——与同一函数里读 coverage 的 brief.metadata?.coverage 一致。
+            // 旧代码走的也是错路径，但硬编码 'qwen-long' 兜底把它盖住了；2026-08-12 改成
+            // 'unknown' 后统计里立刻出现 model_used:"unknown"，才让这个既有错误显形。
+            model_used: (brief.metadata as any)?.model_used || 'unknown'
           }
         };
       });

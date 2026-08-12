@@ -17,6 +17,7 @@ import {
 } from '../prompts/briefGeneration';
 import { getTldrGenerationPrompt } from '../prompts/tldrGeneration';
 import { checkBriefHygiene } from '../utils/brief-hygiene';
+import { recordSensor } from './sensor-log';
 import { CloudflareEnv, ChatResponse } from '../types';
 
 // ============================================================================
@@ -358,6 +359,13 @@ export class BriefGenerationService {
           console.warn(`[Brief Generation] BRIEF_HYGIENE ${hygiene.length} 条：` +
             hygiene.map((h) => `${h.kind}(${h.detail})`).join(' | '));
         }
+        // 落 R2：console 的保留期有限且无法按 run 关联，而"卫生问题发生率随时间怎么变"
+        // 正是 error-analysis 要问的。零命中也落，否则"没问题"与"没跑"无法区分。
+        await recordSensor(this.env, this.traceContext, 'brief_hygiene', {
+          findingCount: hygiene.length,
+          findings: hygiene,
+          briefChars: content.length,
+        });
 
         // 生成标题（基于补录后的最终正文）
         const titlePrompt = getBriefTitlePrompt(content);

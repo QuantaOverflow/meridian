@@ -37,7 +37,16 @@ const outDir = outIdx >= 0 ? process.argv[outIdx + 1] : null;
 const sql = postgres(process.env.DATABASE_URL || '', { max: 1 });
 
 // 从 R2 取一个对象（stdout pipe）。失败返回 null，不中断整条 trace。
+// 记忆化：每次调用都 spawn 一个 wrangler 进程（~3-5s），而归属并排视图需要的情报报告
+// 主循环已经取过一遍——不缓存等于把整条 trace 的耗时翻倍。null 也缓存（缺失同样是结论）。
+const r2Cache = new Map<string, string | null>();
 function r2Get(key: string): string | null {
+  if (r2Cache.has(key)) return r2Cache.get(key)!;
+  const v = r2GetUncached(key);
+  r2Cache.set(key, v);
+  return v;
+}
+function r2GetUncached(key: string): string | null {
   try {
     return execFileSync(
       'npx',
@@ -222,6 +231,148 @@ async function main() {
     lines.push(`被拒簇（omission 侧，成簇但没进 story）:`);
     for (const r of rejections) lines.push(`   簇${r.cluster_id}: ${r.reason} (${r.article_count} 篇)`);
   }
+
+  // ── 观测层：step metrics / 传感器 / 覆盖 / 忠实度 / LLM 原始 I/O ─────────────
+  // 这些数据 2026-08 前就大多存在，但病历袋从没接——每次 error-analysis 都要手工
+  // wrangler r2 object get 五六次去拼。数据在、工具不取，等于没有。
+  lines.push('');
+  lines.push('## 观测层（run 级）');
+
+  const metricsRaw = r2Get(`observability/${workflowId}.json`);
+  if (metricsRaw) {
+    try {
+      const m = JSON.parse(metricsRaw);
+      lines.push('### 步骤链');
+      const seen = new Set<string>();
+      for (const step of m.detailedMetrics || []) {
+        const k = `${step.stepName}:${step.status}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const dur = step.duration ? ` ${step.duration}ms` : '';
+        const data = step.data ? ` ${JSON.stringify(step.data).slice(0, 200)}` : '';
+        lines.push(`  ${step.stepName} → ${step.status}${dur}${data}`);
+      }
+    } catch { lines.push('  [步骤 metrics 解析失败]'); }
+  } else lines.push('  [无步骤 metrics]');
+
+  const covRaw = r2Get(`observability/coverage/${workflowId}.json`);
+  if (covRaw) {
+    try {
+      const c = JSON.parse(covRaw);
+      lines.push('### 覆盖对账');
+      lines.push(`  补录后: ${JSON.stringify(c.summary)}`);
+      // 补录前是唯一能反映**合成层原始质量**的信号：补录按构造把 dropped 推到 0，
+      // 只看 summary 会把"模型漏了 4 条但被程序救回"读成"模型一条没漏"。
+      lines.push(`  补录前: ${JSON.stringify(c.summaryBeforeRepair ?? '(该 run 早于此字段上线)')}`);
+      for (const e of c.coverage || []) {
+        if (e.disposition === 'dropped') lines.push(`  ⚠ 仍 dropped: ${e.storyLabel} — ${e.reason}`);
+      }
+    } catch { lines.push('  [覆盖对账解析失败]'); }
+  } else lines.push('  [无覆盖对账]');
+
+  const faithRaw = r2Get(`observability/faithfulness/${workflowId}.json`);
+  if (faithRaw) {
+    try {
+      const v = JSON.parse(faithRaw).verdict || {};
+      lines.push('### 忠实度');
+      lines.push(`  judge=${v.judge_model} mode=${v.mode} block=${v.block} ` +
+        `unsupported=${v.genuine_unsupported}/${v.factual_claims} contradicted=${v.contradicted}`);
+      for (const f of v.flagged_factual || []) {
+        lines.push(`  ⚠ flagged: ${(f.claim || f.text || JSON.stringify(f)).toString().slice(0, 200)}`);
+      }
+    } catch { lines.push('  [忠实度 verdict 解析失败]'); }
+  } else lines.push('  [无忠实度 verdict]');
+
+  // 传感器读数（2026-08-12 起）：卫生检查 / 情报解析重采样 / 输出语言。
+  // key 形状 observability/sensors/{wf}/{kind}-{idx}.json；无 list 能力，按已知 kind 探。
+  lines.push('### 传感器');
+  let sensorHit = 0;
+  for (const kind of ['brief_hygiene', 'intel_parse', 'output_language']) {
+    for (let i = 0; i < 20; i++) {
+      const raw = r2Get(`observability/sensors/${workflowId}/${kind}-${String(i).padStart(3, '0')}.json`);
+      if (!raw) { if (i > 0) break; else continue; }
+      sensorHit++;
+      try {
+        const d = JSON.parse(raw);
+        if (kind === 'brief_hygiene') {
+          lines.push(`  卫生检查: ${d.findingCount} 条（简报 ${d.briefChars} 字符）`);
+          for (const f of d.findings || []) lines.push(`     [${f.kind}] ${f.detail}`);
+        } else if (kind === 'intel_parse') {
+          lines.push(`  情报解析重采样[${i}]: ${d.attempts}/${d.maxAttempts} 次${d.exhausted ? ' ⚠ 耗尽仍失败' : ''}`);
+        } else {
+          lines.push(`  ⚠ 输出语言[${i}]: ${d.phase} CJK ${(d.ratio * 100).toFixed(1)}% — ${String(d.sample).slice(0, 120)}`);
+        }
+      } catch { lines.push(`  [${kind}-${i} 解析失败]`); }
+    }
+  }
+  if (!sensorHit) lines.push('  （无传感器读数——该 run 可能早于传感器上线，或全部零命中且未落盘）');
+
+  // ── 归属并排视图 ────────────────────────────────────────────────────────
+  // 动机：2026-08-12 人工核 report 54 抓到的唯一事实错是**归属类**——把 Pezeshkian
+  // 说的话安到 Rezaei 头上，并改写了成因。它在所有落盘信号里都是干净的（忠实度 0/38、
+  // 覆盖 dropped 0、卫生 0 条），因为每个 token 都在源里，错的是 token 之间的连线。
+  // 这类目前没有自动检测手段，但可以把**人读成本**降下来：把简报里每个带署名的陈述、
+  // 与源里所有涉及该人物的原句并排列出，核对从"翻五个文件"变成"扫一屏"。
+  lines.push('### 归属并排（人读用；无自动判定）');
+  {
+    // 简报里的署名句：含"人名 + 表述动词"的句子。人名取自各情报报告的 keyEntities(type=Person)，
+    // 避免用通用 NER——源里已经有权威的实体表，直接用它才能保证两侧同一口径。
+    const persons = new Set<string>();
+    const personSay = new Map<string, string[]>(); // 人名 → 源里涉及他的原句
+    for (const st of stories) {
+      if (!st.intel_report_r2_key) continue;
+      const raw = r2Get(st.intel_report_r2_key);
+      if (!raw) continue;
+      try {
+        const d = JSON.parse(raw);
+        const ents = Array.isArray(d.keyEntities) ? d.keyEntities : (d.keyEntities?.list ?? d.entities ?? []);
+        for (const e of ents) {
+          const nm = String(e?.name ?? '').trim();
+          if (!nm || nm.split(/\s+/).length < 2) continue; // 只取全名，单名歧义太大
+          // 只收 Person：末词匹配对机构名会崩——"Russian Defence Ministry" 的末词是
+          // "Ministry"，于是简报里的 "russian agriculture ministry" 被归进同一组（实测）。
+          // 人名的姓氏是强标识，机构名的末词是通用词，两者不能用同一套匹配。
+          if (!/person/i.test(String(e?.type ?? ''))) continue;
+          persons.add(nm);
+        }
+        // 源句：timeline.description + factualBasis + executiveSummary，逐句切
+        const srcSents: string[] = [];
+        for (const t of d.timeline ?? []) if (t?.description) srcSents.push(String(t.description));
+        for (const f of d.factualBasis ?? []) srcSents.push(String(f));
+        if (d.executiveSummary) srcSents.push(...String(d.executiveSummary).split(/(?<=[.!?])\s+/));
+        for (const nm of persons) {
+          const last = nm.split(/\s+/).pop()!;
+          for (const sent of srcSents) {
+            if (!sent.includes(nm) && !sent.includes(last)) continue;
+            const arr = personSay.get(nm) ?? [];
+            if (!arr.includes(sent)) arr.push(sent);
+            personSay.set(nm, arr);
+          }
+        }
+      } catch { /* 单条报告解析失败不影响整体 */ }
+    }
+
+    const SAY = /\b(said|says|declared|announced|warned|accused|stated|suggested|told|claimed|argued|confirmed|denied|revealed)\b/i;
+    const briefText = String(run.brief_content ?? '');
+    const briefSents = briefText.split(/(?<=[.!?])\s+/).map((x: string) => x.trim()).filter(Boolean);
+    let shown = 0;
+    for (const nm of [...persons].sort()) {
+      const last = nm.split(/\s+/).pop()!.toLowerCase();
+      const claims = briefSents.filter((sn: string) => sn.toLowerCase().includes(last) && SAY.test(sn));
+      if (!claims.length) continue;
+      shown++;
+      lines.push(`  ── ${nm} ──`);
+      for (const c of claims) lines.push(`    简报: ${c.slice(0, 300)}`);
+      const src = personSay.get(nm) ?? [];
+      if (src.length) for (const ssent of src.slice(0, 6)) lines.push(`    源  : ${ssent.slice(0, 300)}`);
+      else lines.push('    源  : ⚠ 源里没有涉及此人的句子——简报凭空署名，重点核');
+    }
+    if (!shown) lines.push('  （简报里没有可识别的署名陈述）');
+  }
+
+  lines.push('### LLM 原始调用');
+  lines.push(`  按需取: wrangler r2 object get ${BUCKET}/llm-calls/${workflowId}/<phase>-<idx>.json --remote --pipe`);
+  lines.push(`  phase ∈ story_validation | intelligence_analysis | brief_generation | tldr_generation | faithfulness_check`);
 
   const doc = lines.join('\n');
   if (outDir) {

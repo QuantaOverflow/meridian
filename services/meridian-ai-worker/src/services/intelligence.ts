@@ -1,6 +1,7 @@
 import { AIGatewayService } from './ai-gateway';
 import { TraceContext } from './llm-call-logger';
 import { callLLM, PHASE_DEFAULTS } from './call-llm';
+import { recordSensor } from './sensor-log';
 import { getIntelligenceAnalysisPrompt, getIntelReportVerificationPrompt } from '../prompts/intelligenceAnalysis';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { 
@@ -295,7 +296,9 @@ export class IntelligenceService {
     // 只对 parseFailed 重采样；模型**自己判定**的 incomplete（文章空/付费墙）是合法结论，
     // 重问四次只会得到同样答案并白烧四份 token。
     let analysis: any = null;
+    let parseAttempts = 0;
     for (let attempt = 1; attempt <= INTEL_PARSE_MAX_ATTEMPTS; attempt++) {
+      parseAttempts = attempt;
       const responseText = await QuotaHandler.retryWithBackoff(aiOperation);
       analysis = AIResponseParser.parseIntelligenceResponse(responseText);
 
@@ -311,6 +314,16 @@ export class IntelligenceService {
       }
     }
     console.log(`[Intelligence] 解析结果状态: ${analysis?.status || 'unknown'}`);
+    // 落 R2：重采样次数是衡量"模型格式稳定性"的直接指标，只写 console 就无法跨 run 统计。
+    // 只在真发生过重采样时落，避免每条 story 都写一个空对象。
+    if (parseAttempts > 1) {
+      await recordSensor(this.env, this.traceContext, 'intel_parse', {
+        attempts: parseAttempts,
+        maxAttempts: INTEL_PARSE_MAX_ATTEMPTS,
+        exhausted: analysis?.parseFailed === true,
+        articleCount: articles.length,
+      }, this.traceContext.callIndex ?? 0);
+    }
 
     // RARR 式接地校验-改正（默认开；eval baseline 臂传 selfCorrect:false 关掉做对照）
     if (this.selfCorrect !== false && analysis && analysis.status !== 'incomplete') {

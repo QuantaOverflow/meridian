@@ -1,6 +1,7 @@
 import type { AIGatewayService } from './ai-gateway';
 import type { AIResponse, ChatMessage, CloudflareEnv } from '../types';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
+import { recordSensor } from './sensor-log';
 
 // 「调 LLM」的单一配置入口（候选 A）。抽此层前，provider/model/temperature/skipCache 散在
 // 各 service 的 callAI/callJudge helper 里各写一份并已漂移：temperature 默认 `?? 0.1` 五份副本、
@@ -60,16 +61,16 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
 const CJK_ALARM_RATIO = 0.2;
 const CJK_ALARM_MIN_CHARS = 40; // 短输出里几个汉字不足以判断，避免噪声告警
 
-function checkOutputLanguage(phase: LLMCallPhase, content: string): void {
-  if (content.length < CJK_ALARM_MIN_CHARS) return;
+function checkOutputLanguage(phase: LLMCallPhase, content: string): { cjk: number; ratio: number } | null {
+  if (content.length < CJK_ALARM_MIN_CHARS) return null;
   const cjk = content.match(/[一-鿿]/g)?.length ?? 0;
   const ratio = cjk / content.length;
-  if (ratio > CJK_ALARM_RATIO) {
-    console.error(
-      `[LangSensor] ${phase} 输出疑似切换到中文：CJK ${cjk}/${content.length} 字符 ` +
-      `(${(ratio * 100).toFixed(1)}% > ${CJK_ALARM_RATIO * 100}%)。样本: ${JSON.stringify(content.slice(0, 200))}`
-    );
-  }
+  if (ratio <= CJK_ALARM_RATIO) return null;
+  console.error(
+    `[LangSensor] ${phase} 输出疑似切换到中文：CJK ${cjk}/${content.length} 字符 ` +
+    `(${(ratio * 100).toFixed(1)}% > ${CJK_ALARM_RATIO * 100}%)。样本: ${JSON.stringify(content.slice(0, 200))}`
+  );
+  return { cjk, ratio };
 }
 
 export interface CallLLMOverrides {
@@ -106,9 +107,19 @@ export function callLLM(
     metadata: overrides.metadata ?? { requestId: `${phase}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, timestamp: Date.now() },
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;
-  return loggedChat(aiGateway, env, t, phase, request).then(res => {
+  return loggedChat(aiGateway, env, t, phase, request).then(async res => {
     // AIResponse 是联合类型（含 EmbeddingResponse），这里恒为 chat 分支，故用 in 收窄
-    if ('choices' in res) checkOutputLanguage(phase, res.choices?.[0]?.message?.content ?? '');
+    if ('choices' in res) {
+      const content = res.choices?.[0]?.message?.content ?? '';
+      const alarm = checkOutputLanguage(phase, content);
+      // 只在报警时落 R2：语言正确是常态，每次调用都写一条会把 sensors/ 目录淹了，
+      // 而"没有记录"在这里等价于"没报警"（与卫生检查器不同——那个零命中也有信息量）。
+      if (alarm) {
+        await recordSensor(env, t, 'output_language', {
+          phase, ...alarm, contentChars: content.length, sample: content.slice(0, 300),
+        }, t.callIndex ?? 0);
+      }
+    }
     return res;
   });
 }

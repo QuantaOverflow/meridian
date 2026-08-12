@@ -186,8 +186,12 @@ export class IntelligenceReportBuilder {
     if (Array.isArray(analysis.gaps)) {
       return analysis.gaps;
     }
-    
-    return ["Gap 1"];
+
+    // 与 buildEntities / extractFactualBasis 对齐：真没有就返回空，绝不注入占位符。
+    // 旧值 ["Gap 1"] 会被当作一条真实的"信息缺口"流进简报输入与忠实度检查，
+    // 把"模型没产出这个字段"伪装成"模型说缺口是 Gap 1"。
+    console.warn('[IntelligenceReportBuilder] analysis 缺少 informationGaps 数组 → 返回空（不注入 "Gap 1" 占位符）');
+    return [];
   }
 
   private static buildContradictions(analysis: any): Contradiction[] {

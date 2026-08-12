@@ -1,6 +1,6 @@
 import { AIGatewayService } from './ai-gateway';
 import { TraceContext } from './llm-call-logger';
-import { callLLM } from './call-llm';
+import { callLLM, PHASE_DEFAULTS } from './call-llm';
 import { getIntelligenceAnalysisPrompt, getIntelReportVerificationPrompt } from '../prompts/intelligenceAnalysis';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { 
@@ -16,8 +16,22 @@ import { IntelligenceReportBuilder } from '../utils/intelligence-report-builder'
 import { AIResponseParser } from '../utils/ai-response-parser';
 import { QuotaHandler } from '../utils/quota-handler';
 
+// 情报 prompt 的 token 预算。原值 850000（≈340 万字符）是按 qwen-long 的 10M 上下文设的，
+// 对 131k 上下文的模型形同虚设——超限时 Workers AI 直接报 AiError 5021，整条 story 丢失。
+// 推导：门限用的是**估算值** ≈ 字符数/4.2，且把 max_tokens 一起算进上下文总额，故
+// 可用输入 ≈ (131072 − 8192) × 4.2 ≈ 51.6 万字符；取 45 万留 13% 余量。
+// limitTokens 内部按 maxTokens×4 换算字符，故这里填 112500。
+// 截断优于报错：半份报告仍能进简报，报错则整条 story 消失（截断有日志留痕，见调用处）。
+const INTEL_PROMPT_TOKEN_BUDGET = 112500;
+
+// 情报分析格式失败的重采样上限。失败是**采样噪声**不是模型理解错（同一输入 20 次里
+// 16 次成功），故盲重采样有效：单次成功率 ~80% → 4 次尝试残余 ~0.16%。
+// 不带错误反馈重问（业界对"模型没读懂 schema"的默认做法），因为对随机滑手无理论优势且更贵。
+// 不加退避延迟：失败与负载无关，等待纯属浪费。
+const INTEL_PARSE_MAX_ATTEMPTS = 4;
+
 // 导出类型以保持兼容性
-export type { 
+export type {
   ArticleDataset, 
   ValidatedStories, 
   IntelligenceReports, 
@@ -186,8 +200,9 @@ export class IntelligenceService {
         articles_count: articles.length,
         analysis: IntelligenceReportBuilder.convertToLegacyFormat(result.data),
         metadata: {
-          provider: 'dashscope',
-          model: 'qwen-long',
+          // 上报实际使用的模型，别写死——写死会在换 provider 后谎报，误导排错
+          provider: PHASE_DEFAULTS.intelligence_analysis.provider,
+          model: PHASE_DEFAULTS.intelligence_analysis.model,
           original_articles: articles_ids
         }
       };
@@ -234,8 +249,13 @@ export class IntelligenceService {
     // 构建分析输入
     const storyArticleMd = AIResponseParser.buildArticleMarkdown(articles);
     const prompt = getIntelligenceAnalysisPrompt(storyArticleMd);
-    const limitedPrompt = AIResponseParser.limitTokens(prompt, 850000);
-    
+    const limitedPrompt = AIResponseParser.limitTokens(prompt, INTEL_PROMPT_TOKEN_BUDGET);
+    if (limitedPrompt.length < prompt.length) {
+      // 截断必须留痕：静默截断会让"报告漏了某篇文章的事实"看起来像模型漏报，归因彻底跑偏。
+      console.warn(`[Intelligence] 提示词超预算被截断: ${prompt.length} → ${limitedPrompt.length} 字符 ` +
+        `(${articles.length} 篇文章)，尾部文章可能未进入分析`);
+    }
+
     console.log(`[Intelligence] 提示词长度: ${limitedPrompt.length} 字符`);
     console.log(`[Intelligence] 开始调用AI Gateway...`);
     
@@ -267,11 +287,29 @@ export class IntelligenceService {
       return responseText;
     };
 
-    // 执行带重试的AI调用（失败时直接抛出错误）
-    const responseText = await QuotaHandler.retryWithBackoff(aiOperation);
-    
-    // 解析AI响应为标准情报报告结构
-    const analysis = AIResponseParser.parseIntelligenceResponse(responseText);
+    // 格式失败重采样：解析必须在重试**之内**。原先解析在 QuotaHandler.retryWithBackoff 之外，
+    // 且该 helper 只认配额错误（非配额直接 rethrow），所以格式失败一次即判死 → 整条 story
+    // 从简报里消失。2026-08-12 实测该失败率 ~20%（两个真实故事各 10 次，4 次失败），
+    // 两种模式：①前置分析退化成两百多个标号的枚举循环，8192 token 烧光没写到 <final_json>
+    // ②字符串值里出现未转义引号。两者都是采样噪声（同输入 16/20 成功），故重采样有效。
+    // 只对 parseFailed 重采样；模型**自己判定**的 incomplete（文章空/付费墙）是合法结论，
+    // 重问四次只会得到同样答案并白烧四份 token。
+    let analysis: any = null;
+    for (let attempt = 1; attempt <= INTEL_PARSE_MAX_ATTEMPTS; attempt++) {
+      const responseText = await QuotaHandler.retryWithBackoff(aiOperation);
+      analysis = AIResponseParser.parseIntelligenceResponse(responseText);
+
+      if (!analysis?.parseFailed) {
+        if (attempt > 1) console.log(`[Intelligence] 第 ${attempt} 次重采样解析成功`);
+        break;
+      }
+      console.warn(`[Intelligence] 响应格式解析失败，重采样 (${attempt}/${INTEL_PARSE_MAX_ATTEMPTS})`);
+      if (attempt === INTEL_PARSE_MAX_ATTEMPTS) {
+        // 耗尽仍失败：留一条可 grep 的定长签名，供生产查真实发作率（业界共识：重试耗尽
+        // 意味着 schema/prompt 设计问题，该报出来查，而不是静默兜底）。
+        console.error(`[Intelligence] INTEL_PARSE_EXHAUSTED 连续 ${INTEL_PARSE_MAX_ATTEMPTS} 次解析失败，本条 story 将被丢弃`);
+      }
+    }
     console.log(`[Intelligence] 解析结果状态: ${analysis?.status || 'unknown'}`);
 
     // RARR 式接地校验-改正（默认开；eval baseline 臂传 selfCorrect:false 关掉做对照）

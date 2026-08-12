@@ -53,10 +53,16 @@ export class AIResponseParser {
     } catch (error) {
       console.error('解析情报分析结果失败:', error);
       console.log('处理后文本预览:', text.substring(0, 300) + '...');
-      
-      // 返回fallback结构
+
+      // parseFailed 是判别字段，不是装饰：prompt 给了模型一条**合法**的 incomplete 出口
+      // （文章空/付费墙/截断），它和"我们没读懂模型输出"形状完全相同——旧代码把两者合流，
+      // 于是故障被伪装成业务结论，失败率永久不可测。调用方据此决定重试（重采样对格式滑手
+      // 有效；对"模型判断信息不足"重试则纯属烧钱，且必然四次都一样）。
+      // 同款做法：story-validation.ts 的 { answer:'no_stories', parseFailed:true }；
+      // 业界同构：OpenAI structured outputs 用独立 refusal 字段区分"拒绝"与"解析失败"。
       return {
         status: 'incomplete',
+        parseFailed: true,
         reason: '响应格式解析失败',
         availableInfo: '技术错误：无法解析AI响应格式',
       };

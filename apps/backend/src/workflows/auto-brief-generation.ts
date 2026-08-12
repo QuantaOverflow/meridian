@@ -1310,6 +1310,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                     noteworthy: tally('noteworthy'),
                     dropped: tally('dropped'),
                   },
+                  // 补录**前**的去向汇总。summary 是补录后的，而补录按构造把 dropped 推到 0
+                  // ——于是"合成这一遍漏了多少"在落盘数据里恒为 0，跨 run 无从比较生成质量。
+                  // 2026-08-12 迁 Workers AI 时坐实：glm 首遍 dropped 4/10，补录 4/4 全救回，
+                  // 成品指标与 qwen 完全一致(都是 0)，差异被修复机制吃掉了。
+                  summaryBeforeRepair: brief.metadata?.coverage_before_repair ?? null,
                   coverage,
                 },
                 null,

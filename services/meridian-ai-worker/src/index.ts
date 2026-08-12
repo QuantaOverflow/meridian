@@ -583,6 +583,9 @@ app.post('/meridian/generate-final-brief', async (c) => {
         // 覆盖对账清单（洞3 方案B）：每条候选 story 的去向 headline/noteworthy/dropped。
         // backend 可存入 observability 使合成层漏报可追踪。
         coverage: result.coverage ?? [],
+        // 补录前的去向汇总：落盘的 coverage 已被补录推成 dropped=0，合成层的原始漏报率
+        // 在持久化数据里本来完全不可见（只剩一行日志）。这是唯一能跨 run 比较生成质量的信号。
+        coverage_before_repair: result.coverageBeforeRepair ?? null,
       }
     })
 

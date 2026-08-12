@@ -247,7 +247,14 @@ export class BriefGenerationService {
     reports: IntelligenceReports,
     context?: PreviousBriefContext,
     options?: { selfCorrect?: boolean; reconcileCoverage?: boolean; coverageRepair?: boolean }
-  ): Promise<{ success: boolean; data?: FinalBrief; error?: string; coverage?: CoverageEntry[] }> {
+  ): Promise<{
+    success: boolean;
+    data?: FinalBrief;
+    error?: string;
+    coverage?: CoverageEntry[];
+    /** 补录**前**的去向汇总；null = 未跑对账。落盘后的 coverage 是补录后的，此项是唯一的合成层原始质量信号。 */
+    coverageBeforeRepair?: { total: number; headline: number; noteworthy: number; dropped: number } | null;
+  }> {
     // RARR 式接地校验-改正默认开启（选项2）；eval baseline 臂可传 selfCorrect:false 关掉做对照。
     const selfCorrect = options?.selfCorrect !== false;
     // 两遍法覆盖补录默认【开启】（与 selfCorrect 同款语义）：对账找 dropped → 程序化补插
@@ -323,6 +330,19 @@ export class BriefGenerationService {
         if (coverageRepair || reconcileCoverage) {
           coverage = await this.reconcileCoverage(content, reports.reports);
         }
+        // 补录**前**的去向快照。补录按构造把 dropped 推到 0，落盘的 coverage 是补录后的，
+        // 于是"合成这一遍到底漏了多少"在持久化数据里完全看不见——只剩一行日志。
+        // 而这恰恰是唯一能区分不同生成模型合成质量的信号（补录只是兜底网，不改善上游）。
+        // 只存汇总不存全量：明细在补录后的 coverage 里已有，这里多存一份纯属撑大 step 输出。
+        const tallyOf = (list: CoverageEntry[], d: string) => list.filter((c) => c.disposition === d).length;
+        const coverageBeforeRepair = coverage.length
+          ? {
+              total: coverage.length,
+              headline: tallyOf(coverage, 'headline'),
+              noteworthy: tallyOf(coverage, 'noteworthy'),
+              dropped: tallyOf(coverage, 'dropped'),
+            }
+          : null;
         if (coverageRepair && coverage.length) {
           const repaired = this.repairCoverage(content, coverage, reports.reports);
           content = repaired.content;
@@ -344,7 +364,7 @@ export class BriefGenerationService {
         }
         const title = titleData?.title || 'Daily Intelligence Brief';
 
-        return { content, title, coverage };
+        return { content, title, coverage, coverageBeforeRepair };
       };
 
       const result = await BriefErrorHandler.retryWithBackoff(aiOperation);
@@ -372,7 +392,7 @@ export class BriefGenerationService {
       };
 
       console.log(`[Brief Generation] 简报生成完成，标题: "${result.title}"`);
-      return { success: true, data: finalBrief, coverage: result.coverage };
+      return { success: true, data: finalBrief, coverage: result.coverage, coverageBeforeRepair: result.coverageBeforeRepair };
 
     } catch (error) {
       console.error('[Brief Generation] 生成失败:', error);

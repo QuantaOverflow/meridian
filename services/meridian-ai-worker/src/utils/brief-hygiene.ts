@@ -50,6 +50,9 @@ const CONNECTORS = new Set(['of', 'the', 'and', 'for', 'on', 'in', 'de', 'la', '
 const STOPWORDS = new Set([
   'and', 'was', 'were', 'is', 'are', 'this', 'that', 'has', 'have', 'had', 'it', 'its',
   'to', 'in', 'on', 'at', 'by', 'as', 'with', 'war', 'said', 'from', 'but', 'not', 'who',
+  // 冠词必须在列：它同时是 CONNECTORS 成员，早期漏掉导致 "constitutional rights the"
+  // 这类候选逃过功能词否决（生产 e2e 实测误报）。候选词若也在源短语里则自动豁免。
+  'the', 'a', 'an',
 ]);
 
 function escapeRe(s: string): string {
@@ -66,7 +69,9 @@ function isMorphologicalVariant(a: string, b: string): boolean {
 
 export function extractProperPhrases(sourceText: string): string[] {
   const out = new Set<string>();
-  const tokens = sourceText.split(/(\s+)/).filter((t) => t.trim());
+  const lines = sourceText.split(/\n+/); // 换行是硬边界：否则相邻字段会跨行拼出并不存在的专名
+  const tokens: string[] = [];
+  for (const line of lines) { tokens.push(...line.split(/\s+/).filter(Boolean), '\u0000'); }
   let run: string[] = [];
   const flush = () => {
     // 去掉首尾连接词（"Gulf of" / "the Houthis" 这种带残缺边界的跨度）
@@ -87,12 +92,14 @@ export function extractProperPhrases(sourceText: string): string[] {
     run = [];
   };
   for (const raw of tokens) {
+    if (raw === '\u0000') { flush(); continue; }
     const t = raw.replace(/^[("']+/, '');
     const bare = t.replace(/[.,;:!?)"']+$/, '');
     // 句末标点必须断开跨度：源里 "…the Court. ICC officials…" 若不断，会拼出并不存在的
     // 专名 "Court ICC"，随后简报里任何以 court 开头的二元组都可能被误报（实测大量假阳）。
     const endsSentence = /[.;:!?]$/.test(t);
-    const isCap = /^[A-Z][A-Za-z'\-]*$/.test(bare);
+    // 单字母大写（A / I）不是专名，作端点会拼出 "Amnesty International A" 这种假短语
+    const isCap = /^[A-Z][A-Za-z'\-]+$/.test(bare);
     const isConnector = run.length > 0 && CONNECTORS.has(bare.toLowerCase());
     if (isCap || isConnector) {
       run.push(bare);
@@ -123,7 +130,9 @@ function findProperNounVariants(brief: string, phrases: string[]): HygieneFindin
     // 对它们放宽，否则传感器会被英文形态学噪声淹没——喊狼的传感器等于没有传感器。
     // 只看**内部**连接词：首词是冠词（"The Houthis"）不代表这是固定专名，
     // 而 "Gulf of Oman" 中间的 of 才是。误把前者算作严格会把正常单复数全报出来。
-    const strict = parts.slice(1, -1).some((p) => CONNECTORS.has(p));
+    // 'and' 排除在外：它连接的是两个并列实体（"US and Israel"）而非固定专名的组成部分，
+    // 把它算作严格会让 Israel→israeli 这种正当构词变化被报出来（生产 e2e 实测误报）。
+    const strict = parts.slice(1, -1).some((p) => CONNECTORS.has(p) && p !== 'and');
     // 在简报里找同词数、同首词的候选片段
     const words = briefLower.split(/\s+/);
     for (let i = 0; i + parts.length <= words.length; i++) {

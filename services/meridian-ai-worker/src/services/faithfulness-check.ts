@@ -40,7 +40,7 @@ import { AIGatewayService } from './ai-gateway';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { createRequestMetadata } from '../utils/common';
 import { type LLMCallPhase, type TraceContext } from './llm-call-logger';
-import { callLLM } from './call-llm';
+import { callLLM, PHASE_DEFAULTS } from './call-llm';
 // judge prompt 单一真源（eval 也 import 这里）——见 faithfulness-prompts.ts
 import {
   EXTRACT_PROMPT,
@@ -528,20 +528,26 @@ export async function runFaithfulnessCheck(
   env: CloudflareEnv,
   sources: StorySource[],
   brief: string,
-  model = 'qwen-max',
+  // 不再硬编码 'qwen-max'：judge 模型由 phase 默认决定（call-llm 是调 LLM 的单一配置入口），
+  // caller 只在真要指定时才传（eval 注入用）。留着旧默认会让 PHASE_DEFAULTS 的 provider 改动
+  // 与这里的 model 打架——变成 provider=workers-ai + model=qwen-max 这种不存在的组合。
+  model?: string,
   traceContext: TraceContext = {},
   mode: FaithfulnessMode = 'code_only'
 ): Promise<FaithfulnessVerdict> {
+  // 入口解析一次，内部各 judge 函数的签名保持 string 不变
+  const judgeModel = model ?? PHASE_DEFAULTS.faithfulness_check.model;
+
   // 观测性：复用入口 trace_id，把 claim extract / judge 全部串到同一条 R2 LLM 调用链。
   const judgeCtx = createJudgeCallContext(env, traceContext, 'faithfulness_check');
 
-  const claims = await extractClaims(judgeCtx, brief, model);
+  const claims = await extractClaims(judgeCtx, brief, judgeModel);
   // 率的分母固定用抽取总数（code_only 下 factual 列表只含冲突条目，见 gateDecision 注）
   const factualClaims = claims.filter((c) => c.type !== 'analytical').length;
   const { factual, analytical } =
     mode === 'full'
-      ? await judgeAll(judgeCtx, claims, sources, model)
-      : await judgeCodeOnly(judgeCtx, claims, sources, model);
+      ? await judgeAll(judgeCtx, claims, sources, judgeModel)
+      : await judgeCodeOnly(judgeCtx, claims, sources, judgeModel);
 
   const supported = factual.filter((j) => j.verdict === 'supported').length;
   const genuineUnsupported = factual.filter((j) => j.verdict === 'unsupported').length;
@@ -554,7 +560,7 @@ export async function runFaithfulnessCheck(
   return {
     block,
     block_reasons,
-    judge_model: model,
+    judge_model: judgeModel,
     mode,
     total_claims: claims.length,
     factual_claims: factualClaims,

@@ -676,7 +676,8 @@ app.post('/meridian/faithfulness-check', async (c) => {
 
     console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs ${sources.length} 个故事源(合计 ${totalSourceChars} chars)`)
     // 观测性：把 workflow trace 传入 in-process faithfulness LLM 调用，避免绕过 loggedChat。
-    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model || 'qwen-max', readTraceContext(c.req.raw), options?.mode)
+    // 不传 model 时交给 phase 默认（call-llm 单一入口），别在边界处再垫一个硬编码默认
+    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model, readTraceContext(c.req.raw), options?.mode)
     console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
       `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
       `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)

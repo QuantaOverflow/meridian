@@ -149,10 +149,9 @@ export class AIWorkerService {
         clusteringResult,
         articlesData,
         useAI: options?.useAI ?? true,
-        options: options?.aiOptions || {
-          provider: 'dashscope',
-          model: 'qwen-plus'
-        }
+        // 不垫 provider/model 默认：由 ai-worker 的 PHASE_DEFAULTS 决定。垫在这里等于
+        // 跨 service 开第二个配置真源，换 provider 时会把下游拽回旧 provider。
+        options: options?.aiOptions
       })
     });
 
@@ -190,7 +189,7 @@ export class AIWorkerService {
       body: JSON.stringify({
         analysisData,
         previousBrief,
-        options: options || { provider: 'dashscope', model: 'qwen-long' }
+        options // 同上：不垫 provider/model 默认
       })
     });
 
@@ -207,7 +206,7 @@ export class AIWorkerService {
       body: JSON.stringify({
         briefTitle,
         briefContent,
-        options: options || { provider: 'dashscope', model: 'qwen-plus' }
+        options // 同上：不垫 provider/model 默认
       })
     });
 

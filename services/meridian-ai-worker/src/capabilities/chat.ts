@@ -94,10 +94,24 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       // 另：REST /ai/run 多包一层 result，env.AI binding 直接返回内容——两者都兼容。
       const cfBody = response.result ?? response
       const cfChoice = cfBody.choices?.[0]
+      const cfContent: string = cfChoice?.message?.content ?? cfBody.response ?? ''
+      // 空正文必须响亮地失败，不能 `?? ''` 悄悄放行。reasoning 模型（GLM）在 max_tokens 被
+      // 思维链吃光时返回 content=null，而 HTTP 层看起来完全正常（200 + 完整 JSON + usage）——
+      // 静默降级成空串后，下游 JSON 解析拿到 null 再兜底成默认值，故障要到简报缺内容才暴露。
+      // 抛错让上层既有的重试/兜底机制接管，并把判定所需的证据（reasoning 长度、finish_reason）
+      // 一并带出：这正是当初只靠客户端返回码判断时看不见的那部分。
+      if (!cfContent) {
+        const reasoningLen = (cfChoice?.message?.reasoning_content ?? cfChoice?.message?.reasoning ?? '').length
+        throw new Error(
+          `Workers AI 返回空正文 (model=${model.name}, finish_reason=${cfChoice?.finish_reason}, ` +
+          `reasoning=${reasoningLen}字符, completion_tokens=${cfBody.usage?.completion_tokens})` +
+          (reasoningLen > 0 ? ' —— 思维链占满了 max_tokens，检查该模型是否已关闭 thinking' : '')
+        )
+      }
       choices = [{
         message: {
           role: 'assistant' as const,
-          content: cfChoice?.message?.content ?? cfBody.response ?? ''
+          content: cfContent
         },
         finish_reason: cfChoice?.finish_reason || 'stop'
       }]

@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { AIGatewayService } from './ai-gateway';
 import { TraceContext, LLMCallPhase } from './llm-call-logger';
-import { callLLM } from './call-llm';
+import { callLLM, PHASE_DEFAULTS } from './call-llm';
 import {
   getBriefGenerationSystemPrompt,
   getBriefGenerationPrompt,
@@ -291,10 +291,10 @@ export class BriefGenerationService {
         const briefPrompt = getBriefGenerationPrompt(storiesMarkdown, previousContext);
         const systemPrompt = getBriefGenerationSystemPrompt();
         
-        // 多故事合成：输入是所有情报报告拼接的 Markdown + 前日简报上下文，
-        // 单次合成长度容易超过 qwen-plus 的 131k 上下文，使用长文本模型 qwen-long
+        // 多故事合成：输入是所有情报报告拼接的 Markdown + 前日简报上下文。原先覆盖成 qwen-long
+        // 是因为要躲开 qwen-plus 的上下文上限；现 phase 默认已是 131k 上下文的模型，
+        // 不再需要在此覆盖 model——留着覆盖会与 PHASE_DEFAULTS 的 provider 打架（组合无效）。
         const briefResponse = await this.callAI(briefPrompt, systemPrompt, {
-          model: 'qwen-long',
           temperature: 0.7,
           maxTokens: 16000,
           phase: 'brief_generation',
@@ -354,7 +354,8 @@ export class BriefGenerationService {
         metadata: {
           title: result.title,
           createdAt: new Date().toISOString(),
-          model: 'qwen-long',
+          model: PHASE_DEFAULTS.brief_generation.model, // 上报实际使用的模型，别写死
+
           tldr: '', // 将通过单独的TLDR端点生成
         },
         content: {
@@ -493,12 +494,11 @@ export class BriefGenerationService {
    * 让模型只回 edit-list（verbatim span → 接地修正，空串=删除），由本地精确子串 apply。
    * 沿用 faithfulness-check.ts reviseBrief 的防漂移做法：只动命中的 flagged 片段，brief 其余逐字不变，
    * 不让 LLM 重吐整篇（避免好内容被漂改）。没精确命中的 edit 宁可跳过（防误伤），记入 skipped。
-   * 用 qwen-long：校验要喂全部源，qwen-max 30720 token 装不下多故事源（同 per-story 拆源的初衷）。
+   * 校验要喂全部源，需要长上下文模型——现由 phase 默认提供（131k），不再在此覆盖 model。
    */
   private async verifyAndCorrect(draft: string, storiesMarkdown: string): Promise<string> {
     try {
       const raw = await this.callAI(getBriefVerificationPrompt(draft, storiesMarkdown), undefined, {
-        model: 'qwen-long',
         temperature: 0,
         maxTokens: 4000,
         phase: 'brief_generation',
@@ -561,7 +561,7 @@ export class BriefGenerationService {
       let rows: Array<{ story?: string; disposition?: string; section?: string | null; reason?: string }> = [];
       for (let attempt = 1; attempt <= 3; attempt++) {
         const raw = await this.callAI(getBriefCoverageReconciliationPrompt(storyList, content), undefined, {
-          model: 'qwen-long', // 需吃全篇简报，与 verify 同用长文本模型
+          // 需吃全篇简报，与 verify 同用长上下文模型——由 phase 默认给，不在此覆盖
           temperature: 0,
           maxTokens: 4000,
           phase: 'brief_generation',

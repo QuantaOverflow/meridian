@@ -807,8 +807,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 步骤 3: 故事验证 (AI Worker)
       // =====================================================================
       await observability.logStep('story_validation', 'started');
-      
-      const validatedStories = await step.do('执行故事验证', defaultStepConfig, async () => {
+
+      // 这一步在 ai-worker 内**串行**逐簇调 LLM（簇数 = 聚类结果，实测 15 个），单簇 6-10s，
+      // 合计已逼近 defaultStepConfig 的 2 分钟——2026-08-12 迁 Workers AI 后实测超时重试 3 次
+      // 才侥幸通过，而每次重试都把 15 次 LLM 调用整个重跑一遍（纯浪费，且判决结果每次不同）。
+      // 按最坏情形给预算：簇数可随文章量上浮，单簇取 20s 上限 → 10 分钟留足余量。
+      const storyValidationStepConfig: WorkflowStepConfig = {
+        retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
+        timeout: '10 minutes',
+      };
+
+      const validatedStories = await step.do('执行故事验证', storyValidationStepConfig, async () => {
         console.log(`[AutoBrief] 开始故事验证，处理 ${clusteringResult.clusters.length} 个聚类`);
         
         // 创建 AI 服务实例（注入 trace_id 以贯通跨 service 日志）
@@ -856,10 +865,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           articlesData,     // MinimalArticleInfo[] 数组
           {
             useAI: true,    // 启用AI验证
-            aiOptions: {
-              provider: 'dashscope',
-              model: 'qwen-plus'
-            }
+            // 不传 aiOptions：provider/model 由 ai-worker 的 PHASE_DEFAULTS 决定（调 LLM 的单一
+            // 配置入口）。跨 service 传 provider/model 等于在网线这头开第二个真源——2026-08-12
+            // 迁 Workers AI 时正是这里把 story_validation 拽回已失效的 DashScope，15 个聚类
+            // 全部 401 → 降级 no_stories → 工作流「未发现有效故事」终止。
           }
         );
 
@@ -1274,10 +1283,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 调用 AI Worker 生成简报。接缝返回 domain result——status/parse/success/dispose 收进
         // ai-services 的 callJson，此处只按结果 throw（生成失败即整步失败）。
         const aiServices = createAIServices(this.env, workflowId);
-        const brief = await aiServices.aiWorker.generateFinalBrief(analysisData, previousBrief, {
-          provider: 'dashscope',
-          model: 'qwen-long',
-        });
+        // 不传 provider/model：由 ai-worker 的 PHASE_DEFAULTS 决定（该端点本就不读这两个字段）
+        const brief = await aiServices.aiWorker.generateFinalBrief(analysisData, previousBrief);
         if (!brief.ok) {
           throw new Error(`简报生成失败: ${brief.error}`);
         }
@@ -1318,10 +1325,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
 
         // 生成 TLDR
-        const tldr = await aiServices.aiWorker.generateBriefTldr(brief.value.title, brief.value.content, {
-          provider: 'dashscope',
-          model: 'qwen-plus',
-        });
+        // 同上：不传 provider/model
+        const tldr = await aiServices.aiWorker.generateBriefTldr(brief.value.title, brief.value.content);
         if (!tldr.ok) {
           throw new Error(`TLDR生成失败: ${tldr.error}`);
         }
@@ -1340,7 +1345,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             stories_identified: validatedStories.stories.length,
             intelligence_analyses: intelligenceReports.length,
             content_length: brief.value.content.length,
-            model_used: brief.value.metadata?.model_used || 'qwen-long'
+            // 上报 ai-worker 实际用的模型；取不到就说不知道，别硬编一个名字（旧值 'qwen-long'
+            // 在 model_used 恒 undefined 时会把每次统计都写成 qwen-long，与实际脱节）
+            model_used: brief.value.metadata?.model_used || (brief.value.metadata as any)?.model || 'unknown'
           }
         };
       });

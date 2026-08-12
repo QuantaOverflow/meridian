@@ -40,6 +40,13 @@ interface WorkersAIBinding {
   ): Promise<any>
 }
 
+/**
+ * 需要显式关闭思维链的 Workers AI 模型前缀（按模型名前缀匹配）。
+ * 见 executeWorkersAIViaBinding 里的说明——这是模型属性（哪些模型的 chat template 默认开 thinking），
+ * 不是 phase 选择，故放在 binding 调用处而非 PHASE_DEFAULTS。
+ */
+const THINKING_OFF_MODELS = ['@cf/zai-org/glm-']
+
 export class AIGatewayService {
   private gatewayUrl: string
   private providers: Map<string, BaseProvider>
@@ -706,6 +713,16 @@ export class AIGatewayService {
     if (chatRequest.max_tokens != null) inputs.max_tokens = chatRequest.max_tokens
     if (chatRequest.temperature != null) inputs.temperature = chatRequest.temperature
 
+    // GLM 系列是 reasoning 模型，chat template 默认开思维链，且 thinking token **计入 max_tokens
+    // 并先于正文生成**——预算被吃光时 message.content 直接是 null。实测（2026-08-12，服务端日志）：
+    // max_tokens=800 时 content=null / reasoning_content=3468 字符 / finish_reason=length；
+    // 关掉后同一 prompt completion_tokens 950→183、耗时 10.7s→2.7s，正文反而更完整。
+    // 我们所有 phase 都只要结构化正文（<final_json> / <final_brief> / ```json），思维链纯属负担。
+    // 注：reasoning_effort 参数不被 Workers AI 接受（AiError 8001 Invalid input），只能走这个开关。
+    if (THINKING_OFF_MODELS.some(prefix => modelName.startsWith(prefix))) {
+      inputs.chat_template_kwargs = { enable_thinking: false }
+    }
+
     // 不传 gateway 参数。当前形态经生产日志验证可靠：2026-08-11 真实文章流量
     // "尝试分析 (4/4)" 37 次 → "成功完成分析" 37 次（100%）。
     //
@@ -719,6 +736,7 @@ export class AIGatewayService {
     this.logger.log('debug', 'Workers AI via binding', {
       model: modelName,
       viaGateway: false, // 见上：binding + authenticated gateway 会静默挂起
+      thinkingDisabled: inputs.chat_template_kwargs != null, // 生产判定 thinking 是否真关掉的凭据
       requestId: request.metadata?.requestId,
     })
 

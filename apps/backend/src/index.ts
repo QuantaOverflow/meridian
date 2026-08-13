@@ -4,6 +4,7 @@ import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';
 import { Logger } from './lib/core/logger';
+import { runDailyBriefCron } from './lib/scheduled/daily-brief';
 import { Ai } from '@cloudflare/ai';
 
 type ArticleQueueMessage = { articles_id: number[] };
@@ -40,6 +41,11 @@ const app = importedApp || new Hono<{ Bindings: Env }>();
 
 export default {
   fetch: app.fetch,
+  // 每日定时简报。cron 表达式见 wrangler.jsonc(UTC 13:00 = 北京 21:00)。
+  // workflow 是异步派发,这里秒级返回,实际 11-15 分钟跑在 workflow 自己的生命周期里。
+  async scheduled(controller: ScheduledController, env: Env): Promise<void> {
+    await runDailyBriefCron(env);
+  },
   async queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
     const batchLogger = queueLogger.child({ batch_size: batch.messages.length });
     batchLogger.info('Received batch of articles to process');

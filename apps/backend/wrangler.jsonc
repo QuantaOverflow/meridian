@@ -25,6 +25,14 @@
   "observability": {
     "enabled": true,
   },
+  /**
+   * Cron 触发器 — 每日简报
+   * UTC 13:00 = 北京时间 21:00。单次端到端实测 664-897 秒,约 21:15 前完成。
+   * handler 见 src/index.ts 的 scheduled(),实现在 src/lib/scheduled/daily-brief.ts
+   */
+  "triggers": {
+    "crons": ["0 13 * * *"],
+  },
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",

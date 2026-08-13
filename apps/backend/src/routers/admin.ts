@@ -16,6 +16,7 @@ import {
   validateDateRange
 } from '../lib/api/utils';
 import { Logger } from '../lib/core/logger';
+import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import type { Env } from '../index';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -266,19 +267,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       skipFaithfulnessGate,
       
       // 聚类参数（如果提供）
-      clusteringOptions: clusteringOptions || {
-        umapParams: {
-          n_neighbors: 15,
-          n_components: 5,
-          min_dist: 0.1,
-          metric: 'cosine'
-        },
-        hdbscanParams: {
-          min_cluster_size: 3,
-          min_samples: 1,
-          epsilon: 0.5
-        }
-      },
+      clusteringOptions: clusteringOptions || BRIEF_CLUSTERING_OPTIONS,
       
       // 元数据
       triggeredBy

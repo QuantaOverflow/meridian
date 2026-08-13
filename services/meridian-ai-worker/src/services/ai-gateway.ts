@@ -22,6 +22,7 @@ import { GoogleAIProvider } from './providers/google-ai'
 import { DashScopeProvider } from './providers/dashscope'
 import { MockProvider } from './providers/mock'
 import { getProvidersForCapability, getAllProviders } from '../config/providers'
+import { isThinkingDisabled } from '../config/thinking'
 import { AuthenticationService } from './auth'
 import { Logger } from './logger'
 import { RetryService, createRetryConfigFromEnv } from './retry'
@@ -40,12 +41,8 @@ interface WorkersAIBinding {
   ): Promise<any>
 }
 
-/**
- * 需要显式关闭思维链的 Workers AI 模型前缀（按模型名前缀匹配）。
- * 见 executeWorkersAIViaBinding 里的说明——这是模型属性（哪些模型的 chat template 默认开 thinking），
- * 不是 phase 选择，故放在 binding 调用处而非 PHASE_DEFAULTS。
- */
-const THINKING_OFF_MODELS = ['@cf/zai-org/glm-']
+// 需要显式关闭思维链的模型名单已移到 config/thinking.ts——capabilities/chat.ts 的
+// reasoning 兜底判定要用同一份名单，留在这里会漂移。
 
 export class AIGatewayService {
   private gatewayUrl: string
@@ -713,13 +710,19 @@ export class AIGatewayService {
     if (chatRequest.max_tokens != null) inputs.max_tokens = chatRequest.max_tokens
     if (chatRequest.temperature != null) inputs.temperature = chatRequest.temperature
 
-    // GLM 系列是 reasoning 模型，chat template 默认开思维链，且 thinking token **计入 max_tokens
+    // GLM / Qwen3 都是 reasoning 模型，chat template 默认开思维链，且 thinking token **计入 max_tokens
     // 并先于正文生成**——预算被吃光时 message.content 直接是 null。实测（2026-08-12，服务端日志）：
     // max_tokens=800 时 content=null / reasoning_content=3468 字符 / finish_reason=length；
     // 关掉后同一 prompt completion_tokens 950→183、耗时 10.7s→2.7s，正文反而更完整。
     // 我们所有 phase 都只要结构化正文（<final_json> / <final_brief> / ```json），思维链纯属负担。
     // 注：reasoning_effort 参数不被 Workers AI 接受（AiError 8001 Invalid input），只能走这个开关。
-    if (THINKING_OFF_MODELS.some(prefix => modelName.startsWith(prefix))) {
+    //
+    // qwen3 是 2026-08-13 A/B 补进名单的：此前它不在名单里 = 生产一直开着思维链跑文章分析。
+    // 23 篇生产文章 ×2 轮实测（thinking ON vs OFF）：JSON 可解析与 9 字段齐全都是 23/23 打平，
+    // 但 OFF 臂 completion_tokens 808→389、耗时 9.5s→5.4s，且**自一致性显著更高**
+    // （同文重跑两次的 Jaccard：topic_tags 0.458→0.653、thematic_keywords 0.147→0.514）。
+    // 即思维链没换来更好的抽取，只换来更抖的输出——而下游聚类正建立在这些字段上。
+    if (isThinkingDisabled(modelName)) {
       inputs.chat_template_kwargs = { enable_thinking: false }
     }
 

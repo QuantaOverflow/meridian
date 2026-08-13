@@ -94,11 +94,17 @@ export function extractProperPhrases(sourceText: string): string[] {
   };
   for (const raw of tokens) {
     if (raw === '\u0000') { flush(); continue; }
-    const t = raw.replace(/^[("']+/, '');
-    const bare = t.replace(/[.,;:!?)"']+$/, '');
+    // 左括号是**边界**，不能只剥掉就接着并进当前跨度：storiesMarkdown 把实体渲染成
+    // `* Los Angeles Lakers (An NBA franchise…)`，剥掉 "(" 后 "An" 是大写，于是拼出
+    // 并不存在的专名 "Los Angeles Lakers An"——生产 report 55 实测误报即此因。
+    // 括号内是**对该专名的描述**，与专名本身分属两段，必须断开。
+    if (/^[(（[【]/.test(raw)) flush();
+    const t = raw.replace(/^[("'（【[]+/, '');
+    const bare = t.replace(/[.,;:!?)"'。，；：！？）】\]]+$/, '');
     // 句末标点必须断开跨度：源里 "…the Court. ICC officials…" 若不断，会拼出并不存在的
     // 专名 "Court ICC"，随后简报里任何以 court 开头的二元组都可能被误报（实测大量假阳）。
-    const endsSentence = /[.;:!?]$/.test(t);
+    // 含全角：storiesMarkdown 的实体行用 "：" 分隔名字与描述，只认半角会漏断。
+    const endsSentence = /[.;:!?。；：！？)）]$/.test(t);
     // 单字母大写（A / I）不是专名，作端点会拼出 "Amnesty International A" 这种假短语
     const isCap = /^[A-Z][A-Za-z'\-]+$/.test(bare);
     const isConnector = run.length > 0 && CONNECTORS.has(bare.toLowerCase());

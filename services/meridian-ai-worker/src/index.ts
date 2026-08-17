@@ -166,16 +166,26 @@ app.post('/meridian/article/analyze', async (c) => {
 
     const analysisPrompt = getArticleAnalysisPrompt(title, truncatedContent)
 
-    // 分级重试策略，优先使用性能较好的模型。
-    // 末档跨 provider：前三档同属 DashScope，该供应商整体不可用时（鉴权失效/欠费/限流）
-    // 三次重试必然全挂——2026-07-29 起 DashScope key 401 invalid_api_key，3425 篇文章
-    // 连续 12 天全部 AI_ANALYSIS_FAILED，重试机制提供的防护为零。故末档换 Workers AI
-    // （CF 原生 binding 侧凭证，与 DashScope 凭证相互独立）。
+    // 分级重试策略。
+    //
+    // 2026-08-17：删掉原先前三档 DashScope（qwen-plus / qwen-turbo ×2）。它们自 2026-07-29 起
+    // 每次都返回 401 invalid_api_key，实际干活的一直是末档 qwen3——生产日志实证 6 小时内
+    // 「尝试分析 (1/4)」41 次 = 「(4/4)」41 次，100% 走到第 4 档。删除是行为等价的。
+    //
+    // 删它不只是省 3 次白打的调用，是**批量进稿的硬阻塞**：backend 侧 analyze 步是
+    // timeout 1 分钟 + retries 3。涓流量（实测 5-14 篇/小时）下 3 次失败调用还挤得进 60 秒，
+    // 但 2026-08-17 新增两个源、首轮一次进 42 篇时，并发把延迟放大到超时 —— ai-worker 侧
+    // 日志明明「成功完成分析」，backend 侧 42/43 篇却记 AI_ANALYSIS_FAILED（同小时前 10 小时
+    // 失败数均为 0）。少 3 次往返直接把这个放大器拆掉。
+    //
+    // ⚠️ 保留两档而非退化成单档：2026-07-29 的教训是同源多档对 provider 级故障零防护。
+    // 但目前只有 Workers AI 一家凭证可用（DashScope key 已死），所以这两档只提供
+    // **模型级**兜底，不提供 provider 级兜底 —— 真要后者得再配一家可用 provider 的 key。
+    // 第二档选 glm-4.7-flash：简报五 phase 已在生产验证，且 131k 上下文比 qwen3 的 32k
+    // 更能吃长文（本函数上游把正文截到 20000 字符）。
     const analysisStrategies = [
-      { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 2000 },
-      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0.1, maxTokens: 2000 },
-      { provider: 'dashscope', model: 'qwen-turbo', temperature: 0, maxTokens: 2000 },
-      { provider: 'workers-ai', model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0.1, maxTokens: 4000 }
+      { provider: 'workers-ai', model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0.1, maxTokens: 4000 },
+      { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000 }
     ]
 
     let lastError: Error | null = null

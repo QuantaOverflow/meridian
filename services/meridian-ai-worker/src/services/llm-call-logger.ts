@@ -8,6 +8,11 @@ export type LLMCallPhase =
   | 'article_analysis'
   | 'story_validation'
   | 'intelligence_analysis'
+  // 观测性：环1 的 RARR 接地校验-改正原先复用 'intelligence_analysis' 且沿用同一个 callIndex
+  // （= story 序号）→ **同一个 R2 key**，校验响应把情报分析的原始响应整份覆盖掉。
+  // 2026-08-15 run 实证：15 份 llm-calls 记录里 14 份是校验响应，唯一保住分析原文的
+  // 反而是分析失败、没走到校验的那条——留档只剩"没出事"的那段，排查时最需要的正好没有。
+  | 'intel_grounding_verify'
   | 'brief_generation'
   | 'tldr_generation'
   // 观测性：运行时忠实度门也走 loggedChat，单独 phase 便于和 brief 生成区分。

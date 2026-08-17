@@ -374,42 +374,106 @@ export class IntelligenceService {
       });
       if (!targets.length) return analysis;
 
-      // 与生成同款长上下文模型（default qwen-long）；temp 0 + maxTokens 4000 覆盖。
-      const raw = await callLLM(this.aiGatewayService, this.env, this.traceContext, 'intelligence_analysis',
+      // 独立 phase：模型/温度/预算见 PHASE_DEFAULTS.intel_grounding_verify。
+      // 复用 'intelligence_analysis' 会和分析本体撞同一个 R2 key（见 llm-call-logger 的 phase 注释）。
+      const raw = await callLLM(this.aiGatewayService, this.env, this.traceContext, 'intel_grounding_verify',
         [{ role: 'user' as const, content: getIntelReportVerificationPrompt(lines.join('\n'), storyArticleMd) }],
         {
-          temperature: 0,
-          maxTokens: 4000,
           skipCache: this.skipCache,
           metadata: { requestId: `intel-rarr-${Date.now()}`, timestamp: Date.now() },
         }
       );
       const text = (raw as ChatResponse).choices?.[0]?.message?.content || '';
-      // 容忍 ```json 围栏 / 裸对象两种形态（与 AIResponseParser 同款容错思路）
-      const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const body = fenced ? fenced[1] : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      const parsed = JSON.parse(body);
-      const edits: Array<{ span?: string; replacement?: string; reason?: string }> = Array.isArray(parsed?.edits) ? parsed.edits : [];
+      const { edits, salvaged } = IntelligenceService.parseEditList(text);
+      // 区分「一条 edit 都没解析出来」与「模型判定 0 处要改」：两者都走成 0 修正，但前者是
+      // "这篇报告根本没被 RARR 核过"。不说出来就是静默降级——同 brief-generation.ts 的做法。
+      if (edits.length === 0) {
+        console.warn('[Intelligence] 接地校验响应未解析出任何 edit → 本篇报告未经 RARR 核验（非"模型判定 0 处要改"）');
+      }
 
-      let applied = 0, skipped = 0;
+      let applied = 0, noop = 0, skipped = 0;
       for (const e of edits) {
         if (!e || typeof e.span !== 'string' || !e.span.length) continue;
         const rep = typeof e.replacement === 'string' ? e.replacement : '';
         // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤）。逐字段试，改第一个命中的。
         const hit = targets.find((t) => (t.get() || '').includes(e.span!));
         if (hit) {
-          hit.set((hit.get() || '').replace(e.span, rep).replace(/\s{2,}/g, ' ').trim());
-          applied++;
+          const before = hit.get() || '';
+          const after = before.replace(e.span, rep).replace(/\s{2,}/g, ' ').trim();
+          // 分出 noop：复读产出的拷贝里有 replacement 与 span 逐字相同的（实测 010 号响应 64 条如此），
+          // 一律记 applied 会让"改了 66 处"的日志对应实际 2 处改动——写回同一个值本就是空操作，
+          // 故行为不变，只是计数不再说谎。
+          if (after !== before) { hit.set(after); applied++; } else { noop++; }
         } else {
           skipped++;
         }
       }
-      console.log(`[Intelligence] 接地校验-改正：edits ${edits.length}，applied ${applied}，skipped ${skipped}`);
+      // uniqueSpans 是复读探针：正常响应 unique == edits，复读时会塌成个位数（实测 66→3）。
+      // 只报数不改行为——判定"这次校验是否可信"要的是这个比值，不是被清洗过的漂亮计数。
+      const uniqueSpans = new Set(edits.map((e) => e?.span).filter((s) => typeof s === 'string')).size;
+      console.log(
+        `[Intelligence] 接地校验-改正：edits ${edits.length}（unique span ${uniqueSpans}），applied ${applied}，noop ${noop}，skipped ${skipped}` +
+        `${salvaged ? '，响应截断已救回完整部分' : ''}`
+      );
       return analysis;
     } catch (error) {
       // 校验失败不应拖垮整条生成：退回未修订报告（下游忠实度门仍作末端兜底）。
       console.error('[Intelligence] 接地校验-改正失败，退回原报告:', error);
       return analysis;
     }
+  }
+
+  /**
+   * 从校验响应里取 edit-list。严格 JSON.parse 优先；解析不了就退到括号配平扫描，
+   * 把 `"edits": [` 之后**已经写完整**的对象逐个捞出来。
+   *
+   * 为什么需要救回：glm-4.7-flash 在 temp 0 下会陷入复读退化——同一条 edit 反复写到把
+   * max_tokens 烧光，响应截断成非法 JSON，原实现整份丢弃 → 退回未校验报告。
+   * 2026-08-15 生产 run 14 次校验里 4 次如此（近 7 天 71 次里 10 次），而这 4 份响应在
+   * 陷入循环前已各写出 17/44/66/69 条完整 edit，去重后是 1/1/3/3 条真实修正，全被扔了。
+   *
+   * **不去重**：重复 span 看着像复读垃圾，但去掉会改行为——同一句话可能同时出现在
+   * executiveSummary 和某条 timeline.description 里，而 apply 是"找第一个命中的 target"，
+   * 靠后的那条重复 edit 才是去修第二处的；实测 012 号响应里还有同 span 不同 replacement 的情形。
+   * 重复份本就是无害的：命中过的 span 已被替换，后续必然落空、记进 skipped。
+   * 复读信号改为在日志里报去重后的条数（见调用处），只让它可见，不动行为。
+   */
+  private static parseEditList(text: string): { edits: Array<{ span?: string; replacement?: string; reason?: string }>; salvaged: boolean } {
+    // 容忍 ```json 围栏 / 裸对象两种形态（与 AIResponseParser 同款容错思路）
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const body = fenced ? fenced[1] : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    try {
+      const parsed = JSON.parse(body);
+      return { edits: Array.isArray(parsed?.edits) ? parsed.edits : [], salvaged: false };
+    } catch {
+      const edits = IntelligenceService.salvageEdits(fenced ? fenced[1] : text);
+      return { edits, salvaged: edits.length > 0 };
+    }
+  }
+
+  /** 括号配平扫描（跳过字符串内的括号与转义），逐个 JSON.parse 已闭合的对象。 */
+  private static salvageEdits(body: string): Array<any> {
+    const at = body.indexOf('"edits"');
+    if (at < 0) return [];
+    const start = body.indexOf('[', at);
+    if (start < 0) return [];
+    const out: Array<any> = [];
+    let depth = 0, objStart = -1, inStr = false, esc = false;
+    for (let p = start + 1; p < body.length; p++) {
+      const c = body[p];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') { if (depth === 0) objStart = p; depth++; }
+      else if (c === '}') {
+        depth--;
+        if (depth === 0 && objStart >= 0) {
+          try { out.push(JSON.parse(body.slice(objStart, p + 1))); } catch { /* 半条，丢弃 */ }
+          objStart = -1;
+        }
+      } else if (c === ']' && depth === 0) break;
+    }
+    return out;
   }
 }

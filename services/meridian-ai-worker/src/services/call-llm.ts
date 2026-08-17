@@ -39,6 +39,11 @@ export interface PhaseDefault {
 export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   story_validation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000, skipCache: true },
   intelligence_analysis: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8192, skipCache: true },
+  // 环1 RARR 接地校验：与情报分析同模型（需长上下文喂全部源），但 temp 0（edit-list 要确定性）。
+  // maxTokens 维持 4000——2026-08-15 run 实测未截断响应的 completion_tokens 是 217..1853（21 条 edit
+  // 已是最长的一份），4000 有 2 倍余量。**打满 4000 的那 4 份不是"清单太长"而是复读退化**
+  // （span 去重后只剩 1/1/3/3 条，最高一条重复 64 次），加预算只会让循环跑更久，故不加。
+  intel_grounding_verify: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 4000, skipCache: true },
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },

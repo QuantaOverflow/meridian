@@ -55,7 +55,15 @@ export const BRIEF_CLUSTERING_OPTIONS = {
 // 每日定时简报参数。取值来自 2026-08-13 生产实测(report 54/55,端到端 664-897 秒)。
 export const CRON_BRIEF_PARAMS = {
   TIME_RANGE_DAYS: 2, // 覆盖前一天全天,与 1 天窗口相比留出抓取延迟的冗余
-  ARTICLE_LIMIT: 150,
+  // 取数是「窗口内按 publish_date 倒序取前 N 篇」,所以 N 太小会把时间窗**截短**:
+  // 150 时 2 天窗口实际只覆盖 21.1 小时(08-15 run 实测:窗口内 327 篇合格,只取最新 149 篇,
+  // 178 篇从未被看过)。而多源印证要求同一事件的两篇都落在切片内,切片越窄越配不成对
+  // ——embedding 实测有 13/149 篇「切片内无同事件伙伴、切片外有」。
+  //
+  // 上限从哪来:跨 step 的只有轻量 articles(embeddings 已卸 R2),实测 263 字节/篇(最大 394),
+  // 加 JSON 键名开销约 400 字节/篇 → CF Workflow 单 step ~1MB 对应约 2500 篇。取 1000 留 2.5 倍余量。
+  // 当前源池下即时效果是 149 → 327(窗口有多少取多少),余量留给后续加源。
+  ARTICLE_LIMIT: 1000,
   MIN_IMPORTANCE: 3,
   MAX_STORIES_TO_GENERATE: 15,
   STORY_MIN_IMPORTANCE: 0.1,

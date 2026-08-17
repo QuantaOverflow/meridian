@@ -61,9 +61,11 @@ export const CRON_BRIEF_PARAMS = {
   // ——embedding 实测有 13/149 篇「切片内无同事件伙伴、切片外有」。
   //
   // 上限从哪来:跨 step 的只有轻量 articles(embeddings 已卸 R2),实测 263 字节/篇(最大 394),
-  // 加 JSON 键名开销约 400 字节/篇 → CF Workflow 单 step ~1MB 对应约 2500 篇。取 1000 留 2.5 倍余量。
-  // 当前源池下即时效果是 149 → 327(窗口有多少取多少),余量留给后续加源。
-  ARTICLE_LIMIT: 1000,
+  // 加 JSON 键名开销约 400 字节/篇 → CF Workflow 单 step ~1MB 对应约 2500 篇。
+  // 取值 1500(=600KB,占硬上限 60%):新增 4 源后预估进稿约 600 篇/天,2 天窗口约 1200 篇,
+  // 1000 会重新把窗口截短。不取 2000 是因为 2500 这个天花板是估算值,而越界的后果是
+  // WorkflowInternalError 硬失败(见 CLAUDE.md 已知坑),不值得为余量赌 80% 占用。
+  ARTICLE_LIMIT: 1500,
   MIN_IMPORTANCE: 3,
   MAX_STORIES_TO_GENERATE: 15,
   STORY_MIN_IMPORTANCE: 0.1,

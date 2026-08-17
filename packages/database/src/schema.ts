@@ -80,7 +80,13 @@ export const $reports = pgTable('reports', {
   totalArticles: integer('total_articles').notNull(),
   totalSources: integer('total_sources').notNull(),
 
+  // 进入简报的去重文章数。
+  // ⚠️ 语义在 2026-08-17 修正过：第 51-59 期存的是**故事数**（旧代码错写成
+  // intelligenceReports.length，与 brief_runs.intelligence_analyses 同值），第 60 期起
+  // 才是真正的文章数。跨期比较务必注意；旧期真值可由 brief_stories.article_ids 反算。
   usedArticles: integer('used_articles').notNull(),
+  // 覆盖到的去重信源数。注意与 usedArticles 取自管线不同阶段：它按**全部已识别故事**算，
+  // 而 usedArticles 按拿到情报报告的故事算。
   usedSources: integer('used_sources').notNull(),
 
   tldr: text('tldr'),

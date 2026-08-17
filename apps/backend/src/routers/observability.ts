@@ -208,7 +208,9 @@ app.get('/briefs/stats', async (c) => {
       return {
         date: brief.createdAt.toISOString().split('T')[0],
         briefId: brief.id,
-        articleUsageRate: brief.totalArticles && brief.usedArticles ? 
+        // ⚠️ 第 51-59 期的 usedArticles 存的是故事数而非文章数（见 schema.ts 注释），
+        // 这几期的比率被系统性低报约 2.8 倍。第 60 期起该字段才是真文章数。
+        articleUsageRate: brief.totalArticles && brief.usedArticles ?
           (brief.usedArticles / brief.totalArticles) : 0,
         totalArticles: brief.totalArticles,
         usedArticles: brief.usedArticles,

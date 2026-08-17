@@ -11,6 +11,12 @@
 
 import type { AIWorkerEnv } from './ai-services';
 
+/**
+ * HDBSCAN 的噪声标签。ml 侧把这一组也当普通簇返回，故它会出现在 clusters 里；
+ * 判"是不是真簇"必须显式排除它，别再靠 clusters.length。
+ */
+export const NOISE_CLUSTER_ID = -1;
+
 // 数据类型定义 - 与intelligence-pipeline.test.ts保持一致
 export interface ArticleDataset {
   articles: Array<{
@@ -197,12 +203,20 @@ export class ClusteringService {
 
         
         // 转换ML服务响应为ClusteringResult格式
+        const clusters = mlResult.clusters.map((cluster) => ({
+          clusterId: cluster.cluster_id,
+          articleIds: cluster.items.map((item: any) => item.metadata?.id || item.id),
+          size: cluster.size
+        }));
+
+        // HDBSCAN 把"不属于任何簇"的点标成 cluster_id = -1，ml 侧照旧把它当一个簇返回。
+        // 这一组**继续下传**给故事验证：它不是垃圾堆——2026-08-15 run 里 54 篇噪声中被验证
+        // 层认出一条真故事（韩朝会谈），并进了第 59 期简报。删掉它会直接丢新闻。
+        // 但它不能算进"簇数"，也必须作为噪声量被看见。
+        const noiseCluster = clusters.find(c => c.clusterId === NOISE_CLUSTER_ID);
+
         const clusteringResult: ClusteringResult = {
-          clusters: mlResult.clusters.map((cluster) => ({
-            clusterId: cluster.cluster_id,
-            articleIds: cluster.items.map((item: any) => item.metadata?.id || item.id),
-            size: cluster.size
-          })),
+          clusters,
           parameters: {
             umapParams: {
               n_neighbors: mlResult.config_used?.umap_n_neighbors || 15,
@@ -216,9 +230,14 @@ export class ClusteringService {
               epsilon: mlResult.config_used?.hdbscan_cluster_selection_epsilon || 0.2
             }
           },
+          // totalClusters / noisePoints 从 clusters 自身推导，不再取 ml 侧的旁路统计字段。
+          // 2026-08 四次生产 run 实测 clustering_stats.n_outliers 与真实 -1 组系统性差约 8 倍
+          // （报 8/9/7/11，实际 71/70/59/54 = 输入的 36-47%）。ml 侧为何不一致尚未定位，
+          // 但下游真正消费的是 clusters 数组，指标必须与它同源——否则观测面板显示"聚类几乎
+          // 没丢东西"，而实际近一半文章在这一关就出局，没人看得见。
           statistics: {
-            totalClusters: mlResult.clustering_stats?.n_clusters || 0,
-            noisePoints: mlResult.clustering_stats?.n_outliers || 0,
+            totalClusters: clusters.filter(c => c.clusterId !== NOISE_CLUSTER_ID).length,
+            noisePoints: noiseCluster?.articleIds.length ?? 0,
             totalArticles: mlResult.clustering_stats?.n_samples || dataset.articles.length
           }
         };

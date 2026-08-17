@@ -773,12 +773,19 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           throw new Error(`聚类分析失败: ${response.error || '未知错误'}`);
         }
 
-        console.log(`[AutoBrief] 聚类分析完成: 发现 ${response.data!.clusters.length} 个聚类`);
+        const st = response.data!.statistics;
+        console.log(
+          `[AutoBrief] 聚类分析完成: ${st.totalClusters} 个真簇 + 1 个噪声组(${st.noisePoints} 篇, ` +
+          `占 ${((st.noisePoints / Math.max(st.totalArticles, 1)) * 100).toFixed(0)}%)，噪声组同样作为候选下传`
+        );
         return response.data!;
       });
 
+      // clustersFound 用 statistics.totalClusters（已排除噪声组）。此前用 clusters.length，
+      // 把 -1 噪声组也算成一个簇，每次多报 1 个。
       await observability.logStep('clustering_analysis', 'completed', {
-        clustersFound: clusteringResult.clusters.length,
+        clustersFound: clusteringResult.statistics.totalClusters,
+        candidateGroupsSentToValidation: clusteringResult.clusters.length,
         totalArticles: clusteringResult.statistics.totalArticles,
         noisePoints: clusteringResult.statistics.noisePoints
       });
@@ -944,7 +951,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           reason: 'INSUFFICIENT_QUALITY_STORIES',
           analysis: {
             totalArticles: dataset.articles.length,
-            clustersFound: clusteringResult.clusters.length,
+            clustersFound: clusteringResult.statistics.totalClusters,
             validStories: 0,
             rejectedClusters: validatedStories.rejectedClusters.length,
             rejectionReasons: validatedStories.rejectedClusters.reduce((acc: Record<string, number>, cluster: any) => {
@@ -981,7 +988,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               status: 'TERMINATED_NO_STORIES',
               finished_at: new Date(),
               total_articles: dataset.articles.length,
-              clusters_found: clusteringResult.clusters.length,
+              clusters_found: clusteringResult.statistics.totalClusters,
               stories_identified: 0,
               intelligence_analyses: 0,
             })
@@ -1338,6 +1345,20 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         console.log(`[AutoBrief] 成功生成TLDR`);
 
+        // used_articles 此前写的是 intelligenceReports.length —— 与下一行 intelligence_analyses
+        // 同一个表达式，即**故事数**，字段名却叫 articles。artifact 据此显示"9 / 150 篇入选"，
+        // 而第 56 期真实入选文章是 25 篇，低报 2.8 倍；observability 的 articleUsageRate 同源同错。
+        // 改为真正喂进简报的去重文章数 = 拿到情报报告的那些 story 的 articleIds 并集
+        // （失败的 story 不算，它的报告没进简报）。failures[].idx 是 storiesForIntelligence 的全局下标
+        // （batchProcessParallel 传的是 i + batchIndex）。
+        // ⚠️ 语义变更：reports 表 51-59 期存的仍是旧值（故事数），跨期比较需注意。
+        const failedIdx = new Set(intelFailures.map(f => f.idx));
+        const usedArticleIds = new Set<number>(
+          storiesForIntelligence
+            .filter((_: any, i: number) => !failedIdx.has(i))
+            .flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []))
+        );
+
         return {
           title: brief.value.title,
           content: brief.value.content,
@@ -1345,8 +1366,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           model_author: 'meridian-ai-worker',
           stats: {
             total_articles: dataset.articles.length,
-            used_articles: intelligenceReports.length,
-            clusters_found: clusteringResult.clusters.length,
+            used_articles: usedArticleIds.size,
+            clusters_found: clusteringResult.statistics.totalClusters,
             stories_identified: validatedStories.stories.length,
             intelligence_analyses: intelligenceReports.length,
             content_length: brief.value.content.length,

@@ -16,7 +16,7 @@
 import type { CloudflareEnv } from '../types';
 import type { TraceContext } from './llm-call-logger';
 
-export type SensorKind = 'brief_hygiene' | 'intel_parse' | 'output_language';
+export type SensorKind = 'brief_hygiene' | 'intel_parse' | 'story_validation_parse' | 'output_language';
 
 /**
  * 落一条传感器读数。无 trace_id 或无 R2 binding 时静默跳过（本地/单测场景）。

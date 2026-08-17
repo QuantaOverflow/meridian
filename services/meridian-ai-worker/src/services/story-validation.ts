@@ -12,6 +12,11 @@ import {
   AIValidationResponse
 } from '../types/story-validation'
 import { CloudflareEnv } from '../types'
+import { recordSensor } from './sensor-log'
+
+// 解析失败重采样上限。与情报分析的 INTEL_PARSE_MAX_ATTEMPTS 取同值：同模型同类 JSON 格式滑手，
+// 没有理由一边给 4 次机会、一边给 0 次。
+const SV_PARSE_MAX_ATTEMPTS = 4
 
 export class StoryValidationService {
   private aiGateway: AIGatewayService
@@ -257,18 +262,49 @@ export class StoryValidationService {
       .join('\n\n')
 
     const validationPrompt = getStoryValidationPrompt(articleList)
-    
-    const response = await this.callAI(validationPrompt, undefined, {
-      provider: options?.provider,
-      model: options?.model,
-      temperature: 0
-    })
-    
-    const validation = this.parseJSONFromResponse(response)
+
+    // 格式失败重采样。此前一次解析失败即 return no_stories → **整簇消失**，连一次重试都没有，
+    // 而隔壁情报分析同模型同类 JSON 有 4 次（INTEL_PARSE_MAX_ATTEMPTS）——全管线最不对称处。
+    // 生产 7 天实测该降级触发 11 次（其中 5 次是真簇、6 次是 -1 噪声桶）。
+    // 只对解析失败重采样：模型判定的 no_stories / pure_noise 是合法结论，重问只会得到同样答案。
+    // 实测主因是"漏写字符串值的开引号"（`"why": A recurring…`），即采样噪声，重采样对症。
+    let validation: any = null
+    let attempts = 0
+    for (let attempt = 1; attempt <= SV_PARSE_MAX_ATTEMPTS; attempt++) {
+      attempts = attempt
+      const response = await this.callAI(validationPrompt, undefined, {
+        provider: options?.provider,
+        model: options?.model,
+        temperature: 0
+      })
+      validation = this.parseJSONFromResponse(response)
+      if (validation) {
+        if (attempt > 1) console.log(`[Story Validation] 聚类 ${cluster.clusterId} 第 ${attempt} 次重采样解析成功`)
+        break
+      }
+      console.warn(`[Story Validation] 聚类 ${cluster.clusterId} 验证响应解析失败，重采样 (${attempt}/${SV_PARSE_MAX_ATTEMPTS})`)
+    }
+
+    // 重采样次数落 R2：只写 console 就无法跨 run 统计"模型格式稳定性"。只在真发生过重采样时写。
+    // idx 用 clusterId + 1：clusterId 可为 -1（噪声桶），负数进 padStart 会得到 "-1" 这种别扭 key，
+    // +1 后 -1→0、0→1，仍然一簇一 key 不碰撞。
+    if (attempts > 1) {
+      await recordSensor(this.env, this.traceContext, 'story_validation_parse', {
+        clusterId: cluster.clusterId,
+        clusterSize: cluster.articleIds.length,
+        attempts,
+        maxAttempts: SV_PARSE_MAX_ATTEMPTS,
+        exhausted: validation === null,
+      }, cluster.clusterId + 1)
+    }
+
     if (!validation) {
-      // 解析失败：仍降级为 no_stories（不改丢弃行为），但打 parseFailed 标记 + 具名日志，
+      // 耗尽仍失败：仍降级为 no_stories（不改丢弃行为），但打 parseFailed 标记 + 具名日志，
       // 让"解析失败伪装的没故事"可被调用方/指标区分，不再与"模型真判没故事"静默合流。
-      console.warn(`[Story Validation] 聚类 ${cluster.clusterId} 验证响应解析失败 → 降级 no_stories（非模型判定，整簇将被丢弃）`)
+      console.warn(
+        `[Story Validation] SV_PARSE_EXHAUSTED 聚类 ${cluster.clusterId} 连续 ${SV_PARSE_MAX_ATTEMPTS} 次解析失败 ` +
+        `→ 降级 no_stories（非模型判定，整簇 ${cluster.articleIds.length} 篇将被丢弃）`
+      )
       return { answer: 'no_stories', parseFailed: true }
     }
     return validation

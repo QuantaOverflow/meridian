@@ -23,6 +23,13 @@ analysis pipeline. Pick ONE of:
 
 3) pure_noise — Articles unrelated; no meaningful pattern.
 
+# JSON validity (CRITICAL)
+EVERY string value must be wrapped in double quotes — this includes every \`why\` field.
+WRONG:  "why": A recurring pattern of settler violence
+RIGHT:  "why": "A recurring pattern of settler violence"
+An unquoted value makes the whole response unparseable, and the entire cluster is then
+discarded — not one story from it reaches the brief.
+
 # Anti-padding rules (CRITICAL)
 A cluster is NOT a single_story if any of these apply — pick collection_of_stories or pure_noise instead:
 

@@ -53,6 +53,46 @@ const dbStepConfig: WorkflowStepConfig = {
   timeout: '5 seconds',
 };
 
+// LLM 分析阶段的并发上限。此前是无界并发(articlesToProcess.map 一次全发),
+// 队列 max_batch_size=100 意味着单实例可拿到 100 篇 → 100 路并发。
+// 实证(2026-08-17):新增两源首轮 42 篇同时进分析,42/42 在 10:08:53.5xx 这同一毫秒窗内
+// 全部 `WorkflowTimeoutError: Execution timed out after 60000ms`(单篇 step 超时 1 分钟);
+// 同日涓流量(每小时 5-14 篇)同样代码下 AI_ANALYSIS_FAILED 为 0。
+// 注:那次失败跑的是旧 ai-worker(每篇 4 次 LLM 往返,三档死 DashScope 未删),现已降到 1 次,
+// 所以真实安全上限比当时高;取 10 是保守值,与同仓既有并发档位(抓取 maxConcurrent=8、
+// auto-brief R2_BATCH_SIZE=5)同量级。100 篇 → 10 批,单篇约 5-10 秒,批次总耗时可接受。
+const LLM_ANALYSIS_CONCURRENCY = 10;
+
+/**
+ * 最小信号量:限制同时进行的异步操作数。
+ * 用它而不是 auto-brief 的 batchProcessParallel(分批 + 批间栅栏),原因有二:
+ * 1. batchProcessParallel 只收 fulfilled、丢弃 rejected,而这里下游要靠完整的 settled
+ *    结果数 failedAnalyses——套用会让失败数静默少算;
+ * 2. 分批有队头阻塞:单篇最坏 1 分钟 × 4 次重试,会把整批其余 9 篇一起拖住。
+ * release 时把名额**直接移交**给等待者(而非先 active--),避免唤醒间隙被新请求插队超发。
+ */
+function createSemaphore(limit: number) {
+  let active = 0;
+  const waiters: Array<() => void> = [];
+  return {
+    async acquire(): Promise<void> {
+      if (active < limit) {
+        active++;
+        return;
+      }
+      await new Promise<void>(resolve => waiters.push(resolve));
+    },
+    release(): void {
+      const next = waiters.shift();
+      if (next !== undefined) {
+        next(); // 名额移交,active 不变
+      } else {
+        active--;
+      }
+    },
+  };
+}
+
 /**
  * Parameters for the ProcessArticles workflow
  */
@@ -303,9 +343,14 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
       processingLogger.info('Processing articles with LLM analysis');
 
       const llmAnalysisBatchStartTime = Date.now();
+      const analysisSemaphore = createSemaphore(LLM_ANALYSIS_CONCURRENCY);
       const analysisResults = await Promise.allSettled(
         articlesToProcess.map(async (article, analysisIndex) => {
           const articleLogger = processingLogger.child({ article_id: article.id });
+
+          // 排队等分析名额。step.do 在 acquire 之后才发起,所以在途 step 最多
+          // LLM_ANALYSIS_CONCURRENCY 个;等待中的文章不占用任何 LLM 调用。
+          await analysisSemaphore.acquire();
           articleLogger.info('Analyzing article');
 
           const individualAnalysisStartTime = Date.now();
@@ -433,6 +478,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 .where(eq($articles.id, article.id))
             );
             return { id: article.id, success: false, error };
+          } finally {
+            analysisSemaphore.release();
           }
         })
       );

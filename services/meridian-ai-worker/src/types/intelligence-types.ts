@@ -34,7 +34,7 @@ export const StorySchema = z.object({
 
 export const RejectedClusterSchema = z.object({
   clusterId: z.number(),
-  rejectionReason: z.enum(["PURE_NOISE", "NO_STORIES", "INSUFFICIENT_ARTICLES"]),
+  rejectionReason: z.enum(["PURE_NOISE", "NO_STORIES", "INSUFFICIENT_ARTICLES", "NOISE_BUCKET_SKIPPED"]),
   originalArticleIds: z.array(z.number()),
 });
 

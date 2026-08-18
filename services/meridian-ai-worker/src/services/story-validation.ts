@@ -75,6 +75,27 @@ export class StoryValidationService {
       const outStories: Story[] = []
       const outRejected: RejectedCluster[] = []
       try {
+        // HDBSCAN 的 -1 不是一个簇，是"没聚成簇"的残余集合——把它当故事候选送模型，
+        // 是拿一次调用去拆解几百篇互不相关的文章。2026-08-18 实测它已占窗口文章约 70%
+        // (515/745)，比最大真实簇(23 篇)大 22 倍，而 max_tokens=4000 的输出上限决定了
+        // 响应必然被截断 → JSON 解析失败；又因 temperature=0 且 prompt 不变，4 次重采样
+        // 是同一请求重发 4 遍，必然同样失败(run 76/77 均 4/4)。它从未产出过一个故事
+        // (brief_stories 全表无 -1 来源记录)，纯粹每轮白烧 4 次超大调用，并且因为调度是
+        // "分批 + 批间栅栏"，它所在批次的其余簇都要陪它等 → 并发提上去也吃不到收益。
+        //
+        // 跳过的是**模型判定**，不是**记录**：仍然落一条带完整 originalArticleIds 的拒绝
+        // 记录，让"哪些文章从未进入任何故事"可从 cluster_rejections 直接查（复盘/救回噪声
+        // 桶是独立的一件事，届时从这张表取样本，不必回头翻 R2）。
+        if (cluster.clusterId === -1) {
+          console.log(`[Story Validation] 跳过 -1 噪声组(${cluster.articleIds.length} 篇)：非簇，不送模型判定，仅登记`)
+          outRejected.push({
+            clusterId: cluster.clusterId,
+            rejectionReason: "NOISE_BUCKET_SKIPPED",
+            originalArticleIds: cluster.articleIds
+          })
+          return { stories: outStories, rejected: outRejected }
+        }
+
         // 基本尺寸过滤
         if (cluster.size < 3) {
           outRejected.push({

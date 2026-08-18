@@ -43,7 +43,8 @@ export interface Story {
 
 export interface RejectedCluster {
   clusterId: number
-  rejectionReason: "PURE_NOISE" | "NO_STORIES" | "INSUFFICIENT_ARTICLES"
+  // NOISE_BUCKET_SKIPPED: HDBSCAN 的 -1 组，机械跳过、未送模型判定（与前三者的"判过了"语义区分开）
+  rejectionReason: "PURE_NOISE" | "NO_STORIES" | "INSUFFICIENT_ARTICLES" | "NOISE_BUCKET_SKIPPED"
   originalArticleIds: number[]
 }
 

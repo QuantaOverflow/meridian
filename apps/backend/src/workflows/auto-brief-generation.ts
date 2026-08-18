@@ -108,9 +108,14 @@ interface BriefGenerationResultData {
 // 工作流步骤配置
 // ============================================================================
 
+// 现仅由「准备文章数据集」与「执行聚类分析」两步使用（合成步已拆出独立配置，见 briefSynthesisStepConfig）。
+// 2 → 5 分钟：两步的耗时都随文章量线性涨，而 2026-08-17 扩源后窗口从 149 篇跳到 505 篇、
+// 源池满负荷后 2 天窗口预计约 1200 篇。数据集步要读回全部带 384 维向量的行并卸载到 R2；
+// 聚类步打的是 0.5 vCPU 容器，sleepAfter 到期后首调含冷启动（embedding 补算已在同工作流内跑过时
+// 容器是热的，无补算可做的那天就是冷的——run 74 热、run 75 冷，同规模两种时间分布）。
 const defaultStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
-  timeout: '2 minutes',
+  timeout: '5 minutes',
 };
 
 const dbStepConfig: WorkflowStepConfig = {
@@ -1270,8 +1275,20 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 步骤 5: 简报生成 (AI Worker)
       // =====================================================================
       await observability.logStep('brief_generation', 'started');
-      
-      const briefResult = await step.do('生成最终简报', defaultStepConfig, async (): Promise<BriefGenerationResultData> => {
+
+      // 合成这一步串起两次 LLM 长调用(generate-final-brief + generate-brief-tldr)，输入是全部
+      // 情报报告全文，规模随 maxStoriesToGenerate 与每故事文章数一起涨——不该吃 2 分钟的默认档。
+      // 实证(2026-08-17 run 75，扩源后首次 cron)：505 篇/36 故事/15 份情报报告下单次合成超 2 分钟，
+      // defaultStepConfig 的 1+3 次尝试全部超时，整个工作流以 WorkflowTimeoutError 失败、当日无简报
+      // (CF 日志实证 13:15-13:29 内 generate-final-brief 被调 4 次、generate-brief-tldr 3 次)。
+      // retries 取 1 而非 3：同 storyValidation/intelligence 的既有判断——重试把整套 LLM 调用重跑一遍，
+      // 纯烧钱且拖长失败判定，超时余量该给单次尝试而不是给次数。
+      const briefSynthesisStepConfig: WorkflowStepConfig = {
+        retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
+        timeout: '10 minutes',
+      };
+
+      const briefResult = await step.do('生成最终简报', briefSynthesisStepConfig, async (): Promise<BriefGenerationResultData> => {
         console.log(`[AutoBrief] 开始生成简报，基于 ${intelligenceReports.length} 个情报分析`);
         
         // 前日简报上下文已停用：它把昨天 brief 的 TLDR（一串主题标识符）回灌进来，

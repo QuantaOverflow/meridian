@@ -1,0 +1,1 @@
+ALTER TABLE "cluster_rejections" ADD COLUMN "article_ids" jsonb;

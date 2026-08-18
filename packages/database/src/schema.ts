@@ -176,6 +176,10 @@ export const $cluster_rejections = pgTable(
     cluster_id: integer('cluster_id'),
     reason: text('reason'),
     article_count: integer('article_count'),
+    // 被拒绝聚类的成员文章 id。此前只存 count，导致"哪些文章从未进入任何故事"无法从库里查——
+    // 而 -1 噪声桶已占窗口文章的约 70%(2026-08-18 实测 515/745)，是最需要复盘的一批。
+    // 数据一直采集着（RejectedCluster.originalArticleIds），只是落库前被丢弃，这里补上。
+    article_ids: jsonb('article_ids'),
     created_at: timestamp('created_at', { mode: 'date' })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

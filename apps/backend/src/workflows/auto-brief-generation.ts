@@ -942,6 +942,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               cluster_id: typeof c.clusterId === 'number' ? c.clusterId : null,
               reason: c.rejectionReason ?? null,
               article_count: Array.isArray(c.originalArticleIds) ? c.originalArticleIds.length : null,
+              // 成员 id 一并落库：此前只存 count，"哪些文章从未进入任何故事"就只能去 R2 手翻。
+              // -1 噪声桶已占窗口文章约 70%，是最需要复盘的一批。
+              article_ids: Array.isArray(c.originalArticleIds) ? c.originalArticleIds : null,
             }))
           );
         }

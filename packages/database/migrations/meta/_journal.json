@@ -43,6 +43,13 @@
       "when": 1782963195055,
       "tag": "0005_thankful_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787028310658,
+      "tag": "0006_pink_nova",
+      "breakpoints": true
     }
   ]
 }

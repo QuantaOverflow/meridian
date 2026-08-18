@@ -56,9 +56,16 @@ export class StoryValidationService {
     const rejectedClusters: RejectedCluster[] = []
 
     // 限并发并行验证：每簇独立(collection 路径的 seen 去重是簇内的、不跨簇共享；
-    // AI 验证的 LLM 调用是大头)，原串行逐簇 await 是次要 wall-clock 来源。并发上限
-    // 保守起步=3，撞 DashScope 限流由 AIGateway 配额退避兜底。按簇顺序合并结果保持确定性。
-    const VALIDATION_CONCURRENCY = 3
+    // AI 验证的 LLM 调用是大头)，原串行逐簇 await 是次要 wall-clock 来源。
+    // 按簇顺序合并结果保持确定性。
+    //
+    // 3 → 6(2026-08-18)：原注释给出的保守理由是"撞 DashScope 限流由 AIGateway 配额退避兜底"，
+    // 而 DashScope 三档已在 c997f56 删除，现在走 Workers AI——该理由已失效。
+    // 同仓 intelligence 分析走的是同一类 LLM 调用、并发早已是 6 且生产稳定
+    // (auto-brief-generation.ts INTEL_CONCURRENCY，注释记录 18min→6min→3min)。
+    // 实测依据：本步 wall-clock 随簇数线性涨——109s(16簇) → 293s(23簇) → 367s(24簇)，
+    // 扩源后已是端到端第二大头(20 分钟里占 6 分钟)。
+    const VALIDATION_CONCURRENCY = 6
     // 解析失败降级丢簇计数（Node 单线程，await 间自增原子安全）。落进 metadata + summary 日志，让静默丢簇可观测。
     let validationParseFailures = 0
 

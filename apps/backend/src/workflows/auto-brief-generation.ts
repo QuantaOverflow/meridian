@@ -820,13 +820,21 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('story_validation', 'started');
 
-      // 这一步在 ai-worker 内**串行**逐簇调 LLM（簇数 = 聚类结果，实测 15 个），单簇 6-10s，
-      // 合计已逼近 defaultStepConfig 的 2 分钟——2026-08-12 迁 Workers AI 后实测超时重试 3 次
-      // 才侥幸通过，而每次重试都把 15 次 LLM 调用整个重跑一遍（纯浪费，且判决结果每次不同）。
-      // 按最坏情形给预算：簇数可随文章量上浮，单簇取 20s 上限 → 10 分钟留足余量。
+      // 这一步在 ai-worker 内限并发(VALIDATION_CONCURRENCY=6)逐簇调 LLM，wall-clock 随簇数
+      // 线性涨，实测约 8s/簇(24 簇 191s)。2026-08-12 迁 Workers AI 后曾因预算过紧超时重试 3 次
+      // 才侥幸通过，而 step.do 的重试是**整步重来、无断点**——每次重试把全部 LLM 调用重跑一遍。
+      //
+      // 10 → 25 分钟(2026-08-18)：移除质心剪枝 + eps 0.5→0.35(167f4c3)后簇数 28 → 87
+      // (1045 篇窗口)，87 × 8s ≈ 692s 直接撑破 600s。当日实测 admin-brief-1787048524613
+      // 正是死在这里：`WorkflowTimeoutError: Execution timed out after 600000ms`,且因 retries=3
+      // 会连撞三次、白烧三轮 LLM 调用。原注释的"单簇 20s × 约 30 簇"预算随簇数变化已失效。
+      //
+      // 25 分钟按当前 1045 篇/87 簇留 2 倍余量;进稿再涨需重估(线性外推:约 172 簇撑破 25 分钟)。
+      // **这是放宽预算不是修性能**——真正的修法是把并发 6 提高、并把"分批+批间栅栏"换成
+      // worker pool(现在一个慢簇会拖住整批)，属 story-validation 的题目，另行处理。
       const storyValidationStepConfig: WorkflowStepConfig = {
         retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
-        timeout: '10 minutes',
+        timeout: '25 minutes',
       };
 
       const validatedStories = await step.do('执行故事验证', storyValidationStepConfig, async () => {

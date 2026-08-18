@@ -205,7 +205,7 @@ export class ClusteringService {
             umap_metric?: string;
             hdbscan_min_cluster_size?: number;
             hdbscan_min_samples?: number;
-            hdbscan_cluster_selection_epsilon?: number;
+            hdbscan_epsilon?: number;   // ML 侧字段名(clustering.py:634),非发送侧的 hdbscan_cluster_selection_epsilon
           };
           clustering_stats?: {
             n_clusters?: number;
@@ -241,7 +241,7 @@ export class ClusteringService {
             hdbscanParams: {
               min_cluster_size: mlResult.config_used?.hdbscan_min_cluster_size || 5,
               min_samples: mlResult.config_used?.hdbscan_min_samples || 3,
-              epsilon: mlResult.config_used?.hdbscan_cluster_selection_epsilon || 0.2
+              epsilon: mlResult.config_used?.hdbscan_epsilon ?? 0.35
             }
           },
           // totalClusters / noisePoints 从 clusters 自身推导，不再取 ml 侧的旁路统计字段。

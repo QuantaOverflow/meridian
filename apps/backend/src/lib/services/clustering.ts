@@ -159,11 +159,25 @@ export class ClusteringService {
           umap_metric: options?.umapParams?.metric || 'cosine',
           hdbscan_min_cluster_size: options?.hdbscanParams?.min_cluster_size || 5,
           hdbscan_min_samples: options?.hdbscanParams?.min_samples || 3,
-          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2,
-          // 确定性后处理:质心剪枝(治簇内噪音污染)。eval 交叉验证锁定(prod 无前缀嵌入, mcs5/ms3):
-          // B-cubed P 0.45→0.83 / F 0.61→0.84 / R 0.87,跨窗口稳定。阈值与嵌入余弦分布绑定——
-          // 若改嵌入(如加 e5 query: 前缀)需用 scripts/eval/clustering/tune.ts 重标。
-          postprocess_prune_threshold: 0.92
+          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2
+          // 质心剪枝已移除(原 postprocess_prune_threshold: 0.92)。
+          //
+          // 它做的是"甄别故事",而甄别是 story-validation 的职责:剪枝按"成员到簇质心余弦"
+          // 一刀切,而质心假设簇是单峰球形——一条主线天然多峰(美伊线=军事威胁+能源价格+
+          // 外交进展三个叶团),侧翼被误判成噪声。run 78 实测被它剪掉的含"伊朗谈判代表宣布
+          // 战胜美国""北约战机击落俄无人机"这类明显同主线的报道,而 LLM 不会犯这种错。
+          //
+          // 代价是量级的,不是边际的(run 78, 767 篇,τ=0.94 跨源同事件对构成的 48 个事件):
+          //   剪枝前同事件保全 99.6% → 剪枝后 80.3%;损失 100% 来自这一步,HDBSCAN 无过。
+          //   事件完整率 39.6% → 93.8%(生产下 10 个事件有 6 个被剪掉部分成员)。
+          //   进簇文章 31% → 95%。整个"比利时史上最大野火"事件 7 篇全被剪进噪声而消失。
+          //
+          // 下游接得住:本地实测 4 个簇(29/31/37/64 篇)6 次真实调用 0 解析失败——
+          // 31 篇的多国灾害桶被正确拆成印尼地震/哥伦比亚地震/津巴布韦渡轮/印第安纳洪水/
+          // 韩菲暴雨 5 个独立故事;29 篇的簇剔除 9 篇亚太防务杂项后留下 20 篇韩美军演主线。
+          //
+          // 原 0.92 的标定注释(B-cubed P 0.45→0.83)标的是 mcs5/ms3——2025-06-18 起生产已
+          // 换成 mcs3/ms1,阈值与它作用的对象早已不是一对;所用金标亦已归档。
         },
         return_embeddings: false,
         return_reduced_embeddings: false

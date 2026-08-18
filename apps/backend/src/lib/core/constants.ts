@@ -46,9 +46,19 @@ export const BRIEF_CLUSTERING_OPTIONS = {
     metric: 'cosine',
   },
   hdbscanParams: {
+    // mcs/ms 经 2026-08-18 扫描确认现值即最优,不动:eps=0.35 下 mcs3 覆盖 95% vs mcs4 93%
+    // (事件完整率同为 93.8%);ms=1 同事件保全 97.0% 优于 ms3 的 96.2%、ms5 的 90.7%。
     min_cluster_size: 3,
     min_samples: 1,
-    epsilon: 0.5,
+    // 0.5 → 0.35。0.5 把 43% 的文章粘成一个 332 篇巨团,一次 story-validation 调用吃不下,
+    // 且它让质心失准、把剪枝放大成屠杀(见 clustering.ts 剪枝移除说明)。
+    // 上限卡在 0.40 而非簇大小:0.40 会把「美伊战争」与「特朗普国内杂闻」并成一个 87 篇簇
+    // ——两堆共享 Trump 这个强实体,模型于是有现成伞状标签可用,把 78/87 篇兜进一个
+    // "Trump administration: Domestic policy, economy, and political fallout",十来件独立
+    // 事件压成一段、只占 top-15 一个名额且无法拆回。同批 98 篇的簇(无共同实体)反而正常
+    // ——所以约束是"别合并共享强实体的两条主线",不是"别让簇太大"。0.35 下两者分属独立簇。
+    // 0.25-0.38 是一段 96-98% 同事件保全的宽平台(0.42 后掉崖),取 0.35 兼顾调用数(64 簇)。
+    epsilon: 0.35,
   },
 } as const;
 

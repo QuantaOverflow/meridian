@@ -68,6 +68,8 @@ export class StoryValidationService {
     const VALIDATION_CONCURRENCY = 6
     // 解析失败降级丢簇计数（Node 单线程，await 间自增原子安全）。落进 metadata + summary 日志，让静默丢簇可观测。
     let validationParseFailures = 0
+    // 部分丢弃的文章数（簇没被拒、但成员没进任何故事）。单位是**文章**，与 rejectedClusters(单位=簇)分开计。
+    let partiallyDroppedArticles = 0
 
     const validateCluster = async (
       cluster: (typeof clusteringResult.clusters)[number]
@@ -122,6 +124,17 @@ export class StoryValidationService {
                 articleIds: validArticleIds,
                 storyType: "SINGLE_STORY"
               })
+              // 被模型显式排除的 outliers 留痕：它们此前直接从 validArticleIds 里消失，
+              // 既不在故事里也不在 cluster_rejections 里，无从判断排得对不对。
+              const excluded = cluster.articleIds.filter((id: number) => !validArticleIds.includes(id))
+              if (excluded.length > 0) {
+                partiallyDroppedArticles += excluded.length
+                outRejected.push({
+                  clusterId: cluster.clusterId,
+                  rejectionReason: "OUTLIER_IN_SINGLE_STORY",
+                  originalArticleIds: excluded
+                })
+              }
             } else {
               outRejected.push({
                 clusterId: cluster.clusterId,
@@ -157,6 +170,22 @@ export class StoryValidationService {
                 rejectionReason: "NO_STORIES",
                 originalArticleIds: cluster.articleIds
               })
+            } else {
+              // 有故事产出，但模型只列了部分成员——其余的此前**零记录**地消失。
+              // 这是全管线最大的一个观测盲点：2026-08-18 生产实测 352/967 篇进簇文章走的是这条路。
+              // 模型不列它们并不违反任何指令（prompt 从未要求穷尽分配，outliers 数组也只存在于
+              // single_story 分支），所以这里不改行为、只记账，让"甄别对了"与"错杀了"可分。
+              // 注意用 seen 而非各子故事的原始 articles：seen 只含真正进了故事的 id
+              //（被 ≥2 篇门槛挡下的子故事成员同样算丢弃，它们确实没进任何故事）。
+              const unassigned = cluster.articleIds.filter((id: number) => !seen.has(id))
+              if (unassigned.length > 0) {
+                partiallyDroppedArticles += unassigned.length
+                outRejected.push({
+                  clusterId: cluster.clusterId,
+                  rejectionReason: "UNASSIGNED_IN_COLLECTION",
+                  originalArticleIds: unassigned
+                })
+              }
             }
           } else if (validation.answer === 'pure_noise') {
             outRejected.push({
@@ -203,8 +232,9 @@ export class StoryValidationService {
       }
     }
     
-    console.log(`[Story Validation] 验证完成: ${stories.length} 个有效故事, ${rejectedClusters.length} 个拒绝聚类` +
-      (validationParseFailures > 0 ? `（其中 ${validationParseFailures} 个因验证响应解析失败被降级丢弃，非模型判定）` : ''))
+    console.log(`[Story Validation] 验证完成: ${stories.length} 个有效故事, ${rejectedClusters.length} 条拒绝记录` +
+      (validationParseFailures > 0 ? `（其中 ${validationParseFailures} 个因验证响应解析失败被降级丢弃，非模型判定）` : '') +
+      (partiallyDroppedArticles > 0 ? `；另有 ${partiallyDroppedArticles} 篇文章所在簇未被拒但自身未进任何故事（部分丢弃，已留痕）` : ''))
 
     return {
       stories,
@@ -215,6 +245,7 @@ export class StoryValidationService {
         validatedStories: stories.length,
         rejectedClusters: rejectedClusters.length,
         validationParseFailures,
+        partiallyDroppedArticles,
         processingStatistics: clusteringResult.statistics
       }
     }

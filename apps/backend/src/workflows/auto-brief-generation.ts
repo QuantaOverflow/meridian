@@ -847,6 +847,21 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         const db = getDb(this.env.HYPERDRIVE);
         const articleIds = dataset.articles.map(a => a.id);
         
+        // 这里回查的唯一目的是拿回**完整** event_summary_points：dataset.articles 只带
+        // summary = event_summary_points[0]（:619），而完整要点(近 3 天均值 7.88 条/篇)
+        // 若随 dataset 走 step 输出约 960KB，会顶在 CF Workflow 单 step ~1MB 上限上，
+        // 故设计上就该在步内回查、不进 step 输出。
+        //
+        // 2026-08-19 修：WHERE 漏了 `inArray(id, articleIds)`（上一行算出的 articleIds
+        // 从未被使用），配 `.limit(50)` 无排序 → 实际取到的是全表最早的 50 篇
+        // (id 1..3758, publish_date 2026-05-19..22)，与当前窗口(id 61 万量级)**交集为零**。
+        // 于是 metadataMap 每篇都 miss、每篇都走兜底 `[article.summary]` → 模型只看到
+        // 标题 + 一条导语，判别信号被砍到约 1/8。Map.get miss 有合法兜底路径，
+        // 100% miss 与 0% miss 在日志里完全同形，无计数器可响（「静默降级成安全默认值」
+        // 模式的又一实例，此处发生在数据装配而非 LLM 边界）。
+        //
+        // 剪枝时代簇最大 15 篇，标题+导语够拆，故长期无症状；移除剪枝后簇涨到 96 篇，
+        // 判别难度陡升才显形——上游改动叫醒的休眠 bug。
         const articleMetadata = await db
           .select({
             id: $articles.id,
@@ -855,11 +870,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             event_summary_points: $articles.event_summary_points
           })
           .from($articles)
-          .where(and(
-            eq($articles.status, 'PROCESSED'),
-            isNotNull($articles.embedding)
-          ))
-          .limit(50);
+          .where(inArray($articles.id, articleIds));
         
         const metadataMap = new Map(articleMetadata.map(a => [a.id, a]));
         

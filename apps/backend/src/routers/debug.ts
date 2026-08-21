@@ -383,11 +383,24 @@ debugRouter.post('/test-story-validation', async (c) => {
             articlesCount: articlesData.length
         }, null, 2));
 
+        // 2026-08-21：判定单位改为几何候选组，与生产走同一条路（lib/core/candidate-grouping.ts）
+        const { buildCandidateGroups } = await import('../lib/core/candidate-grouping');
+        const { CANDIDATE_GROUP_THRESHOLD } = await import('../lib/core/constants');
+        const { groups: candidateGroups } = buildCandidateGroups(
+            clusteringResult.clusters,
+            // 显式标注：本文件既有的 import 解析失败(基线红)导致 testArticles 推不出类型
+            (testArticles as Array<{ id: number; embedding: unknown }>)
+                .filter(a => Array.isArray(a.embedding))
+                .map(a => ({ articleId: a.id, embedding: a.embedding as number[] })),
+            CANDIDATE_GROUP_THRESHOLD
+        );
+        console.log(`[Debug] 候选组 ${candidateGroups.length} 个`);
+
         const validation = await aiServices.aiWorker.validateStory(
             clusteringResult,
+            candidateGroups,
             articlesData,
             {
-                useAI: true,
                 aiOptions: {
                     provider: 'google-ai-studio',
                     model: 'gemini-2.0-flash'

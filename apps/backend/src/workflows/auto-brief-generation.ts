@@ -8,6 +8,8 @@ import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
 import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
+import { buildCandidateGroups } from '../lib/core/candidate-grouping';
+import { CANDIDATE_GROUP_THRESHOLD } from '../lib/core/constants';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -887,15 +889,36 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           };
         });
         
-        console.log(`[AutoBrief] 调用真正的AI Worker故事验证服务，处理 ${clusteringResult.clusters.length} 个聚类`);
-        console.log(`[AutoBrief] 发送数据：聚类结果包含 ${clusteringResult.clusters.length} 个聚类，文章数据包含 ${articlesData.length} 个条目`);
+        // 簇内几何候选分组(全链 cos≥CANDIDATE_GROUP_THRESHOLD)。2026-08-21 起 story-validation
+        // 的判定单位由「整簇」改为「候选组」——原因与实测见 lib/core/candidate-grouping.ts。
+        //
+        // 为什么算在**步内**而不是单开一步：向量是 384 维 float，1254 篇约 3.7MB，
+        // 跨 step 传会撞 CF Workflow 单 step ~1MB 输出上限（与 embeddings 卸 R2 同一个约束）。
+        // 成本上也不需要单开：全量 57 簇 1254 篇实测单线程 28ms。
+        const { groups: candidateGroups, skippedNoEmbedding } = buildCandidateGroups(
+          clusteringResult.clusters,
+          dataset.embeddings,
+          CANDIDATE_GROUP_THRESHOLD
+        );
+        if (skippedNoEmbedding.length > 0) {
+          // 缺向量的文章无法参与几何分组。正常应为 0（进稿侧已补算），非 0 说明补算漏了，
+          // 而它会静默表现为「这些文章没进任何故事」，故显式告警。
+          console.warn(`[AutoBrief] ${skippedNoEmbedding.length} 篇文章缺 embedding，未参与候选分组`);
+        }
+        const groupedArticles = new Set(candidateGroups.flatMap(g => g.articleIds));
+        console.log(
+          `[AutoBrief] 候选分组：${clusteringResult.clusters.length} 簇 → ${candidateGroups.length} 组，` +
+          `进组 ${groupedArticles.size}/${dataset.articles.length} 篇`
+        );
+
+        console.log(`[AutoBrief] 调用真正的AI Worker故事验证服务，处理 ${candidateGroups.length} 个候选组`);
         
         // 使用真正的AI Worker故事验证服务
         const validation = await aiServices.aiWorker.validateStory(
-          clusteringResult, // ClusteringResult 对象
+          clusteringResult, // ClusteringResult 对象（供 ai-worker 统计口径与落单留痕）
+          candidateGroups,  // CandidateGroup[] 判定单位
           articlesData,     // MinimalArticleInfo[] 数组
           {
-            useAI: true,    // 启用AI验证
             // 不传 aiOptions：provider/model 由 ai-worker 的 PHASE_DEFAULTS 决定（调 LLM 的单一
             // 配置入口）。跨 service 传 provider/model 等于在网线这头开第二个真源——2026-08-12
             // 迁 Workers AI 时正是这里把 story_validation 拽回已失效的 DashScope，15 个聚类
@@ -945,7 +968,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           await db.insert($brief_stories).values(
             validatedStories.stories.map((s: any, i: number) => ({
               workflow_id: workflowId,
-              cluster_id: s.clusterId ?? i + 1,
+              // 2026-08-21：Story 现在带真实来源簇。此前 Story 上根本没有 clusterId 字段，
+              // 这里恒走 `i + 1` 兜底 → 落库的 cluster_id 实为**故事序号**，与聚类快照对不上
+              // （08-20 生产抽查 7 条全错）。i 保留只为极端兜底，正常不再触发。
+              cluster_id: typeof s.clusterId === 'number' ? s.clusterId : i + 1,
               title: s.title ?? null,
               importance: typeof s.importance === 'number' ? s.importance : null,
               article_count: Array.isArray(s.articleIds) ? s.articleIds.length : null,

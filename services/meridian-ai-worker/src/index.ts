@@ -325,7 +325,16 @@ app.post('/meridian/story/validate', async (c) => {
       }, 400)
     }
 
-    console.log(`[Story Validation] 验证 ${body.clusteringResult.clusters.length} 个聚类，包含 ${body.articlesData.length} 个文章数据`)
+    // 候选组由 backend 在 story-validation 步内算好传入（几何见 lib/core/candidate-grouping.ts）。
+    // 2026-08-21 起它是判定单位；缺失即无法工作，显式 400 而不是静默按空处理。
+    if (!body.candidateGroups || !Array.isArray(body.candidateGroups)) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'candidateGroups array is required'
+      }, 400)
+    }
+
+    console.log(`[Story Validation] 验证 ${body.clusteringResult.clusters.length} 个聚类 / ${body.candidateGroups.length} 个候选组，包含 ${body.articlesData.length} 个文章数据`)
 
     // 验证空聚类情况 - 保持原有的400错误响应
     if (!body.clusteringResult.clusters.length) {
@@ -339,8 +348,8 @@ app.post('/meridian/story/validate', async (c) => {
     const storyValidationService = new StoryValidationService(c.env, readTraceContext(c.req.raw))
     const result = await storyValidationService.validateStories({
       clusteringResult: body.clusteringResult,
+      candidateGroups: body.candidateGroups,
       articlesData: body.articlesData,
-      useAI: body.useAI,
       options: body.options
     })
     

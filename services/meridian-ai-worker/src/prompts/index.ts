@@ -4,7 +4,7 @@
  */
 
 export { getArticleAnalysisPrompt, articleAnalysisSchema } from './articleAnalysis'
-export { getStoryValidationPrompt } from './storyValidation'
+export { getStoryJudgePrompt, getStoryVerifyPrompt } from './storyValidation'
 export { getBriefGenerationSystemPrompt, getBriefGenerationPrompt, getBriefTitlePrompt, getBriefCoverageReconciliationPrompt } from './briefGeneration'
 export { getTldrGenerationPrompt } from './tldrGeneration'
 export { getIntelligenceAnalysisPrompt } from './intelligenceAnalysis' 

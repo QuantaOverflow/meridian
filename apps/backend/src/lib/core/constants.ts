@@ -62,6 +62,17 @@ export const BRIEF_CLUSTERING_OPTIONS = {
   },
 } as const;
 
+// 簇内候选分组阈值(全链余弦)。story-validation 的判定单位由「整簇」改为「几何候选组」后引入,
+// 见 lib/core/candidate-grouping.ts 的算法说明。
+//
+// 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径(scripts/eval/story-validation/rubric.md)复验:
+//   0.85(原型初值,随手定) 严精度 58-60%,配复核后 85-87%,前15精度 33-53%
+//   0.87                  严精度 70%
+//   0.90                  严精度 76-84%,配复核后 89-92%,**前15精度两天都是 93.3%**
+//   0.91 起掉崖:一次丢 4 个人工确认的真事件(4 篇的 Face the Nation 当期综述、3 篇的官员回应等)
+// 上限卡在 0.90 的理由是「0.91 开始丢真事件」,不是「组太大」——0.90 下组中位 2 篇、最大 16 篇。
+export const CANDIDATE_GROUP_THRESHOLD = 0.9;
+
 // 每日定时简报参数。取值来自 2026-08-13 生产实测(report 54/55,端到端 664-897 秒)。
 export const CRON_BRIEF_PARAMS = {
   TIME_RANGE_DAYS: 2, // 覆盖前一天全天,与 1 天窗口相比留出抓取延迟的冗余

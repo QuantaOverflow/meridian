@@ -141,14 +141,15 @@ export class AIWorkerService {
   /**
    * 验证故事 (第一阶段LLM分析) - 符合新数据契约
    */
-  async validateStory(clusteringResult: any, articlesData: any, options?: any): Promise<ServiceResult<ValidatedStoriesData>> {
+  async validateStory(clusteringResult: any, candidateGroups: any, articlesData: any, options?: any): Promise<ServiceResult<ValidatedStoriesData>> {
     const request = new Request(`${this.baseUrl}/meridian/story/validate`, {
       method: 'POST',
       headers: this.buildHeaders(),
       body: JSON.stringify({
         clusteringResult,
+        // 几何候选组（backend lib/core/candidate-grouping.ts 算好传入）。2026-08-21 起是判定单位。
+        candidateGroups,
         articlesData,
-        useAI: options?.useAI ?? true,
         // 不垫 provider/model 默认：由 ai-worker 的 PHASE_DEFAULTS 决定。垫在这里等于
         // 跨 service 开第二个配置真源，换 provider 时会把下游拽回旧 provider。
         options: options?.aiOptions

@@ -959,13 +959,19 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         rejectedClusters: validatedStories.rejectedClusters,
       });
 
-      // 观测性：写入 brief_stories + cluster_rejections。delete+insert 保证 step 重试时幂等
-      await step.do('persist:brief_stories_and_rejections', dbStepConfig, async () => {
+      // 观测性：写入 brief_stories + cluster_rejections。delete+insert 保证 step 重试时幂等。
+      //
+      // 返回插入行的自增主键(按 validatedStories.stories 顺序)：下游 mark_selected_for_intel
+      // 要精确标记「被选中送情报分析的那几条」，而 cluster_id 在 2026-08-21 换架构后**不再唯一**
+      // （一个簇现在会产出多个故事），按 cluster_id 更新会把该簇的全部故事一并标成已选中。
+      // 换架构前 Story 上没有 clusterId、落库恒走 `i + 1`，与故事序号一一对应，是歪打正着。
+      const briefStoryRowIds = await step.do('persist:brief_stories_and_rejections', dbStepConfig, async (): Promise<number[]> => {
         const db = getDb(this.env.HYPERDRIVE);
         await db.delete($brief_stories).where(eq($brief_stories.workflow_id, workflowId));
         await db.delete($cluster_rejections).where(eq($cluster_rejections.workflow_id, workflowId));
+        let insertedIds: number[] = [];
         if (validatedStories.stories.length > 0) {
-          await db.insert($brief_stories).values(
+          const inserted = await db.insert($brief_stories).values(
             validatedStories.stories.map((s: any, i: number) => ({
               workflow_id: workflowId,
               // 2026-08-21：Story 现在带真实来源簇。此前 Story 上根本没有 clusterId 字段，
@@ -978,7 +984,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               article_ids: Array.isArray(s.articleIds) ? s.articleIds : null,
               selected_for_intel: false,
             }))
-          );
+          ).returning({ id: $brief_stories.id });
+          insertedIds = inserted.map(r => r.id);
         }
         if (validatedStories.rejectedClusters.length > 0) {
           await db.insert($cluster_rejections).values(
@@ -993,6 +1000,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             }))
           );
         }
+        return insertedIds;
       });
 
       // =====================================================================
@@ -1213,17 +1221,27 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 观测性：标记被选中跑 intel 的 stories
       await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
-        const selectedClusterIds = storiesForIntelligence
-          .map((s: any, i: number) => s.clusterId ?? (validatedStories.stories.indexOf(s) + 1))
-          .filter((id: any) => id != null);
-        if (selectedClusterIds.length > 0) {
+        // 按 brief_stories 的自增主键精确标记。**不能按 cluster_id**：换架构后一个簇会产出
+        // 多个故事、共享同一个 cluster_id，按它更新会把整簇的故事都标成已选中，
+        // 让 selected_for_intel 虚高（下游观测与 eval 都读这个字段）。
+        const selectedRowIds = storiesForIntelligence
+          .map((s: any) => briefStoryRowIds[validatedStories.stories.indexOf(s)])
+          .filter((id: any) => typeof id === 'number');
+        if (selectedRowIds.length !== storiesForIntelligence.length) {
+          // 对不上说明插入顺序与 stories 顺序错位，标记会漏/错。宁可显式告警也不静默少标。
+          console.warn(
+            `[AutoBrief] mark_selected_for_intel: ${storiesForIntelligence.length} 个选中故事只解析出 ` +
+            `${selectedRowIds.length} 个 brief_stories 主键，selected_for_intel 可能不完整`
+          );
+        }
+        if (selectedRowIds.length > 0) {
           await db
             .update($brief_stories)
             .set({ selected_for_intel: true })
             .where(
               and(
                 eq($brief_stories.workflow_id, workflowId),
-                inArray($brief_stories.cluster_id, selectedClusterIds)
+                inArray($brief_stories.id, selectedRowIds)
               )
             );
         }

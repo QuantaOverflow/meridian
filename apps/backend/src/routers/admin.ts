@@ -230,7 +230,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       
       // 业务参数
       minImportance = 3, // 降低默认重要性阈值，增加故事识别率
-      maxStoriesToGenerate = 15,
+      maxStoriesToGenerate = 25,
       storyMinImportance = 0.1,
       
       // 高级参数（可选）

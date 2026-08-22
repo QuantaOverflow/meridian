@@ -88,7 +88,14 @@ export const CRON_BRIEF_PARAMS = {
   // WorkflowInternalError 硬失败(见 CLAUDE.md 已知坑),不值得为余量赌 80% 占用。
   ARTICLE_LIMIT: 1500,
   MIN_IMPORTANCE: 3,
-  MAX_STORIES_TO_GENERATE: 15,
+  // 15 → 25(2026-08-22)。旧值卡住的是**召回**不是成本:08-20 全天 154 个候选故事里约 137 个
+  // 是真事件,15 的帽子把约 123 个真故事挡在简报外,损失量级压过管线其余所有环节之和。
+  // 名次段实测(人工严口径):1-15 精度 93%/imp 中位 7,16-20 100%/6,21-25 100%/6,
+  // 26-30 100%/5,31 名后 imp 掉到 4 以下——内容价值的悬崖在 30 名附近,不在 15。
+  // 上限按阅读预算定:08-21 新架构实测 1334 字符/条,25 条约 3.3 万字符 ≈ 5500 词。
+  // 成本:情报分析每故事一次 LLM,并发 6 下 15 条约 3 分钟,25 条约 5 分钟(该步预算 30 分钟)。
+  // 不撞 CF Workflow 单 step ~1MB 上限:情报报告已卸 R2、step 只回传 key(见 auto-brief-generation.ts)。
+  MAX_STORIES_TO_GENERATE: 25,
   STORY_MIN_IMPORTANCE: 0.1,
   // 判定"上一次还在跑"的时间窗。单次实测 11-15 分钟,取 2 小时;
   // 超出此窗的 RUNNING 视为崩溃遗留(workflow 挂掉时不会回写终态),否则 cron 会被永久卡死。

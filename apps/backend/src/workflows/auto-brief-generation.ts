@@ -260,7 +260,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       articleLimit = 30, // 降低默认限制以避免SQLITE_TOOBIG错误
       timeRangeDays = 2,
       clusteringOptions,
-      maxStoriesToGenerate = 15,
+      maxStoriesToGenerate = 25,
       storyMinImportance = 0.1,
       skipFaithfulnessGate = false
     } = event.payload;

@@ -21,6 +21,9 @@ import { readFileSync } from 'node:fs';
 
 const AI_WORKER_URL = process.env.AI_WORKER_URL || 'https://meridian-ai-worker.swj299792458.workers.dev';
 const RUNS = Number(process.env.RUNS ?? '3');
+// 端点默认 code_only（线上传感器形态，LLM 判官旁路）；离线批跑要量 LLM 判官通道时传 MODE=full。
+// 不传则沿用端点默认，与线上一致。
+const MODE = process.env.MODE as 'code_only' | 'full' | undefined;
 
 interface BriefCase {
   brief_id: string;
@@ -44,7 +47,7 @@ async function runGate(c: BriefCase): Promise<GateVerdict | null> {
       const resp = await fetch(`${AI_WORKER_URL}/meridian/faithfulness-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sources: c.sources, brief: c.brief }),
+        body: JSON.stringify({ sources: c.sources, brief: c.brief, ...(MODE ? { options: { mode: MODE } } : {}) }),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = (await resp.json()) as { success?: boolean; data?: GateVerdict };
@@ -75,7 +78,7 @@ async function main() {
     process.exit(1);
   }
   const briefs = loadBriefs(path);
-  console.log(`[run-level-eval] ${briefs.length} briefs × ${RUNS} runs，门=${AI_WORKER_URL}\n`);
+  console.log(`[run-level-eval] ${briefs.length} briefs × ${RUNS} runs，mode=${MODE ?? '端点默认(code_only)'}，门=${AI_WORKER_URL}\n`);
 
   let falseBlock = 0; // should_block=false 但门拦了
   let missed = 0; // should_block=true 但门放了
@@ -83,8 +86,10 @@ async function main() {
   let unstable = 0;
 
   for (const c of briefs) {
-    const verdicts: (GateVerdict | null)[] = [];
-    for (let k = 0; k < RUNS; k++) verdicts.push(await runGate(c));
+    // 多跑并行：RUNS 次调用彼此独立，串行只是白等（判官单次 60-120s）。
+    const verdicts: (GateVerdict | null)[] = await Promise.all(
+      Array.from({ length: RUNS }, () => runGate(c))
+    );
     const ok = verdicts.filter((v): v is GateVerdict => v !== null);
     if (ok.length === 0) {
       console.log(`${c.brief_id}: 全部 gate 调用失败，跳过`);
@@ -109,8 +114,11 @@ async function main() {
           : majorityBlock
             ? ' 🔴误拦'
             : ' 🟡漏判';
+    // A/B 对拍要看的是连续量（unsupported 占比、可核 claim 总数），不是只看拦不拦的二值判决：
+    // 两条 brief 可能都 pass，但 unsupported_rate 差一倍。只打 block 会把这个差别丢掉。
+    const unsup = ok.map((v) => `${v.genuine_unsupported}/${v.factual_claims}`);
     console.log(
-      `${c.brief_id}: block ${blockCount}/${ok.length}${stable ? '' : ' ⚠️不稳'} | contra=[${contra.join(',')}] | maj=${majorityBlock ? 'BLOCK' : 'pass'}${goldStr}${verdictMark}`
+      `${c.brief_id}: block ${blockCount}/${ok.length}${stable ? '' : ' ⚠️不稳'} | contra=[${contra.join(',')}] | unsup=[${unsup.join(' ')}] | maj=${majorityBlock ? 'BLOCK' : 'pass'}${goldStr}${verdictMark}`
     );
     for (const f of flaggedContra) {
       console.log(`    contradicted: ${f.claim.text.slice(0, 70)} :: ${(f.reason || '').slice(0, 80)}`);

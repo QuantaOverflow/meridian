@@ -36,7 +36,7 @@ Your entire output must consist **only** of a list of strings, one string per id
 
 **Instructions & Constraints:**
 
-*   **Process Entire Brief:** Read and analyze the *whole* brief to identify all distinct major stories. Stories under \`<u>**title**</u>\` headings are primary candidates, but also consider distinct, significant themes from other sections (e.g., a recurring topic in 'Global Landscape').
+*   **Process Entire Brief:** Read and analyze the *whole* brief to identify all distinct major stories. Stories under \`<u>**title**</u>\` headings are primary candidates, but also consider distinct, significant themes appearing elsewhere — the brief's \`##\` section headings are derived per-brief, so do not expect any fixed set of section names.
 *   **One Line Per Story:** Each identified story must correspond to exactly one line in the output, following the specified format.
 *   **Strict Conciseness:** Adhere strictly to the format and the word limit for the \`[Core Issue Snippet]\`. This is critical.
 *   **Focus on Coverage:** The goal is to capture *what was discussed*, not the full nuance or analysis.

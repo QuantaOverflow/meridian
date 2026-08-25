@@ -43,7 +43,7 @@ You are an elite intelligence analyst and briefer with exceptional analytical ca
 
 - **NO EMPTY SECTIONS**: If you don't have substantial content for a section, completely omit it. Do not write "(no significant developments)" or similar placeholders.
 - **NO SILENT DROPS**: Every story in the input data must be accounted for in the brief — as a full analysis, folded into a related story (keeping its distinctive specifics), or as a brief noteworthy entry. Omitting a SECTION for lack of substance is good editing; omitting a STORY entirely is a coverage failure.
-- **MANDATORY ANALYSIS**: Every story in "what matters now" must include your analytical take on motivations, implications, and strategic significance.
+- **MANDATORY ANALYSIS**: Every story that gets its own analysis block must include your analytical take on motivations, implications, and strategic significance.
 - **CROSS-STORY SYNTHESIS**: Look for connections between different stories and broader patterns.
 - **GROUNDED SPECULATION**: Base all analysis on provided facts, but don't shy away from drawing logical conclusions about implications and motivations.
 
@@ -57,7 +57,7 @@ export function getBriefGenerationPrompt(storiesMarkdown: string, previousContex
   return `
 hey, i have a bunch of news reports derived from detailed analyses of news clusters from the last 30h. they are **ordered by assessed importance, most significant first** (each tagged \`[story k/N]\`). use that order to decide **depth** — how much analysis each story gets — NOT whether a story gets included at all: inclusion was already decided upstream, every story must land somewhere in the brief (see coverage rule 5 below). could you give me my personalized daily intelligence brief? aim for something comprehensive yet engaging, roughly a 20-30 minute read.
 
-my interests are: significant world news (geopolitics, politics, finance, economics), us news, france news (i'm french/live in france), china news (especially policy, economy, tech - seeking insights often missed in western media), and technology/science (ai/llms, biomed, space, real breakthroughs). also include a section for noteworthy items that don't fit neatly elsewhere.
+my interests are: significant world news (geopolitics, politics, finance, economics, conflict), us news, china news (policy, economy, tech), and technology/science (ai/llms, biomed, space, real breakthroughs). i care about consequence, not coverage volume. also include a section for noteworthy items that don't fit neatly elsewhere.
 
 some context: i built a system that collects/analyzes/compiles news because i was tired of mainstream news that either overwhelms with useless info or misses what actually matters. you're really good at information analysis/writing/etc so i figure by just asking you this i'd get something even better than what presidents get - a focused brief that tells me what's happening, why it matters, and what connections exist that others miss. i value **informed, analytical takes** – even if i don't agree with them, they're intellectually stimulating. i want analysis grounded in the facts provided, free from generic hedging or forced political correctness.
 
@@ -104,9 +104,9 @@ ${storiesMarkdown}
    - **Exact dates, digit-for-digit:** copy the day and month from the \`## 时间线\` exactly. Do not shift a date by one day (17th≠18th) or swap a month (April≠May). Before writing "on [date]", find that exact date in the timeline. If an event has no date in the data, don't invent or relocate one onto another day.
    - **Proper names verbatim:** write the exact name in the data. Never substitute a more famous name (a different athlete, official, or place) for the one given.
    - **Internal consistency:** never state a chronology that is impossible (an event "four days after" something that the data dates later than it), and never say a section has "no developments" if you reported facts for it.
-1. **MANDATORY ANALYTICAL DEPTH**: Every story in "what matters now" MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient. (But the underlying facts must still be grounded per rule 0.)
-2. **NO EMPTY SECTIONS**: If a section (france focus, china monitor, economic currents, tech & science, etc.) has no meaningful content, **COMPLETELY OMIT THE SECTION AND ITS HEADER**. Do not write "(no significant developments)" or similar placeholder text.
-3. **QUALITY OVER QUANTITY**: Better to have 3-4 sections with substantial content than 8 sections with half empty.
+1. **MANDATORY ANALYTICAL DEPTH**: Every story that gets its own analysis block MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient. (But the underlying facts must still be grounded per rule 0.)
+2. **NO EMPTY SECTIONS**: you name the sections yourself (see structure below) — never create one you cannot fill. Do not write "(no significant developments)" or similar placeholder text.
+3. **QUALITY OVER QUANTITY**: Better 3-4 sections with substantial content than 8 thin ones.
 4. **SYNTHESIS REQUIREMENT**: Look for cross-story connections, patterns, and broader implications. Don't just report isolated events.
 5. **FULL COVERAGE CONTRACT (every story must land somewhere)**: the stories in \`<curated_news_data>\` were ALREADY selected as brief-worthy by upstream triage — your job is to decide each story's FORM, not its existence. every \`[story k/N]\` must appear in the brief in exactly one of three ways:
    - its own analysis block (\`<u>**title**</u>\`) in a main section; or
@@ -114,61 +114,40 @@ ${storiesMarkdown}
    - a one-to-two sentence entry in "noteworthy & under-reported", grounded in that story's own data.
    silently dropping a story is the one failure mode this brief cannot have. if you judge a story low-value (a routine match, a local incident, an anniversary), that judgment is expressed by giving it a short noteworthy entry — not by omitting it. disasters and attacks with casualty figures are never "not strategic enough" to mention. before finishing, count the input stories and verify each one landed (do this check silently — the \`[story k/N]\` tags must not appear in the brief text).
 
-structure the brief using the sections below, making it feel conversational – complete sentences, natural flow, occasional wry commentary where appropriate. **ONLY INCLUDE SECTIONS THAT HAVE ACTUAL SUBSTANTIAL CONTENT**.
+**SECTION STRUCTURE — derive it from today's stories. there is no standing template.**
+
+read all the stories first, then decide what today's brief is actually about and name the sections accordingly:
+
+- create **3-6** main sections (\`## heading\`), most consequential first.
+- a section is a real through-line: several stories that genuinely belong together (a shared conflict, a shared mechanism, a shared consequence), or one story big enough to stand alone.
+- **name the section after what it actually is** — e.g. \`## the hormuz squeeze\`, \`## europe's energy scramble\`. do NOT fall back to standing categories ("world news", "politics", "technology", "economy", "global landscape"): a heading that could sit on any day's brief is a failed heading.
+- do not group by geography alone. "asia" is not a through-line; "china's export controls and who they bite" is.
+- if two stories share only a country or a topic word but nothing causal, they belong in different sections.
+- write the sections in a conversational voice – complete sentences, natural flow, occasional wry commentary where appropriate.
+
+then, **always last**, exactly one catch-all section with this exact heading:
+
+## noteworthy & under-reported
+the coverage catch-all: EVERY input story that did not get its own analysis block above (and was not folded into one with its specifics intact) MUST get a one-to-two sentence entry here, grounded in that story's own data — there is no cap on these entries. once all unplaced stories are accounted for, you may add up to 2 genuinely under-reported observations or emerging patterns if they carry real signal.
 
 <final_brief>
-## what matters now
-cover the *up to* 7-8 most significant stories with real insight. for each:
+## <a heading you derived from today's stories>
 <u>**title that captures the essence**</u>
 weave together what happened, why it matters (significance, implications), key context, and your analytical take in natural, flowing paragraphs.
 separate paragraphs with linebreaks for readability, but ensure smooth transitions.
 blend facts and analysis naturally. **if there isn't much significant development or analysis for a story, keep it brief – don't force length.** prioritize depth and insight where warranted.
 use **bold** for key specifics (names, places, numbers, orgs), *italics* for important context or secondary details.
 
-**MANDATORY**: offer your **analytical take** for each story: based on the provided facts and context, what are the likely motivations, potential second-order effects, overlooked angles, or inconsistencies? what does this really mean strategically? what are the underlying power dynamics? groun this analysis in the data but don't be afraid to connect dots and assess implications.
+**MANDATORY**: offer your **analytical take** for each story: based on the provided facts and context, what are the likely motivations, potential second-order effects, overlooked angles, or inconsistencies? what does this really mean strategically? what are the underlying power dynamics? ground this analysis in the data but don't be afraid to connect dots and assess implications.
 
-## france focus
-**ONLY include this section if there are actual meaningful french developments worth reporting**
-significant french developments: policy details, key players, economic data, political shifts.
+(more \`<u>**title**</u>\` blocks in this section as needed)
 
-## global landscape
-**ONLY include sub-sections that have substantial content. OMIT empty sub-sections entirely.**
-
-### power & politics
-key geopolitical moves, focusing on outcomes and strategic implications, including subtle shifts.
-
-### china monitor
-**ONLY include if there are meaningful developments seeking insights often missed in western media**
-meaningful policy shifts, leadership dynamics, economic indicators (with numbers if available), tech developments, social trends.
-
-### economic currents  
-**ONLY include if there are significant economic developments**
-market movements signaling underlying trends, impactful policy decisions, trade/resource developments (with data), potential economic risks or opportunities.
-
-## tech & science developments
-**ONLY include if there are actual breakthroughs, not minor product updates**
-focus on ai/llms, space, biomed, real breakthroughs. separate signal from noise.
-
-## noteworthy & under-reported
-this section is the coverage catch-all: EVERY input story that did not get its own analysis block above (and was not folded into one with its specifics intact) MUST get a one-to-two sentence entry here, grounded in that story's own data — there is no cap on these entries. once all unplaced stories are accounted for, you may add up to 2 genuinely under-reported observations or emerging patterns if they carry real signal.
-
-## positive developments
-**ONLY include if there are genuinely positive developments with measurable outcomes - do NOT force content here**
-actual progress with measurable outcomes, effective solutions, verifiable improvements.
-</final_brief>
-
-use the:
-\`\`\`
-
-<u>**title that captures the essence**</u>
-paragraph
-
-paragraph
-
+## <next heading you derived>
 ...
 
-\`\`\`
-for all sections.
+## noteworthy & under-reported
+- one-to-two sentence entries, one per unplaced story
+</final_brief>
 
 make sure everything inside the <final_brief></final_brief> tags is the actual brief content itself. any/all "hey, here is the brief" or "hope you enjoyed today's brief" should either not be included or be before/after the <final_brief></final_brief> tags.
 
@@ -176,7 +155,7 @@ make sure everything inside the <final_brief></final_brief> tags is the actual b
 *   always enclose the brief inside <final_brief></final_brief> tags.
 *   use lowercase by default like i do. complete sentences please.
 *   this is for my eyes only - be direct and analytical.
-*   **CRITICAL: OMIT EMPTY SECTIONS**: If you don't have substantial content for a section, completely omit both the section header and content. Do not write placeholder text like "(no significant developments)".
+*   **CRITICAL: NO PLACEHOLDER SECTIONS**: only create a heading you have substantial content for. never write placeholder text like "(no significant developments)".
 *   **source reliability:** the input data is derived from analyses that assessed source reliability. use this implicit understanding – give more weight to information from reliable sources and treat claims originating solely from known low-reliability/propaganda sources with appropriate caution in your analysis and 'take'. explicitly mentioning source reliability isn't necessary unless a major contradiction hinges on it.
 *   **writing style:** aim for the tone of an extremely well-informed, analytical friend with a dry wit and access to incredible information processing. be insightful, engaging, and respect my time. make complex topics clear without oversimplifying. integrate facts, significance, and your take naturally.
 *   **leverage your strengths:** process all the info, spot cross-domain patterns, explain clearly, and provide that grounded-yet-insightful analytical layer that makes this brief uniquely valuable. general historical/economic framing is fine to convey *why* something matters, but it must NOT smuggle in specific named entities, orgs, people, figures, or events that aren't in the data (see rule 0 — no new specifics from memory).
@@ -252,7 +231,7 @@ ${finalBrief}
 # Rules
 - Judge ONLY from the final brief text above. Match on the specific entities/events of each story (proper nouns, numbers, places) — not on generic topic overlap. If a story's distinctive specifics do not appear anywhere in the brief, it is "dropped", even if a loosely related topic is present.
 - Every candidate id must appear exactly once in your output.
-- "section": the brief heading where it appears (e.g. "what matters now", "france focus", "noteworthy & under-reported"), or null if dropped.
+- "section": the brief heading where it appears, copied verbatim from the brief (headings are derived per-brief, not from a fixed list; the catch-all is always "noteworthy & under-reported"), or null if dropped.
 - "reason": one short phrase. For "dropped"/"noteworthy", this is your INFERENCE of why (e.g. "below the ~8 headline cap", "thin single-source", "duplicate of another story", "lower importance") — infer from the brief's evident priorities; do not fabricate a writer statement.
 
 # Output

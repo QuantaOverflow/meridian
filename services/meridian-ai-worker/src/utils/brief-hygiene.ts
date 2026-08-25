@@ -16,7 +16,7 @@
 
 export interface HygieneFinding {
   kind: 'proper_noun_variant' | 'duplicate_sentence' | 'meta_label_leak' | 'missing_section'
-    | 'story_tag_leak' | 'broken_punctuation' | 'truncated_text';
+    | 'story_tag_leak' | 'broken_punctuation' | 'truncated_text' | 'catch_all_anomaly';
   detail: string;
   /** 同一处缺陷被多条嵌套短语命中时的归并键（仅 proper_noun_variant 用） */
   dedupeKey?: string;
@@ -267,10 +267,30 @@ function findMetaCommentary(brief: string): HygieneFinding[] {
 }
 
 function findMissingSections(brief: string): HygieneFinding[] {
-  // 只查唯一的必需区：prompt 里其余各节都明确「没内容就整节省略」，缺失是合法编辑决策。
-  return /^##\s*what matters now/im.test(brief)
+  // 唯一的必需区是 catch-all。主线章节自 2026-08 起由模型依当天内容自行命名（没有固定
+  // 模板），其余各节 prompt 也明确「没内容就整节省略」——缺失是合法编辑决策。
+  // 原先查的是 "## what matters now"：那是已删除的固定模板里的标题，留着会 100% 命中、
+  // 把整个卫生传感器淹掉（本条即改此）。
+  return CATCH_ALL_RE.test(brief)
     ? []
-    : [{ kind: 'missing_section', detail: '缺主区标题 "## what matters now"' }];
+    : [{ kind: 'missing_section', detail: '缺 catch-all 区标题 "## noteworthy & under-reported"' }];
+}
+
+// coverageRepair 用 /^##\s*noteworthy[^\n]*$/im 定位 catch-all 做程序化补录。模型若把标题
+// 写成前缀变体（"## under-reported & noteworthy"），该正则匹配不到 → 走建区分支 → 一篇里
+// 出现两个 catch-all，而且补录内容进的是新建那个。这是 prompt 与代码之间的口头协定，
+// 没有任何校验；prompt 放开章节命名后风险变高，故在此留一个能真正触发的传感器。
+const CATCH_ALL_RE = /^##\s*noteworthy[^\n]*$/im;
+
+function findCatchAllAnomalies(brief: string): HygieneFinding[] {
+  const headings = brief.split(/\r?\n/).filter((l) => /^##\s/.test(l) && /noteworthy|under[- ]reported/i.test(l));
+  if (headings.length <= 1) return [];
+  return [
+    {
+      kind: 'catch_all_anomaly',
+      detail: `catch-all 区出现 ${headings.length} 个: ${headings.map((h) => h.trim()).join(' | ')}`,
+    },
+  ];
 }
 
 /**
@@ -280,6 +300,7 @@ function findMissingSections(brief: string): HygieneFinding[] {
 export function checkBriefHygiene(brief: string, sourceText: string): HygieneFinding[] {
   return [
     ...findMissingSections(brief),
+    ...findCatchAllAnomalies(brief),
     ...findMetaLabelLeaks(brief),
     ...findMetaCommentary(brief),
     ...findBrokenPunctuation(brief),

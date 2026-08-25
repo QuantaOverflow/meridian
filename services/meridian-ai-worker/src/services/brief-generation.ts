@@ -229,6 +229,22 @@ class BriefErrorHandler {
   }
 }
 
+// 故事标题的 <u>**title**</u> 写法不是审美选择：前端目录（useTableOfContents.ts）的选择器
+// 是 'h2, h3, u > strong'，靠 <strong> 认故事标题。模型只写 <u>title</u> 时 markdown 照常
+// 渲染出下划线、正文看不出任何异常，但该故事进不了目录——静默失效，无报错、typecheck 查不到。
+// 2026-08-22 A/B 实测：旧 prompt 8 个故事块 0/8 带 **，那份简报的目录里一条故事都没有。
+// 只认整行就是一个 <u>…</u> 的形态（实测两版简报的 <u> 全部独占一行、且从不出现在 noteworthy 区），
+// 段落内联的 <u> 不碰。纯格式补齐，不改一个字。
+export function normalizeStoryTitleMarkers(content: string): { content: string; fixed: number } {
+  let fixed = 0;
+  const out = content.replace(/^<u>(.+?)<\/u>[ \t]*$/gm, (whole, inner: string) => {
+    if (inner.includes('**')) return whole;
+    fixed++;
+    return `<u>**${inner.trim()}**</u>`;
+  });
+  return { content: out, fixed };
+}
+
 // factualBasis / informationGaps 声明为 string[]，但情报分析 prompt 没规定这两个字段的
 // JSON 结构，模型时而给 {description, importance} 对象；且本服务的入口（index.ts 的
 // /meridian/generate-final-brief）是把 backend 回灌的 R2 报告原样透传，不经 builder 归一化，
@@ -365,6 +381,14 @@ export class BriefGenerationService {
           coverage = repaired.coverage;
         }
 
+        // 目录锚点补齐。放在补录之后、卫生检查之前 = 作用于真正交付的那份正文。
+        // 留痕：模型多久违反一次这个软约定，是"prompt 约定该不该继续靠自觉"的唯一信号。
+        const titleMarkers = normalizeStoryTitleMarkers(content);
+        content = titleMarkers.content;
+        if (titleMarkers.fixed) {
+          console.warn(`[Brief Generation] TOC_ANCHOR_REPAIR ${titleMarkers.fixed} 个故事标题缺 ** → 已补齐（缺则前端目录里该故事消失）`);
+        }
+
         // 简报卫生检查（确定性传感器，零 LLM）。放在补录之后 = 检查真正交付给读者的那份正文。
         // 覆盖的是忠实度判官结构上抓不到的一类：专名拼写损坏、整句重复、元标签泄漏、缺主区标题。
         // 只报不改——误报由人一眼判掉，静默修正才是真风险。
@@ -379,6 +403,8 @@ export class BriefGenerationService {
           findingCount: hygiene.length,
           findings: hygiene,
           briefChars: content.length,
+          // console 保留期有限；"模型遵守 <u>**…**</u> 约定的比例随时间怎么变"要能回溯
+          tocAnchorRepairs: titleMarkers.fixed,
         });
 
         // 生成标题（基于补录后的最终正文）

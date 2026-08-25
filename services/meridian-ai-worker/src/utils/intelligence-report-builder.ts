@@ -164,9 +164,28 @@ export class IntelligenceReportBuilder {
     return [];
   }
 
+  // factualBasis / informationGaps 的元素形状不受控：prompt 只用散文描述这两个字段、没给
+  // JSON 结构，模型时而给字符串、时而给 {description, importance}。schema 声明的是
+  // z.array(z.string()) 但 analysis 是 any，TS 拦不住；下游 convertReportsToMarkdown 用
+  // 模板串插值 → 对象渲染成 "[object Object]"，整段"影响评估"喂给简报模型的是垃圾
+  // （2026-08-22 生产 run 实证：25 篇报告里 1 篇的 4 条全废）。这里在入库前统一压成字符串。
+  private static toStringList(list: any[]): string[] {
+    return list
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          // 观察到的对象形状是 {description, importance}；description 才是内容本体
+          const text = item.description ?? item.text ?? item.gap ?? item.fact;
+          if (typeof text === 'string') return text;
+        }
+        return '';
+      })
+      .filter((s: string) => s.trim().length > 0);
+  }
+
   private static extractFactualBasis(analysis: any): string[] {
     if (Array.isArray(analysis.factualBasis)) {
-      return analysis.factualBasis;
+      return this.toStringList(analysis.factualBasis);
     }
     // prompt 不产 factualBasis，但 timeline 就是按时序的事实发展——用它作为关键发展
     if (Array.isArray(analysis.timeline)) {
@@ -180,11 +199,11 @@ export class IntelligenceReportBuilder {
 
   private static extractInformationGaps(analysis: any): string[] {
     if (Array.isArray(analysis.informationGaps)) {
-      return analysis.informationGaps;
+      return this.toStringList(analysis.informationGaps);
     }
-    
+
     if (Array.isArray(analysis.gaps)) {
-      return analysis.gaps;
+      return this.toStringList(analysis.gaps);
     }
 
     // 与 buildEntities / extractFactualBasis 对齐：真没有就返回空，绝不注入占位符。

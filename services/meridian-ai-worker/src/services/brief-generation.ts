@@ -229,6 +229,20 @@ class BriefErrorHandler {
   }
 }
 
+// factualBasis / informationGaps 声明为 string[]，但情报分析 prompt 没规定这两个字段的
+// JSON 结构，模型时而给 {description, importance} 对象；且本服务的入口（index.ts 的
+// /meridian/generate-final-brief）是把 backend 回灌的 R2 报告原样透传，不经 builder 归一化，
+// R2 里也已存着改这之前写入的对象形状。直接模板串插值会渲染成 "[object Object]"——
+// 2026-08-22 生产 run 实证：一篇报告的「影响评估」4 条全废，整段垃圾喂进简报模型。
+function renderListItem(item: unknown): string {
+  if (typeof item === 'string') return item.trim();
+  if (item && typeof item === 'object') {
+    const text = (item as any).description ?? (item as any).text ?? (item as any).gap ?? (item as any).fact;
+    if (typeof text === 'string') return text.trim();
+  }
+  return '';
+}
+
 // ============================================================================
 // 简报生成服务
 // ============================================================================
@@ -803,7 +817,8 @@ export class BriefGenerationService {
       if (report.factualBasis?.length) {
         markdown += '## 关键发展\n';
         report.factualBasis.forEach((fact) => {
-          markdown += `* ${fact}\n`;
+          const line = renderListItem(fact);
+          if (line) markdown += `* ${line}\n`;
         });
         markdown += '\n';
       }
@@ -824,7 +839,8 @@ export class BriefGenerationService {
       if (report.informationGaps?.length) {
         markdown += '## 影响评估\n';
         report.informationGaps.forEach((gap) => {
-          markdown += `* ${gap}\n`;
+          const line = renderListItem(gap);
+          if (line) markdown += `* ${line}\n`;
         });
         markdown += '\n';
       }

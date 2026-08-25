@@ -31,7 +31,11 @@ the SOURCE that describes the SAME thing (same event, same entity, same aspect).
 
 Rules:
 - Copy values VERBATIM. Keep qualifiers attached ("over 130", "at least 11",
-  "about 600", "£50 million").
+  "about 600", "£50 million"). NEVER rewrite a word as a digit.
+- SKIP ordinals and rankings entirely — "first", "second", "third", "1st", "2nd",
+  "the first since 1986", "second-largest". They express position, not quantity,
+  and must NOT be emitted as a pair. (Writing "first" as claim_value "1" and
+  pairing it against a vote tally is exactly the failure this rule prevents.)
 - If the SOURCE expresses the time of the event as a weekday or relative day
   ("on Friday", "yesterday"), quote it AS IS in source_value, and copy the
   publication ISO timestamp of the article that sentence came from into
@@ -125,6 +129,12 @@ export function parseNumInterval(raw: string): { lo: number; hi: number } | null
   // 前导零整数（"000" 报警号/编号类）不是数量，解析成 0 会制造假冲突（线上实测：
   // "failed 000 calls" 撞 "over 300 welfare checks"）
   if (/^0\d/.test(m[1])) return null;
+  // 紧跟字母的数字是标识符不是数量（"E1 area" 约旦河西岸地名 / "Q3" / "G7" / "F-16"）。
+  // 线上实测："E1 area" 抓出 1，撞源里 "roughly 12-square-kilometer" → 假冲突。
+  // 判据取匹配位置的前一个字符（含 "字母+连字符" 如 F-16），不看整串，避免误伤 "$3.8B"。
+  const at = m.index ?? 0;
+  const before = s.slice(0, at);
+  if (/[a-z](-)?$/.test(before)) return null;
   let v = parseFloat(m[1]);
   const mag = m[2];
   if (mag === 'million' || mag === 'm') v *= 1e6;
@@ -227,13 +237,27 @@ export interface HardConflict {
   why: string;
 }
 
+// claim_value 的 verbatim 自查：ALIGN_PROMPT 要求逐字照抄，但抽取器会把词写成数字
+// （线上实测："the first contested presidential vote in 35 years" → claim_value "1"，
+// 再与同句票数 "255-to-88" 比 → 假冲突）。claim 原文里根本没有这个数，配对本身就是
+// 抽取器造的，不该进比对。只管数字通道：日期通道的 claim_value 允许规范化成 ISO。
+// 逗号/空格不计（"1,600" vs "1600"）。
+export function claimValueAppearsInClaim(claim: string, claimValue: string): boolean {
+  const core = claimValue.replace(/[,，\s]/g, '').match(/\d+(?:\.\d+)?/)?.[0];
+  if (!core) return true; // 无数字核 → parseNumInterval 本就返回 null，不会判冲突
+  return claim.replace(/[,，\s]/g, '').includes(core);
+}
+
 // 一条 claim 的抽取结果 → 硬冲突列表（只认 same_fact + high confidence）
-export function findHardConflicts(pairs: AlignPair[]): HardConflict[] {
+export function findHardConflicts(pairs: AlignPair[], claim = ''): HardConflict[] {
   const out: HardConflict[] = [];
   for (const p of pairs || []) {
     if (p.source_status !== 'same_fact' || p.confidence !== 'high' || !p.source_value) continue;
     // kind 归一化：模型会自由发挥（"money amount"/"quantity"等）——含 date 算日期，其余按数字解析
     const kind = /date/i.test(p.kind || '') ? 'date' : 'number';
+    if (kind === 'number' && claim && !claimValueAppearsInClaim(claim, p.claim_value)) {
+      continue;
+    }
     if (kind === 'number' && numbersConflict(p.claim_value, p.source_value)) {
       out.push({ pair: p, why: `number: claim "${p.claim_value}" vs source "${p.source_value}"` });
     } else if (kind === 'date' && datesConflict(p.claim_value, p.source_value, p.article_timestamp)) {
@@ -301,5 +325,5 @@ export async function extractCompareClaim(
       p.confidence = 'high';
     }
   }
-  return findHardConflicts(parsed.pairs);
+  return findHardConflicts(parsed.pairs, claim);
 }

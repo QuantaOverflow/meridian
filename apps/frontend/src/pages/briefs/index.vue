@@ -1,25 +1,13 @@
 <script setup lang="ts">
-useSEO({
-  title: 'briefs | meridian',
-  description: 'list of all briefs',
-  ogImage: `${useRuntimeConfig().public.WORKER_API}/og/default`,
-  ogUrl: `https://news.iliane.xyz/briefs`,
+// 标记全在 BriefArchive 里：Tailwind 扫不到 src/pages/，页面文件写 class 不会生成样式。
+// 见 assets/css/main.css 顶部说明。
+useSeoMeta({
+  title: '归档 | Meridian',
+  description: '检索历史每日情报简报',
+  ogLocale: 'zh_CN',
 });
-
-const { data: briefsList, error } = await useFetch('/api/briefs');
-if (error.value !== null) {
-  console.error('Failed to fetch briefs list');
-  throw createError({ statusCode: 500, statusMessage: 'Failed to fetch briefs list' });
-}
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <NuxtLink v-for="brief in briefsList" :key="brief.id" class="group" :to="`/briefs/${brief.slug}`">
-      <p class="text-xl font-bold group-hover:underline">{{ brief.title }}</p>
-      <p class="text-sm text-gray-600 mt-1">
-        {{ brief.date?.month.toLowerCase() }} {{ brief.date?.day }}, {{ brief.date?.year }}
-      </p>
-    </NuxtLink>
-  </div>
+  <BriefArchive />
 </template>

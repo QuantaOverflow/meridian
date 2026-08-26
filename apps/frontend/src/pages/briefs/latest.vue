@@ -1,24 +1,18 @@
 <script setup lang="ts">
-useSEO({
-  title: 'latest report | meridian',
-  description:
-    'a daily brief of everything important happening that i care about, with actual analysis beyond headlines',
-  ogImage: `${useRuntimeConfig().public.WORKER_API}/og/default`,
-  ogUrl: `https://news.iliane.xyz/latest`,
-});
+import type { BriefDetail } from '~/shared/types';
 
-// redirect to the latest report
-const { data: latestSlug, error } = await useFetch('/api/briefs/latest');
-if (error.value !== null) {
-  throw createError({ statusCode: 500 });
+// 兼容旧的 /briefs/latest 链接：拿到最新一期后跳到它的规范地址
+const { data: brief, error } = await useFetch<BriefDetail>('/api/briefs/latest');
+if (error.value) {
+  throw createError({ statusCode: 500, statusMessage: '简报加载失败', fatal: true });
 }
-if (latestSlug.value !== null) {
-  await navigateTo(`/briefs/${latestSlug.value}`);
+if (brief.value !== null) {
+  await navigateTo(`/briefs/${brief.value.slug}`, { redirectCode: 301 });
 }
+
+useSeoMeta({ title: '最新一期 | Meridian', ogLocale: 'zh_CN' });
 </script>
 
 <template>
-  <div>
-    <p>Redirecting to the latest report...</p>
-  </div>
+  <PageNotice text="正在跳转到最新一期…" />
 </template>

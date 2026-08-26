@@ -1,54 +1,19 @@
 <script setup lang="ts">
-import SubscriptionForm from '../components/SubscriptionForm.vue';
+import type { BriefDetail } from '~/shared/types';
 
-const { $md } = useNuxtApp();
-const config = useRuntimeConfig();
+// 首页就是最新一期。一次请求拿全，不再「先问期号再取正文」。
+// lazy: 不阻塞路由切换。默认行为是等数据回来才换页，旧页面原地不动、
+// 骨架屏永远等不到显示的时机，点击后 1-2 秒毫无反馈。
+const { data: brief, error, status } = await useFetch<BriefDetail>('/api/briefs/latest', { lazy: true });
 
-const text = ref(
-  `
-## what is this?
+if (error.value) {
+  throw createError({ statusCode: 500, statusMessage: '简报加载失败', fatal: true });
+}
 
-my personal intelligence agency. i built a daily brief of everything important happening that i care about, with *actual analysis* beyond headlines.
-
-gives me the "what", "why", and "so what" behind global events in 15min.
-
-### how it works
-- scrapes hundreds of news sources
-- clusters related articles
-- separates facts from disputed claims
-- spots bias patterns
-- runs targeted web searches to find context and fill knowledge gaps
-- identifies what actually matters
-- delivers one clean & engaging brief
-
-### why i built this
-
-always thought it was cool how presidents get those daily briefings - everything they need to know, perfectly prepared by a team of analysts. figured *why can't i have that too*?
-
-now with ai, i can. what would've required an *entire* intelligence agency now costs about *a dollar a day* in compute.
-
-this brief is tuned to what i care about (geopolitics, french news, tech, actual good news).
-
-just what's happening and why it matters. no middleman deciding what reaches me.
-`.trim()
-);
-
-useSEO({
-  title: 'home | meridian',
-  description:
-    'a daily brief of everything important happening that i care about, with actual analysis beyond headlines',
-  ogImage: `${config.public.WORKER_API}/openGraph/default`,
-  ogUrl: `https://news.iliane.xyz/`,
-});
+useBriefSeo(brief);
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="prose" v-html="$md.render(text)" />
-
-    <!-- Subscription area -->
-    <div class="mt-4 pt-8 pb-6 border-t border-gray-300">
-      <SubscriptionForm />
-    </div>
-  </div>
+  <BriefSkeleton v-if="status === 'pending' || brief === null" />
+  <BriefArticle v-else :brief="brief" />
 </template>

@@ -46,7 +46,7 @@ export function useReadingProgress() {
 
   onMounted(() => {
     scrollListener = throttledCalculateProgress;
-    window.addEventListener('scroll', scrollListener);
+    window.addEventListener('scroll', scrollListener, { passive: true });
     calculateProgress(); // Initial calculation
   });
 

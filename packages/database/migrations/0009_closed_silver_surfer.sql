@@ -1,0 +1,1 @@
+ALTER TABLE "story_clusters" ADD COLUMN "centroid" vector(384);

@@ -33,6 +33,10 @@ export interface FinalBriefData {
 export interface BriefTldrData {
   tldr: string;
 }
+
+interface BriefSummaryData {
+  tldrProse: string;
+}
 // 情报报告 / 忠实度 verdict 载荷形态大且松，保持宽松类型（D 的收益在接缝仪式收敛，
 // 非逐字段深类型化——那是另一件事）。
 export type IntelligenceReportData = Record<string, any>;
@@ -212,6 +216,22 @@ export class AIWorkerService {
     });
 
     return await this.callJson<BriefTldrData>(request);
+  }
+
+  /**
+   * 生成面向读者的散文摘要（reports.tldr_prose）
+   *
+   * 与 generateBriefTldr 是两件事：那个产出给次日模型读的机器格式记忆状态，
+   * 这个产出读者端展示的 2-3 句导语。
+   */
+  async generateBriefSummary(briefTitle: string, briefContent: string, options?: any): Promise<ServiceResult<BriefSummaryData>> {
+    const request = new Request(`${this.baseUrl}/meridian/generate-brief-summary`, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+      body: JSON.stringify({ briefTitle, briefContent, options })
+    });
+
+    return await this.callJson<BriefSummaryData>(request);
   }
 
   /**

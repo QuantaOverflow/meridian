@@ -50,6 +50,34 @@
       "when": 1787028310658,
       "tag": "0006_pink_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787701248764,
+      "tag": "0007_hesitant_boomer",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787703557480,
+      "tag": "0008_closed_may_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787707323768,
+      "tag": "0009_closed_silver_surfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787754975175,
+      "tag": "0010_huge_bug",
+      "breakpoints": true
     }
   ]
 }

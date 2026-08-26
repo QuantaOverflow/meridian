@@ -669,6 +669,50 @@ app.post('/meridian/generate-brief-tldr', async (c) => {
   }
 })
 
+app.post('/meridian/generate-brief-summary', async (c) => {
+  try {
+    const body = await c.req.json()
+
+    if (!body.briefTitle || !body.briefContent) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'briefTitle and briefContent are required'
+      }, 400)
+    }
+
+    console.log(`[TLDR Prose] 为简报生成散文摘要`)
+
+    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
+
+    const result = await briefService.generateProseTldr(body.briefTitle, body.briefContent)
+
+    if (!result.success) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'Failed to generate brief summary',
+        metadata: { details: result.error }
+      }, 500)
+    }
+
+    return c.json<APIResponse<{ tldrProse: string }>>({
+      success: true,
+      data: result.data!,
+      metadata: {
+        brief_title: body.briefTitle,
+        summary_length: result.data!.tldrProse.length
+      }
+    })
+
+  } catch (error: any) {
+    console.error('Brief summary generation error:', error)
+    return c.json<APIResponse<null>>({
+      success: false,
+      error: 'Failed to generate brief summary',
+      metadata: { details: error.message }
+    }, 500)
+  }
+})
+
 // ============================================================================
 // Faithfulness Check - 忠实度传感器（mark-only）
 // 逐句把 brief 对 source 取证 → 套门 F 判据 → 出 verdict（block 字段实为 would_block，
@@ -802,6 +846,7 @@ app.get('/meridian/status', (c) => {
           intelligence_single_analysis: '/meridian/intelligence/analyze-single-story',
           brief_generation: '/meridian/generate-final-brief',
           brief_tldr: '/meridian/generate-brief-tldr',
+          brief_summary: '/meridian/generate-brief-summary',
           // 通用端点
           chat: '/meridian/chat',
           health: '/health'

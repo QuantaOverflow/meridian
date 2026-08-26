@@ -15,6 +15,8 @@ export type LLMCallPhase =
   | 'intel_grounding_verify'
   | 'brief_generation'
   | 'tldr_generation'
+  // 读者端的散文摘要，与 tldr_generation 用途不同（那个是给次日模型读的机器格式）
+  | 'tldr_prose_generation'
   // 观测性：运行时忠实度门也走 loggedChat，单独 phase 便于和 brief 生成区分。
   | 'faithfulness_check'
   | 'faithfulness_revise'

@@ -46,6 +46,9 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   intel_grounding_verify: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 4000, skipCache: true },
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
+  // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；
+  // temperature 0 —— 摘要要可复现，不需要创造性。
+  tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_revise: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）

@@ -1,6 +1,7 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
 import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -94,6 +95,8 @@ interface BriefGenerationResultData {
   title: string;
   content: string;
   tldr: string;
+  /** 面向读者的散文摘要；生成失败时为 null（不阻断简报落库） */
+  tldrProse: string | null;
   model_author: string;
   stats: {
     total_articles: number;
@@ -1428,6 +1431,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         console.log(`[AutoBrief] 成功生成TLDR`);
 
+        // 读者端展示用的散文摘要。与上面的 TLDR 是两件事：那个是次日模型的记忆状态
+        // （`标识|状态|实体|要点` 每行一条），这个是给人读的 2-3 句导语。
+        // 刻意 best-effort：摘要只影响读者端标题下那一段的显示，为它整步失败、
+        // 丢掉一份已经生成好的简报是不划算的。失败留 null，前端自然不渲染该段。
+        const tldrProse = await aiServices.aiWorker.generateBriefSummary(brief.value.title, brief.value.content);
+        if (!tldrProse.ok) {
+          console.warn(`[AutoBrief] 散文摘要生成失败（不阻断简报）: ${tldrProse.error}`);
+        }
+
         // used_articles 此前写的是 intelligenceReports.length —— 与下一行 intelligence_analyses
         // 同一个表达式，即**故事数**，字段名却叫 articles。artifact 据此显示"9 / 150 篇入选"，
         // 而第 56 期真实入选文章是 25 篇，低报 2.8 倍；observability 的 articleUsageRate 同源同错。
@@ -1446,6 +1458,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           title: brief.value.title,
           content: brief.value.content,
           tldr: tldr.value.tldr,
+          tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null,
           model_author: 'meridian-ai-worker',
           stats: {
             total_articles: dataset.articles.length,
@@ -1602,6 +1615,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               usedArticles: briefResult.stats.used_articles,
               usedSources: usedSources,
               tldr: briefResult.tldr,
+              tldr_prose: briefResult.tldrProse,
               clustering_params: {
                 workflowId,
                 triggeredBy,
@@ -1628,6 +1642,25 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       await observability.logStep('save_brief', 'completed', { reportId });
+
+      // 读者端「事件追踪」：把今天的 story 归并到跨期线索上。
+      //
+      // best-effort：归并只影响 /stories 两个页面，简报本身已经落库了，
+      // 为它把整个工作流判失败不划算。失败时这批 story 的 story_cluster_id 留空，
+      // 下次跑（或补跑 scripts/assign-story-clusters.ts）会重新捡起来——
+      // 归并按 story_cluster_id IS NULL 选行，天然可续。
+      await step.do('persist:story_clusters', dbStepConfig, async () => {
+        try {
+          const db = getDb(this.env.HYPERDRIVE);
+          const stats = await assignStoryClustersForWorkflow(db, workflowId);
+          console.log(
+            `[AutoBrief] 事件追踪归并: 入选 ${stats.briefed} 条 → 并入 ${stats.joined} · ` +
+            `新建 ${stats.created} · 候选挂靠 ${stats.attachedCandidates}`
+          );
+        } catch (error) {
+          console.warn('[AutoBrief] 事件追踪归并失败（不阻断工作流）:', error);
+        }
+      });
 
       // 观测性：标记 brief_runs 完成状态并填充全部统计。
       // 有可对账的局部失败（intel 步选中 N 只产出 M<N）→ DEGRADED 而非 COMPLETED，

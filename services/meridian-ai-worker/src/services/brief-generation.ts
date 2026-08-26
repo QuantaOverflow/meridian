@@ -15,7 +15,7 @@ import {
   getBriefVerificationPrompt,
   getBriefCoverageReconciliationPrompt
 } from '../prompts/briefGeneration';
-import { getTldrGenerationPrompt } from '../prompts/tldrGeneration';
+import { getTldrGenerationPrompt, getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { checkBriefHygiene } from '../utils/brief-hygiene';
 import { recordSensor } from './sensor-log';
 import { CloudflareEnv, ChatResponse } from '../types';
@@ -503,6 +503,60 @@ export class BriefGenerationService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * 生成面向读者的散文摘要（reports.tldr_prose）。
+   *
+   * 与 generateTLDR 并列但用途相反：那个产出给次日模型读的机器格式，这个产出给人读的
+   * 2-3 句导语。temperature 取 0 与 generateTLDR 一致——摘要要可复现，不需要创造性。
+   */
+  async generateProseTldr(
+    briefTitle: string,
+    briefContent: string
+  ): Promise<{ success: boolean; data?: { tldrProse: string }; error?: string }> {
+    try {
+      console.log(`[TLDR Prose] 为简报生成散文摘要`);
+
+      const aiOperation = async () => {
+        const prompt = getTldrProsePrompt(briefTitle, briefContent);
+
+        const response = await this.callAI(prompt, undefined, {
+          temperature: 0,
+          phase: 'tldr_prose_generation',
+          callIndex: 0
+        });
+
+        let content = response.trim();
+        if (content.startsWith('```') && content.endsWith('```')) {
+          content = content.slice(3, -3).trim();
+        }
+        // 模型偶尔会把整段包在引号里
+        if (content.length > 1 && content.startsWith('"') && content.endsWith('"')) {
+          content = content.slice(1, -1).trim();
+        }
+
+        // 空响应必须当失败抛出去，否则会静默写一条空摘要进库，
+        // 读者端只看到标题下少了一段，没有任何报错可查。
+        if (content === '') {
+          throw new Error('模型返回空摘要');
+        }
+
+        return content;
+      };
+
+      const prose = await BriefErrorHandler.retryWithBackoff(aiOperation);
+
+      console.log(`[TLDR Prose] 散文摘要生成完成 (${prose.length} 字符)`);
+      return { success: true, data: { tldrProse: prose } };
+
+    } catch (error) {
+      console.error('[TLDR Prose] 生成失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }

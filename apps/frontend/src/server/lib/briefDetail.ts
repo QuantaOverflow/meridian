@@ -39,7 +39,11 @@ export async function loadBriefDetail(
     const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
     where = and(gte($reports.createdAt, startOfDay), lte($reports.createdAt, endOfDay));
-    reportIdExpr = sql`(SELECT id FROM reports WHERE created_at >= ${startOfDay} AND created_at <= ${endOfDay} ORDER BY created_at DESC LIMIT 1)`;
+    // 传 ISO 字符串而不是 Date 对象：裸 sql 模板没有列信息，参数原样交给 postgres.js，
+    // 在 Workers 的 nodejs_compat 下 Date 会炸成
+    // 「The "string" argument must be ... Received an instance of Date」（生产 500，本地 Node 不复现）。
+    // 上面 where 里的同一个 Date 没事，是因为 drizzle 知道 $reports.createdAt 的列类型、会替我们序列化。
+    reportIdExpr = sql`(SELECT id FROM reports WHERE created_at >= ${startOfDay.toISOString()} AND created_at <= ${endOfDay.toISOString()} ORDER BY created_at DESC LIMIT 1)`;
   } else {
     reportIdExpr = sql`(SELECT id FROM reports ORDER BY created_at DESC LIMIT 1)`;
   }

@@ -39,30 +39,34 @@ export function ensureDate(dateInput: Date | string | null | undefined): Date {
   return dateInput ? new Date(dateInput) : new Date();
 }
 
-/**
- * 数据库句柄，按连接串在进程内复用。
- *
- * 原实现每次请求都 getDb(url) 新建一个连接池。到 Neon（ap-southeast-1）的 TLS 握手
- * 实测约 2.5 秒，而握手完之后查询本身几乎免费（同一连接跑 5 条查询同样是 2.5 秒）。
- * 于是每个接口至少 2.5 秒起步，调两次 getDB 的接口翻倍到 5-7 秒，页面切换肉眼可见地卡。
- *
- * postgres.js 的返回值本来就是**长期持有**的连接池，重建它没有任何好处。
- * 按 url 做 key 而不是单例，是为了让不同连接串（如测试库）互不干扰。
- */
-const dbCache = new Map<string, ReturnType<typeof getDb>>();
+const DB_CONTEXT_KEY = '_meridianDb';
 
-export function getDB(event: H3Event) {
-  const url = useRuntimeConfig(event).database.url;
-  let db = dbCache.get(url);
-  if (db === undefined) {
-    db = getDb(url, {
-      // Neon 会主动关掉闲置连接。池子不回收的话偶尔会拿到一条已死的连接、
-      // 请求一直挂到超时——实测出现过一次 40 秒。让 postgres.js 提前回收。
-      idle_timeout: 20,
-      connect_timeout: 15,
-    });
-    dbCache.set(url, db);
-  }
+/**
+ * 数据库句柄，在**单次请求内**复用。
+ *
+ * 每次调用 getDb(url) 都新建连接池的话，到 Neon（ap-southeast-1）的 TLS 握手实测约
+ * 2.5 秒，而握手完之后查询几乎免费（同一连接跑 5 条查询同样是 2.5 秒）。调两次 getDB
+ * 的接口（briefDetail 与 briefSources 并行取数就是这种）会翻倍到 5-7 秒。所以要复用。
+ *
+ * 但复用**不能跨请求**。postgres.js 底下是一条 TCP socket，而 Cloudflare Workers 里
+ * socket 属于创建它的那次请求的 I/O 上下文；同一个 isolate 接到下一个请求再碰它，
+ * runtime 直接抛 "Cannot perform I/O on behalf of a different request"。
+ * 曾经用模块级 Map 缓存，生产上约三分之一的请求因此 500——且只在生产复现，
+ * 本地 dev 是单个 Node 进程没有这层隔离，一路绿灯。
+ *
+ * 于是缓存挂在 event.context 上：请求内共享，请求结束即随 event 一起丢弃。
+ */
+export function getDB(event: H3Event): ReturnType<typeof getDb> {
+  const cached = event.context[DB_CONTEXT_KEY] as ReturnType<typeof getDb> | undefined;
+  if (cached !== undefined) return cached;
+
+  const db = getDb(useRuntimeConfig(event).database.url, {
+    // Neon 会主动关掉闲置连接。池子不回收的话偶尔会拿到一条已死的连接、
+    // 请求一直挂到超时——实测出现过一次 40 秒。让 postgres.js 提前回收。
+    idle_timeout: 20,
+    connect_timeout: 15,
+  });
+  event.context[DB_CONTEXT_KEY] = db;
   return db;
 }
 

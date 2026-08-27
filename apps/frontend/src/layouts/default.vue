@@ -19,11 +19,12 @@ function toggleTheme() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
 }
 
-function goToSubscribe() {
-  scrollToAnchor('subscribe', 40);
-  // 滚动动画期间就聚焦会被浏览器打断滚动，等落位后再聚焦
-  window.setTimeout(() => document.getElementById('subscribe-email')?.focus(), 600);
-}
+// 订阅入口下线期间闲置，恢复订阅时一并放开
+// function goToSubscribe() {
+//   scrollToAnchor('subscribe', 40);
+//   // 滚动动画期间就聚焦会被浏览器打断滚动，等落位后再聚焦
+//   window.setTimeout(() => document.getElementById('subscribe-email')?.focus(), 600);
+// }
 </script>
 
 <template>
@@ -90,13 +91,10 @@ function goToSubscribe() {
           </button>
         </ClientOnly>
 
-        <button
-          type="button"
-          class="bg-accent hidden cursor-pointer rounded-full px-[16px] py-[7px] text-[13.5px] text-white md:block"
-          @click="goToSubscribe"
-        >
-          订阅
-        </button>
+        <!-- 订阅入口暂时下线：runtimeConfig.mailerlite 没有真实 key，
+             会落回 nuxt.config.ts 里的占位符 'your_mailerlite_key'，
+             读者点了只会静默失败。拿到 MailerLite key 后连同
+             BriefArticle.vue 里的 <SubscriptionForm /> 一起放开。 -->
       </div>
 
       <div class="absolute right-0 bottom-0 left-0 h-[2px]">
@@ -111,10 +109,7 @@ function goToSubscribe() {
 
     <footer class="border-rule-soft mx-auto max-w-[1160px] border-t px-5 py-7 text-[12.5px] text-ink3 md:px-8">
       <p>
-        由
-        <NuxtLink to="https://iliane.xyz" class="border-rule border-b">iliane</NuxtLink>
-        创建 ·
-        <NuxtLink to="https://github.com/iliane5/meridian" target="_blank" rel="noopener noreferrer" class="border-rule border-b">
+        <NuxtLink to="https://github.com/QuantaOverflow/meridian" target="_blank" rel="noopener noreferrer" class="border-rule border-b">
           在 GitHub 开源
         </NuxtLink>
       </p>

@@ -127,7 +127,9 @@ const showAllArticles = ref(false);
         </div>
       </div>
 
-      <SubscriptionForm />
+      <!-- 订阅区块暂时下线：没有 MailerLite key，提交会静默失败。
+           拿到 key 后连同 layouts/default.vue 顶栏的订阅按钮一起放开。 -->
+      <!-- <SubscriptionForm /> -->
     </div>
   </div>
 </template>

@@ -2,11 +2,7 @@
   "name": "meridian",
   "private": true,
   "license": "MIT",
-  "author": {
-    "name": "Iliane Amadou",
-    "email": "mail@iliane.xyz",
-    "url": "https://iliane.xyz"
-  },
+  "author": "QuantaOverflow",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",

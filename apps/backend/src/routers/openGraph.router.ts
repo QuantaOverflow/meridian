@@ -32,7 +32,7 @@ const getBriefOpenGraph = (opts: { title: string; date: Date; totalArticles: num
     </div>
 
     <div style="right: 42px; bottom: 42px; position: absolute; display: flex; align-items: center">
-      <span style="margin-left: 8px; font-size: 25px; font-weight: normal; letter-spacing: normal"> news.iliane.xyz </span>
+      <span style="margin-left: 8px; font-size: 25px; font-weight: normal; letter-spacing: normal"> meridian-reader.pages.dev </span>
     </div>
 
     <div

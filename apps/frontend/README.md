@@ -1,6 +1,6 @@
 # Meridian Frontend
 
-This is the Nuxt 3 frontend application for the [Meridian project](https://github.com/iliane5/meridian) (your personal AI intelligence agency). It provides the web interface for viewing generated intelligence briefs and managing sources (admin).
+This is the Nuxt 3 frontend application for the [Meridian project](https://github.com/QuantaOverflow/meridian) (your personal AI intelligence agency). It provides the web interface for viewing generated intelligence briefs and managing sources (admin).
 
 Built with:
 
@@ -33,7 +33,7 @@ cd apps/frontend
 pnpm install
 ```
 
-You'll also need to ensure the necessary environment variables are configured (likely in a `.env` file in the root or this directory, depending on your setup) – particularly for the database connection (`DATABASE_URL`) and any external API endpoints (`WORKER_API`). See the [main project README](https://github.com/iliane5/meridian#setup) for full setup details.
+You'll also need to ensure the necessary environment variables are configured (likely in a `.env` file in the root or this directory, depending on your setup) – particularly for the database connection (`DATABASE_URL`) and any external API endpoints (`WORKER_API`). See the [main project README](https://github.com/QuantaOverflow/meridian#setup) for full setup details.
 
 ## Development Server
 

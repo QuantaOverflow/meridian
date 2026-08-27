@@ -1,6 +1,6 @@
 # Meridian: Your Personal Intelligence Agency
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/iliane5/meridian/deploy-services.yaml?branch=main)](https://github.com/iliane5/meridian/actions/workflows/deploy-services.yaml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/QuantaOverflow/meridian/deploy-services.yaml?branch=meridian-dev)](https://github.com/QuantaOverflow/meridian/actions/workflows/deploy-services.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Presidential-level intelligence briefings, built with AI, tailored for you.**
@@ -256,7 +256,7 @@ Modern web interface built with Nuxt 3:
 
 1. **Clone and Install**:
 ```bash
-git clone https://github.com/iliane5/meridian.git
+git clone https://github.com/QuantaOverflow/meridian.git
 cd meridian
 pnpm install
 ```

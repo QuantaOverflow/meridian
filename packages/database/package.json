@@ -3,11 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "author": {
-    "name": "Iliane Amadou",
-    "email": "mail@iliane.xyz",
-    "url": "https://iliane.xyz"
-  },
+  "author": "QuantaOverflow",
   "publishConfig": {
     "access": "public"
   },

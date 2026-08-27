@@ -1175,10 +1175,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('intelligence_analysis', 'started');
       
-      // 情报深度分析这一步串行调多次 qwen-long，每次 30-90s，需要更长 timeout
-      const intelligenceStepConfig: WorkflowStepConfig = {
-        retries: { limit: 1, delay: '10 seconds', backoff: 'linear' },
-        timeout: '30 minutes',
+      // 情报分析按「每故事一个 step」拆开，所以这份配置是**单个故事**的量级，不再是整批。
+      // timeout 10 分钟：实测单次 ai-worker 调用 p95 约 2.7 分钟、最慢 6.5 分钟(2026-08-26 生产数据)，留一倍余量。
+      // retries 提到 2：拆开后重试只重跑一个故事、一次 LLM 调用，不再是整批 25 个重来，
+      // 所以可以多给一次机会——这正是治 2026-08-26 那次整期丢失的关键。
+      const perStoryIntelStepConfig: WorkflowStepConfig = {
+        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
+        timeout: '10 minutes',
       };
 
       // 多源覆盖度客观锚：聚类后每个 story 天然知道来自几个独立源。distinct_source_count 是最强的
@@ -1250,82 +1253,100 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      const { reports: intelligenceReports, failures: intelFailures } = await step.do('执行情报深度分析', intelligenceStepConfig, async () => {
-        console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
+      // 【每故事一个 step】原先 25 个故事全挤在一个 15-25 分钟的单 step 里，是"全有或全无"：
+      // 平台侧一次 canceled（本账号基线约 2%：过去 6 天 5090 ok / 110 canceled）就整步作废，
+      // 重试还得把 25 个故事从头再跑一遍。2026-08-26 第 73 期就是这么丢的——两次尝试都被 cancel，
+      // 而那时 25 份情报报告其实早已全部落进 R2（CPU 仅 240ms、墙钟 972s，纯粹是等 I/O 时被掐）。
+      // 拆开之后：一次 cancel 只损失那一个故事，由 Workflows 单独重试它；已完成的故事在实例
+      // 重放时从 state 恢复、不会重跑，所以也不必再加"先查 R2 是否已存在"的补丁。
+      // 并发仍由 batchProcessParallel 卡在 6，不让 25 路同时打 provider。
+      console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
-                 const aiServices = createAIServices(this.env, workflowId);
-        // 情报分析改限并发并行：各 story 完全独立(各读各的 R2、各落各自 intel-reports/{wf}/{idx}.json key)，
-        // 原串行 for 是端到端 wall-clock 第一大头(N× qwen-long，每次 30-90s)。实测并发=3 把 15 故事
-        // 从 ~18min 压到 ~6min;提到 6 预计 ~3min。撞 DashScope 限流由 AIGateway 配额退避兜底;
-        // 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
-        const INTEL_CONCURRENCY = 6;
-        const results = await this.batchProcessParallel(
-          storiesForIntelligence,
-          INTEL_CONCURRENCY,
-          async (story: any, idx: number): Promise<{ r2Key: string } | { failure: { idx: number; title: string; reason: string } }> => {
-            try {
-              // 为情报分析动态获取相关文章的内容
-              const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
+      const intelAiServices = createAIServices(this.env, workflowId);
+      // 各 story 完全独立(各读各的 R2、各落各自 intel-reports/{wf}/{idx}.json key)。原串行 for 是
+      // 端到端 wall-clock 第一大头(N× LLM，每次 30-90s)。实测并发=3 把 15 故事从 ~18min 压到 ~6min;
+      // 提到 6 预计 ~3min。撞限流由 AIGateway 配额退避兜底; 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
+      const INTEL_CONCURRENCY = 6;
 
-              // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
-              // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
-              const result = await aiServices.aiWorker.analyzeStoryIntelligence(
-                story,
-                clusterArticles,
-                { analysis_depth: 'detailed' },
-                idx
-              );
+      type IntelOutcome = { r2Key: string } | { failure: { idx: number; title: string; reason: string } };
+      const analyzeOneStory = async (story: any, idx: number): Promise<IntelOutcome> => {
+        try {
+          // 为情报分析动态获取相关文章的内容
+          const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
 
-              if (!result.ok) {
-                // 非成功别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断。
-                // result.error 保留原措辞（非200="HTTP <s>: <body>"、success:false="success:false: <e>"）。
-                console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${result.error}`);
-                return { failure: { idx, title: story.title, reason: result.error } };
-              }
+          // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
+          // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
+          const result = await intelAiServices.aiWorker.analyzeStoryIntelligence(
+            story,
+            clusterArticles,
+            { analysis_depth: 'detailed' },
+            idx
+          );
 
-              // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
-              // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
-              const r2Key = `intel-reports/${workflowId}/${idx}.json`;
-              await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
-
-              // R2 key 记到 brief_stories(观测;落库失败不致命)
-              try {
-                const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
-                const db = getDb(this.env.HYPERDRIVE);
-                await db
-                  .update($brief_stories)
-                  .set({ intel_report_r2_key: r2Key })
-                  .where(
-                    and(
-                      eq($brief_stories.workflow_id, workflowId),
-                      eq($brief_stories.cluster_id, clusterId)
-                    )
-                  );
-              } catch (persistErr) {
-                console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
-              }
-              return { r2Key };
-            } catch (error) {
-              // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
-              const reason = error instanceof Error ? error.message : String(error);
-              console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}): ${reason}`);
-              return { failure: { idx, title: story.title, reason } };
-            }
+          if (!result.ok) {
+            // 非成功别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断。
+            // result.error 保留原措辞（非200="HTTP <s>: <body>"、success:false="success:false: <e>"）。
+            console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${result.error}`);
+            return { failure: { idx, title: story.title, reason: result.error } };
           }
-        );
-        // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随 step 返回上传，供观测性落库对账。
-        const reports = results.filter((r): r is { r2Key: string } => 'r2Key' in r);
-        const failures = results
-          .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
-          .map((r) => r.failure);
 
-        console.log(`[AutoBrief] 情报分析完成: ${reports.length} 份情报报告${failures.length ? `，${failures.length} 个故事失败` : ''}`);
-        // 全部失败必须在本层显式失败：空报告下传只会以 brief_generation "HTTP 500" 假象冒出，难以诊断
-        if (storiesForIntelligence.length > 0 && reports.length === 0) {
-          throw new Error(`情报分析对全部 ${storiesForIntelligence.length} 个故事均失败，无可用报告（详见上方各故事错误日志）`);
+          // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
+          // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
+          const r2Key = `intel-reports/${workflowId}/${idx}.json`;
+          await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
+
+          // R2 key 记到 brief_stories(观测;落库失败不致命)
+          try {
+            const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
+            const db = getDb(this.env.HYPERDRIVE);
+            await db
+              .update($brief_stories)
+              .set({ intel_report_r2_key: r2Key })
+              .where(
+                and(
+                  eq($brief_stories.workflow_id, workflowId),
+                  eq($brief_stories.cluster_id, clusterId)
+                )
+              );
+          } catch (persistErr) {
+            console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+          }
+          return { r2Key };
+        } catch (error) {
+          // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
+          const reason = error instanceof Error ? error.message : String(error);
+          console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}): ${reason}`);
+          return { failure: { idx, title: story.title, reason } };
         }
-        return { reports, failures };
-      });
+      };
+
+      const results = await this.batchProcessParallel(
+        storiesForIntelligence,
+        INTEL_CONCURRENCY,
+        (story: any, idx: number): Promise<IntelOutcome> =>
+          step
+            .do(`情报分析:故事${idx}`, perStoryIntelStepConfig, () => analyzeOneStory(story, idx))
+            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn——
+            // 不接住的话这个故事会静默消失。转成一条明确的 failure，走既有的失败对账。
+            .catch((e: unknown): IntelOutcome => {
+              const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
+              console.error(`[AutoBrief] 情报分析 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
+              return { failure: { idx, title: story.title, reason } };
+            })
+      );
+
+      // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随后落观测性对账。
+      const intelligenceReports = results.filter((r): r is { r2Key: string } => 'r2Key' in r);
+      const intelFailures = results
+        .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
+        .map((r) => r.failure);
+
+      console.log(`[AutoBrief] 情报分析完成: ${intelligenceReports.length} 份情报报告${intelFailures.length ? `，${intelFailures.length} 个故事失败` : ''}`);
+      // 全部失败必须显式失败：空报告下传只会以 brief_generation "HTTP 500" 假象冒出，难以诊断。
+      // 拆 step 后每个故事已各自重试过，这里不再整批重来，直接终止。
+      if (storiesForIntelligence.length > 0 && intelligenceReports.length === 0) {
+        throw new Error(`情报分析对全部 ${storiesForIntelligence.length} 个故事均失败，无可用报告（详见上方各故事错误日志）`);
+      }
 
       // 失败对账：选中 N 个 story、实际产出 M 份报告；M<N 记 'degraded' + 落每条失败原因，
       // 供 /observability/runs/:wf 直接查（防"选了 14 只做出 13、头条静默消失"这类无人对账）。

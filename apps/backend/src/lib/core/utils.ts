@@ -13,6 +13,11 @@ import { userAgents } from './constants';
  * 检查请求是否有有效的认证令牌
  */
 export function hasValidAuthToken(c: Context<HonoEnv>) {
+  // API_TOKEN 没配时必须拒绝：否则模板串出来是字面量 "Bearer undefined",
+  // 等于把一个可猜到的令牌当成有效凭据放行。
+  if (!c.env.API_TOKEN) {
+    return false;
+  }
   const auth = c.req.header('Authorization');
   if (auth === undefined || auth !== `Bearer ${c.env.API_TOKEN}`) {
     return false;

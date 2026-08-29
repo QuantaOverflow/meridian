@@ -15,6 +15,31 @@ import {
   getBriefVerificationPrompt,
   getBriefCoverageReconciliationPrompt
 } from '../prompts/briefGeneration';
+import {
+  getBriefSkeletonPlanPrompt,
+  getBlockTitlePrompt,
+  getBriefBlockPrompt,
+  type BlockSectionContext
+} from '../prompts/briefSkeleton';
+import { applyGroundedEdits, tallyGuards } from '../utils/grounded-edits';
+import { checkBlockConsistency, type ConsistencyFinding } from '../utils/block-consistency';
+import {
+  ISOLATED_HEADING,
+  CALL_INDEX,
+  shapeSkeleton,
+  parseLooseJSON,
+  toProse,
+  cleanTitle,
+  mapLimit,
+  renderBriefMarkdown,
+  type SkeletonRef,
+  type BriefSkeleton,
+  type BriefBlockResult
+} from './brief-skeleton';
+
+// 供 index.ts 与既有调用方从本模块取（b′ 的结构类型实现在 brief-skeleton.ts）
+export type { SkeletonRef, SkeletonSection, BriefSkeleton, BriefBlockResult } from './brief-skeleton';
+export { shapeSkeleton, renderBriefMarkdown, toProse, parseLooseJSON } from './brief-skeleton';
 import { getTldrGenerationPrompt, getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { checkBriefHygiene } from '../utils/brief-hygiene';
 import { recordSensor } from './sensor-log';
@@ -257,6 +282,69 @@ function renderListItem(item: unknown): string {
     if (typeof text === 'string') return text.trim();
   }
   return '';
+}
+
+/**
+ * 把上游 intel 端点产出的原始分析（R2 里那份，或 backend 回灌的 analysisData）归一成
+ * IntelligenceReport。
+ *
+ * 抽成函数是因为 b′ 的三个端点直接从 R2 读报告，必须跟 `/meridian/generate-final-brief`
+ * 走**同一套**归一逻辑——它承载了几个真实 bug 的修复：keyEntities→entities 的接线
+ * （漏接会让相关方在简报输入里整段丢失，归属类错误由此而来）、significance 的两种形状、
+ * legacy 字段名兜底。两份实现迟早会漂，而漂的表现是"简报里的人名开始张冠李戴"。
+ *
+ * 内容与原先内联在 index.ts 里的那段逐字相同，只是换了位置。
+ */
+export function normalizeAnalysisToReport(analysis: any): IntelligenceReport {
+  return {
+    storyId: analysis.storyId || analysis.id || `story_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+    status: analysis.status || ("COMPLETE" as const),
+    executiveSummary: analysis.executiveSummary || analysis.overview || analysis.summary || '发展概述',
+    storyStatus: analysis.storyStatus || ("DEVELOPING" as const),
+    timeline: Array.isArray(analysis.timeline) ? analysis.timeline : [],
+    significance: (analysis.significance && (analysis.significance.level || analysis.significance.reasoning))
+      ? {
+          level: analysis.significance.level || ("MODERATE" as const),
+          reasoning: analysis.significance.reasoning || analysis.outlook || '需要持续关注的发展',
+        }
+      : {
+          level: "MODERATE" as const,
+          reasoning: analysis.outlook || '需要持续关注的发展',
+        },
+    entities: Array.isArray(analysis.entities) && analysis.entities.length
+      ? analysis.entities.map((e: any) => ({
+          name: e.name || 'Unknown Entity',
+          type: e.type || 'Organization',
+          role: e.role || 'Stakeholder',
+          positions: Array.isArray(e.positions) ? e.positions : [],
+        }))
+      // 上游 intel 报告用 keyEntities（name/type/description），不是 entities。
+      // 之前这里漏接 → 相关方在简报输入里整段丢失，归属类错误（引语/行动安错主体）由此而来。
+      : Array.isArray(analysis.keyEntities) && analysis.keyEntities.length
+      ? analysis.keyEntities.map((e: any) => ({
+          name: e.name || 'Unknown Entity',
+          type: e.type || 'Organization',
+          role: e.description || e.role || 'Stakeholder',
+          positions: [],
+        }))
+      : (analysis.stakeholders || []).map((name: string) => ({
+          name,
+          type: 'Organization',
+          role: 'Stakeholder',
+          positions: [],
+        })),
+    sources: (Array.isArray(analysis.sources) && analysis.sources.length)
+      ? analysis.sources
+      : [{
+          sourceName: 'Multiple Sources',
+          articleIds: [1, 2, 3], // 占位符
+          reliabilityLevel: "HIGH" as const,
+          bias: 'Minimal',
+        }],
+    factualBasis: analysis.factualBasis || analysis.key_developments || [],
+    informationGaps: analysis.informationGaps || analysis.implications || [],
+    contradictions: Array.isArray(analysis.contradictions) ? analysis.contradictions : [],
+  };
 }
 
 // ============================================================================
@@ -562,6 +650,286 @@ export class BriefGenerationService {
   }
 
   // ============================================================================
+  // b′ 方案：因果主线章节 + 独立事态，分段写
+  //
+  // 与上面 generateBrief 的整篇合成是两条并行路径。分三步、由 backend workflow 编排：
+  //   planBriefSkeleton   1 次调用   规划章节与块标题
+  //   writeBriefBlock     N 次调用   一份报告一个块（backend 侧 fan-out 成 N 个 step）
+  //   assembleBrief       1 次调用   拼装 + 起标题 + 传感器，结构部分零 LLM
+  //
+  // ⚠️ fan-out 必须留在 backend，不能挪进本 service 内部并发跑：CF 侧约 2% 的 invocation
+  // 会被平台 canceled，N 次调用挤在一个 step 里就是 16efc42 刚修完那个 bug 的翻版。
+  // ============================================================================
+
+  /**
+   * 步骤 1：规划骨架。只喂 N 条 executiveSummary（不喂全文），产出章节结构 + 每块标题。
+   * 覆盖由 shapeSkeleton 程序化保证：1..N 恰好各出现一次，规划漏掉的索引自动进独立事态。
+   */
+  async planBriefSkeleton(
+    reports: IntelligenceReport[]
+  ): Promise<{ success: boolean; data?: BriefSkeleton; error?: string }> {
+    try {
+      if (!reports.length) return { success: false, error: 'No intelligence reports provided' };
+
+      const summaries = reports.map((r) => r.executiveSummary || '');
+      const raw = await this.callAI(getBriefSkeletonPlanPrompt(summaries), undefined, {
+        temperature: 0,
+        maxTokens: 4000,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.plan,
+      });
+
+      const plan = parseLooseJSON(raw);
+      if (!Array.isArray(plan?.sections) || plan.sections.length === 0) {
+        // 规划失败必须硬失败：静默兜底成"25 个块全进独立事态"会产出一份没有任何因果主线的
+        // 简报，而它在指标上（覆盖率 25/25、块数 25）看起来完全正常——正是本项目反复栽的
+        // 「失败静默降级成安全默认值」。让 step 失败去重试。
+        return { success: false, error: '骨架规划解析失败：响应里没有可用的 sections 数组' };
+      }
+
+      const skeleton = shapeSkeleton(plan, reports.length);
+
+      // 规划没给标题的（含被程序补回的索引）单独补一次，20 token 的小调用。
+      // 比重跑整个规划便宜，也比拿 "story 7" 这种占位标题交付强。
+      const untitled = [...skeleton.main.flatMap((s) => s.reports), ...skeleton.isolated].filter((r) => !r.title);
+      if (untitled.length) {
+        console.warn(`[Brief Skeleton] ${untitled.length} 个块规划未给标题 → 单独补标题: ${untitled.map((r) => r.i).join(',')}`);
+        await mapLimit(untitled, 4, async (ref) => {
+          try {
+            const t = await this.callAI(getBlockTitlePrompt(reports[ref.i - 1].executiveSummary || ''), undefined, {
+              temperature: 0,
+              maxTokens: 60,
+              phase: 'brief_generation',
+              callIndex: CALL_INDEX.titleFillBase + ref.i,
+            });
+            ref.title = cleanTitle(t);
+          } catch (e) {
+            console.warn(`[Brief Skeleton] 补标题失败 (story ${ref.i}):`, e);
+          }
+          // 补标题调用失败/回空 → 用 executiveSummary 首句截断兜底。这里的兜底是安全的：
+          // 标题缺失不会静默（正文照写），而没有标题的块在拼装时无法渲染成 <u> 条目。
+          if (!ref.title) ref.title = this.firstSentence(reports[ref.i - 1].executiveSummary || `story ${ref.i}`, 80).toLowerCase();
+        });
+      }
+
+      // 覆盖是 by construction 的，但断言必须直接查产出、不能同义反复：
+      // 「blocks.size + missing.length === N」恒真（missing 是补集），0/25 全失败也不报警。
+      const all = [...skeleton.main.flatMap((s) => s.reports), ...skeleton.isolated].map((r) => r.i);
+      if (new Set(all).size !== reports.length) {
+        return { success: false, error: `骨架覆盖断言失败：分节后索引不是恰好覆盖 1..${reports.length}（得到 ${new Set(all).size} 个）` };
+      }
+      const titles = [...skeleton.main.flatMap((s) => s.reports), ...skeleton.isolated].map((r) => r.title.toLowerCase());
+      const dupes = titles.filter((t, i) => titles.indexOf(t) !== i);
+      if (dupes.length) {
+        // 只报不改：重复标题会让读者端目录出现两条一模一样的条目，但自动改写标题
+        // 比暴露问题更糟。两轮原型实测 0 次。
+        console.warn(`[Brief Skeleton] BLOCK_TITLE_DUPLICATE ${dupes.length} 条重复标题: ${[...new Set(dupes)].join(' | ')}`);
+      }
+
+      console.log(
+        `[Brief Skeleton] 规划完成：主线 ${skeleton.main.length} 节 / 独立事态 ${skeleton.isolated.length} 条` +
+          (skeleton.repaired.length ? `（规划漏掉 ${skeleton.repaired.join(',')}，已补进独立事态）` : '')
+      );
+      return { success: true, data: skeleton };
+    } catch (error) {
+      console.error('[Brief Skeleton] 规划失败:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    }
+  }
+
+  /**
+   * 步骤 2：写一个块。**写作只看自己那份报告**（防串源），**校验看全量源**（防误删）。
+   *
+   * oracle 宽窄三档实测（第 75 期，删除/真误删/专名嫁接）：
+   *   own      44 / 11 / 0      跨报告的正确内容被当成无据删掉
+   *   full     17-18 / 3-2 / 1  两轮稳定，嫁接那 1 条被 G1 守卫拦住  ← 采用
+   *   section  46 / 15 / 2      远在波动范围外
+   * 注：section 档曾用离线反事实推算预测能救回 11/11 误删，真跑出来是 15 条误删——
+   * **反事实推算不能当结论**，别再据此改回去。
+   *
+   * @param index 0 基，这个块对应 reports 里的第几份
+   */
+  async writeBriefBlock(
+    reports: IntelligenceReport[],
+    index: number,
+    title: string,
+    section?: BlockSectionContext,
+    options?: { selfCorrect?: boolean }
+  ): Promise<{ success: boolean; data?: BriefBlockResult; error?: string }> {
+    try {
+      const report = reports[index];
+      if (!report) return { success: false, error: `index ${index} 超出报告范围（共 ${reports.length} 份）` };
+      const selfCorrect = options?.selfCorrect !== false;
+
+      const storyMarkdown = this.convertReportsToMarkdown([report], index, reports.length);
+      const raw = await this.callAI(getBriefBlockPrompt(storyMarkdown, title, section), getBriefGenerationSystemPrompt(), {
+        temperature: 0.7,
+        maxTokens: 2500,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.blockWriteBase + index,
+      });
+
+      const prose = toProse(raw);
+      if (!prose) {
+        // 回了 200 但剥完标记没剩正文 = 这个块作废。硬失败让 step 重试，
+        // 静默返回空串会让拼装步少一个块而覆盖率读数照样好看。
+        return { success: false, error: `块正文为空（原始 ${raw.length} 字符）` };
+      }
+
+      if (!selfCorrect) {
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+      }
+
+      // RARR 接地校验-改正。oracle = 全量 25 份报告；守卫也查全量源。
+      // 失败不阻断（同既有 verifyAndCorrect 的 fail-open），但 verified 标出来，
+      // 免得"没校验成"与"校验过且干净"在数据里长得一样。
+      const oracle = this.convertReportsToMarkdown(reports);
+      try {
+        const verifyRaw = await this.callAI(getBriefVerificationPrompt(prose, oracle), undefined, {
+          temperature: 0,
+          maxTokens: 4000,
+          phase: 'brief_generation',
+          callIndex: CALL_INDEX.blockVerifyBase + index,
+        });
+        const parsed = parseLooseJSON(verifyRaw);
+        if (!parsed || !Array.isArray(parsed.edits)) {
+          console.warn(`[Brief Block ${index}] 接地校验响应解析失败或无 edits 字段 → 发未经 RARR 核验的块（非"判定 0 处要改"）`);
+          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+        }
+        const result = applyGroundedEdits(prose, parsed.edits, oracle);
+        const text = result.deleted ? this.tidyAfterDelete(result.text) : result.text;
+        const blocked = tallyGuards(result.blocked);
+        console.log(
+          `[Brief Block ${index}] 接地校验：edits ${parsed.edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
+            `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}`
+        );
+        return {
+          success: true,
+          data: {
+            index, title, text, verified: true,
+            edits: parsed.edits.length, applied: result.applied, skipped: result.skipped, blocked,
+            blockedDetail: result.blocked,
+          },
+        };
+      } catch (verifyError) {
+        console.error(`[Brief Block ${index}] 接地校验失败，退回未校验草稿:`, verifyError);
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+      }
+    } catch (error) {
+      console.error(`[Brief Block ${index}] 写作失败:`, error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    }
+  }
+
+  /**
+   * 步骤 3：拼装。`<u>**title**</u>` 包装、章节归属、章节内顺序全由代码做，
+   * 唯一的 LLM 调用是起整篇标题。
+   *
+   * 覆盖对账在这里也是**程序化**的：b′ 每份报告恰好一个块，成功的判 headline、
+   * 调用失败没交回块的判 dropped。不再需要 qwen 判官事后猜去向，也不需要两遍法补录
+   * （补录治的是"整篇合成静默丢 story"，b′ 从结构上没有这个自由度）。
+   */
+  async assembleBrief(
+    reports: IntelligenceReport[],
+    skeleton: BriefSkeleton,
+    blocks: Array<{ index: number; title: string; text: string }>
+  ): Promise<{
+    success: boolean;
+    data?: { title: string; content: string; coverage: CoverageEntry[]; model: string };
+    error?: string;
+    hygiene?: unknown[];
+    consistency?: ConsistencyFinding[];
+  }> {
+    try {
+      const byIndex = new Map<number, { title: string; text: string }>();
+      for (const b of blocks) {
+        if (typeof b?.index !== 'number' || !b.text?.trim()) continue;
+        byIndex.set(b.index, { title: (b.title || '').trim(), text: b.text.trim() });
+      }
+      if (byIndex.size === 0) return { success: false, error: '没有任何可用的简报块' };
+
+      const { content: rendered, sectionCount } = renderBriefMarkdown(skeleton, byIndex);
+      let content = rendered;
+
+      // 目录锚点补齐。上面本来就按 <u>**…**</u> 渲染，这里恒为 0——留着是因为
+      // 块标题万一自带 ** 会走进 normalize 的豁免分支，出现即说明拼装逻辑漂了。
+      const titleMarkers = normalizeStoryTitleMarkers(content);
+      content = titleMarkers.content;
+      if (titleMarkers.fixed) {
+        console.warn(`[Brief Assemble] TOC_ANCHOR_REPAIR ${titleMarkers.fixed} 个块标题缺 ** → 已补齐（拼装逻辑异常，正常应为 0）`);
+      }
+
+      // 覆盖对账：程序化，零 LLM。成功交回块的 = headline，没交回的 = dropped。
+      const storiesMarkdown = this.convertReportsToMarkdown(reports);
+      const sectionOf = new Map<number, string>();
+      for (const s of skeleton.main) for (const r of s.reports) sectionOf.set(r.i, s.heading.toLowerCase());
+      for (const r of skeleton.isolated) sectionOf.set(r.i, ISOLATED_HEADING);
+      const coverage: CoverageEntry[] = reports.map((r, i) => {
+        const covered = byIndex.has(i);
+        return {
+          storyId: r.storyId,
+          storyLabel: (r.executiveSummary || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+          disposition: covered ? ('headline' as const) : ('dropped' as const),
+          section: covered ? sectionOf.get(i + 1) ?? null : null,
+          // 与整篇合成路径不同：这里的理由不是事后推断出来的编辑判断，而是**确定已知**的
+          // 调用结果。字段名沿用 reasonInferred 是为了不改 CoverageEntry 契约。
+          reason: covered ? 'b′ 每份报告一个块' : '块写作调用失败，未交回正文',
+          reasonInferred: true as const,
+        };
+      });
+      const dropped = coverage.filter((c) => c.disposition === 'dropped');
+      if (dropped.length) {
+        console.warn(`[Brief Assemble] ${dropped.length}/${reports.length} 份报告没有块（块 step 失败）: ${dropped.map((c) => c.storyId).join(', ')}`);
+      }
+
+      // 传感器（确定性，只报不改）
+      // requireCatchAll:false —— b′ 没有 "## noteworthy & under-reported" 区：每份报告
+      // 都拿到完整分析块，一句话降级条目这个形态在 b′ 里不存在。不关掉的话这条会 100% 命中，
+      // 把整个卫生传感器淹掉。
+      const hygiene = checkBriefHygiene(content, storiesMarkdown, { requireCatchAll: false });
+      if (hygiene.length) {
+        console.warn(`[Brief Assemble] BRIEF_HYGIENE ${hygiene.length} 条：` + hygiene.map((h) => `${h.kind}(${h.detail})`).join(' | '));
+      }
+      const consistency = checkBlockConsistency(content);
+      if (consistency.length) {
+        console.warn(
+          `[Brief Assemble] BLOCK_CONSISTENCY ${consistency.length} 处疑似跨块数值冲突：` +
+            consistency.map((c) => `${c.kind} ${c.a.raw} vs ${c.b.raw}`).join(' | ')
+        );
+      }
+      await recordSensor(this.env, this.traceContext, 'brief_hygiene', {
+        findingCount: hygiene.length,
+        findings: hygiene,
+        briefChars: content.length,
+        tocAnchorRepairs: titleMarkers.fixed,
+        path: 'bprime',
+      });
+      await recordSensor(this.env, this.traceContext, 'block_consistency', {
+        findingCount: consistency.length,
+        findings: consistency,
+        blockCount: byIndex.size,
+      });
+
+      const titleResponse = await this.callAI(getBriefTitlePrompt(content), undefined, {
+        temperature: 0,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.assembleTitle,
+      });
+      const titleData = this.parseJSONFromResponse(titleResponse);
+      if (!titleData?.title) {
+        console.warn('[Brief Assemble] 标题解析失败或缺 title 字段 → 用通用标题 "Daily Intelligence Brief"（非模型生成）');
+      }
+      const title = titleData?.title || 'Daily Intelligence Brief';
+
+      console.log(`[Brief Assemble] 拼装完成：${sectionCount} 节 / ${byIndex.size} 块 / ${content.length} 字符，标题 "${title}"`);
+      return { success: true, data: { title, content, coverage, model: PHASE_DEFAULTS.brief_generation.model }, hygiene, consistency };
+    } catch (error) {
+      console.error('[Brief Assemble] 拼装失败:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    }
+  }
+
+  // ============================================================================
   // 私有辅助方法
   // ============================================================================
 
@@ -647,25 +1015,17 @@ export class BriefGenerationService {
       const edits: Array<{ brief_span?: string; replacement?: string; reason?: string }> =
         Array.isArray(parsed?.edits) ? parsed.edits : [];
 
-      let revised = draft;
-      let applied = 0;
-      let skipped = 0;
-      let deleted = false;
-      for (const e of edits) {
-        if (!e || typeof e.brief_span !== 'string' || e.brief_span.length === 0) continue;
-        const replacement = typeof e.replacement === 'string' ? e.replacement : '';
-        // 只认精确子串命中：命中才改，没命中宁可不动（避免误伤）。
-        if (revised.includes(e.brief_span)) {
-          revised = revised.replace(e.brief_span, replacement);
-          applied++;
-          if (replacement === '') deleted = true;
-        } else {
-          skipped++;
-        }
-      }
-      if (deleted) revised = this.tidyAfterDelete(revised);
+      // 四条确定性守卫（G1 专名嫁接 / G2 误删 / G3 空转 / G4 膨胀）与 b′ 分块路径共用
+      // 同一个应用器。守卫是严格保护性的——每条拦的都是实测有害或无用的一类 edit，
+      // 尤其 G1「把源里对的专名改成另一份报告里的名字」是把对的改成错的，比漏改严重。
+      const result = applyGroundedEdits(draft, edits, storiesMarkdown);
+      const revised = result.deleted ? this.tidyAfterDelete(result.text) : result.text;
+      const blocked = tallyGuards(result.blocked);
 
-      console.log(`[Brief Generation] 接地校验-改正：edits ${edits.length}，applied ${applied}，skipped ${skipped}`);
+      console.log(
+        `[Brief Generation] 接地校验-改正：edits ${edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
+          `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}`
+      );
       return revised;
     } catch (error) {
       // 校验失败不应拖垮整条生成：退回未修订草稿（门仍作末端兜底）。
@@ -872,12 +1232,19 @@ export class BriefGenerationService {
     }
   }
 
-  private convertReportsToMarkdown(reports: IntelligenceReport[]): string {
+  /**
+   * @param startIndex 这批报告在**全量**报告里的起始下标（0 基）。b′ 逐块写作时只传一份
+   *                   报告，但序号必须仍是它在全量里的真实排名，否则块内看到的是 [story 1/1]
+   *                   而校验用的全量 oracle 里同一份是 [story 7/25]，两边对不上。
+   * @param totalCount 全量报告总数。缺省时按本批数量算（整篇合成路径的既有行为）。
+   */
+  private convertReportsToMarkdown(reports: IntelligenceReport[], startIndex = 0, totalCount?: number): string {
     // [story k/N] 序号标记：k 即重要性排名（backend 已按 importance+覆盖度降序喂入），
     // 供 prompt 的覆盖契约（每条 story 必须有去向）做"全部安置"自查；N 让模型能数总数。
-    const total = reports.length;
-    return reports.map((report, index) => {
-      let markdown = index > 0 ? '\n---\n\n' : '';
+    const total = totalCount ?? reports.length;
+    return reports.map((report, i) => {
+      const index = startIndex + i;
+      let markdown = i > 0 ? '\n---\n\n' : '';
       markdown += `# [story ${index + 1}/${total}] ${report.executiveSummary}\n\n`;
 
       // 时间线（带时间戳，事件顺序的唯一权威来源）——必须喂给生成器，否则它只能从散文里猜

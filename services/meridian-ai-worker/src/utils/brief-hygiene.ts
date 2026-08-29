@@ -293,13 +293,24 @@ function findCatchAllAnomalies(brief: string): HygieneFinding[] {
   ];
 }
 
+export interface HygieneOptions {
+  /**
+   * 是否要求存在 catch-all 区（`## noteworthy & under-reported`）。
+   * 整篇合成路径必须有它（一句话降级条目的去处，也是补录的插入锚点）；
+   * b′ 分段写路径**没有**这个区——每份报告都拿完整分析块，降级条目这个形态不存在。
+   * 不给 b′ 关掉的话这条会 100% 命中，把整个卫生传感器淹掉（同 "what matters now" 那次）。
+   */
+  requireCatchAll?: boolean;
+}
+
 /**
  * @param brief   成品简报正文
  * @param sourceText 喂给合成步的全部源文本（storiesMarkdown 或情报报告摊平）
  */
-export function checkBriefHygiene(brief: string, sourceText: string): HygieneFinding[] {
+export function checkBriefHygiene(brief: string, sourceText: string, options: HygieneOptions = {}): HygieneFinding[] {
+  const requireCatchAll = options.requireCatchAll !== false;
   return [
-    ...findMissingSections(brief),
+    ...(requireCatchAll ? findMissingSections(brief) : []),
     ...findCatchAllAnomalies(brief),
     ...findMetaLabelLeaks(brief),
     ...findMetaCommentary(brief),

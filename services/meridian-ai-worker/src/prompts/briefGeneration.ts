@@ -53,6 +53,34 @@ Your goal: Deliver a brief that combines superhuman information processing with 
 `.trim()
 }
 
+/**
+ * 接地规则（rule 0 / 0b / 0c）—— 简报生成的最高优先级约束，也是**分段写**每一次块调用
+ * 必须携带的那段。b′ 把整篇合成拆成一份报告一次调用后，如果这段只留在整篇 prompt 里，
+ * 每个块就都在没有「不许编造 / 不许重排时间线 / 逐字抄数字」的情况下写——抽成常量是为了
+ * 两条路径共用同一份文本，改一处两边同时生效。
+ *
+ * 内容与抽取前逐字相同（含已有的反引号转义），只是换了个存放位置。
+ */
+export const GROUNDING_RULES = `
+0. **FACTUAL GROUNDING (HIGHEST PRIORITY)**: Every concrete fact — names, numbers, dates, events, quotes, places, organizations, technical specifics — MUST be present in \`<curated_news_data>\` above. You may NOT introduce a fact that is not in that data.
+   - **Analysis vs. fact:** your *analytical take* (motivations, implications, connections) may extrapolate, but it must be visibly framed as interpretation ("this likely signals…", "the strategic read is…") and must rest on facts that ARE in the data. Never state an invented event/number as if it happened.
+   - **No new specifics from memory (even hedged):** analysis may interpret the given facts but MUST NOT introduce specific named companies, organizations, people, places, numbers, party affiliations, or events that are absent from \`<curated_news_data>\` — not even with "likely", "almost certainly", or "presumably". If a specific isn't in the data (who manufactures a chip, which countries are in talks, someone's political party, a court's deadline), OMIT it; do NOT supply it from background knowledge. Naming an unsourced specific is fabrication, however confident the tone.
+   - **If the data is thin, the brief is short.** A faithful one-section brief beats a fabricated eight-section one. Do not manufacture content to hit the "20-30 minute read" target. That target is an upper bound, not a quota.
+   - **Self-check before writing each sentence:** "can I point to the line in curated_news_data that supports this specific claim?" If no, cut it or reframe it explicitly as your analytical inference.
+0b. **DO NOT GARBLE THE GIVEN FACTS (as important as rule 0)**: not inventing facts is not enough — you must also not MISARRANGE the facts that ARE in the data. The data is faithful; most errors come from re-ordering or re-assigning it. Three hard rules:
+   - **Event order & timing:** the \`## 时间线\` list is the ONLY authority on what happened before/after what. Follow its timestamps exactly. Never say X happened "before / after / within days of / hours before / in retaliation for / following" Y unless the timeline's order supports it. Do NOT fold an earlier-dated event into a later event's cause or consequence (e.g. if a downgrade is dated February and an explosion is dated May, the May explosion did NOT cause the February downgrade).
+   - **Attribution (who said / who did):** keep every quote, statement, and action attached to the exact actor/office named in \`## 相关方\` and the source text. Never move a quote from one person to another, never swap an actor (if the data says Iran declared the closure, do NOT write the US did; if the data says President Dan, do NOT write a different name), and never change someone's office/title.
+   - **Values, scope & status:** keep numbers, rankings, scope, and the status/modality of a claim exactly as given. A target "to expand to 70%" is NOT "has seized 70%"; "Latin America's second-largest" is NOT "the world's second-largest"; an agreement that "awaits formal adoption" is NOT "formally adopted"; a "PHEIC declared" is NOT a lower risk level. Also do not assert a section "has no developments" when you reported relevant facts for it elsewhere.
+   A reversed timeline, a misattributed quote/actor, a wrong office, or an altered value/status is a factual error even though every word came from the data — and it is exactly the kind of error to avoid.
+0c. **COPY, DON'T COMPUTE OR APPROXIMATE (the most common slip)**: when you state a specific concrete token, transcribe it from the data — do not regenerate it from memory or by mental math:
+   - **No arithmetic:** do NOT compute durations, ages, "X years since…", anniversaries, day-counts, or differences yourself. If the data says "last in 1986 (40 years ago)", write 40 — never recompute to "38". If a derived number is not stated in the data, omit it.
+   - **Units & rates verbatim:** "20 litres per day" is NOT "per week"; "per capita" is not "total". Copy the unit exactly.
+   - **Severity verbs verbatim:** if the source says "damaged", do not write "destroyed"; "struck" is not "leveled". Match the intensity the source used.
+   - **Exact dates, digit-for-digit:** copy the day and month from the \`## 时间线\` exactly. Do not shift a date by one day (17th≠18th) or swap a month (April≠May). Before writing "on [date]", find that exact date in the timeline. If an event has no date in the data, don't invent or relocate one onto another day.
+   - **Proper names verbatim:** write the exact name in the data. Never substitute a more famous name (a different athlete, official, or place) for the one given.
+   - **Internal consistency:** never state a chronology that is impossible (an event "four days after" something that the data dates later than it), and never say a section has "no developments" if you reported facts for it.
+`.trim()
+
 export function getBriefGenerationPrompt(storiesMarkdown: string, previousContext: string = ''): string {
   return `
 hey, i have a bunch of news reports derived from detailed analyses of news clusters from the last 30h. they are **ordered by assessed importance, most significant first** (each tagged \`[story k/N]\`). use that order to decide **depth** — how much analysis each story gets — NOT whether a story gets included at all: inclusion was already decided upstream, every story must land somewhere in the brief (see coverage rule 5 below). could you give me my personalized daily intelligence brief? aim for something comprehensive yet engaging, roughly a 20-30 minute read.
@@ -87,23 +115,7 @@ ${storiesMarkdown}
 </curated_news_data>
 
 **CRITICAL: STRUCTURE AND CONTENT RULES**
-0. **FACTUAL GROUNDING (HIGHEST PRIORITY)**: Every concrete fact — names, numbers, dates, events, quotes, places, organizations, technical specifics — MUST be present in \`<curated_news_data>\` above. You may NOT introduce a fact that is not in that data.
-   - **Analysis vs. fact:** your *analytical take* (motivations, implications, connections) may extrapolate, but it must be visibly framed as interpretation ("this likely signals…", "the strategic read is…") and must rest on facts that ARE in the data. Never state an invented event/number as if it happened.
-   - **No new specifics from memory (even hedged):** analysis may interpret the given facts but MUST NOT introduce specific named companies, organizations, people, places, numbers, party affiliations, or events that are absent from \`<curated_news_data>\` — not even with "likely", "almost certainly", or "presumably". If a specific isn't in the data (who manufactures a chip, which countries are in talks, someone's political party, a court's deadline), OMIT it; do NOT supply it from background knowledge. Naming an unsourced specific is fabrication, however confident the tone.
-   - **If the data is thin, the brief is short.** A faithful one-section brief beats a fabricated eight-section one. Do not manufacture content to hit the "20-30 minute read" target. That target is an upper bound, not a quota.
-   - **Self-check before writing each sentence:** "can I point to the line in curated_news_data that supports this specific claim?" If no, cut it or reframe it explicitly as your analytical inference.
-0b. **DO NOT GARBLE THE GIVEN FACTS (as important as rule 0)**: not inventing facts is not enough — you must also not MISARRANGE the facts that ARE in the data. The data is faithful; most errors come from re-ordering or re-assigning it. Three hard rules:
-   - **Event order & timing:** the \`## 时间线\` list is the ONLY authority on what happened before/after what. Follow its timestamps exactly. Never say X happened "before / after / within days of / hours before / in retaliation for / following" Y unless the timeline's order supports it. Do NOT fold an earlier-dated event into a later event's cause or consequence (e.g. if a downgrade is dated February and an explosion is dated May, the May explosion did NOT cause the February downgrade).
-   - **Attribution (who said / who did):** keep every quote, statement, and action attached to the exact actor/office named in \`## 相关方\` and the source text. Never move a quote from one person to another, never swap an actor (if the data says Iran declared the closure, do NOT write the US did; if the data says President Dan, do NOT write a different name), and never change someone's office/title.
-   - **Values, scope & status:** keep numbers, rankings, scope, and the status/modality of a claim exactly as given. A target "to expand to 70%" is NOT "has seized 70%"; "Latin America's second-largest" is NOT "the world's second-largest"; an agreement that "awaits formal adoption" is NOT "formally adopted"; a "PHEIC declared" is NOT a lower risk level. Also do not assert a section "has no developments" when you reported relevant facts for it elsewhere.
-   A reversed timeline, a misattributed quote/actor, a wrong office, or an altered value/status is a factual error even though every word came from the data — and it is exactly the kind of error to avoid.
-0c. **COPY, DON'T COMPUTE OR APPROXIMATE (the most common slip)**: when you state a specific concrete token, transcribe it from the data — do not regenerate it from memory or by mental math:
-   - **No arithmetic:** do NOT compute durations, ages, "X years since…", anniversaries, day-counts, or differences yourself. If the data says "last in 1986 (40 years ago)", write 40 — never recompute to "38". If a derived number is not stated in the data, omit it.
-   - **Units & rates verbatim:** "20 litres per day" is NOT "per week"; "per capita" is not "total". Copy the unit exactly.
-   - **Severity verbs verbatim:** if the source says "damaged", do not write "destroyed"; "struck" is not "leveled". Match the intensity the source used.
-   - **Exact dates, digit-for-digit:** copy the day and month from the \`## 时间线\` exactly. Do not shift a date by one day (17th≠18th) or swap a month (April≠May). Before writing "on [date]", find that exact date in the timeline. If an event has no date in the data, don't invent or relocate one onto another day.
-   - **Proper names verbatim:** write the exact name in the data. Never substitute a more famous name (a different athlete, official, or place) for the one given.
-   - **Internal consistency:** never state a chronology that is impossible (an event "four days after" something that the data dates later than it), and never say a section has "no developments" if you reported facts for it.
+${GROUNDING_RULES}
 1. **MANDATORY ANALYTICAL DEPTH**: Every story that gets its own analysis block MUST include your analytical take - what are the likely motivations, second-order effects, overlooked angles, or strategic implications? Just summarizing facts is insufficient. (But the underlying facts must still be grounded per rule 0.)
 2. **NO EMPTY SECTIONS**: you name the sections yourself (see structure below) — never create one you cannot fill. Do not write "(no significant developments)" or similar placeholder text.
 3. **QUALITY OVER QUANTITY**: Better 3-4 sections with substantial content than 8 thin ones.

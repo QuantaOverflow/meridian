@@ -801,7 +801,9 @@ export class BriefGenerationService {
           return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
         }
         const result = applyGroundedEdits(prose, parsed.edits, oracle);
-        const text = result.deleted ? this.tidyAfterDelete(result.text) : result.text;
+        const tidied = result.deleted ? this.tidyAfterDelete(result.text) : { text: result.text, repairs: 0 };
+        const text = tidied.text;
+        if (tidied.repairs) console.warn(`[Brief Block ${index}] PUNCT_REPAIR ${tidied.repairs} 处删除残渣（RARR 删完留下的标点断裂）`);
         const blocked = tallyGuards(result.blocked);
         console.log(
           `[Brief Block ${index}] 接地校验：edits ${parsed.edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
@@ -1043,7 +1045,9 @@ export class BriefGenerationService {
       // 同一个应用器。守卫是严格保护性的——每条拦的都是实测有害或无用的一类 edit，
       // 尤其 G1「把源里对的专名改成另一份报告里的名字」是把对的改成错的，比漏改严重。
       const result = applyGroundedEdits(draft, edits, storiesMarkdown);
-      const revised = result.deleted ? this.tidyAfterDelete(result.text) : result.text;
+      const tidied = result.deleted ? this.tidyAfterDelete(result.text) : { text: result.text, repairs: 0 };
+      const revised = tidied.text;
+      if (tidied.repairs) console.warn(`[Brief Generation] PUNCT_REPAIR ${tidied.repairs} 处删除残渣（RARR 删完留下的标点断裂）`);
       const blocked = tallyGuards(result.blocked);
 
       console.log(
@@ -1235,11 +1239,23 @@ export class BriefGenerationService {
   }
 
   // 删除片段后清理遗留的双空格/悬空标点；只做最轻量收尾，不动其它字符。
-  private tidyAfterDelete(s: string): string {
-    return s
+  /**
+   * 收拾删除留下的残渣。返回值带修补计数——修好不留痕的话，"RARR 删完有多脏"这个信号
+   * 就在数据里消失了（同 TOC_ANCHOR_REPAIR 的做法）。
+   */
+  private tidyAfterDelete(s: string): { text: string; repairs: number } {
+    let repairs = 0;
+    const text = s
       .replace(/ {2,}/g, ' ')
       .replace(/\s+([.,;:!?])/g, '$1')
+      // 标点挨着标点：删掉一个从句后剩下 "shipping needs,." 这种。原实现只管"标点前的
+      // 空格"，管不到这类——2026-08-29 dry-run 在成品里实测到 2 处，读者直接看得见。
+      // 只收敛"逗号/分号/冒号 紧跟 句号"这一种确定形态，句中悬空的 "and," 之类
+      // 机械改不安全（改法取决于删掉的是什么），留给卫生传感器报。
+      .replace(/([,;:])\s*\./g, () => { repairs++; return '.'; })
+      .replace(/,{2,}/g, () => { repairs++; return ','; })
       .replace(/\n{3,}/g, '\n\n');
+    return { text, repairs };
   }
 
   private parseJSONFromResponse(response: string): any {

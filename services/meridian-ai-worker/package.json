@@ -15,7 +15,13 @@
     "test:integration": "bash test-integration.sh",
     "health": "curl http://localhost:8787/health | jq .",
     "config": "curl http://localhost:8787/ai-gateway/config | jq .",
-    "providers": "curl http://localhost:8787/providers | jq ."
+    "providers": "curl http://localhost:8787/providers | jq .",
+    "prototype:skeleton": "node --experimental-strip-types prototypes/skeleton-planner/tui.ts",
+    "prototype:skeleton:batch": "node --experimental-strip-types prototypes/skeleton-planner/batch.ts",
+    "prototype:anchor": "node --experimental-strip-types prototypes/skeleton-planner/anchor-ab.ts",
+    "prototype:bprime": "node --experimental-strip-types prototypes/skeleton-planner/bprime.ts",
+    "prototype:rarr": "node --experimental-strip-types prototypes/skeleton-planner/rarr-perblock.ts",
+    "prototype:slim": "node --experimental-strip-types prototypes/article-prompt-slim/tui.ts"
   },
   "dependencies": {
     "hono": "^3.12.0",

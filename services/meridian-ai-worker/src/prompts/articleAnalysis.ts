@@ -1,5 +1,25 @@
 import { z } from 'zod';
 
+/**
+ * 文章分析 prompt。
+ *
+ * 2026-08-29 瘦身：模板 10,264 → 3,733 字符（-64%），单篇 24.5 → 15.3 neurons（-38%）。
+ * 剃掉的是三条 few-shot 示例里的两条 + 示例的散文外壳 + criteria 的举例与解释散文；
+ * **few-shot 这个技巧保留**（留一条精简示例）——原型对照实测证明它在干活。
+ *
+ * 关键发现（这才是这次改动的正当理由，省钱只是搭车）：
+ *   砍示例后唯一的系统性偏移是 `primary_location` **粒度崩掉**
+ *     India → "Ujjain-Garoth four-lane road, Ramakhedi village"
+ *     China → "重慶"   /   USA → "Akron, Ohio"
+ *   查因：Detailed Criteria 里**从来没有 primary_location 的定义**，三条示例是靠
+ *   「都写国家级」隐式在教。而这个字段原样进 generateSearchText → embedding → 聚类，
+ *   粒度不稳等于往聚类信号里掺噪声。基线自己也犯（"Gulf" / "Nepal-Tibet border"）。
+ *   补 96 字符的显式判据后偏移归零。**剃 6,531 字符散文，补 96 字符判据。**
+ *
+ * 证据：prototypes/article-prompt-slim/（10 篇真实文章 × 6 臂 × 2 轮，含噪声地板对照）
+ *   —— temp 0.1 非确定性，同一 prompt 自比即 6 处软字段差异，不建地板会把抖动读成退化。
+ * 本函数正文由该原型的 `minimal-loc` 变体程序化生成，与实测过的那份逐字节相同。
+ */
 function getArticleAnalysisPrompt(title: string, content: string) {
   return `
 # Article Text:
@@ -13,183 +33,29 @@ ${content.trim()}
 
 **Goal:** Extract structured, semantically dense information from this article. This data will be used primarily for matching articles to diverse user interests via semantic similarity search and keyword filtering. Focus on extracting core facts and concepts; human readability is secondary to informational density.
 
-**Enhanced Analysis with Advanced Model:** You have access to an advanced language model with extensive contextual understanding. Leverage this to provide comprehensive and nuanced analysis while maintaining the required JSON structure.
-
 **IMPORTANT FORMAT REQUIREMENT:**
 - Start your response immediately with the opening brace {
 - End your response with the closing brace }
 - NO text before or after the JSON object
 - Use the <final_json></final_json> tags to wrap your JSON response for reliable parsing
 
-**Output Format:** Return ONLY the JSON object below. Follow the examples provided.
+**Output Format:** Return ONLY the JSON object below. Follow the example provided.
 
-**--- Start Examples ---**
+**Example** — input: *"Regional Powers Convene Summit on Water Rights Dispute — three neighbouring states met in Geneva over the shrinking Blue River basin after a decade of tension and two failed treaties; mediator Elena Ruiz said a framework deal was reached but needs ratification, and it sidesteps the contested upstream dam."*
 
-**Example 1: Tech Product Launch**
-
-*Input Article Snippet (Conceptual):*
-\`\`\`
-Headline: NovaCorp Unveils 'Photon' AI Chip for Edge Computing
-Body: San Francisco – NovaCorp today announced Photon, its new AI accelerator chip designed for low-power edge devices. Photon boasts 10 TOPS performance at under 2 watts, targeting IoT and autonomous systems. CEO Jane Smith highlighted partnerships with device makers OmniGadget and AutoDrive. Initial benchmarks show significant speedups in image recognition tasks compared to competitors. Shipments begin Q3. Analysts see this intensifying competition in the edge AI market.
-\`\`\`
-
-*Output JSON:*
 <final_json>
 {
   "language": "en",
-  "primary_location": "USA",
+  "primary_location": "Switzerland",
   "completeness": "COMPLETE",
   "content_quality": "OK",
-  "event_summary_points": [
-    "NovaCorp announces Photon AI chip",
-    "Designed for low-power edge devices",
-    "Specs: 10 TOPS, <2W power",
-    "Targets IoT, autonomous systems",
-    "Partnerships: OmniGadget, AutoDrive",
-    "Shipments start Q3"
-  ],
-  "thematic_keywords": [
-    "Edge AI acceleration",
-    "Low-power computing",
-    "AI hardware market",
-    "Competitive landscape",
-    "IoT enablement",
-    "Autonomous system components"
-  ],
-  "topic_tags": [
-    "Artificial Intelligence",
-    "Semiconductors",
-    "Edge Computing",
-    "Internet of Things (IoT)",
-    "Hardware",
-    "NovaCorp"
-  ],
-  "key_entities": [
-    "NovaCorp",
-    "Photon",
-    "Jane Smith",
-    "OmniGadget",
-    "AutoDrive",
-    "San Francisco"
-  ],
-  "content_focus": [
-    "Technology",
-    "Business"
-  ]
+  "event_summary_points": ["Three states meet in Geneva over Blue River basin", "Follows decade of tension, two failed treaties", "Framework agreement reached, awaits ratification", "Deal sidesteps contested upstream dam"],
+  "thematic_keywords": ["Transboundary water rights", "Resource scarcity diplomacy", "Treaty ratification risk", "Unresolved infrastructure dispute"],
+  "topic_tags": ["Water Resources", "Diplomacy", "Regional Security", "Environment"],
+  "key_entities": ["Blue River", "Geneva", "Elena Ruiz"],
+  "content_focus": ["World Affairs", "Environment"]
 }
 </final_json>
-
-**Example 2: Geopolitical Development**
-
-*Input Article Snippet (Conceptual):*
-\`\`\`
-Headline: Maritime Tensions Rise in Azure Strait After Naval Incident
-Body: Tensions flared today in the Azure Strait following a close encounter between naval vessels from Accadia and Borealia. Accadia claims a Borealian patrol boat entered its territorial waters, issuing warnings before escorting it out. Borealia disputes the boundary claim and accuses Accadian ships of aggressive maneuvers. The strait is a critical shipping lane. Regional powers call for de-escalation. This follows months of diplomatic friction over fishing rights.
-\`\`\`
-
-*Output JSON:*
-<final_json>
-{
-  "language": "en",
-  "primary_location": "GLOBAL",
-  "completeness": "COMPLETE",
-  "content_quality": "OK",
-  "event_summary_points": [
-    "Naval encounter in Azure Strait",
-    "Involved Accadia and Borealia vessels",
-    "Accadia alleges territorial water violation",
-    "Borealia disputes boundary, alleges aggression",
-    "Regional powers urge calm"
-  ],
-  "thematic_keywords": [
-    "Maritime security",
-    "Geopolitical tension",
-    "Territorial disputes",
-    "Freedom of navigation",
-    "International relations",
-    "Shipping lane security",
-    "De-escalation efforts"
-  ],
-  "topic_tags": [
-    "International Relations",
-    "Maritime Law",
-    "Geopolitics",
-    "Accadia",
-    "Borealia",
-    "Azure Strait",
-    "Naval Operations"
-  ],
-  "key_entities": [
-    "Accadia",
-    "Borealia",
-    "Azure Strait"
-  ],
-  "content_focus": [
-    "World Affairs",
-    "Security",
-    "Politics"
-  ]
-}
-</final_json>
-
-**Example 3: Scientific Breakthrough Report**
-
-*Input Article Snippet (Conceptual):*
-\`\`\`
-Headline: Researchers Develop Novel Catalyst for Greener Plastic Production
-Body: A team at Quantum University has developed a new palladium-based catalyst that enables the production of common plastics using significantly less energy and generating fewer harmful byproducts. Published in 'Nature Synthesis', the study shows a 30% reduction in energy requirements for polymerization. Lead researcher Dr. Eva Rostova notes potential for large-scale industrial adoption, reducing the carbon footprint of plastic manufacturing. Further testing is needed for durability.
-\`\`\`
-
-*Output JSON:*
-<final_json>
-{
-  "language": "en",
-  "primary_location": "N/A",
-  "completeness": "COMPLETE",
-  "content_quality": "OK",
-  "event_summary_points": [
-    "New palladium catalyst developed",
-    "Created by Quantum University researchers",
-    "Reduces energy use (30%) in plastic production",
-    "Lowers harmful byproducts",
-    "Published in 'Nature Synthesis'"
-  ],
-  "thematic_keywords": [
-    "Green chemistry",
-    "Sustainable manufacturing",
-    "Catalysis innovation",
-    "Plastic production efficiency",
-    "Carbon footprint reduction",
-    "Industrial process improvement"
-  ],
-  "topic_tags": [
-    "Chemistry",
-    "Materials Science",
-    "Sustainability",
-    "Plastics",
-    "Research",
-    "Catalysis"
-  ],
-  "key_entities": [
-    "Quantum University",
-    "Eva Rostova",
-    "Nature Synthesis",
-    "Palladium"
-  ],
-  "content_focus": [
-    "Science",
-    "Technology",
-    "Environment"
-  ]
-}
-</final_json>
-
-**--- End Examples ---**
-
-**CRITICAL REMINDER:**
-- Your response must be ONLY the JSON object wrapped in <final_json></final_json> tags
-- No explanatory text, no "Here is..." or "Based on..."
-- Start immediately with <final_json>{ and end with }</final_json>
 
 **Now, analyze the following article and provide the JSON output:**
 
@@ -207,27 +73,14 @@ Body: A team at Quantum University has developed a new palladium-based catalyst 
 }
 </final_json>
 
-**Detailed Criteria Clarifications:**
+**Criteria:**
 
-*   **Completeness:**
-    *   \`COMPLETE\`: Appears to be the full article text available in the input.
-    *   \`PARTIAL_USEFUL\`: Text appears truncated (e.g., paywall fade-out, "read more" link cut-off, abruptly ends mid-paragraph) but enough core information is present to understand the basic story and extract meaningful data.
-    *   \`PARTIAL_USELESS\`: Only headline, lede, or a tiny snippet is present. Virtually no usable content beyond the absolute minimum to identify the topic, making extraction of summaries/keywords impossible or pointless.
-
-*   **Content Quality:**
-    *   \`OK\`: Standard news reporting, analysis, interviews, press releases, or other substantive factual content. Well-structured and informative.
-    *   \`LOW_QUALITY\`: Content is present but potentially problematic. Examples: very thin/short updates with little new info, heavy on opinion/ranting with minimal facts, celebrity gossip focus, sensationalized or clickbait-style writing (even if factual), user-generated content (like comments sections mistakenly scraped), lists/roundups with minimal detail per item. *May be useful depending on user needs, but flag it.*
-    *   \`JUNK\`: Input text is clearly not usable article content. Examples: Error messages (404, 500), login/signup prompts, ad-heavy pages with no real article, navigation menus or site boilerplate text only, code snippets, raw data tables without context, content is obviously machine-generated gibberish or non-prose, duplicate template text. *These should generally be filtered out entirely.*
-
-*   **Semantic Density:** For \`event_summary_points\` and \`thematic_keywords\`, prioritize packing meaning into keywords and short phrases. Avoid conversational filler ("As reported today...", "It is interesting to note that..."), introductory clauses, or full grammatical sentences. Think like you're writing concise tags or dense factual notes for a database entry, not prose for a human reader.
-
-*   **Distinctions between Key Fields:**
-    *   \`event_summary_points\`: Focus strictly on the *specific facts* of the *event being reported* in this article. Who did what, when, where, what was the immediate outcome? Use keywords and essential nouns/verbs.
-    *   \`thematic_keywords\`: Describe the *broader context, significance, and underlying forces* related to the event. Why does this event matter in the bigger picture? What trends does it connect to? What are the potential implications? Use conceptual phrases.
-    *   \`topic_tags\`: Identify the *core subjects or categories* the article falls under. What general areas of interest does this article cover? Think of these like index terms or categories in a library. Use concise nouns or noun phrases.
-    *   \`key_entities\`: List the *specific named proper nouns* (people, organizations, specific geographic locations like cities/regions if central to the event, product names, legislative bill names, etc.) that are the main actors or subjects *within the specific event*.
-
-*   **\`content_focus\` Selection:** Choose the 1-3 tags from the provided list \`["Politics", "Business", "Technology", "Science", "World Affairs", "Economy", "Environment", "Health", "Security", "Culture", "Human Interest", "Analysis", "Breaking News"]\` that best capture the *primary angle or lens* through which the article presents the information. An article about a new environmental regulation could be \`Environment\` and \`Politics\` and maybe \`Economy\` if it focuses on business impact. \`Analysis\` is for pieces primarily offering interpretation or opinion on events, rather than just reporting them. \`Breaking News\` suggests a focus on immediate, unfolding events.
+*   \`completeness\`: \`COMPLETE\` = full text. \`PARTIAL_USEFUL\` = truncated (paywall, cut-off, ends mid-paragraph) but core story still extractable. \`PARTIAL_USELESS\` = only headline/lede/snippet; extraction pointless.
+*   \`content_quality\`: \`OK\` = substantive reporting, analysis, interview, press release. \`LOW_QUALITY\` = thin update, opinion/rant with few facts, celebrity gossip, clickbait, scraped comments, minimal-detail roundup. \`JUNK\` = not article content at all (error page, login prompt, nav boilerplate, code, raw tables, gibberish, template text).
+*   **Semantic density:** \`event_summary_points\` and \`thematic_keywords\` are dense tags, not prose. No filler, no full sentences.
+*   **Field distinctions:** \`event_summary_points\` = specific facts of THIS event (who/what/when/where/outcome). \`thematic_keywords\` = broader context, significance, implications. \`topic_tags\` = subject categories, like index terms. \`key_entities\` = named proper nouns central to the event.
+*   \`content_focus\`: pick 1-3 from \`["Politics", "Business", "Technology", "Science", "World Affairs", "Economy", "Environment", "Health", "Security", "Culture", "Human Interest", "Analysis", "Breaking News"]\` — the primary lens, not every topic touched.
+*   \`primary_location\`: the country most central to the event (English country name). Use a city or region only when the event is inherently local to it.
 `.trim();
 }
 

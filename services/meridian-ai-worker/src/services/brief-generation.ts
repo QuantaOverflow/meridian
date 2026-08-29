@@ -914,7 +914,21 @@ export class BriefGenerationService {
         blockCount: byIndex.size,
       });
 
-      const titleResponse = await this.callAI(getBriefTitlePrompt(content), undefined, {
+      // 起标题喂的是**骨架摘要**而不是 34K 字的全文。2026-08-29 dry-run 实证：喂全文时
+      // 模型会把 15 个板块逐一列进标题，产出 247 字符、14 个逗号短语的怪物
+      // （"us israel iran stalemate, nepal tibet glacial collapse, … uefa fifa"）。
+      // 老路径没这个病纯粹因为整篇合成只产出 1-4 个板块，题材少到列不长。
+      // 主线章节的标题本来就是"按当天实际发生的事命名"的，正是 prompt 要的 major topics；
+      // 主线不足时才用独立事态的块标题补位。
+      const titleTopics = [
+        ...skeleton.main.map((sec) => sec.heading.toLowerCase()),
+        ...skeleton.isolated.map((r) => (byIndex.get(r.i - 1)?.title || r.title).toLowerCase()),
+      ].filter(Boolean);
+      const titleDigest = titleTopics
+        .slice(0, Math.max(5, skeleton.main.length))
+        .map((t) => `- ${t}`)
+        .join('\n');
+      const titleResponse = await this.callAI(getBriefTitlePrompt(titleDigest), undefined, {
         temperature: 0,
         phase: 'brief_generation',
         callIndex: CALL_INDEX.assembleTitle,
@@ -924,6 +938,12 @@ export class BriefGenerationService {
         console.warn('[Brief Assemble] 标题解析失败或缺 title 字段 → 用通用标题 "Daily Intelligence Brief"（非模型生成）');
       }
       const title = titleData?.title || 'Daily Intelligence Brief';
+      // 只报不改：截断会静默产出半截标题，比一个过长标题更难发现。
+      if (title.length > 120) {
+        console.warn(
+          `[Brief Assemble] BRIEF_TITLE_TOO_LONG ${title.length} 字符（喂进去的题材 ${titleTopics.length} 条，正常应产出 3-6 个短语）: ${title.slice(0, 160)}`
+        );
+      }
 
       console.log(`[Brief Assemble] 拼装完成：${sectionCount} 节 / ${byIndex.size} 块 / ${content.length} 字符，标题 "${title}"`);
       return { success: true, data: { title, content, coverage, model: PHASE_DEFAULTS.brief_generation.model }, hygiene, consistency };

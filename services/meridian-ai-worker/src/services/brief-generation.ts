@@ -807,7 +807,8 @@ export class BriefGenerationService {
         const blocked = tallyGuards(result.blocked);
         console.log(
           `[Brief Block ${index}] 接地校验：edits ${parsed.edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
-            `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}`
+            `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}` +
+            (result.recased ? `，${result.recased} 条替换压回全小写文风` : '')
         );
         return {
           success: true,
@@ -1052,7 +1053,8 @@ export class BriefGenerationService {
 
       console.log(
         `[Brief Generation] 接地校验-改正：edits ${edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
-          `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}`
+          `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}` +
+          (result.recased ? `，${result.recased} 条替换压回全小写文风` : '')
       );
       return revised;
     } catch (error) {

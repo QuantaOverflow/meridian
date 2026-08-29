@@ -47,6 +47,8 @@ export interface ApplyResult {
   blocked: BlockedEdit[];
   /** 是否发生过删除，调用方据此决定要不要收拾删除留下的空白 */
   deleted: boolean;
+  /** 被压回全小写文风的替换条数（留痕：RARR 破坏文风的频率是个要跟的信号） */
+  recased: number;
 }
 
 /**
@@ -88,6 +90,34 @@ export function isNoop(span: string, replacement: string): boolean {
   return replacement.trim().toLowerCase() === span.trim().toLowerCase();
 }
 
+/**
+ * 把替换文本压回简报的全小写文风，但**保留全大写缩写**。
+ *
+ * 简报 prompt 明写 "use lowercase by default like i do"，生成端照做了；RARR 的替换文本
+ * 却按标准大小写回来，于是修一处事实就带回一处文风破口。
+ * 2026-08-29 dry-run 逐条归因坐实：成品正文里 12 个大写起首专名，**11 个来自 RARR 的
+ * 替换文本**，生成端只贡献 1 个（November）。
+ *
+ * 为什么用代码而不是 prompt：给 RARR 加"别改成大写"的约束实测更差——模型改成全小写的
+ * 同时把 nicolás 的重音也抹了，空转从 23 涨到 50（见 memory: rarr-prompt-constraint-negative）。
+ *
+ * "强制小写会误伤 IRGC" 这条担心已证伪：保留 ≥2 个连续大写字母的 token 即可。
+ * 拿 dry-run 的 77 条真实替换验：8 条被规整，IRGC 零误伤。
+ */
+const ACRONYM = /\b[A-Z][A-Z0-9&.\-]*[A-Z]\b/g;
+
+export function toHouseCase(replacement: string): string {
+  const out: string[] = [];
+  let last = 0;
+  ACRONYM.lastIndex = 0;
+  for (let m = ACRONYM.exec(replacement); m; m = ACRONYM.exec(replacement)) {
+    out.push(replacement.slice(last, m.index).toLowerCase(), m[0]);
+    last = m.index + m[0].length;
+  }
+  out.push(replacement.slice(last).toLowerCase());
+  return out.join('');
+}
+
 /** G4 膨胀：替换比原文长出一半以上 —— 在补充信息而不是修错 */
 export function isBloat(span: string, replacement: string): boolean {
   return replacement.trim().length > 1.5 * span.trim().length;
@@ -110,6 +140,7 @@ export function applyGroundedEdits(
   let applied = 0;
   let skipped = 0;
   let deleted = false;
+  let recased = 0;
   const blocked: BlockedEdit[] = [];
 
   for (const e of edits) {
@@ -129,17 +160,22 @@ export function applyGroundedEdits(
       continue;
     }
 
+    // 压回全小写文风（保留缩写）。放在守卫之后：守卫判的是"这条 edit 该不该应用"，
+    // 大小写是"应用时怎么写"，两件事。
+    const cased = replacement ? toHouseCase(replacement) : replacement;
+    if (cased !== replacement) recased++;
+
     // 只认精确子串命中：命中才改，没命中宁可不动（防误伤），与既有 verifyAndCorrect 一致
     if (text.includes(span)) {
-      text = text.replace(span, replacement);
+      text = text.replace(span, cased);
       applied++;
-      if (replacement === '') deleted = true;
+      if (cased === '') deleted = true;
     } else {
       skipped++;
     }
   }
 
-  return { text, applied, skipped, blocked, deleted };
+  return { text, applied, skipped, blocked, deleted, recased };
 }
 
 /** 拦截数按守卫分类汇总，供日志/传感器用 */

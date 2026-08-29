@@ -762,7 +762,11 @@ export class BriefGenerationService {
       const selfCorrect = options?.selfCorrect !== false;
 
       const storyMarkdown = this.convertReportsToMarkdown([report], index, reports.length);
-      const raw = await this.callAI(getBriefBlockPrompt(storyMarkdown, title, section), getBriefGenerationSystemPrompt(), {
+      // 刻意不带 system prompt。getBriefGenerationSystemPrompt() 讲的是整篇尺度的规矩
+      // （"创建 3-6 个章节"、"每条 story 必须有去向"、"没内容就整节省略"），喂给只写一个块的
+      // 调用会反过来诱发它去写章节标题——正是 b′ 要消灭的那个失败模式。文风与接地规则
+      // 都已经在 block prompt 里了。原型实测的 100% 落地率也是不带 system prompt 跑出来的。
+      const raw = await this.callAI(getBriefBlockPrompt(storyMarkdown, title, section), undefined, {
         temperature: 0.7,
         maxTokens: 2500,
         phase: 'brief_generation',

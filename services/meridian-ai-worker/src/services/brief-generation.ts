@@ -1256,6 +1256,10 @@ export class BriefGenerationService {
       // 机械改不安全（改法取决于删掉的是什么），留给卫生传感器报。
       .replace(/([,;:])\s*\./g, () => { repairs++; return '.'; })
       .replace(/,{2,}/g, () => { repairs++; return ','; })
+      // 双句号：删掉一句后与前句句末的点撞在一起（"…respective shares of the strait's
+      // waters and revenues.. meanwhile…"）。两条路径都会出，@15 实测各 2 处。
+      // 三点省略号由前后 lookaround 排除，不误伤。
+      .replace(/(?<!\.)\.\.(?!\.)/g, () => { repairs++; return '.'; })
       .replace(/\n{3,}/g, '\n\n');
     return { text, repairs };
   }

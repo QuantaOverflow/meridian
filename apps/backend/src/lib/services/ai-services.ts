@@ -37,6 +37,26 @@ export interface BriefTldrData {
 interface BriefSummaryData {
   tldrProse: string;
 }
+/** b′ 骨架：因果主线章节 + 独立事态。`i` 是 1 基的 story 序号（与 reportKeys 下标差 1）。 */
+export interface BriefSkeletonData {
+  main: Array<{ heading: string; causalLink: string; reports: Array<{ i: number; title: string }> }>;
+  isolated: Array<{ i: number; title: string }>;
+  /** 规划完全没提到、由 ai-worker 侧代码补进独立事态的 story 序号。非空即说明规划步不完整。 */
+  repaired: number[];
+}
+
+/** 一个写好的简报块。`verified:false` = 这块没经过 RARR 核验，不是"核过且干净"。 */
+export interface BriefBlockData {
+  index: number;
+  title: string;
+  text: string;
+  verified: boolean;
+  edits: number;
+  applied: number;
+  skipped: number;
+  blocked: Record<'noop' | 'bad_delete' | 'graft' | 'bloat', number>;
+}
+
 // 情报报告 / 忠实度 verdict 载荷形态大且松，保持宽松类型（D 的收益在接缝仪式收敛，
 // 非逐字段深类型化——那是另一件事）。
 export type IntelligenceReportData = Record<string, any>;
@@ -196,6 +216,62 @@ export class AIWorkerService {
         previousBrief,
         options // 同上：不垫 provider/model 默认
       })
+    });
+
+    return await this.callJson<FinalBriefData>(request);
+  }
+
+  /**
+   * b′ 步骤 1：规划简报骨架（因果主线章节 + 块标题）。
+   *
+   * 三个 b′ 端点都只收 `reportKeys`：情报报告全文已卸在 R2，ai-worker 自己读回。
+   * 不内联传是因为 RARR 校验必须看全量源，逐块内联 = 每份简报把 ~158KB 的报告
+   * 在 service binding 上搬 25 遍。
+   */
+  async planBriefSkeleton(reportKeys: string[]): Promise<ServiceResult<BriefSkeletonData>> {
+    const request = new Request(`${this.baseUrl}/meridian/plan-brief-skeleton`, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+      body: JSON.stringify({ reportKeys })
+    });
+
+    return await this.callJson<BriefSkeletonData>(request);
+  }
+
+  /**
+   * b′ 步骤 2：写一个简报块（写作 + RARR 接地校验 + 四条确定性守卫）。
+   * 由 workflow 侧 fan-out 成 N 个 step —— 不能挤在一个 step 里跑（CF 约 2% invocation
+   * 会被平台 canceled，一次抖动丢整期简报）。
+   *
+   * @param index 0 基，这个块对应 reportKeys 里的第几份
+   */
+  async writeBriefBlock(
+    reportKeys: string[],
+    index: number,
+    title: string,
+    section?: { heading: string; causalLink: string; siblingIndices: number[] }
+  ): Promise<ServiceResult<BriefBlockData>> {
+    const request = new Request(`${this.baseUrl}/meridian/write-brief-block`, {
+      method: 'POST',
+      headers: this.buildHeaders({ 'x-call-index': String(index) }),
+      body: JSON.stringify({ reportKeys, index, title, section })
+    });
+
+    return await this.callJson<BriefBlockData>(request);
+  }
+
+  /**
+   * b′ 步骤 3：拼装成品简报（结构零 LLM，唯一调用是起整篇标题）+ 跑传感器。
+   */
+  async assembleBrief(
+    reportKeys: string[],
+    skeleton: BriefSkeletonData,
+    blocks: Array<{ index: number; title: string; text: string }>
+  ): Promise<ServiceResult<FinalBriefData>> {
+    const request = new Request(`${this.baseUrl}/meridian/assemble-brief`, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+      body: JSON.stringify({ reportKeys, skeleton, blocks })
     });
 
     return await this.callJson<FinalBriefData>(request);

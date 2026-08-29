@@ -1366,49 +1366,145 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('brief_generation', 'started');
 
-      // 合成这一步串起两次 LLM 长调用(generate-final-brief + generate-brief-tldr)，输入是全部
-      // 情报报告全文，规模随 maxStoriesToGenerate 与每故事文章数一起涨——不该吃 2 分钟的默认档。
-      // 实证(2026-08-17 run 75，扩源后首次 cron)：505 篇/36 故事/15 份情报报告下单次合成超 2 分钟，
-      // defaultStepConfig 的 1+3 次尝试全部超时，整个工作流以 WorkflowTimeoutError 失败、当日无简报
-      // (CF 日志实证 13:15-13:29 内 generate-final-brief 被调 4 次、generate-brief-tldr 3 次)。
-      // retries 取 1 而非 3：同 storyValidation/intelligence 的既有判断——重试把整套 LLM 调用重跑一遍，
-      // 纯烧钱且拖长失败判定，超时余量该给单次尝试而不是给次数。
-      const briefSynthesisStepConfig: WorkflowStepConfig = {
+      // ── b′ 分段写 ────────────────────────────────────────────────────────
+      // 原先是「一次调用把 N 份报告写成一篇简报」。实测（第 75 期 25 份报告）那条路
+      // 落地率只有 12%-56%（3-14 块，天天跳），且 1/4 期的 RARR 校验会整期复读失效、
+      // 静默发布未校对稿。b′ 把结构从模型手里拿走：
+      //   规划 1 次   →  逐块 N 次（每块只看自己那份报告，防串源）  →  拼装 0 次 LLM
+      // 落地率 25/25、两轮零失败；块数与覆盖由代码保证，不靠模型自觉。
+      //
+      // ⚠️ fan-out 必须在 backend、不能塞进 ai-worker 内部并发：CF 侧约 2% 的 invocation
+      // 会被平台 canceled，N 次调用挤一个 step 就是 16efc42 刚修完那个 bug 的翻版。
+      //
+      // 前日简报上下文已停用（b′ 也不传）：它把昨天 brief 的 TLDR（一串主题标识符）回灌
+      // 进来，brief 会无视 guardrail 把这些标识符展开成编造的整节，再被 TLDR 压回、次日
+      // 重灌，形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。
+      const reportKeys = intelligenceReports.map(({ r2Key }: { r2Key: string }) => r2Key);
+
+      // 5a 骨架规划：1 次调用，只读 N 条 executiveSummary（不读全文），量级很小。
+      const skeletonStepConfig: WorkflowStepConfig = {
+        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
+        timeout: '5 minutes',
+      };
+      const skeleton = await step.do('简报骨架规划', skeletonStepConfig, async () => {
+        const aiServices = createAIServices(this.env, workflowId);
+        const plan = await aiServices.aiWorker.planBriefSkeleton(reportKeys);
+        // 规划失败硬失败：静默兜底成"全部进独立事态"会产出一份没有任何因果主线的简报，
+        // 而它在覆盖率/块数上看起来完全正常——正是本项目反复栽的"失败静默降级"。
+        if (!plan.ok) throw new Error(`简报骨架规划失败: ${plan.error}`);
+        const s = plan.value;
+        console.log(
+          `[AutoBrief] 简报骨架：主线 ${s.main.length} 节 / 独立事态 ${s.isolated.length} 条` +
+            (s.repaired?.length ? `（规划漏掉 ${s.repaired.join(',')}，已由代码补进独立事态）` : '')
+        );
+        return s;
+      });
+
+      // 5b 逐块写作：一份报告一个 step。每个块 = 1 次写作调用 + 1 次 RARR 校验调用。
+      const briefBlockStepConfig: WorkflowStepConfig = {
+        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
+        timeout: '10 minutes',
+      };
+      // 与情报分析同档：不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
+      const BRIEF_BLOCK_CONCURRENCY = 6;
+
+      type BlockJob = {
+        /** 1 基的 story 序号（骨架里的 i）；端点要的是 0 基下标，差 1 */
+        i: number;
+        title: string;
+        section?: { heading: string; causalLink: string; siblingIndices: number[] };
+      };
+      const blockJobs: BlockJob[] = [
+        ...skeleton.main.flatMap((s) =>
+          s.reports.map((r) => ({
+            i: r.i,
+            title: r.title,
+            section: {
+              heading: s.heading,
+              causalLink: s.causalLink,
+              // 同节兄弟的 0 基下标，供 ai-worker 取摘要做"别重复叙述"的提示
+              siblingIndices: s.reports.filter((x) => x.i !== r.i).map((x) => x.i - 1),
+            },
+          }))
+        ),
+        ...skeleton.isolated.map((r) => ({ i: r.i, title: r.title })),
+      ];
+
+      type BlockOutcome =
+        | { block: { index: number; title: string; text: string; verified: boolean } }
+        | { failure: { i: number; title: string; reason: string } };
+
+      const blockOutcomes = await this.batchProcessParallel(
+        blockJobs,
+        BRIEF_BLOCK_CONCURRENCY,
+        (job: BlockJob): Promise<BlockOutcome> =>
+          step
+            .do(`简报块:${job.i}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
+              const aiServices = createAIServices(this.env, workflowId);
+              const res = await aiServices.aiWorker.writeBriefBlock(reportKeys, job.i - 1, job.title, job.section);
+              if (!res.ok) throw new Error(res.error);
+              const b = res.value;
+              if (!b.verified) {
+                // 没经过 RARR 核验 ≠ 核过且干净。不阻断（校验是末端兜底），但要可见。
+                console.warn(`[AutoBrief] 简报块 ${job.i}「${job.title}」未经 RARR 核验（校验调用失败或响应坏）`);
+              }
+              return { block: { index: b.index, title: b.title, text: b.text, verified: b.verified } };
+            })
+            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
+            // ——不接住的话这个块会静默消失，而拼装步照样产出一份"看起来正常"的简报。
+            .catch((e: unknown): BlockOutcome => {
+              const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
+              console.error(`[AutoBrief] 简报块 step 最终失败 (story=${job.i}, "${job.title}"): ${reason}`);
+              return { failure: { i: job.i, title: job.title, reason } };
+            })
+      );
+
+      const writtenBlocks = blockOutcomes
+        .filter((r): r is { block: { index: number; title: string; text: string; verified: boolean } } => 'block' in r)
+        .map((r) => r.block);
+      const blockFailures = blockOutcomes
+        .filter((r): r is { failure: { i: number; title: string; reason: string } } => 'failure' in r)
+        .map((r) => r.failure);
+      const unverifiedCount = writtenBlocks.filter((b) => !b.verified).length;
+
+      console.log(
+        `[AutoBrief] 简报块写作完成: ${writtenBlocks.length}/${blockJobs.length}` +
+          (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
+          (unverifiedCount ? `，${unverifiedCount} 个块未经 RARR 核验` : '')
+      );
+      if (writtenBlocks.length === 0) {
+        throw new Error(`简报块写作对全部 ${blockJobs.length} 个块均失败，无可拼装内容（详见上方各块错误日志）`);
+      }
+      await observability.logStep(
+        'brief_blocks',
+        blockFailures.length > 0 ? 'degraded' : 'completed',
+        {
+          expected: blockJobs.length,
+          written: writtenBlocks.length,
+          failedCount: blockFailures.length,
+          unverified: unverifiedCount,
+          failures: blockFailures,
+          mainSections: skeleton.main.length,
+          isolated: skeleton.isolated.length,
+          repaired: skeleton.repaired ?? [],
+        }
+      );
+
+      // 5c 拼装：结构部分零 LLM（<u> 包装、章节归属、覆盖对账全由代码做），
+      // 唯一的调用是给整篇起标题。
+      const briefAssembleStepConfig: WorkflowStepConfig = {
         retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
         timeout: '10 minutes',
       };
-
-      const briefResult = await step.do('生成最终简报', briefSynthesisStepConfig, async (): Promise<BriefGenerationResultData> => {
-        console.log(`[AutoBrief] 开始生成简报，基于 ${intelligenceReports.length} 个情报分析`);
-        
-        // 前日简报上下文已停用：它把昨天 brief 的 TLDR（一串主题标识符）回灌进来，
-        // brief 会无视 guardrail 把这些标识符展开成编造的整节，再被 TLDR 压回、次日重灌，
-        // 形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。断源 > 靠模型自觉。
-        const previousBrief = null;
-
-        // 情报报告已卸到 R2(上一 step 只回传 keys,避免内联超 1MB)；这里读回全文供简报生成。
-        const analysisData = (await Promise.all(
-          intelligenceReports.map(async ({ r2Key }: { r2Key: string }) => {
-            const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
-            return obj ? JSON.parse(await obj.text()) : null;
-          })
-        )).filter(Boolean);
-
-        // 调用 AI Worker 生成简报。接缝返回 domain result——status/parse/success/dispose 收进
-        // ai-services 的 callJson，此处只按结果 throw（生成失败即整步失败）。
+      const assembled = await step.do('简报拼装', briefAssembleStepConfig, async () => {
         const aiServices = createAIServices(this.env, workflowId);
-        // 不传 provider/model：由 ai-worker 的 PHASE_DEFAULTS 决定（该端点本就不读这两个字段）
-        const brief = await aiServices.aiWorker.generateFinalBrief(analysisData, previousBrief);
-        if (!brief.ok) {
-          throw new Error(`简报生成失败: ${brief.error}`);
-        }
+        const res = await aiServices.aiWorker.assembleBrief(reportKeys, skeleton, writtenBlocks);
+        if (!res.ok) throw new Error(`简报拼装失败: ${res.error}`);
 
-        console.log(`[AutoBrief] 成功生成简报: ${brief.value.title}`);
-
-        // 观测性：落一份覆盖对账清单到 R2（洞3 方案B）。合成步会静默丢弃已分析的 story
-        // （占缺陷 68% 的合成层漏报），此清单记录每条候选 story 的去向 headline/noteworthy/
-        // dropped，使合成层漏报事后可追踪、可对账 selected_for_intel。best-effort，不拖垮生成。
-        const coverage = Array.isArray(brief.metadata?.coverage) ? brief.metadata.coverage : [];
+        // 观测性：覆盖对账落 R2。b′ 下这份账是**确定已知**的调用结果（每份报告恰好一个块，
+        // 成功=headline、块 step 失败=dropped），不再是判官事后猜去向——也因此不再需要
+        // 两遍法补录（补录治的是"整篇合成静默丢 story"，b′ 从结构上没有这个自由度）。
+        const coverage = Array.isArray((res.metadata as any)?.coverage) ? (res.metadata as any).coverage : [];
         if (coverage.length) {
           try {
             const tally = (d: string) => coverage.filter((c: any) => c?.disposition === d).length;
@@ -1418,84 +1514,92 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 {
                   workflowId,
                   createdAt: new Date().toISOString(),
+                  path: 'bprime',
                   summary: {
                     total: coverage.length,
                     headline: tally('headline'),
                     noteworthy: tally('noteworthy'),
                     dropped: tally('dropped'),
                   },
-                  // 补录**前**的去向汇总。summary 是补录后的，而补录按构造把 dropped 推到 0
-                  // ——于是"合成这一遍漏了多少"在落盘数据里恒为 0，跨 run 无从比较生成质量。
-                  // 2026-08-12 迁 Workers AI 时坐实：glm 首遍 dropped 4/10，补录 4/4 全救回，
-                  // 成品指标与 qwen 完全一致(都是 0)，差异被修复机制吃掉了。
-                  summaryBeforeRepair: brief.metadata?.coverage_before_repair ?? null,
+                  // b′ 没有补录环节，故与 summary 同值。字段保留是为了让跨期查询不用分叉。
+                  summaryBeforeRepair: null,
                   coverage,
+                  // 两个确定性传感器的读数（只报不改）
+                  hygiene: (res.metadata as any)?.hygiene_findings ?? [],
+                  consistency: (res.metadata as any)?.consistency_findings ?? [],
                 },
                 null,
                 2
               )
             );
-            console.log(
-              `[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')}, noteworthy ${tally('noteworthy')})`
-            );
+            console.log(`[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')})`);
           } catch (persistErr) {
             console.warn(`[AutoBrief] 覆盖对账落盘失败 (workflow=${workflowId}):`, persistErr);
           }
         }
 
-        // 生成 TLDR
-        // 同上：不传 provider/model
-        const tldr = await aiServices.aiWorker.generateBriefTldr(brief.value.title, brief.value.content);
+        return {
+          title: res.value.title,
+          content: res.value.content,
+          model_used: (res.metadata as any)?.model_used || 'unknown',
+          hygieneCount: ((res.metadata as any)?.hygiene_findings ?? []).length,
+          consistencyCount: ((res.metadata as any)?.consistency_findings ?? []).length,
+        };
+      });
+
+      console.log(
+        `[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符）` +
+          `，卫生 ${assembled.hygieneCount} 条 / 跨块数值冲突 ${assembled.consistencyCount} 处`
+      );
+
+      // 5d 摘要：次日模型用的 TLDR + 读者端展示的散文导语。与拼装分开成 step，
+      // 是为了让"简报正文已经生成好了"这件事不被摘要环节的失败拖累。
+      const briefSummaryStepConfig: WorkflowStepConfig = {
+        retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
+        timeout: '10 minutes',
+      };
+      const summaries = await step.do('简报摘要', briefSummaryStepConfig, async () => {
+        const aiServices = createAIServices(this.env, workflowId);
+        const tldr = await aiServices.aiWorker.generateBriefTldr(assembled.title, assembled.content);
         if (!tldr.ok) {
           throw new Error(`TLDR生成失败: ${tldr.error}`);
         }
-
-        console.log(`[AutoBrief] 成功生成TLDR`);
-
-        // 读者端展示用的散文摘要。与上面的 TLDR 是两件事：那个是次日模型的记忆状态
-        // （`标识|状态|实体|要点` 每行一条），这个是给人读的 2-3 句导语。
-        // 刻意 best-effort：摘要只影响读者端标题下那一段的显示，为它整步失败、
-        // 丢掉一份已经生成好的简报是不划算的。失败留 null，前端自然不渲染该段。
-        const tldrProse = await aiServices.aiWorker.generateBriefSummary(brief.value.title, brief.value.content);
+        // 读者端展示用的散文摘要。刻意 best-effort：摘要只影响读者端标题下那一段的显示，
+        // 为它整步失败、丢掉一份已经生成好的简报是不划算的。失败留 null，前端自然不渲染。
+        const tldrProse = await aiServices.aiWorker.generateBriefSummary(assembled.title, assembled.content);
         if (!tldrProse.ok) {
           console.warn(`[AutoBrief] 散文摘要生成失败（不阻断简报）: ${tldrProse.error}`);
         }
-
-        // used_articles 此前写的是 intelligenceReports.length —— 与下一行 intelligence_analyses
-        // 同一个表达式，即**故事数**，字段名却叫 articles。artifact 据此显示"9 / 150 篇入选"，
-        // 而第 56 期真实入选文章是 25 篇，低报 2.8 倍；observability 的 articleUsageRate 同源同错。
-        // 改为真正喂进简报的去重文章数 = 拿到情报报告的那些 story 的 articleIds 并集
-        // （失败的 story 不算，它的报告没进简报）。failures[].idx 是 storiesForIntelligence 的全局下标
-        // （batchProcessParallel 传的是 i + batchIndex）。
-        // ⚠️ 语义变更：reports 表 51-59 期存的仍是旧值（故事数），跨期比较需注意。
-        const failedIdx = new Set(intelFailures.map(f => f.idx));
-        const usedArticleIds = new Set<number>(
-          storiesForIntelligence
-            .filter((_: any, i: number) => !failedIdx.has(i))
-            .flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []))
-        );
-
-        return {
-          title: brief.value.title,
-          content: brief.value.content,
-          tldr: tldr.value.tldr,
-          tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null,
-          model_author: 'meridian-ai-worker',
-          stats: {
-            total_articles: dataset.articles.length,
-            used_articles: usedArticleIds.size,
-            clusters_found: clusteringResult.statistics.totalClusters,
-            stories_identified: validatedStories.stories.length,
-            intelligence_analyses: intelligenceReports.length,
-            content_length: brief.value.content.length,
-            // 路径是 brief.metadata（跨 service 响应的 metadata），不是 brief.value.metadata
-            // （domain 数据）——与同一函数里读 coverage 的 brief.metadata?.coverage 一致。
-            // 旧代码走的也是错路径，但硬编码 'qwen-long' 兜底把它盖住了；2026-08-12 改成
-            // 'unknown' 后统计里立刻出现 model_used:"unknown"，才让这个既有错误显形。
-            model_used: (brief.metadata as any)?.model_used || 'unknown'
-          }
-        };
+        return { tldr: tldr.value.tldr, tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null };
       });
+
+      // used_articles 是真正喂进简报的去重文章数 = 拿到情报报告的那些 story 的 articleIds 并集
+      // （失败的 story 不算，它的报告没进简报）。failures[].idx 是 storiesForIntelligence 的
+      // 全局下标（batchProcessParallel 传的是 i + batchIndex）。
+      // ⚠️ 语义变更：reports 表 51-59 期存的仍是旧值（故事数），跨期比较需注意。
+      const failedIdx = new Set(intelFailures.map(f => f.idx));
+      const usedArticleIds = new Set<number>(
+        storiesForIntelligence
+          .filter((_: any, i: number) => !failedIdx.has(i))
+          .flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []))
+      );
+
+      const briefResult: BriefGenerationResultData = {
+        title: assembled.title,
+        content: assembled.content,
+        tldr: summaries.tldr,
+        tldrProse: summaries.tldrProse,
+        model_author: 'meridian-ai-worker',
+        stats: {
+          total_articles: dataset.articles.length,
+          used_articles: usedArticleIds.size,
+          clusters_found: clusteringResult.statistics.totalClusters,
+          stories_identified: validatedStories.stories.length,
+          intelligence_analyses: intelligenceReports.length,
+          content_length: assembled.content.length,
+          model_used: assembled.model_used,
+        },
+      };
 
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
 

@@ -41,8 +41,13 @@ async function chatOnce(
   const body = {
     messages: [{ role: 'user', content: prompt }],
     options: {
-      // JUDGE_MODEL=claude-* 时走 anthropic（跨家族判官通道），其余仍走 dashscope
-      provider: options.provider || (model.startsWith('claude') ? 'anthropic' : 'dashscope'),
+      // 按模型名路由：claude-* → anthropic（跨家族判官通道）、@cf/* → workers-ai、其余 → dashscope。
+      // @cf/ 这条是 2026-08-29 加的：DashScope key 自 2026-07-29 起 401 失效，qwen-max 判官
+      // 通道整条是死的，workers-ai 是眼下唯一活着的出口。注意选型要避开与被测生成端同族——
+      // 生成端是 @cf/zai-org/glm-4.7-flash，判官就不能也用 glm（同族共盲会把分数抬虚）。
+      provider:
+        options.provider ||
+        (model.startsWith('claude') ? 'anthropic' : model.startsWith('@cf/') ? 'workers-ai' : 'dashscope'),
       model,
       temperature: options.temperature ?? 0,
       max_tokens: options.maxTokens,

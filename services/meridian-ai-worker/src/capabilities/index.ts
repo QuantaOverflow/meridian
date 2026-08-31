@@ -18,7 +18,10 @@ const SHARED_CHAT_HANDLER = new ChatCapabilityHandler()
 const SHARED_LIVE_AUDIO_HANDLER = new LiveAudioCapability()
 
 // Registry of all capability handlers
-export const CAPABILITY_HANDLERS: Record<AICapability, CapabilityHandler<any, any>> = {
+// Partial 而非 Record：AICapability 里的 function_calling 没有对应 handler（providers.ts
+// 有模型声明了这个能力，但从没实现过）。下面 getCapabilityHandler 本来就带 !handler 兜底，
+// 类型写成全覆盖是与现实不符，会让 tsc 一直红。
+export const CAPABILITY_HANDLERS: Partial<Record<AICapability, CapabilityHandler<any, any>>> = {
   chat: SHARED_CHAT_HANDLER,
   embedding: new EmbeddingCapabilityHandler(),
   image: new ImageCapabilityHandler(),

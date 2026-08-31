@@ -36,5 +36,12 @@
 
     /* Skip type checking all .d.ts files. */
     "skipLibCheck": true
-  }
+  },
+
+  /* 只检 src。test/** 里 24 个文件引用的是重构前的模块路径（../src/lib/parsers、
+     ../src/lib/utils、cloudflare:test 等），早已不存在——那批测试跑不起来，
+     却贡献 39 条错误，把 typecheck 的退出码永久钉死在非 0。门永远红等于没有门。 */
+  /* worker-configuration.d.ts 在包根不在 src，必须显式列出：Workers 的全局类型
+     （R2Bucket / DurableObjectState / cloudflare:workers 等）全从它来，漏了会多出 80 条假错。 */
+  "include": ["src", "worker-configuration.d.ts"]
 }

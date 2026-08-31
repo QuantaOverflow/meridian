@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy",
     "deploy:prod": "wrangler deploy --env production",
     "build": "wrangler build",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",

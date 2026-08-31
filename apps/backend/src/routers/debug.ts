@@ -114,7 +114,7 @@ debugRouter.get('/workflow-status/:workflowId', async (c) => {
  */
 debugRouter.get('/db-stats', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $articles, $reports, gte, eq, and, isNotNull, desc, sql } = await import('@meridian/database');
         
         const db = getDb(c.env.HYPERDRIVE);
@@ -186,7 +186,7 @@ debugRouter.get('/db-stats', async (c) => {
  */
 debugRouter.get('/r2-content-check', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $articles, gte, eq, and, isNotNull, desc } = await import('@meridian/database');
         
         const db = getDb(c.env.HYPERDRIVE);
@@ -278,10 +278,10 @@ debugRouter.get('/r2-content-check', async (c) => {
  */
 debugRouter.post('/test-story-validation', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $articles, gte, eq, and, isNotNull, desc } = await import('@meridian/database');
-        const { createClusteringService } = await import('../lib/clustering-service');
-        const { createAIServices } = await import('../lib/ai-services');
+        const { createClusteringService } = await import('../lib/services/clustering');
+        const { createAIServices } = await import('../lib/services/ai-services');
         
         const db = getDb(c.env.HYPERDRIVE);
         
@@ -456,7 +456,7 @@ debugRouter.post('/test-story-validation', async (c) => {
  */
 debugRouter.get('/latest-brief-details', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $reports, desc, sql } = await import('@meridian/database');
         
         const db = getDb(c.env.HYPERDRIVE);
@@ -526,7 +526,7 @@ debugRouter.get('/latest-brief-details', async (c) => {
  */
 debugRouter.get('/check-article-data-types', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $articles, gte, eq, and, isNotNull, desc } = await import('@meridian/database');
         
         const db = getDb(c.env.HYPERDRIVE);
@@ -622,7 +622,7 @@ debugRouter.get('/check-article-data-types', async (c) => {
  */
 debugRouter.get('/recent-reports', async (c) => {
     try {
-        const { getDb } = await import('../lib/utils');
+        const { getDb } = await import('../lib/database');
         const { $reports, desc } = await import('@meridian/database');
         
         const db = getDb(c.env.HYPERDRIVE);

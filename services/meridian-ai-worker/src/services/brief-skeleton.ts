@@ -178,3 +178,73 @@ export async function mapLimit<T>(items: T[], limit: number, fn: (t: T) => Promi
     })
   );
 }
+
+// ============================================================================
+// R2 批量读取（限并发）
+// ============================================================================
+
+/** 最小 R2 形状，只用到本文件需要的两个方法——为的是能拿假 bucket 离线对拍。 */
+export interface MinimalBucket {
+  get(key: string): Promise<{ text(): Promise<string> } | null>;
+}
+
+export interface R2LoadResult<T> {
+  /** 按输入 key 的顺序；失败位留空 */
+  values: T[];
+  /** R2 里不存在的 key */
+  missing: string[];
+  /** 存在但读不出/解析不了的 key，带原因 */
+  broken: string[];
+}
+
+/**
+ * 限并发读一批 R2 对象并逐个解析。
+ *
+ * ⚠️ 「取对象 + 读 body」必须成对做完再取下一份。写成
+ * `Promise.all(keys.map(k => bucket.get(k)))` 再在循环里逐个 `.text()` 会炸：
+ * body 是流，没读完的连接一直开着；**Workers 同时只允许 6 条连接**，超出的被平台
+ * 掐掉，随后 `.text()` 抛 `Response closed due to connection limit`。
+ * 2026-08-29 21:00 b′ 首次真实 cron 即因此整期失败（25 份情报报告 → 25 条并发）。
+ * 本地 miniflare 没有这个上限，`wrangler dev` 与 dry-run 全绿，照不出来。
+ *
+ * limit 取 4 而非 6：留出余量给同一请求里可能并存的其它出站连接。
+ */
+export async function loadR2Batched<T>(
+  keys: string[],
+  bucket: MinimalBucket,
+  parse: (text: string, key: string) => T,
+  limit = 4
+): Promise<R2LoadResult<T>> {
+  const values: T[] = new Array(keys.length);
+  const missing: string[] = [];
+  const broken: string[] = [];
+
+  await mapLimit(
+    keys.map((key, i) => ({ key, i })),
+    limit,
+    async ({ key, i }) => {
+      const obj = await bucket.get(key);
+      if (!obj) {
+        missing.push(key);
+        return;
+      }
+      // 读 body 与解析分开报错：读失败是连接/传输问题，解析失败是内容问题，
+      // 两者修法完全不同。合在一句 catch 里会把连接数上限报成「解析失败」——
+      // 上面那次生产失败就是被这条错误信息带偏了一轮。
+      let text: string;
+      try {
+        text = await obj.text();
+      } catch (e) {
+        broken.push(`${key}(读取: ${e instanceof Error ? e.message : String(e)})`);
+        return;
+      }
+      try {
+        values[i] = parse(text, key);
+      } catch (e) {
+        broken.push(`${key}(解析: ${e instanceof Error ? e.message : String(e)})`);
+      }
+    }
+  );
+
+  return { values, missing, broken };
+}

@@ -11,6 +11,7 @@ import {
   type BriefSkeleton,
   type IntelligenceReport
 } from './services/brief-generation'
+import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
 import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
@@ -589,22 +590,20 @@ app.post('/meridian/generate-final-brief', async (c) => {
 
 /** 按 R2 key 读回情报报告并归一。任何一个 key 读不到都硬失败——静默少一份报告会让
  *  oracle 悄悄变窄（RARR 把跨报告的正确内容判成无据删掉），而指标上完全看不出来。 */
-async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: true; reports: IntelligenceReport[] } | { ok: false; error: string }> {
+export async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: true; reports: IntelligenceReport[] } | { ok: false; error: string }> {
   if (!Array.isArray(keys) || keys.length === 0) return { ok: false, error: 'reportKeys must be a non-empty array' }
   const bucket = env?.ARTICLES_BUCKET as R2Bucket | undefined
   if (!bucket) return { ok: false, error: 'ARTICLES_BUCKET binding 不可用' }
-  const objects = await Promise.all(keys.map((k: unknown) => bucket.get(String(k))))
-  const missing = keys.filter((_: unknown, i: number) => !objects[i])
+  // 限并发 + 「取对象与读 body 成对完成」的理由见 loadR2Batched 的注释
+  // （2026-08-29 b′ 首次真实 cron 因 25 条并发撞 Workers 6 连接上限整期失败）。
+  const { values, missing, broken } = await loadR2Batched(
+    keys.map((k: unknown) => String(k)),
+    bucket as unknown as MinimalBucket,
+    (text: string) => normalizeAnalysisToReport(JSON.parse(text))
+  )
   if (missing.length) return { ok: false, error: `R2 缺 ${missing.length} 份情报报告: ${missing.slice(0, 5).join(', ')}` }
-  const reports: IntelligenceReport[] = []
-  for (const obj of objects) {
-    try {
-      reports.push(normalizeAnalysisToReport(JSON.parse(await obj!.text())))
-    } catch (e) {
-      return { ok: false, error: `情报报告解析失败: ${e instanceof Error ? e.message : String(e)}` }
-    }
-  }
-  return { ok: true, reports }
+  if (broken.length) return { ok: false, error: `情报报告读取失败 ${broken.length} 份: ${broken.slice(0, 3).join('; ')}` }
+  return { ok: true, reports: values as IntelligenceReport[] }
 }
 
 app.post('/meridian/plan-brief-skeleton', async (c) => {

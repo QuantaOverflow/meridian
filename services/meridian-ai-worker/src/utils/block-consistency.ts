@@ -28,7 +28,9 @@ export interface ConsistencyFinding {
   sharedTopic: string[];
 }
 
-interface Block {
+export interface Block {
+  /** 所属 `## ` 节标题；块间重复检测要分「同节内」与「跨节」两种口径 */
+  section: string;
   title: string;
   text: string;
 }
@@ -58,12 +60,19 @@ const PEOPLE: Record<string, Kind> = {
   injured: 'injured', rescued: 'rescued',
 };
 
-/** 把成品简报切回块：`<u>**title**</u>` 独占一行，其后段落属于该块 */
+/**
+ * 把成品简报切回块：`<u>**title**</u>` 独占一行，其后段落属于该块。
+ * 顺带记住每块所属的 `## ` 节——节标题夹在上一块正文之后、下一个 `<u>` 之前，
+ * 所以在同一个 chunk 的尾部找它，作为**后续**块的节名。
+ */
 export function splitBriefBlocks(brief: string): Block[] {
   const out: Block[] = [];
+  let section = brief.match(/^##\s+(.+)$/m)?.[1].trim() ?? '';
   for (const chunk of brief.split(/^\s*<u>/m).slice(1)) {
     const m = chunk.match(/^\*{0,2}(.*?)\*{0,2}<\/u>\s*([\s\S]*?)(?=\n## |$)/);
-    if (m) out.push({ title: m[1].trim(), text: m[2].trim() });
+    if (m) out.push({ section, title: m[1].trim(), text: m[2].trim() });
+    const next = chunk.match(/\n##\s+(.+)/);
+    if (next) section = next[1].trim();
   }
   return out;
 }

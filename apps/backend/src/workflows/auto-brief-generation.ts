@@ -1627,7 +1627,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         /** 1 基的 story 序号（骨架里的 i）；端点要的是 0 基下标，差 1 */
         i: number;
         title: string;
-        section?: { heading: string; causalLink: string; siblingIndices: number[] };
+        section?: { heading: string; causalLink: string; siblingTitles: string[] };
       };
       const blockJobs: BlockJob[] = [
         ...skeleton.main.flatMap((s) =>
@@ -1637,8 +1637,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             section: {
               heading: s.heading,
               causalLink: s.causalLink,
-              // 同节兄弟的 0 基下标，供 ai-worker 取摘要做"别重复叙述"的提示
-              siblingIndices: s.reports.filter((x) => x.i !== r.i).map((x) => x.i - 1),
+              // 同节兄弟的**块标题**。此前传的是下标、ai-worker 据此取兄弟的 executiveSummary
+              // 全文塞进 prompt —— 实测那份摘要比本块自己的报告还长，模型照抄。
+              // 标题只在骨架里有（规划步产出），ai-worker 拿不到，必须从这边传。
+              siblingTitles: s.reports.filter((x) => x.i !== r.i).map((x) => x.title),
             },
           }))
         ),

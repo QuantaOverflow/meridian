@@ -80,8 +80,18 @@ do not let the \`[story k/N]\` tag appear in your output.`;
 export interface BlockSectionContext {
   heading: string;
   causalLink: string;
-  /** 同节其他块的 executiveSummary，用来防重复叙述（不是让模型去写它们） */
-  siblingSummaries: string[];
+  /**
+   * 同节其他块的**标题**（规划步产出的那些）。
+   *
+   * 曾经这里放的是兄弟块的 executiveSummary 全文，配一句「别复述」。实测那是反效果：
+   * report 78 的一次调用里兄弟摘要 4956 字符 > 自己的报告 4081 字符——模型面前别人的
+   * 成品比自己的原料还多，「别写这些」被读成「写这些」。产出的块整段在写兄弟的题材
+   * （同一所中学、同一个校长、同样的 69 所学校）。
+   *
+   * 换成标题之后模型**手里根本没有**兄弟的内容，抄无可抄。防重复靠"没有材料"而不是
+   * 靠"有材料但被要求别用"——后者是在跟注意力机制对赌。
+   */
+  siblingTitles: string[];
 }
 
 /**
@@ -96,14 +106,20 @@ export function getBriefBlockPrompt(
   title: string,
   section?: BlockSectionContext
 ): string {
+  const siblings = (section?.siblingTitles ?? []).map((t) => t.trim()).filter(Boolean);
   const ctx = section
     ? `this block belongs to the section **${section.heading}** — what makes that section one story:
-${section.causalLink}
+${section.causalLink}${
+        siblings.length === 0
+          ? ''
+          : `
 
-the same section also covers the developments below, each written up separately by someone
-else. do NOT re-tell them; assume the reader has them. you may refer to the through-line, but
-your paragraphs must be about YOUR story only:
-${section.siblingSummaries.map((s) => `  · ${s}`).join('\n')}`
+the same section also covers the developments named below, each written up separately by
+someone else. they are listed only so you can stay off them: you have no material on them and
+must not write about them. you may refer to the through-line, but your paragraphs must be
+about YOUR story only:
+${siblings.map((t) => `  · ${t}`).join('\n')}`
+      }`
     : `this development stands on its own — it shares no causal line with the rest of today's
 news. cover it on its own terms and do NOT reach for connections to stories you don't have.
 be substantive but tight: this is a standalone item, not a headline act.`;

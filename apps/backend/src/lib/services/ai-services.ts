@@ -269,7 +269,7 @@ export class AIWorkerService {
     reportKeys: string[],
     index: number,
     title: string,
-    section?: { heading: string; causalLink: string; siblingIndices: number[] }
+    section?: { heading: string; causalLink: string; siblingTitles: string[] }
   ): Promise<ServiceResult<BriefBlockData>> {
     const request = new Request(`${this.baseUrl}/meridian/write-brief-block`, {
       method: 'POST',

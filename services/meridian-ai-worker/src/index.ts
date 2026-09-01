@@ -697,19 +697,26 @@ app.post('/meridian/write-brief-block', async (c) => {
     if (!title) return c.json<APIResponse<null>>({ success: false, error: 'title is required（块标题由规划步产出，写作调用不自己写标题）' }, 400)
 
     // 章节上下文可缺省：缺省即「独立事态」，prompt 会换成 standalone 的措辞。
-    // 同节兄弟只传下标不传摘要：报告全文本来就在这边（刚从 R2 读回），让 backend 也去读一遍
-    // R2 再把摘要传过来，就等于两边各存一份「摘要长什么样」的知识，迟早漂。
+    //
+    // 兄弟块传的是**标题**，由 backend 从骨架里取。此前传的是下标、这边按下标去 R2 报告里
+    // 取 executiveSummary——那条路自身没错（报告全文本来就在这边），但传的东西错了：
+    // 摘要全文会被模型当成"要写的材料"照抄（见 briefSkeleton.ts 的 siblingTitles 注释）。
+    // 标题只存在于规划步的产出里，这边没有，所以必须由 backend 传过来。
     const raw = body?.section
     const section: BlockSectionContext | undefined = raw && typeof raw.heading === 'string'
       ? {
           heading: String(raw.heading),
           causalLink: String(raw.causalLink ?? ''),
-          siblingSummaries: (Array.isArray(raw.siblingIndices) ? raw.siblingIndices : [])
-            .map((n: unknown) => Number(n))
-            .filter((n: number) => Number.isInteger(n) && n >= 0 && n < loaded.reports.length && n !== index)
-            .map((n: number) => loaded.reports[n].executiveSummary || ''),
+          siblingTitles: (Array.isArray(raw.siblingTitles) ? raw.siblingTitles : [])
+            .map((t: unknown) => String(t ?? '').trim())
+            .filter((t: string) => t.length > 0),
         }
       : undefined
+    // 只在"上游还在发旧字段"时报警：backend 未同步部署的窗口里兄弟上下文会整段消失，
+    // 块照写但少了防重复提示。空着不报会让这种半部署状态看起来一切正常。
+    if (section && section.siblingTitles.length === 0 && Array.isArray(raw?.siblingIndices)) {
+      console.warn('[BriefBlock] 上游只发了 siblingIndices 没发 siblingTitles —— backend 与 ai-worker 版本不一致')
+    }
 
     const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
     const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect })

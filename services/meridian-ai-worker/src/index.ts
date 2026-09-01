@@ -12,6 +12,8 @@ import {
   type IntelligenceReport
 } from './services/brief-generation'
 import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
+import { callLLM } from './services/call-llm'
+import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
@@ -605,6 +607,54 @@ export async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: 
   if (broken.length) return { ok: false, error: `情报报告读取失败 ${broken.length} 份: ${broken.slice(0, 3).join('; ')}` }
   return { ok: true, reports: values as IntelligenceReport[] }
 }
+
+// ============================================================================
+// 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题
+//
+// 上游 backend 已用 story centroid 余弦（0.94 单链）聚出候选组，这里只补代码做不了的两件事。
+// 两条一组才确认（单边支撑，余弦分不开真假）；≥3 条的组多条边互相印证，只起标题。
+// 判据与失败反例见 prompts/storyMerge.ts。
+// ============================================================================
+app.post('/meridian/story/merge-check', async (c) => {
+  try {
+    const body = await c.req.json()
+    const candidates = body?.candidates as MergeCandidate[] | undefined
+    if (!Array.isArray(candidates) || candidates.length < 2) {
+      return c.json<APIResponse<null>>({ success: false, error: 'candidates must be an array of >= 2 stories' }, 400)
+    }
+
+    const confirm = candidates.length === 2
+    const prompt = confirm ? getStoryMergeConfirmPrompt(candidates) : getStoryMergeTitlePrompt(candidates)
+    const aiGateway = new AIGatewayService(c.env)
+    const res = await callLLM(aiGateway, c.env, readTraceContext(c.req.raw), 'story_merge',
+      [{ role: 'user', content: prompt }])
+    const content = ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+    const parsed = parseJSONFromResponse(content) as { same_occurrence?: boolean; title?: string; reason?: string } | null
+
+    // 解析失败不静默降级成"合并"——合错的代价是两件事被写成一件，读者看不出来。
+    // 失败一律回 same_occurrence:false，上游据此放弃这次合并、保持原状。
+    if (!parsed || typeof parsed.title !== 'string') {
+      console.warn(`[StoryMerge] 响应解析失败，放弃本组合并。原始响应: ${content.slice(0, 200)}`)
+      return c.json<APIResponse<{ same_occurrence: boolean; title: string; reason: string }>>({
+        success: true,
+        data: { same_occurrence: false, title: '', reason: 'unparseable model response' },
+        metadata: { parse_failed: true, candidates: candidates.length },
+      })
+    }
+
+    // ≥3 条的组不做确认，视为已确认（组的成立由上游多条边支撑）
+    const same = confirm ? parsed.same_occurrence === true : true
+    const title = (parsed.title || '').trim()
+    return c.json<APIResponse<{ same_occurrence: boolean; title: string; reason: string }>>({
+      success: true,
+      data: { same_occurrence: same && title.length > 0, title, reason: parsed.reason || '' },
+      metadata: { confirmed: confirm, candidates: candidates.length },
+    })
+  } catch (error: any) {
+    console.error('Story merge check error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: 'Failed to check story merge', metadata: { details: error.message } }, 500)
+  }
+})
 
 app.post('/meridian/plan-brief-skeleton', async (c) => {
   try {

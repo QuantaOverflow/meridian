@@ -2,6 +2,15 @@ import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } f
 import { getDb } from '../lib/database';
 import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
+import { backfillStoryCentroids } from '../lib/story-clusters';
+import {
+  buildMergeGroups,
+  collapseGroup,
+  DEFAULT_ARTICLE_CAP,
+  DEFAULT_MIN_COSINE,
+  type CosinePair,
+  type DedupStory,
+} from '../lib/core/story-dedup';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -126,6 +135,16 @@ const defaultStepConfig: WorkflowStepConfig = {
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
   timeout: '30 seconds',
+};
+
+// 去重步单列配置：这一步不是纯 DB 步，体里有 11-15 次**串行** LLM 确认调用
+// （实测 workflow admin-brief-1788170117190：41 条过阈配对、11 个簇），每次 2-4 秒 → 22-60 秒，
+// 而 dbStepConfig 只给 30 秒。那次生产跑压线过关纯属侥幸；一旦超时，retries 会把整组 LLM
+// 重打 3 遍（4 倍成本）后整期简报失败。5 分钟对当前规模约 10 倍余量。
+// retries 降到 2：这一步重试的代价是整组 LLM 重跑，不像纯 DB 步那样近乎免费。
+const dedupStepConfig: WorkflowStepConfig = {
+  retries: { limit: 2, delay: '5 seconds', backoff: 'linear' },
+  timeout: '5 minutes',
 };
 
 // ============================================================================
@@ -1184,6 +1203,194 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         timeout: '10 minutes',
       };
 
+      // ======================================================================
+      // 去重：把 story-validation 从**同一个簇**里切出来的重复故事并回去。
+      //
+      // 病灶（2026-08-30 实测 + 94 条人工金标）：一场尼泊尔冰川溃决洪水的 91 篇报道被切成
+      // 22 个故事，占掉 25 个名额里的 11 个，把基辅无人机袭击致 37 死等挤出简报；8/28 同一场
+      // 灾难复现（74 篇 → 14 个）。判据与阈值来历见 lib/core/story-dedup.ts 的文件头。
+      //
+      // 位置在覆盖度与排序**之前**：放在 b′ 那层只能治观感，名额早已花掉，被挤走的真新闻
+      // 追不回来。落库在此之前已完成，故 centroid 可现场补算。
+      // ======================================================================
+      // 去重失败不该连坐整期：合不上顶多是大事件多占几个名额，简报照出；抛出去则今天没有简报。
+      // 不是静默降级——失败走 error 级日志，且 candidateGroups=-1 是"这一步压根没跑成"的可判别信号
+      // （正常至少是 0）。
+      type DedupPlan = {
+        groups: Array<{ indices: number[]; title: string; minCos: number; confirmed: boolean }>;
+        candidateGroups: number;
+        centroidsFilled: number;
+      };
+      let dedupPlan: DedupPlan;
+      try {
+        dedupPlan = await step.do('故事去重', dedupStepConfig, async (): Promise<DedupPlan> => {
+          const db = getDb(this.env.HYPERDRIVE);
+          // 幂等：只补 centroid IS NULL 的行。工作流末尾的 assignStoryClustersForWorkflow 仍会再调一次。
+          const filled = await backfillStoryCentroids(db, workflowId);
+          console.log(`[AutoBrief] 去重：补算 ${filled} 条 story centroid`);
+
+          const rows = (await db.execute(sql`
+            SELECT a.id AS a_id, b.id AS b_id, (1 - (a.centroid <=> b.centroid)) AS cos
+            FROM brief_stories a
+            JOIN brief_stories b
+              ON b.workflow_id = a.workflow_id AND b.cluster_id = a.cluster_id AND a.id < b.id
+            WHERE a.workflow_id = ${workflowId}
+              AND a.centroid IS NOT NULL AND b.centroid IS NOT NULL
+              AND (1 - (a.centroid <=> b.centroid)) >= ${DEFAULT_MIN_COSINE}
+          `)) as unknown as Array<{ a_id: number; b_id: number; cos: number }>;
+
+          // rowId → stories 下标。briefStoryRowIds 是按 stories 顺序插入返回的主键。
+          const rowIdToIndex = new Map<number, number>();
+          briefStoryRowIds.forEach((rowId, i) => { if (typeof rowId === 'number') rowIdToIndex.set(rowId, i); });
+
+          const items: DedupStory[] = validatedStories.stories.map((st: any, i: number) => ({
+            index: i,
+            clusterId: st.clusterId ?? -1,
+            importance: st.importance ?? 0,
+            articleIds: Array.isArray(st.articleIds) ? st.articleIds : [],
+            title: st.title ?? '',
+          }));
+          const pairs: CosinePair[] = rows
+            .map(r => ({ a: rowIdToIndex.get(Number(r.a_id))!, b: rowIdToIndex.get(Number(r.b_id))!, cos: Number(r.cos) }))
+            .filter(p => Number.isInteger(p.a) && Number.isInteger(p.b));
+
+          const groups = buildMergeGroups(items, pairs);
+          console.log(`[AutoBrief] 去重：候选合并组 ${groups.length} 个（需 LLM 确认 ${groups.filter(g => g.needsConfirm).length} 个）`);
+
+          // 确认 + 起标题。两条一组才确认（单边支撑，余弦分不开真假）；≥3 条只起标题。
+          const dedupAi = createAIServices(this.env, workflowId);
+          const decided: Array<{ indices: number[]; title: string; minCos: number; confirmed: boolean }> = [];
+          for (const [groupIdx, g] of groups.entries()) {
+            const candidates = g.indices.map(i => ({
+              title: items[i].title,
+              articleTitles: items[i].articleIds
+                .map(aid => dataset.articles.find(a => a.id === aid)?.title)
+                .filter((t): t is string => !!t)
+                .slice(0, 4),
+            }));
+            // groupIdx 作为 call index：不传的话 R2 日志 key 恒为 story_merge-000.json，
+            // 10+ 个组只留得下最后一个——而这一层最需要人工复核"判得对不对"。
+            const res = await dedupAi.aiWorker.checkStoryMerge(candidates, groupIdx);
+            if (!res.ok) {
+              // 调用失败不静默合并：合错的代价是两件事被写成一件，读者看不出来。
+              console.warn(`[AutoBrief] 去重确认失败，放弃本组: ${res.error}`);
+              continue;
+            }
+            if (!res.value.same_occurrence || !res.value.title) {
+              console.log(`[AutoBrief] 去重：LLM 判为不同发生，放弃合并 [${g.indices.join(',')}] — ${res.value.reason}`);
+              continue;
+            }
+            decided.push({ indices: g.indices, title: res.value.title, minCos: g.minCos, confirmed: g.needsConfirm });
+          }
+          return { groups: decided, candidateGroups: groups.length, centroidsFilled: filled };
+        });
+      } catch (dedupErr) {
+        console.error(
+          `[AutoBrief] 去重步失败，跳过去重继续出简报: ${dedupErr instanceof Error ? dedupErr.message : String(dedupErr)}`
+        );
+        dedupPlan = { groups: [], candidateGroups: -1, centroidsFilled: 0 };
+      }
+
+      // 应用合并（纯代码，放在 step 外：step 只回小决策，不回整份 story 数组）
+      if (dedupPlan.groups.length > 0) {
+        const publishedAt = new Map<number, number>();
+        for (const a of dataset.articles) {
+          const t = Date.parse(a.publishDate);
+          if (Number.isFinite(t)) publishedAt.set(a.id, t);
+        }
+        const mergedIn = new Set<number>();
+        const additions: any[] = [];
+        // 合并结果待回写 DB 的主行。见下方 persist:story_dedup_merge 的注释。
+        const mergeWriteback: Array<{ rowId: number; title: string; importance: number; articleIds: number[] }> = [];
+        for (const g of dedupPlan.groups) {
+          const members: DedupStory[] = g.indices.map((i: number) => ({
+            index: i,
+            clusterId: validatedStories.stories[i].clusterId ?? -1,
+            importance: validatedStories.stories[i].importance ?? 0,
+            articleIds: validatedStories.stories[i].articleIds ?? [],
+            title: validatedStories.stories[i].title ?? '',
+          }));
+          const merged = collapseGroup(members, g.title, publishedAt, DEFAULT_ARTICLE_CAP);
+          const survivors = new Set(merged.articleIds);
+          // 一个合并组 = 一条 story = 一份情报报告 = 简报里的一块，所以 DB 侧也只认**一行**。
+          //
+          // 曾经这里标的是「全部还有文章活下来的成员」。那会让下游把同一份报告数成 N 条：
+          // 覆盖对账的母集是 selected_for_intel=true 且 intel_report_r2_key 非空，尼泊尔 11 条
+          // 全标上就变成 1 条进简报、10 条判「合成层漏报」——凭空造出十条不存在的缺陷，
+          // 而合成漏报正是 memory synthesis-omission-fix 那条线的核心读数。
+          // 前端来源清单、story 线索建线同理，都会按 N 倍虚增。
+          //
+          // 主行取「第一个有文章活下来的成员」，其余成员留在库里、保持 selected_for_intel=false
+          // ——它们是 story-validation 过拆的证据，不该删，但确实没有作为独立故事送进情报分析。
+          // 主行的 title/article_ids 由下面的回写步改成合并后的值，否则库里那行仍是拆碎的旧样子。
+          const contributing = g.indices.filter(
+            (i: number) => (validatedStories.stories[i].articleIds ?? []).some((aid: number) => survivors.has(aid))
+          );
+          const primaryIdx: number = contributing.length > 0 ? contributing[0] : g.indices[0];
+          const primaryRowId = briefStoryRowIds[primaryIdx];
+          if (typeof primaryRowId === 'number') {
+            mergeWriteback.push({
+              rowId: primaryRowId,
+              title: merged.title,
+              importance: merged.importance,
+              articleIds: merged.articleIds,
+            });
+          }
+          additions.push({
+            title: merged.title,
+            importance: merged.importance,
+            articleIds: merged.articleIds,
+            storyType: merged.storyType,
+            clusterId: members[0].clusterId,
+            // 下游 mark_selected_for_intel 用它精确标记，不能再靠 stories.indexOf（合并后下标全变）。
+            __briefStoryRowIds: typeof primaryRowId === 'number' ? [primaryRowId] : [],
+          });
+          g.indices.forEach((i: number) => mergedIn.add(i));
+          console.log(
+            `[AutoBrief] 去重：${g.indices.length} 条 → 1（余弦≥${g.minCos.toFixed(4)}${g.confirmed ? '，已确认' : ''}）` +
+            `文章 ${members.reduce((n, m) => n + m.articleIds.length, 0)} → ${merged.articleIds.length}｜${g.title}`
+          );
+        }
+        const kept = validatedStories.stories
+          .map((st: any, i: number) => ({ st, i }))
+          .filter(({ i }: { i: number }) => !mergedIn.has(i))
+          .map(({ st, i }: { st: any; i: number }) => ({ ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number') }));
+        const before = validatedStories.stories.length;
+        validatedStories.stories = [...kept, ...additions];
+        console.log(`[AutoBrief] 去重完成：${before} → ${validatedStories.stories.length} 个故事`);
+
+        // 合并结果回写主行。不回写的话合并只活在内存里：库里主行还挂着拆碎前的旧标题和
+        // 只属于自己那几篇的 article_ids，而简报正文用的是 LLM 起的合并标题——那个标题
+        // **在数据库里不存在**，简报正文就再也对不回 brief_stories（eval 与前端来源都靠这个对齐）。
+        // 值由确定性代码算出，重放时写入同样的值，故幂等。
+        if (mergeWriteback.length > 0) {
+          await step.do('persist:story_dedup_merge', dbStepConfig, async () => {
+            const db = getDb(this.env.HYPERDRIVE);
+            for (const m of mergeWriteback) {
+              await db
+                .update($brief_stories)
+                .set({
+                  title: m.title,
+                  importance: m.importance,
+                  article_count: m.articleIds.length,
+                  article_ids: m.articleIds,
+                  // centroid 置空让工作流末尾的 assignStoryClustersForWorkflow 按合并后的
+                  // article_ids 重算（backfillStoryCentroids 只补 NULL 的行）。留着旧值的话，
+                  // 这行的向量还是拆碎前那几篇算的，跨期线索匹配与代表文章都会挑错。
+                  centroid: null,
+                })
+                .where(and(eq($brief_stories.workflow_id, workflowId), eq($brief_stories.id, m.rowId)));
+            }
+            console.log(`[AutoBrief] 去重：回写 ${mergeWriteback.length} 条合并主行`);
+          });
+        }
+      } else {
+        // 没有合并也要补 __briefStoryRowIds，否则下游标记逻辑得分叉
+        validatedStories.stories = validatedStories.stories.map((st: any, i: number) => ({
+          ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number'),
+        }));
+      }
+
       // 多源覆盖度客观锚：聚类后每个 story 天然知道来自几个独立源。distinct_source_count 是最强的
       // 客观显著性信号(GDELT breaking-news 检测同源)——一个事件被多少家独立媒体报道 ≈ 它多重要，
       // 用来补正 storyValidation 那个一行定义、LLM 纯主观的 importance(1-10)。详见 roadmap 选择层。
@@ -1230,9 +1437,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 按 brief_stories 的自增主键精确标记。**不能按 cluster_id**：换架构后一个簇会产出
         // 多个故事、共享同一个 cluster_id，按它更新会把整簇的故事都标成已选中，
         // 让 selected_for_intel 虚高（下游观测与 eval 都读这个字段）。
+        // 去重层引入后不能再按 stories.indexOf 取主键：合并会重排数组，下标与
+        // briefStoryRowIds 不再对应，而条数仍然对得上——下面那个告警根本不会响，
+        // 结果是**静默标错行**。故每条 story 自带 __briefStoryRowIds（合并的带全部成员）。
         const selectedRowIds = storiesForIntelligence
-          .map((s: any) => briefStoryRowIds[validatedStories.stories.indexOf(s)])
+          .flatMap((s: any) => (Array.isArray(s.__briefStoryRowIds) ? s.__briefStoryRowIds : []))
           .filter((id: any) => typeof id === 'number');
+        // 去重后每条 story 恒好一个主行 id（合并组只留主行），故这里是严格相等而非 <。
         if (selectedRowIds.length !== storiesForIntelligence.length) {
           // 对不上说明插入顺序与 stories 顺序错位，标记会漏/错。宁可显式告警也不静默少标。
           console.warn(
@@ -1297,17 +1508,21 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
           // R2 key 记到 brief_stories(观测;落库失败不致命)
           try {
-            const clusterId = story.clusterId ?? (validatedStories.stories.indexOf(story) + 1);
-            const db = getDb(this.env.HYPERDRIVE);
-            await db
-              .update($brief_stories)
-              .set({ intel_report_r2_key: r2Key })
-              .where(
-                and(
-                  eq($brief_stories.workflow_id, workflowId),
-                  eq($brief_stories.cluster_id, clusterId)
-                )
-              );
+            // **不能按 cluster_id**：一个簇会产出多个故事、共享同一个 cluster_id，按它更新会把
+            // 整簇的行都写上同一个 r2 key（同 60 行前 mark_selected_for_intel 处的坑，那里已修）。
+            // 用 story 自带的 __briefStoryRowIds，与 selected_for_intel 走同一套主键。
+            const rowIds: number[] = Array.isArray(story.__briefStoryRowIds)
+              ? story.__briefStoryRowIds.filter((id: any) => typeof id === 'number')
+              : [];
+            if (rowIds.length === 0) {
+              console.warn(`[AutoBrief] intel_report_r2_key 跳过落库：story 无 brief_stories 主键 (idx=${idx})`);
+            } else {
+              const db = getDb(this.env.HYPERDRIVE);
+              await db
+                .update($brief_stories)
+                .set({ intel_report_r2_key: r2Key })
+                .where(and(eq($brief_stories.workflow_id, workflowId), inArray($brief_stories.id, rowIds)));
+            }
           } catch (persistErr) {
             console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
           }

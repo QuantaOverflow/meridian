@@ -20,6 +20,9 @@ export type LLMCallPhase =
   // 观测性：运行时忠实度门也走 loggedChat，单独 phase 便于和 brief 生成区分。
   | 'faithfulness_check'
   | 'faithfulness_revise'
+  // 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题。单独 phase 的理由与
+  // intel_grounding_verify 相同——和 story_validation 共用会让两者的 R2 观测记录互相覆盖。
+  | 'story_merge'
   | 'other'
 
 export interface TraceContext {

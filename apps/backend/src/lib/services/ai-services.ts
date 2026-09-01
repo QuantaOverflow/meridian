@@ -205,6 +205,26 @@ export class AIWorkerService {
   }
 
   /**
+   * 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题。
+   * 两条一组时 ai-worker 会做确认；≥3 条只起标题（组的成立由上游多条边支撑）。
+   */
+  async checkStoryMerge(
+    candidates: Array<{ title: string; articleTitles: string[] }>,
+    callIndex?: number
+  ): Promise<ServiceResult<{ same_occurrence: boolean; title: string; reason: string }>> {
+    // 观测性：一次 workflow 有 10+ 个合并组，不带序号则 R2 日志 key 恒为 story_merge-000.json，
+    // 只留得下最后一组。这一层的判决（两条是不是同一个发生）恰恰是最需要人工回看的。
+    const extra: Record<string, string> = {};
+    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
+    const request = new Request(`${this.baseUrl}/meridian/story/merge-check`, {
+      method: 'POST',
+      headers: this.buildHeaders(extra),
+      body: JSON.stringify({ candidates }),
+    });
+    return await this.callJson<{ same_occurrence: boolean; title: string; reason: string }>(request);
+  }
+
+  /**
    * 生成最终简报
    */
   async generateFinalBrief(analysisData: any[], previousBrief: any, options?: any): Promise<ServiceResult<FinalBriefData>> {

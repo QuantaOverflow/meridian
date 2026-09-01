@@ -8,6 +8,7 @@
 //   env: BACKEND_URL, AI_WORKER_URL, JUDGE_MODEL(qwen-max)
 // ============================================================================
 
+import { authHeaders } from '../_shared/backend.js';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { extractClaims } from './claims.js';
 import { judgeAll } from './judge.js';
@@ -18,7 +19,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://meridian-backend.swj2997
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 
 async function fetchJSON(url: string): Promise<any> {
-  const r = await fetch(url);
+  const r = await fetch(url, { headers: authHeaders() });
   if (!r.ok) throw new Error(`GET ${url} -> ${r.status} ${(await r.text()).slice(0, 200)}`);
   return r.json();
 }

@@ -1,5 +1,6 @@
 // 覆盖检查辅助：对给定 brief 跑新 EXTRACT_PROMPT，dump 全部抽出的 claim（不跑 judge）。
 // 用法：tsx extract-dump.ts <wfId> [<wfId> ...]   输出 worklist/extract-dump.jsonl
+import { authHeaders } from '../_shared/backend.js';
 import { writeFileSync } from 'node:fs';
 import { extractClaims } from './claims.js';
 
@@ -7,7 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://meridian-backend.swj2997
 const JUDGE_MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 
 async function fetchJSON(url: string): Promise<any> {
-  const r = await fetch(url);
+  const r = await fetch(url, { headers: authHeaders() });
   if (!r.ok) throw new Error(`GET ${url} -> ${r.status}`);
   return r.json();
 }

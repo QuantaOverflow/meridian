@@ -1,13 +1,14 @@
 // 治②实验：对"整份源误拦"的 claim，改用 per-story 情报报告(运行时实际喂的源)逐个重判，
 // 短路 supported/contradicted(复现 runtime runFaithfulnessCheck)。看是否从误拦恢复。
 // per-story 源 = 各 intelligence_analysis 调用的 OUTPUT(情报报告)。
+import { authHeaders } from '../_shared/backend.js';
 import { judgeFactual } from './judge.js';
 import type { Claim } from './types.js';
 
 const B = process.env.BACKEND_URL || 'https://meridian-backend.swj299792458.workers.dev';
 const MODEL = process.env.JUDGE_MODEL || 'qwen-max';
 
-async function j(url: string) { const r = await fetch(url); if (!r.ok) throw new Error(`${url} ${r.status}`); return r.json() as any; }
+async function j(url: string) { const r = await fetch(url, { headers: authHeaders() }); if (!r.ok) throw new Error(`${url} ${r.status}`); return r.json() as any; }
 
 // 取某 brief 的所有 per-story 情报报告(intelligence_analysis 输出)
 async function perStorySources(wf: string): Promise<string[]> {

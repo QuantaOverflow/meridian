@@ -1,3 +1,4 @@
+import { authHeaders } from '../_shared/backend.js';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
@@ -64,7 +65,7 @@ Env:
 }
 
 async function fetchWorkflowData(workflowId: string): Promise<StoryValidationStepData> {
-  const listResp = await fetch(`${BACKEND_URL}/observability/workflows`);
+  const listResp = await fetch(`${BACKEND_URL}/observability/workflows`, { headers: authHeaders() });
   if (!listResp.ok) throw new Error(`List workflows failed: ${listResp.status}`);
   const list = (await listResp.json()) as {
     workflows: Array<{ key: string; uploaded: string }>;
@@ -77,7 +78,8 @@ async function fetchWorkflowData(workflowId: string): Promise<StoryValidationSte
   const key = matches[0].key;
 
   const detailResp = await fetch(
-    `${BACKEND_URL}/observability/workflows/${encodeURIComponent(key)}`
+    `${BACKEND_URL}/observability/workflows/${encodeURIComponent(key)}`,
+    { headers: authHeaders() }
   );
   if (!detailResp.ok) throw new Error(`Fetch workflow detail failed: ${detailResp.status}`);
   const detail = (await detailResp.json()) as { detailedMetrics: any[] };
@@ -99,7 +101,7 @@ async function fetchArticles(ids: number[]): Promise<Map<number, ArticleInfo>> {
   if (ids.length === 0) return new Map();
   const resp = await fetch(`${BACKEND_URL}/admin/articles/by-ids`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ids }),
   });
   if (!resp.ok) {

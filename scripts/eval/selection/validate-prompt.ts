@@ -1,6 +1,7 @@
 // 本地验证新 importance prompt 的忠实度:对金标故事用【新 storyValidation prompt】让 LLM 打 d1-d4,
 // 算 importance→rel,对比你确认的 gold rel。不用部署 ai-worker——prompt 内联发 /meridian/chat。
 // 用法: tsx validate-prompt.ts --labels gold-worklist-2026-06-05.csv [--per 5]
+import { authHeaders } from '../_shared/backend.js';
 import { readFile } from 'node:fs/promises';
 import { fetchCandidates } from './fetch.js';
 import { getStoryValidationPrompt } from '../../../services/meridian-ai-worker/src/prompts/storyValidation.ts';
@@ -14,7 +15,7 @@ const chat = (prompt: string) => sharedChat(prompt, { model: 'qwen-max', maxToke
 async function fetchArticleInfo(ids: number[]): Promise<Map<number, { title: string; points: string[] }>> {
   const m = new Map<number, { title: string; points: string[] }>();
   if (ids.length === 0) return m;
-  const r = await fetch(`${BACKEND}/admin/articles/by-ids`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+  const r = await fetch(`${BACKEND}/admin/articles/by-ids`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ ids }) });
   const d: any = await r.json();
   for (const a of d.articles || []) m.set(a.id, { title: a.title, points: a.event_summary_points || [] });
   return m;

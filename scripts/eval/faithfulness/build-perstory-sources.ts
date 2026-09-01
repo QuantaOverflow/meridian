@@ -4,12 +4,13 @@
 // 这是 eval 保真修复：之前用 brief_generation 整源(~84K, 系统prompt+全story拼接)，
 // 与运行时 per-story(~7.5K/story 短路判)不符 → 误拦虚高。详见 ADR 0001 / memory。
 // 用法：tsx build-perstory-sources.ts <gold.jsonl> [<gold.jsonl> ...]
+import { authHeaders } from '../_shared/backend.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const B = process.env.BACKEND_URL || 'https://meridian-backend.swj299792458.workers.dev';
 const OUT = process.env.OUT || 'gold/sources-perstory.jsonl';
 
-async function j(url: string) { const r = await fetch(url); if (!r.ok) throw new Error(`${url} ${r.status}`); return r.json() as any; }
+async function j(url: string) { const r = await fetch(url, { headers: authHeaders() }); if (!r.ok) throw new Error(`${url} ${r.status}`); return r.json() as any; }
 
 async function perStorySources(wf: string): Promise<string[]> {
   const list = await j(`${B}/observability/runs/${wf}/llm-calls`);

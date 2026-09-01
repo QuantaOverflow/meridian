@@ -1,11 +1,12 @@
 // 给单个 workflowId 组装 run-level-eval 输入行：拉 brief 全文 + 15 个 per-story 情报源。
 // 用法：tsx assemble-one.ts <workflowId> [should_block] > out.jsonl
+import { authHeaders } from '../_shared/backend.js';
 import process from 'node:process';
 
 const B = process.env.BACKEND_URL || 'https://meridian-backend.swj299792458.workers.dev';
 
 async function j(url: string): Promise<any> {
-  const r = await fetch(url);
+  const r = await fetch(url, { headers: authHeaders() });
   if (!r.ok) throw new Error(`${url} -> ${r.status}`);
   return r.json();
 }

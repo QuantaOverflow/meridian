@@ -1,5 +1,6 @@
 // 拉某 run 的候选 story：/observability/runs/:workflowId 返回 {success, run, stories}，
 // 其中 stories 即 $brief_stories 行(带 article_ids)。这些都是被接受的候选(拒绝聚类不在此表)。
+import { authHeaders } from '../_shared/backend.js';
 import type { Candidate } from './types.js';
 
 const BACKEND_URL =
@@ -24,7 +25,7 @@ export async function fetchSources(ids: number[]): Promise<Map<number, number>> 
     const batch = ids.slice(i, i + BATCH);
     const resp = await fetch(`${BACKEND_URL}/admin/articles/by-ids`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ ids: batch }),
     });
     if (!resp.ok) throw new Error(`/admin/articles/by-ids 失败 ${resp.status}`);
@@ -35,7 +36,7 @@ export async function fetchSources(ids: number[]): Promise<Map<number, number>> 
 }
 
 export async function fetchCandidates(workflowId: string): Promise<Candidate[]> {
-  const resp = await fetch(`${BACKEND_URL}/observability/runs/${workflowId}`);
+  const resp = await fetch(`${BACKEND_URL}/observability/runs/${workflowId}`, { headers: authHeaders() });
   if (!resp.ok) {
     throw new Error(`/observability/runs/${workflowId} 失败 ${resp.status}（run 可能不存在或早于 brief_stories 落库）`);
   }

@@ -2,6 +2,7 @@
 // 旧 importance 来自 CSV(旧 prompt 跑出),新 importance 现场用新 rubric 打 d1-d4。
 // 结果缓存到 _rescore-cache.json，再跑不重复付费。
 // 用法: BACKEND_URL=... AI_WORKER_URL=... node_modules/.bin/tsx rescore.ts [labels.csv] [--baseline 0.958] [--tolerance 0.02]
+import { authHeaders } from '../_shared/backend.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fetchCandidates, fetchSources } from './fetch.js';
 import { ndcgAtN } from './metrics.js';
@@ -46,7 +47,7 @@ const chat = (prompt: string) => sharedChat(prompt, { model: 'qwen-max', maxToke
 async function fetchArticleInfo(ids: number[]): Promise<Map<number, { title: string; points: string[] }>> {
   const m = new Map<number, { title: string; points: string[] }>();
   if (ids.length === 0) return m;
-  const r = await fetch(`${BACKEND}/admin/articles/by-ids`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+  const r = await fetch(`${BACKEND}/admin/articles/by-ids`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ ids }) });
   const d: any = await r.json();
   for (const a of d.articles || []) m.set(a.id, { title: a.title, points: a.event_summary_points || [] });
   return m;

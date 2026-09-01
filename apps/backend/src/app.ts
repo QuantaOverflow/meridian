@@ -30,6 +30,17 @@ const app = new Hono<HonoEnv>()
     await next();
   })
   .route('/admin', adminRouter) // 添加admin路由
+  // /observability/* 与 /admin 同样挡在挂载处。它虽全是 GET，但两条参数化读取
+  // (/workflows/:key 与 /llm-calls/*) 把 URL 里的 key 直接喂给 ARTICLES_BUCKET.get()，
+  // /workflows/:key 无任何前缀校验 → 公网可读同一 bucket 内任意对象(文章正文、情报报告)。
+  // 实测：无 token 打 /observability/workflows/2026%2F9%2F1%2F<id>.txt 命中正文对象(500=已取出，
+  // 仅因内容非 JSON 才在 parse 处崩)。列表接口也裸吐生产元数据(简报标题/24h 文章数/run 状态)。
+  // 鉴权是上游根治：外部进不来，任意 key 读取与元数据泄露一并消除，胜过逐路由补前缀校验。
+  // eval 脚本经 scripts/eval/_shared/backend.ts 带 API_TOKEN 访问。
+  .use('/observability/*', async (c, next) => {
+    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
   .route('/observability', observabilityRouter) // 添加可观测性路由
   .get('/ping', async c => c.json({ pong: true }));
 

@@ -14,6 +14,7 @@
  *     -d "$(node -e "const f=require('./fixtures/<name>.json');console.log(JSON.stringify({article_ids:f.articleIds,maxStoriesToGenerate:3,minImportance:3,clusteringOptions:{umapParams:{n_neighbors:5,n_components:5,min_dist:0.1,metric:'cosine'},hdbscanParams:{min_cluster_size:3,min_samples:1,epsilon:0.5}},triggeredBy:'eval-fixture-<name>'}))")"
  */
 
+import { authHeaders } from '../_shared/backend.js';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -48,7 +49,7 @@ function parseArgs(argv: string[]): CLIArgs {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  const listResp = await fetch(`${BACKEND_URL}/observability/workflows`);
+  const listResp = await fetch(`${BACKEND_URL}/observability/workflows`, { headers: authHeaders() });
   if (!listResp.ok) throw new Error(`List workflows failed: ${listResp.status}`);
   const list = (await listResp.json()) as {
     workflows: Array<{ key: string; uploaded: string }>;
@@ -62,7 +63,8 @@ async function main() {
   const key = matches[0].key;
 
   const detailResp = await fetch(
-    `${BACKEND_URL}/observability/workflows/${encodeURIComponent(key)}`
+    `${BACKEND_URL}/observability/workflows/${encodeURIComponent(key)}`,
+    { headers: authHeaders() }
   );
   if (!detailResp.ok) throw new Error(`Fetch workflow detail failed: ${detailResp.status}`);
   const detail = (await detailResp.json()) as { detailedMetrics: any[] };

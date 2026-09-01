@@ -7,19 +7,24 @@
 // （过拆倍数 1.1-1.3），所以缺陷集中在**单一大事件的大簇**上。
 //
 // 判据来源：`brief_stories.centroid`（成员文章 embedding 的均值，聚类时已算好躺在库里）。
-// 拿 94 条人工金标校准出阈值 0.94，单链聚合，在 5 个簇里 4 个与金标**逐条相同**，
+// 拿 94 条人工金标校准出阈值 0.94（校准时用的是单链），在 5 个簇里 4 个与金标**逐条相同**，
 // 且顺手把误入尼泊尔簇的津巴布韦车祸孤立了出来（那是聚类塞错的，没让它找）。
+// ⚠️ 那批金标文件已丢失，重跑对拍前得先重建——见 docs/engineering-notes/event-dedup-industry-patterns.md。
+//
+// 2026-09-01 聚合由单链改为全链（complete-linkage），理由与实测见 buildMergeGroups。
+// 原「中东伞」那条已知缺陷（单链把霍尔木兹谈判、卡塔尔斡旋、六个月盘点串成一片，
+// A↔B、B↔C 过线而 A↮C）随之消失：全链要求组内所有对都过线，构造上不可能串联。
 //
 // 已知缺陷（别指望这一层解决）：
-//  · 唯一错的簇是「中东伞」——单链把霍尔木兹谈判、卡塔尔斡旋、六个月盘点串成一片。
-//    A↔B、B↔C 各自过线但 A↮C，这是单链的固有弱点，调阈值同时满足不了
-//    （47 号簇最小边只有 0.8895，**需要**这种传递性才能连起来）。
 //  · 两条一组的合并只靠一条边支撑，余弦分不开真假：
 //    实测「基辅袭击 vs 泽连斯基无人机计划」(0.9445，不该合) 夹在
 //    「纳根德拉辞职」(0.9579，该合) 与「科伦坡测试赛」(0.9423，该合) 中间。
 //    LLM importance 差也无效（尼日尔兵变那对差 4 却该合，基辅那对差 3 却不该合）。
-//    → 故两条组交给 LLM 确认（起标题那次调用顺便做，零增量成本）；≥3 条的组有多条边
-//      互相印证，不确认。
+//    → 故两条组交给 LLM 确认（起标题那次调用顺便做，零增量成本）；≥3 条的组不确认。
+//  · 「≥3 条不确认」的依据在改全链后才真正成立：单链时代所谓「多条边互相印证」是假的
+//    （7 期实测 32 个多条组里 21 个内部存在没过线的配对），全链下组内每一对都过线。
+//    但过线 ≠ 同一发生——原型实测判官对「同题材不同发生」仍有假阳（美国遣返阿富汗人
+//    × Milo 被遣返，两两问也判成一件事）。逐对送确认是下一步，见 prototypes/dedup-band。
 
 /** 参与去重的最小 story 形状。index 是它在 validatedStories.stories 里的下标。 */
 export interface DedupStory {
@@ -40,7 +45,7 @@ export interface CosinePair {
 export interface MergeGroup {
   /** 组内成员的 index，升序 */
   indices: number[];
-  /** 组内最小边的余弦（观测用：越接近阈值越可疑） */
+  /** 组内**全部配对**的最小余弦，全链下保证 ≥ 阈值（观测用：越接近阈值越可疑） */
   minCos: number;
   /** 只有两条的组需要 LLM 确认（单边支撑） */
   needsConfirm: boolean;
@@ -53,8 +58,28 @@ export const DEFAULT_MIN_COSINE = 0.94;
 export const DEFAULT_ARTICLE_CAP = 30;
 
 /**
- * 单链聚合出合并组。只在**同一个 clusterId 内**合并——跨簇相似是聚类该管的事，
- * 这一层不越权（越权的代价见 memory: clustering-prune-overreach）。
+ * 全链（complete-linkage）凝聚出合并组。只在**同一个 clusterId 内**合并——跨簇相似是
+ * 聚类该管的事，这一层不越权（越权的代价见 memory: clustering-prune-overreach）。
+ *
+ * ⚠️ 2026-09-01 由单链改为全链。单链「组内任意一对过线即可入组」，靠传递性串联：
+ * A↔B 过线、B↔C 过线，A↮C 完全不像也会被并进同一组，而合并后 A 和 C 被写成同一件事。
+ *
+ * 实测（7 期真实数据，阈值不变仍是 0.94）：
+ *   聚合   组数  合掉的故事  最大组  ≥3条的组  其中"组内全对最小 < 阈值"
+ *   单链     76         257      14        32                        21
+ *   全链     91         228       6        27                         0
+ * 即 32 个多条组里有 21 个（66%）内部存在没过线的配对，全链定义上把它归零；
+ * 那个 14 条的巨团正是串出来的，全链下最大 6 条。
+ * 代价是少合 29 条故事，其中「正确地不合」与「误拆」的比例目前没有金标可量。
+ *
+ * 一手来源（docs/engineering-notes/event-dedup-industry-patterns.md）：
+ * 单链 = transitive closure / connected components，是 entity resolution 文献里最原始的
+ * 一档；Hassanzadeh et al. VLDB'09 (PVLDB 2(1):1282-1293) 受控实验实测其精度显著低于
+ * 其他所有算法，失效模式（chaining、阈值越松越严重）与上表完全吻合。
+ * 本仓库上游的 candidate-grouping.ts 早就是全链，理由逐字相同——这一层是漏网的。
+ *
+ * 注：`pairs` 可以只带 ≥ minCosine 的边（生产就是这么查 SQL 的）。缺失的边按 0 处理，
+ * 而按定义它本来就低于阈值、必然阻止合并，所以结论不受影响。
  */
 export function buildMergeGroups(
   stories: DedupStory[],
@@ -62,46 +87,57 @@ export function buildMergeGroups(
   minCosine = DEFAULT_MIN_COSINE
 ): MergeGroup[] {
   const byIndex = new Map(stories.map((s) => [s.index, s]));
-  const parent = new Map<number, number>(stories.map((s) => [s.index, s.index]));
-  const find = (x: number): number => {
-    let r = x;
-    while (parent.get(r) !== r) r = parent.get(r)!;
-    while (parent.get(x) !== r) {
-      const next = parent.get(x)!;
-      parent.set(x, r);
-      x = next;
-    }
-    return r;
-  };
-
-  const kept: CosinePair[] = [];
+  const key = (a: number, b: number) => `${Math.min(a, b)}-${Math.max(a, b)}`;
+  const sim = new Map<string, number>();
   for (const p of pairs) {
     if (p.cos < minCosine) continue;
     const sa = byIndex.get(p.a);
     const sb = byIndex.get(p.b);
     if (!sa || !sb || sa.clusterId !== sb.clusterId) continue;
-    kept.push(p);
-    parent.set(find(p.a), find(p.b));
+    sim.set(key(p.a, p.b), p.cos);
   }
+  const cos = (a: number, b: number) => sim.get(key(a, b)) ?? 0;
 
-  const groups = new Map<number, number[]>();
-  for (const s of stories) {
-    const root = find(s.index);
-    const bucket = groups.get(root);
-    if (bucket) bucket.push(s.index);
-    else groups.set(root, [s.index]);
+  // 贪心凝聚：每轮并「组间最小相似度」最大的那一对，直到没有任何一对的最小相似度过线。
+  // 以最小相似度作优先级 = 最保守的那对先并，与 candidate-grouping.ts 的做法一致。
+  // 并列时取下标最小的一对，保证同一批输入永远得到同一个划分（工作流重放要求确定性）。
+  let groups: number[][] = stories.map((s) => [s.index]);
+  for (;;) {
+    let best: [number, number] | null = null;
+    let bestSim = -Infinity;
+    for (let a = 0; a < groups.length; a++) {
+      for (let b = a + 1; b < groups.length; b++) {
+        if (byIndex.get(groups[a][0])!.clusterId !== byIndex.get(groups[b][0])!.clusterId) continue;
+        let mn = 1;
+        outer: for (const x of groups[a]) {
+          for (const y of groups[b]) {
+            const s = cos(x, y);
+            if (s < mn) mn = s;
+            if (mn < minCosine) break outer; // 全链的合并条件就是最小值 ≥ 阈值，早剪枝
+          }
+        }
+        if (mn >= minCosine && mn > bestSim) {
+          bestSim = mn;
+          best = [a, b];
+        }
+      }
+    }
+    if (!best) break;
+    const [a, b] = best;
+    groups[a] = groups[a].concat(groups[b]);
+    groups.splice(b, 1);
   }
 
   const out: MergeGroup[] = [];
-  for (const indices of groups.values()) {
+  for (const indices of groups) {
     if (indices.length < 2) continue;
-    const inside = new Set(indices);
-    const edges = kept.filter((p) => inside.has(p.a) && inside.has(p.b));
-    out.push({
-      indices: indices.sort((x, y) => x - y),
-      minCos: edges.length ? Math.min(...edges.map((e) => e.cos)) : minCosine,
-      needsConfirm: indices.length === 2,
-    });
+    const sorted = indices.slice().sort((x, y) => x - y);
+    // 全链下这个值就是「组内全部配对的最小余弦」，且保证 ≥ 阈值。
+    // 单链时代它只是链上最小边，管不到组内没连边的那些对——正是那个读数掩盖了串联。
+    let mn = 1;
+    for (let i = 0; i < sorted.length; i++)
+      for (let j = i + 1; j < sorted.length; j++) mn = Math.min(mn, cos(sorted[i], sorted[j]));
+    out.push({ indices: sorted, minCos: mn, needsConfirm: sorted.length === 2 });
   }
   return out.sort((a, b) => b.indices.length - a.indices.length);
 }

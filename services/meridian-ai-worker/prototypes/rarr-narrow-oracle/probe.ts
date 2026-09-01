@@ -21,7 +21,7 @@
  *   cd services/meridian-ai-worker/prototypes/rarr-narrow-oracle
  *   # baseline 臂要用**改动前**的 prompt。它是 git 里的历史版本，不入库（28K 全量副本
  *   # 进 git 只会腐烂），跑之前先取出来：
- *   git show 54e9ca3ridian-ai-worker/src/prompts/briefGeneration.ts > baseline-prompt.ts
+ *   git show 54e9ca3:services/meridian-ai-worker/src/prompts/briefGeneration.ts > baseline-prompt.ts
  *   pnpm i --ignore-workspace && pnpm probe [--tp] [--guard-narrow] [--repeats 2] [--conc 4]
  *
  *   --tp           换真幻觉金标（判定方向翻转：被删=抓到）

@@ -32,7 +32,10 @@ import { getBriefVerificationPrompt } from '../../src/prompts/briefGeneration.js
 import { getBriefVerificationPrompt as baselinePrompt } from './baseline-prompt.js';
 import { rankSourcesByRelevance } from '../../src/services/faithfulness-prompts.js';
 import { applyGroundedEdits, inSource, presLev, type GroundedEdit } from '../../src/utils/grounded-edits.js';
-import { getQuestionGenPrompt, getAgreementEditPrompt, buildWindows, retrieveFor, checksToEdits } from './rarr-arm.js';
+// 移植校验：rarr 臂改调**生产**函数（原型实现留在 rarr-arm.ts 供对照）。
+// 搬进生产后必须用同一批金标重跑——「代码搬过去了」和「行为一致」是两回事。
+import { getBriefQuestionsPrompt, getBriefAgreementPrompt } from '../../src/prompts/briefGeneration.js';
+import { buildEvidenceWindows, retrieveEvidence, checksToEdits } from '../../src/utils/evidence-windows.js';
 
 const WORKER = 'https://meridian-ai-worker.swj299792458.workers.dev/meridian/chat';
 const CACHE = new URL('../../../../scripts/eval/rarr-deletion/.cache/', import.meta.url).pathname;
@@ -148,17 +151,17 @@ async function main() {
       let nq = 0, evKB = 0;
       if (j.arm === 'rarr') {
         try {
-          const qRaw = await chat(getQuestionGenPrompt(j.draft));
+          const qRaw = await chat(getBriefQuestionsPrompt(j.draft));
           const qs: string[] = (JSON.parse(qRaw.match(/\{[\s\S]*\}/)?.[0] ?? '{}').questions ?? []).filter((x: any) => typeof x === 'string');
           nq = qs.length;
           // 窗口只从**与本块相关的 top-5 份报告**里切，不是全部 25 份。
           // 首跑不收窄：问"受影响多少人"，top-1 窗口可能来自另一场灾难的报告——
           // 4 行的窗口没有故事标识，跨故事分不开。金标 0/12 疑似出在这里。
           const scoped = rankSourcesByRelevance(j.draft, j.pieces ?? [], 5).map((i) => (j.pieces ?? [])[i]);
-          const items = retrieveFor(qs, buildWindows(scoped));
+          const items = retrieveEvidence(qs, buildEvidenceWindows(scoped));
           evKB = items.reduce((t, it) => t + it.evidence.length, 0) / 1000;
           if (items.length) {
-            raw = await chat(getAgreementEditPrompt(j.draft, items));
+            raw = await chat(getBriefAgreementPrompt(j.draft, items));
             const checks = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}').checks ?? [];
             edits = checksToEdits(checks);
             // 中间产物必须落盘：首轮没存 questions/evidence/checks，导致 6 条金标只能离线推到

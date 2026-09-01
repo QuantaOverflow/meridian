@@ -13,6 +13,8 @@ import {
   getBriefGenerationPrompt,
   getBriefTitlePrompt,
   getBriefVerificationPrompt,
+  getBriefQuestionsPrompt,
+  getBriefAgreementPrompt,
   getBriefCoverageReconciliationPrompt
 } from '../prompts/briefGeneration';
 import {
@@ -23,6 +25,7 @@ import {
 } from '../prompts/briefSkeleton';
 import { applyGroundedEdits, tallyGuards } from '../utils/grounded-edits';
 import { rankSourcesByRelevance } from './faithfulness-prompts';
+import { buildEvidenceWindows, retrieveEvidence, checksToEdits } from '../utils/evidence-windows';
 import { checkBlockConsistency, type ConsistencyFinding } from '../utils/block-consistency';
 import {
   ISOLATED_HEADING,
@@ -793,44 +796,65 @@ export class BriefGenerationService {
         return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
       }
 
-      // RARR 接地校验-改正。
+      // RARR 接地校验-改正，按论文三段做：① 提问 ② 逐问题检索证据 ③ 逐问题填双答案再判。
       //
-      // oracle 收窄（2026-09-01）：原先喂**全量 25 份**（~110KB），模型要在 11 万字里为一句话
-      // 找出处，找不到就输出「data does not mention X」并删掉——而 X 逐字在源里。两期实测
-      // 43 条被应用的删除中 9 条经独立复核确认是误删。对照实验（宽/窄各跑两次，见
-      // prototypes/rarr-narrow-oracle）：收窄后金标被删 13/18 → 8/18，删除总量 58 → 27。
-      // 检索用 rankSourcesByRelevance——FactScore/SAFE/RAGAS 与 RARR 共有的「先检索证据再判」
-      // 那一步，本仓库忠实度路径早在用，块校验此前没接。
+      // 为什么不是「整块正文 + 资料一次性给，你自己找错」：那样模型能说出
+      // "data does not mention X" 而 X 就在资料里——两期 43 条被应用的删除里 20 条经独立
+      // 判定是误删，模型理由抽查 7 条假 6 条。根因是**检索失败被表述成事实断言**：
+      // 它在 11 万字里没找到，输出的却是一句关于语料的全称否定，下游按后者处理直接删。
+      // 逐问题填 source_answer 之后，这句话在结构上就说不出口了。
       //
-      // 守卫仍查**全量**源（下方 applyGroundedEdits 的第三参）：这是刻意的不对称——
-      // 模型的判断范围收窄以提高信噪比，守卫的否决范围放宽以少误伤。名字/事实只要在任何
-      // 一份报告里存在就不该被删掉，这条不因模型看不见而改变。
+      // 四臂离线对照（两批金标各跑 2 次，见 prototypes/rarr-narrow-oracle）：
+      //                    误删(18次)  真幻觉抓到(12次)  Pres_Lev
+      //   改动前              17/18        9/12          0.652
+      //   单次调用+收窄        5/18        3/12          0.968
+      //   本结构（论文）        0/18        4/12          0.990
       //
-      // 失败不阻断（同既有 verifyAndCorrect 的 fail-open），但 verified 标出来，
-      // 免得"没校验成"与"校验过且干净"在数据里长得一样。
+      // ⚠️ 下面两处配置是**被测过的那一组**，改之前先重跑对照：
+      //   · 守卫查的是收窄后的 oracle，不是全量——与「单次调用」臂相反（那臂查全量）
+      //   · G5 举证关闭：absent 类删除引不出原话（资料本来就没提），开着会把它们全拦掉
       const fullOracle = this.convertReportsToMarkdown(reports);
       const perReport = reports.map((r, i) => this.convertReportsToMarkdown([r], i, reports.length));
       const picked = rankSourcesByRelevance(prose, perReport, VERIFY_ORACLE_K).sort((a, b) => a - b);
       const oracle = picked.map((i) => perReport[i]).join('\n---\n\n');
       try {
-        const verifyRaw = await this.callAI(getBriefVerificationPrompt(prose, oracle), undefined, {
+        // ① 提问：只给正文。覆盖率靠问题清单，不靠模型扫一遍自觉发现。
+        const qRaw = await this.callAI(getBriefQuestionsPrompt(prose), undefined, {
+          temperature: 0,
+          maxTokens: 1200,
+          phase: 'brief_generation',
+          callIndex: CALL_INDEX.blockQuestionsBase + index,
+        });
+        const qParsed = parseLooseJSON(qRaw);
+        const questions: string[] = Array.isArray(qParsed?.questions)
+          ? qParsed.questions.filter((x: unknown) => typeof x === 'string' && (x as string).trim().length > 8)
+          : [];
+        // ② 逐问题检索（纯本地）
+        const items = retrieveEvidence(questions, buildEvidenceWindows(picked.map((i) => perReport[i])));
+        if (!items.length) {
+          console.warn(`[Brief Block ${index}] 提问步未产出可用问题（${questions.length} 条）→ 发未经 RARR 核验的块`);
+          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
+        }
+        // ③ 判断 + 改写
+        const verifyRaw = await this.callAI(getBriefAgreementPrompt(prose, items), undefined, {
           temperature: 0,
           maxTokens: 4000,
           phase: 'brief_generation',
           callIndex: CALL_INDEX.blockVerifyBase + index,
         });
         const parsed = parseLooseJSON(verifyRaw);
-        if (!parsed || !Array.isArray(parsed.edits)) {
-          console.warn(`[Brief Block ${index}] 接地校验响应解析失败或无 edits 字段 → 发未经 RARR 核验的块（非"判定 0 处要改"）`);
+        if (!parsed || !Array.isArray(parsed.checks)) {
+          console.warn(`[Brief Block ${index}] 接地校验响应解析失败或无 checks 字段 → 发未经 RARR 核验的块（非"判定 0 处要改"）`);
           return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
         }
-        const result = applyGroundedEdits(prose, parsed.edits, fullOracle);
+        const edits = checksToEdits(parsed.checks);
+        const result = applyGroundedEdits(prose, edits, oracle, { requireQuote: false });
         const tidied = result.deleted ? this.tidyAfterDelete(result.text) : { text: result.text, repairs: 0 };
         const text = tidied.text;
         if (tidied.repairs) console.warn(`[Brief Block ${index}] PUNCT_REPAIR ${tidied.repairs} 处删除残渣（RARR 删完留下的标点断裂）`);
         const blocked = tallyGuards(result.blocked);
         console.log(
-          `[Brief Block ${index}] 接地校验：edits ${parsed.edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
+          `[Brief Block ${index}] 接地校验：问题 ${items.length}，edits ${edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
             `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}` +
             ` / G5未举证 ${blocked.unquoted} / 预算 ${blocked.budget}` +
             `，保留度 ${result.presLev.toFixed(3)}｜oracle ${picked.length}/${reports.length} 份` +
@@ -847,7 +871,7 @@ export class BriefGenerationService {
           success: true,
           data: {
             index, title, text, verified: true,
-            edits: parsed.edits.length, applied: result.applied, skipped: result.skipped, blocked,
+            edits: edits.length, applied: result.applied, skipped: result.skipped, blocked,
             blockedDetail: result.blocked,
           },
         };

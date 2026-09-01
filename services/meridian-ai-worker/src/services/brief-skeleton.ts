@@ -26,6 +26,8 @@ export const CALL_INDEX = {
   blockWriteBase: 100,
   blockVerifyBase: 200,
   titleFillBase: 300,
+  /** RARR 提问步（校验的第一次调用）。与 blockVerifyBase 分段，免得两次调用互相覆盖归档 */
+  blockQuestionsBase: 400,
 } as const;
 
 export interface SkeletonRef {

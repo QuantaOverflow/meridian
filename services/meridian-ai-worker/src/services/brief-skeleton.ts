@@ -1,3 +1,4 @@
+import type { GuardKind } from '../utils/grounded-edits';
 /**
  * b′ 分段写的**纯结构逻辑**：类型、覆盖补齐、成品 markdown 渲染。
  *
@@ -57,7 +58,7 @@ export interface BriefBlockResult {
   edits: number;
   applied: number;
   skipped: number;
-  blocked: Record<'noop' | 'bad_delete' | 'graft' | 'bloat', number>;
+  blocked: Record<GuardKind, number>;
   blockedDetail?: unknown[];
 }
 

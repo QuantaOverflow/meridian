@@ -61,10 +61,15 @@ function norm(s: string): string {
   return s.toLowerCase().replace(/,/g, '').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
 }
 
+// 疑问词必须在列（2026-09-01 补）：实体门用 `/[A-Z][A-Za-z'-]{2,}/` 抽专名，而以问句做
+// query 时首词恒为 How/What/Who/…，会被当成专名，实体门于是只留含该词的源——正确证据
+// 哪怕词汇全中也被踢出候选。实测「How many individuals were injured?」下，含
+// "219 were injured" 的窗口**未进候选**，问句全小写后立刻排第 1。
+// 代价：把 WHO（世卫）这类首字母缩写误当虚词，可接受——它极少是唯一区分信号。
 const STOP = new Set(
-  'the a an of to in on for and or but with by at from as is are was were be been being this that these those it its their his her over under into than then per via amid has have had will would on off out up down new'.split(
-    ' '
-  )
+  ('the a an of to in on for and or but with by at from as is are was were be been being this that these those it its their his her over under into than then per via amid has have had will would on off out up down new' +
+    ' how what who when where why which whose whom does did do'
+  ).split(' ')
 );
 function contentWords(s: string): Set<string> {
   return new Set((s.toLowerCase().match(/[a-z][a-z'-]{2,}/g) || []).filter((w) => !STOP.has(w)));

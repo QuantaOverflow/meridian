@@ -22,6 +22,7 @@ import {
   type BlockSectionContext
 } from '../prompts/briefSkeleton';
 import { applyGroundedEdits, tallyGuards } from '../utils/grounded-edits';
+import { rankSourcesByRelevance } from './faithfulness-prompts';
 import { checkBlockConsistency, type ConsistencyFinding } from '../utils/block-consistency';
 import {
   ISOLATED_HEADING,
@@ -36,6 +37,14 @@ import {
   type BriefSkeleton,
   type BriefBlockResult
 } from './brief-skeleton';
+
+/**
+ * 块校验时喂给模型的情报报告份数（top-k）。
+ * k=5 的来历：prototypes/rarr-retrieval 实测——用被删 span 当 query 时，该块自己那份报告
+ * 落在 top-3 的命中率 92-96%、top-5 达 96-100%；k=5 的 oracle 仍只有 ~26KB（全量 110KB）。
+ * 收益在 k=3→5 之间差别不大，但跨报告支持的余量更宽，而那一格没有尺（只能靠删除总量间接看）。
+ */
+const VERIFY_ORACLE_K = 5;
 
 // 供 index.ts 与既有调用方从本模块取（b′ 的结构类型实现在 brief-skeleton.ts）
 export type { SkeletonRef, SkeletonSection, BriefSkeleton, BriefBlockResult } from './brief-skeleton';
@@ -781,13 +790,28 @@ export class BriefGenerationService {
       }
 
       if (!selfCorrect) {
-        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
       }
 
-      // RARR 接地校验-改正。oracle = 全量 25 份报告；守卫也查全量源。
+      // RARR 接地校验-改正。
+      //
+      // oracle 收窄（2026-09-01）：原先喂**全量 25 份**（~110KB），模型要在 11 万字里为一句话
+      // 找出处，找不到就输出「data does not mention X」并删掉——而 X 逐字在源里。两期实测
+      // 43 条被应用的删除中 9 条经独立复核确认是误删。对照实验（宽/窄各跑两次，见
+      // prototypes/rarr-narrow-oracle）：收窄后金标被删 13/18 → 8/18，删除总量 58 → 27。
+      // 检索用 rankSourcesByRelevance——FactScore/SAFE/RAGAS 与 RARR 共有的「先检索证据再判」
+      // 那一步，本仓库忠实度路径早在用，块校验此前没接。
+      //
+      // 守卫仍查**全量**源（下方 applyGroundedEdits 的第三参）：这是刻意的不对称——
+      // 模型的判断范围收窄以提高信噪比，守卫的否决范围放宽以少误伤。名字/事实只要在任何
+      // 一份报告里存在就不该被删掉，这条不因模型看不见而改变。
+      //
       // 失败不阻断（同既有 verifyAndCorrect 的 fail-open），但 verified 标出来，
       // 免得"没校验成"与"校验过且干净"在数据里长得一样。
-      const oracle = this.convertReportsToMarkdown(reports);
+      const fullOracle = this.convertReportsToMarkdown(reports);
+      const perReport = reports.map((r, i) => this.convertReportsToMarkdown([r], i, reports.length));
+      const picked = rankSourcesByRelevance(prose, perReport, VERIFY_ORACLE_K).sort((a, b) => a - b);
+      const oracle = picked.map((i) => perReport[i]).join('\n---\n\n');
       try {
         const verifyRaw = await this.callAI(getBriefVerificationPrompt(prose, oracle), undefined, {
           temperature: 0,
@@ -798,9 +822,9 @@ export class BriefGenerationService {
         const parsed = parseLooseJSON(verifyRaw);
         if (!parsed || !Array.isArray(parsed.edits)) {
           console.warn(`[Brief Block ${index}] 接地校验响应解析失败或无 edits 字段 → 发未经 RARR 核验的块（非"判定 0 处要改"）`);
-          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
         }
-        const result = applyGroundedEdits(prose, parsed.edits, oracle);
+        const result = applyGroundedEdits(prose, parsed.edits, fullOracle);
         const tidied = result.deleted ? this.tidyAfterDelete(result.text) : { text: result.text, repairs: 0 };
         const text = tidied.text;
         if (tidied.repairs) console.warn(`[Brief Block ${index}] PUNCT_REPAIR ${tidied.repairs} 处删除残渣（RARR 删完留下的标点断裂）`);
@@ -808,8 +832,17 @@ export class BriefGenerationService {
         console.log(
           `[Brief Block ${index}] 接地校验：edits ${parsed.edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
             `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}` +
+            ` / G5未举证 ${blocked.unquoted} / 预算 ${blocked.budget}` +
+            `，保留度 ${result.presLev.toFixed(3)}｜oracle ${picked.length}/${reports.length} 份` +
             (result.recased ? `，${result.recased} 条替换压回全小写文风` : '')
         );
+        // 只优化有据率会被"删光"这个平凡解通吃（RARR 2.3）。保留度低于阈值要看得见。
+        if (result.budgetTripped) {
+          console.warn(`[Brief Block ${index}] DELETION_BUDGET_TRIPPED 删除量超预算 → 整批删除型 edit 作废（替换型照常）`);
+        }
+        if (result.presLev < 0.7) {
+          console.warn(`[Brief Block ${index}] LOW_PRESERVATION ${result.presLev.toFixed(3)}（草稿 ${prose.length} → ${text.length} 字符）`);
+        }
         return {
           success: true,
           data: {
@@ -820,7 +853,7 @@ export class BriefGenerationService {
         };
       } catch (verifyError) {
         console.error(`[Brief Block ${index}] 接地校验失败，退回未校验草稿:`, verifyError);
-        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0 } } };
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
       }
     } catch (error) {
       console.error(`[Brief Block ${index}] 写作失败:`, error);

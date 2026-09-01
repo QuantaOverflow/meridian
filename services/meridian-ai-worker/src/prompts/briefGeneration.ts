@@ -192,27 +192,32 @@ ${storiesMarkdown}
 ${briefDraft}
 </brief_draft>
 
-# What to flag (CONCRETE FACTS ONLY)
-Check every concrete factual token: names, numbers, dates, quantities, scope/rankings, quotes, who-said / who-did attributions, event order, status/modality ("agreed" vs "proposed", "adopted" vs "awaits adoption"), severity verbs ("damaged" vs "destroyed"). Flag a span when:
-- it CONTRADICTS the data — e.g. data says Iran declared the closure but the brief says the US did; data says "to expand to 70%" but the brief says "has seized 70%"; data dates a downgrade in February but the brief implies a May explosion caused it; data says "60-day" but the brief says "90-day"; OR
-- it states a concrete specific (named org / person / place / number / date) that is ABSENT from the data.
+# What to flag: CONTRADICTIONS ONLY
+Check every concrete factual token: names, numbers, dates, quantities, scope/rankings, quotes, who-said / who-did attributions, event order, status/modality ("agreed" vs "proposed", "adopted" vs "awaits adoption"), severity verbs ("damaged" vs "destroyed").
+
+Flag a span ONLY when the data says something DIFFERENT about that same fact — e.g. data says Iran declared the closure but the brief says the US did; data says "to expand to 70%" but the brief says "has seized 70%"; data says "60-day" but the brief says "90-day".
 
 # What NOT to flag (leave untouched)
-- Analytical interpretation — motivations, implications, "this likely signals…". Opinion grounded on real facts is allowed; never touch it.
-- Wording, style, tone. Only factual accuracy matters here.
-- Facts that ARE supported by the data, even if phrased differently. If you are unsure whether a fact is supported, LEAVE IT — flag only clear errors. Precision over zeal: a wrongly-flagged correct sentence is worse than a missed one.
+- **Anything the data simply does not discuss.** Silence is NOT a contradiction. If you cannot find a passage in the data that says something DIFFERENT, leave the span alone — do not remove it.
+- Facts that ARE supported by the data, even if phrased differently. "legal proceedings" vs "trial", "military support" vs "military assistance", "roughly 900" vs "888" — same fact, different words, LEAVE IT.
+- Analytical interpretation — motivations, implications, "this likely signals…". Never touch it.
+- Wording, style, tone.
+
+Precision over zeal: a wrongly-flagged correct sentence is worse than a missed one.
 
 # For each problem, produce one edit
+Before deciding, state what the data actually says about that fact. Then judge.
+- "source_says": a VERBATIM quote copied from the curated news data above, covering the same fact — the passage that CONTRADICTS the brief. Copy it letter-for-letter; it is checked against the source automatically. **If you cannot quote such a passage, there is no contradiction — do not emit an edit at all.**
 - "brief_span": an EXACT verbatim substring of the brief draft (copy letter-for-letter, including punctuation) — the SMALLEST span containing the error.
-- "replacement": the corrected text, grounded in the data (fix the number / name / attribution / order to match the data exactly). Use an empty string "" ONLY when the span is an unsupported specific that cannot be corrected from the data and must be removed.
-- "reason": one short phrase citing the data (e.g. 'data says 60-day, not 90-day').
+- "replacement": the corrected text, grounded in "source_says" (fix the number / name / attribution / order to match the data exactly). Use an empty string "" only when the contradicted claim cannot be repaired into a correct statement.
+- "reason": one short phrase (e.g. 'data says 60-day, not 90-day').
 
 # Output
 Reply with ONLY a JSON object inside a \`\`\`json fenced block. No prose. If the brief has no factual errors, return {"edits": []}.
 \`\`\`json
 {
   "edits": [
-    { "brief_span": "<verbatim substring of brief>", "replacement": "<grounded correction or empty>", "reason": "<short, cite data>" }
+    { "source_says": "<verbatim quote from the data>", "brief_span": "<verbatim substring of brief>", "replacement": "<grounded correction or empty>", "reason": "<short>" }
   ]
 }
 \`\`\`

@@ -27,9 +27,11 @@ export interface GroundedEdit {
   brief_span?: string;
   replacement?: string;
   reason?: string;
+  /** RARR 式举证：源里支持本次改动的**逐字**片段。缺失或不在源里 → G5 拦。 */
+  source_says?: string;
 }
 
-export type GuardKind = 'noop' | 'bad_delete' | 'graft' | 'bloat';
+export type GuardKind = 'noop' | 'bad_delete' | 'graft' | 'bloat' | 'unquoted' | 'budget';
 
 export interface BlockedEdit {
   guard: GuardKind;
@@ -49,6 +51,10 @@ export interface ApplyResult {
   deleted: boolean;
   /** 被压回全小写文风的替换条数（留痕：RARR 破坏文风的频率是个要跟的信号） */
   recased: number;
+  /** 删除预算是否被触发（触发时整批删除型 edit 作废，替换型照常应用） */
+  budgetTripped: boolean;
+  /** 保留度 Pres_Lev = max(1 - Lev(draft,out)/len(draft), 0)，RARR 论文式 3。越接近 1 改得越少 */
+  presLev: number;
 }
 
 /**
@@ -80,9 +86,78 @@ export function isGraft(span: string, replacement: string, source: string): bool
   return inSource(span, source);
 }
 
-/** G2 误删：要删掉的内容在源里逐字存在 —— 这正是「误删」的定义 */
+/**
+ * G2 误删。**2026-09-01 换判据**：原判据是「整段 span 逐字在源里」，两期简报 43 条被应用的
+ * 删除**拦下 0 条**——实际被删的是 130-216 字符的整句转述，措辞与源不同，整句逐字匹配永远
+ * 落空。文件头原写的"实测 2/2 拦对"是在两条短片段上得到的，不成立于真实形态。
+ *
+ * 新判据：span 的**实词逐个**在源里。9 条经独立复核确认的误删在本判据下 9/9 全中。
+ * 局限：判不了搭配——"betancourt as a private operator" 实词全在源里，但源只说他是商人。
+ * 所以它是必要条件不是充分条件，配合 G5（举证）与删除预算一起用。
+ */
+const TOK_STOP = new Set([
+  'the', 'and', 'for', 'that', 'this', 'with', 'from', 'have', 'has', 'had', 'was', 'were',
+  'been', 'are', 'its', 'their', 'they', 'them', 'not', 'but', 'all', 'any', 'which', 'who',
+  'when', 'where', 'while', 'after', 'before', 'into', 'over', 'under', 'about', 'than', 'then',
+  'also', 'such', 'only', 'more', 'most', 'some', 'other', 'said', 'says', 'would', 'could',
+  'should', 'may', 'might', 'must', 'his', 'her', 'she', 'him', 'out', 'off', 'per', 'via', 'due',
+]);
+
+/** span 的实词是否**全部**出现在源里（长度≥4 或含数字才算实词） */
+export function allTokensInSource(span: string, source: string): boolean {
+  const src = source.toLowerCase();
+  const toks = [...new Set((span.toLowerCase().match(/[a-z0-9][a-z0-9\'\u2019.\-]*/g) ?? [])
+    .map((t) => t.replace(/[.\'\u2019\-]+$/, ''))
+    .filter((t) => (t.length >= 4 || /\d/.test(t)) && !TOK_STOP.has(t)))];
+  if (!toks.length) return false;   // 全是虚词 → 判不了，交给别的守卫
+  return toks.every((t) => new RegExp(`(?<![a-z0-9])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-z0-9])`).test(src));
+}
+
 export function isBadDelete(span: string, replacement: string, source: string): boolean {
-  return replacement === '' && inSource(span, source);
+  return replacement === '' && allTokensInSource(span, source);
+}
+
+/**
+ * G5 未举证（RARR 式）。论文的 agreement model 先「说出源对同一问题的答案」再判是否矛盾；
+ * 我们把它落成一个**可机器核验**的输出字段 `source_says`：必须是源里的逐字片段。
+ *
+ * 为什么是字段不是 prompt 约束：memory `rarr-prompt-constraint-negative` 记过「每加一条约束，
+ * 模型换一条逃逸路径」——那说的是模型能悄悄绕开的**约束**。这里是能被程序验证的**产物**，
+ * 引不出源里的原话就发不出这条 edit。9 条误删的理由全是「data does not mention X」而 X 逐字
+ * 在源里，这类断言在举证要求下根本写不出来。
+ */
+export function isUnquoted(edit: GroundedEdit, source: string): boolean {
+  const q = (edit.source_says ?? '').trim();
+  if (q.length < 8) return true;                       // 太短的"引文"不算举证
+  return !source.toLowerCase().includes(q.toLowerCase());
+}
+
+/** Levenshtein，只用于 Pres_Lev。O(n·m)，块级文本（<5KB）够用 */
+function lev(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/**
+ * 保留度（RARR 论文式 3）：`max(1 - Lev(x,y)/len(x), 0)`。1.0 = 没改，0 = 全改掉。
+ *
+ * 立这个指标的理由是论文 2.3 点破的那件事：只优化有据率会被"删光"这个平凡解通吃
+ * （"an adversarial editor could ensure 100% attribution by simply replacing the input"）。
+ * 本项目此前**只测忠实度、从不测保留度**，所以某个块被删掉 85% 正文时没有任何指标会响。
+ */
+export function presLev(before: string, after: string): number {
+  if (!before.length) return 1;
+  return Math.max(1 - lev(before, after) / before.length, 0);
 }
 
 /** G3 空转：替换文本与原文逐字相同（忽略大小写与首尾空白） */
@@ -131,11 +206,37 @@ export function isBloat(span: string, replacement: string): boolean {
  * @param fullSource **全量**源 markdown。守卫一律查全量：原名只要在任何一份报告里存在，
  *                   就不该被替换/删掉。用单份源查会把跨报告的正确内容判成"源里没有"。
  */
+export interface ApplyOptions {
+  /**
+   * 删除预算：整块被删掉的字符占草稿的比例上限，超了就**整批删除型 edit 作废**
+   * （替换型不受影响）。RARR 论文脚注 3 有同类保险（"reject edits with edit distance above
+   * 50 characters or 0.5 times the original text length"），但它的 y 是句子级短文本，
+   * 50 字符照搬到 600-2700 字符的块上会把绝大多数正当删除也拦掉，故改成**累计比例**。
+   *
+   * 0.4 的来历：两期 50 块实测，正常块净减 0-31%，病态块 65-85%，中间是空的。
+   * ⚠️ 那是净变化（含替换）而非纯删除量，n=2 期——这个数是**待复验的起点**，不是定论。
+   */
+  deletionBudget?: number;
+  /** 是否要求每条 edit 举证（G5）。默认开；关掉用于 A/B 对照 */
+  requireQuote?: boolean;
+}
+
 export function applyGroundedEdits(
   draft: string,
   edits: GroundedEdit[],
-  fullSource: string
+  fullSource: string,
+  opts: ApplyOptions = {}
 ): ApplyResult {
+  const budget = opts.deletionBudget ?? 0.4;
+  const requireQuote = opts.requireQuote !== false;
+
+  // 预算是**批级**判断，必须在逐条应用之前算：等边删边看会变成"删到一半停手"，
+  // 留下语义半截的正文，比整批不删更糟。
+  const delChars = edits.reduce(
+    (t, e) => t + ((e?.replacement ?? '') === '' && typeof e?.brief_span === 'string' ? e.brief_span.length : 0), 0
+  );
+  const budgetTripped = draft.length > 0 && delChars / draft.length > budget;
+
   let text = draft;
   let applied = 0;
   let skipped = 0;
@@ -149,9 +250,12 @@ export function applyGroundedEdits(
     const replacement = typeof e.replacement === 'string' ? e.replacement : '';
     const reason = typeof e.reason === 'string' ? e.reason : '';
 
-    // 顺序：空转 → 误删 → 嫁接 → 膨胀。先筛掉不改内容的那类，拦截统计才读得懂。
+    // 顺序：空转 → 预算 → 未举证 → 误删 → 嫁接 → 膨胀。
+    // 先筛掉不改内容的那类，拦截统计才读得懂；预算排在个别守卫之前，因为它是批级判断。
     let guard: GuardKind | null = null;
     if (isNoop(span, replacement)) guard = 'noop';
+    else if (budgetTripped && replacement === '') guard = 'budget';
+    else if (requireQuote && isUnquoted(e, fullSource)) guard = 'unquoted';
     else if (isBadDelete(span, replacement, fullSource)) guard = 'bad_delete';
     else if (isGraft(span, replacement, fullSource)) guard = 'graft';
     else if (replacement && isBloat(span, replacement)) guard = 'bloat';
@@ -175,12 +279,12 @@ export function applyGroundedEdits(
     }
   }
 
-  return { text, applied, skipped, blocked, deleted, recased };
+  return { text, applied, skipped, blocked, deleted, recased, budgetTripped, presLev: presLev(draft, text) };
 }
 
 /** 拦截数按守卫分类汇总，供日志/传感器用 */
 export function tallyGuards(blocked: BlockedEdit[]): Record<GuardKind, number> {
-  const t: Record<GuardKind, number> = { noop: 0, bad_delete: 0, graft: 0, bloat: 0 };
+  const t: Record<GuardKind, number> = { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 };
   for (const b of blocked) t[b.guard]++;
   return t;
 }

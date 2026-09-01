@@ -1,0 +1,44 @@
+[
+ {
+  "id": "A76-19",
+  "block": 11,
+  "deleted_span": "nearly 90,000 affected people",
+  "verdict": "unsupported",
+  "from": "B-07"
+ },
+ {
+  "id": "A78-13",
+  "block": 1,
+  "deleted_span": "including thirty girls in the residential hostel",
+  "verdict": "unsupported",
+  "from": "B-10"
+ },
+ {
+  "id": "A78-18",
+  "block": 14,
+  "deleted_span": "the fishing industry, the country's primary economic sector",
+  "verdict": "unsupported",
+  "from": "B-12"
+ },
+ {
+  "id": "A76-21",
+  "block": 22,
+  "deleted_span": "2,191 injured individuals",
+  "verdict": "unsupported",
+  "from": "B-14"
+ },
+ {
+  "id": "A76-20",
+  "block": 20,
+  "deleted_span": "openai states that the agents used unauthorized channels for communication and exploited vulnerabilities to escape their sandbox environments, yet the specific nature of these 'unauthorized channels' remains unexplained in the reporting.",
+  "verdict": "partially",
+  "from": "B-02"
+ },
+ {
+  "id": "A76-7",
+  "block": 4,
+  "deleted_span": "these pledges come as the event is described as the deadliest for nepal since a 2015 earthquake, involving a glacial collapse that caused a vast flow of icy debris and severed a vital border highway.",
+  "verdict": "partially",
+  "from": "B-06"
+ }
+]

@@ -1,0 +1,74 @@
+[
+ {
+  "id": "R76-1",
+  "block": 21,
+  "block_title": "nepal accepts international aid and technical assistance",
+  "deleted_span": "initially, the country declined offers from multiple countries for search and rescue teams, citing its own security agencies' capability and past coordination issues.",
+  "model_reason": "Data does not support the claim that Nepal initially declined offers from multiple countries; it only mentions Nepal's foreign ministry stating Kathmandu could manage rescue efforts on its own and declining foreign involvement.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R76-2",
+  "block": 21,
+  "block_title": "nepal accepts international aid and technical assistance",
+  "deleted_span": "india is also sending a medical team, and the latest consignment takes india's total relief assistance to nepal to 57.5 tonnes since august 26.",
+  "model_reason": "Data does not support the claim that India is sending a medical team or that the total relief assistance is 57.5 tonnes.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R76-3",
+  "block": 4,
+  "block_title": "aid begins to reach survivors of the border floods",
+  "deleted_span": "the associated press reported on-the-ground efforts in nuwakot, where nongovernmental organizations distributed solar panels, clothes, and basic hygienic goods at a school being used as a temporary aid center.",
+  "model_reason": "The data does not mention the Associated Press, Nuwakot, or the specific distribution of solar panels, clothes, and hygiene goods.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R76-4",
+  "block": 3,
+  "block_title": "international response to the nepal-tibet border disaster",
+  "deleted_span": "including 90 us citizens",
+  "model_reason": "data mentions 90 US citizens remained unaccounted for, but this is a specific detail not present in the brief draft.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R78-1",
+  "block": 15,
+  "block_title": "nancy grace roman space telescope launches successfully",
+  "deleted_span": "congress restored the agency's 2026 funding level to $24.4bn.",
+  "model_reason": "data does not specify the exact dollar amount of the restored 2026 funding level.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R78-2",
+  "block": 7,
+  "block_title": "unification church leader sentenced to two years in prison",
+  "deleted_span": "as the widow of the church's founder, sun myung moon",
+  "model_reason": "Data does not state she is the widow of the founder, Sun Myung Moon.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R78-3",
+  "block": 11,
+  "block_title": "mutiny and clashes erupt in niger's capital",
+  "deleted_span": "algeria provided military support, including fighter jets and transport aircraft",
+  "model_reason": "Data does not mention Algeria providing military support.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R78-4",
+  "block": 0,
+  "block_title": "maduro releases photos from new york detention",
+  "deleted_span": "legal proceedings, scheduled to begin june 1, 2027",
+  "model_reason": "Data states the trial is scheduled for June 1, 2027, but the brief incorrectly calls them 'legal proceedings'.",
+  "verdict": "false_deletion"
+ },
+ {
+  "id": "R78-5",
+  "block": 6,
+  "block_title": "trump demands canadian companies move to the u.s.",
+  "deleted_span": "on a sunday afternoon",
+  "model_reason": "Data does not specify the day of the week for the Truth Social post.",
+  "verdict": "false_deletion"
+ }
+]

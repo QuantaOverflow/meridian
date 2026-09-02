@@ -16,9 +16,6 @@ node scripts/analyze-codebase.js
 - 排除所有构建产物和依赖文件
 - 生成专业的分析报告
 
-### 分析报告文档
-- `scripts/codebase-summary.md` - 完整的代码库分析报告
-
 ## 📊 最新统计结果
 
 ### 核心数据 (截至 2025年6月18日)

@@ -928,10 +928,54 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           console.warn(`[AutoBrief] ${skippedNoEmbedding.length} 篇文章缺 embedding，未参与候选分组`);
         }
         const groupedArticles = new Set(candidateGroups.flatMap(g => g.articleIds));
+        // 落单 = 在真实簇里（非 -1 噪声桶）但够不上任何候选组的文章。
+        // 全链要求组内**每一对**都 ≥ 阈值，落单的多是「只有一家媒体报道」的事件——
+        // candidate-grouping.ts 文件头记着这个偏置（宝莱坞票房 5 篇进简报、跨邦调水裁决 1 篇出局）。
+        const clusteredIds = clusteringResult.clusters
+          .filter((c: any) => c.clusterId !== -1)
+          .flatMap((c: any) => c.articleIds as number[]);
+        const droppedArticleIds = [...new Set(clusteredIds)].filter(id => !groupedArticles.has(id));
         console.log(
           `[AutoBrief] 候选分组：${clusteringResult.clusters.length} 簇 → ${candidateGroups.length} 组，` +
-          `进组 ${groupedArticles.size}/${dataset.articles.length} 篇`
+          `进组 ${groupedArticles.size}/${dataset.articles.length} 篇，落单 ${droppedArticleIds.length} 篇`
         );
+
+        // 观测性：落一份候选分组结果 + **落单清单**到 R2。
+        //
+        // 这一步是全管线丢弃量最大的一处（8 期实测：进簇文章的 ~54% 够不上任何组），
+        // 而在此之前它是唯一**不落盘**的丢弃点——聚类的噪声桶落了、被毙簇落了、
+        // 落选故事在 brief_stories 里查得到，唯独这里丢掉的文章无处可查，
+        // 只在一行 console.log 里报个总数（而 wrangler tail 在开发机上是死的）。
+        //
+        // 支持「丢一半可以接受」的唯一证据是 2026-08-20 的人工复验「85/85 全捕获真事件」，
+        // 而源池 08-17 才扩过一倍（11→17 行，进稿 230→600/天），那个背书没重验过。
+        // 落了这份清单，重验只需读它，不必再拿 R2 快照重算几何。
+        try {
+          await this.env.ARTICLES_BUCKET.put(
+            `observability/candidate-groups/${workflowId}.json`,
+            JSON.stringify({
+              workflowId,
+              createdAt: new Date().toISOString(),
+              threshold: CANDIDATE_GROUP_THRESHOLD,
+              stats: {
+                clusters: clusteringResult.clusters.length,
+                groups: candidateGroups.length,
+                articlesInClusters: new Set(clusteredIds).size,
+                articlesGrouped: groupedArticles.size,
+                articlesDropped: droppedArticleIds.length,
+                skippedNoEmbedding: skippedNoEmbedding.length,
+              },
+              groups: candidateGroups.map(g => ({
+                clusterId: g.clusterId, groupId: g.groupId, articleIds: g.articleIds,
+              })),
+              // 只存 id：标题/正文按 id 去 articles 表取，不在这里冗余一份会漂的副本
+              droppedArticleIds,
+              skippedNoEmbedding,
+            }, null, 2)
+          );
+        } catch (persistErr) {
+          console.warn(`[AutoBrief] 候选分组落盘失败 (workflow=${workflowId}):`, persistErr);
+        }
 
         console.log(`[AutoBrief] 调用真正的AI Worker故事验证服务，处理 ${candidateGroups.length} 个候选组`);
         

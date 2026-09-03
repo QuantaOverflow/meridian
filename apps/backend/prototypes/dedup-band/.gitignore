@@ -1,0 +1,14 @@
+node_modules/
+.cache/
+traces/
+out/
+results/
+*-result.json
+*-result*.json
+*.dump
+# 本原型的运行产物：跑批日志、划分导出、生成的简报
+# 别用宽泛 *.md —— FINDINGS.md 是结论，要入库
+*.log
+*-out.json
+bprime-*.md
+*-brief.md

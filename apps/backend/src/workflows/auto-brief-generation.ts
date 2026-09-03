@@ -11,6 +11,15 @@ import {
   type CosinePair,
   type DedupStory,
 } from '../lib/core/story-dedup';
+import {
+  majorityStoryline,
+  permuteStorylines,
+  regroupByStoryline,
+  STORYLINE_MIN_UNITS,
+  STORYLINE_VOTES,
+  type StorylineDef,
+  type StorylineUnit,
+} from '../lib/core/storyline';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -145,6 +154,14 @@ const dbStepConfig: WorkflowStepConfig = {
 const dedupStepConfig: WorkflowStepConfig = {
   retries: { limit: 2, delay: '5 seconds', backoff: 'linear' },
   timeout: '5 minutes',
+};
+
+// 主线分块：1 次命名 + 单元数 × 5 票归类。最坏情况一个 20 单元的簇要 101 次调用，
+// 并发 6 下约 1-2 分钟；再算上可能有两个大簇，10 分钟约 3-5 倍余量。
+// retries 降到 1：重试代价是整簇 LLM 重跑，而这一步失败不影响出简报（保持去重分组原样）。
+const storylineStepConfig: WorkflowStepConfig = {
+  retries: { limit: 1, delay: '10 seconds', backoff: 'linear' },
+  timeout: '10 minutes',
 };
 
 // ============================================================================
@@ -1333,6 +1350,146 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           `[AutoBrief] 去重步失败，跳过去重继续出简报: ${dedupErr instanceof Error ? dedupErr.message : String(dedupErr)}`
         );
         dedupPlan = { groups: [], candidateGroups: -1, centroidsFilled: 0 };
+      }
+
+      // ======================================================================
+      // 主线分块：把去重后**仍然过多**的同簇单元，按叙事主线归并成 3-5 块。
+      //
+      // 与去重层正交：去重问「底层发生是不是同一个」，这一层问「读者读起来是不是同一条主线」。
+      // 一场洪灾的救援与成因复盘确实是同一个发生（去重判准原文如此），但它们是两条主线。
+      //
+      // 不做这一层的代价（2026-09-02 实测，cluster 22 的 9 条 story / 63 篇）：选择层按
+      // importance 取 top-25 时只放进 2 条、丢掉 7 条，进简报 29 篇 / 丢弃 34 篇，其中
+      // 13 篇的成因与 10 篇的救援整条丢。碎片化不是被合并掉的，是被扔掉的。
+      //
+      // 失败不连坐：任何一步出问题都保持 dedupPlan 原样，简报照出。这不是静默降级——
+      // 走 error 级日志，且「没有任何主线组」与「分块跑成了」在 groups 的 minCos 上可判别
+      // （主线组恒为 SENTINEL_NO_COSINE = -1）。
+      // ======================================================================
+      try {
+        const storylineOutcome = await step.do('主线分块', storylineStepConfig, async () => {
+          const stories = validatedStories.stories as any[];
+          const titleOf = new Map<number, string>();
+          for (const a of dataset.articles) titleOf.set(a.id, a.title ?? '');
+
+          const inGroup = new Set<number>();
+          dedupPlan.groups.forEach(g => g.indices.forEach(i => inGroup.add(i)));
+          // 单元 = 去重合并组，或未被合并的单条 story。两者形状统一，分块结果才能原样替换 groups。
+          type Unit = StorylineUnit & { clusterId: number };
+          const units: Unit[] = [
+            ...dedupPlan.groups.map(g => ({
+              indices: g.indices,
+              title: g.title,
+              minCos: g.minCos,
+              confirmed: g.confirmed,
+              clusterId: stories[g.indices[0]]?.clusterId ?? -1,
+            })),
+            ...stories
+              .map((st: any, i: number) => ({ st, i }))
+              .filter(x => !inGroup.has(x.i))
+              .map(x => ({
+                indices: [x.i],
+                title: x.st.title ?? '',
+                minCos: 1,
+                confirmed: false,
+                clusterId: x.st.clusterId ?? -1,
+              })),
+          ];
+
+          const byCluster = new Map<number, Unit[]>();
+          for (const u of units) {
+            if (u.clusterId < 0) continue; // -1 噪声桶不参与
+            byCluster.set(u.clusterId, [...(byCluster.get(u.clusterId) ?? []), u]);
+          }
+          const targets = [...byCluster.entries()].filter(([, us]) => us.length >= STORYLINE_MIN_UNITS);
+          if (targets.length === 0) {
+            console.log(`[AutoBrief] 主线分块：无簇达到 ${STORYLINE_MIN_UNITS} 单元的触发阈值，跳过`);
+            return null;
+          }
+
+          // 成员报道标题，**不截断**：实测每条只给前 4 篇会让 18 篇的大 story 只露冰山一角，
+          // 而那 4 篇恰好全是同一角度。仅在整簇标题过多时按预算等比缩，且留痕。
+          const PLAN_TITLE_BUDGET = 400;
+          const titlesOf = (u: Unit, cap = Infinity) =>
+            u.indices
+              .flatMap(i => (stories[i]?.articleIds ?? []) as number[])
+              .map(aid => titleOf.get(aid))
+              .filter((t): t is string => !!t)
+              .slice(0, cap === Infinity ? undefined : cap);
+
+          const aiw = createAIServices(this.env, workflowId).aiWorker;
+          const newGroupsByCluster = new Map<number, DedupPlan['groups']>();
+          let plannedLines = 0;
+          let abstained = 0;
+          let assignCalls = 0; // 仅用于日志计数
+
+          for (const [clusterId, us] of targets) {
+            const total = us.reduce((n, u) => n + titlesOf(u).length, 0);
+            const cap = total > PLAN_TITLE_BUDGET ? Math.max(3, Math.floor(PLAN_TITLE_BUDGET / us.length)) : Infinity;
+            if (cap !== Infinity) {
+              console.warn(`[AutoBrief] 主线分块：簇 ${clusterId} 共 ${total} 条标题超预算，命名步每单元截到 ${cap} 条`);
+            }
+            const plan = await aiw.planStorylines(us.map(u => ({ articleTitles: titlesOf(u, cap) })), clusterId);
+            if (!plan.ok || plan.value.storylines.length < 2) {
+              console.warn(`[AutoBrief] 主线分块：簇 ${clusterId} 命名失败或主线不足，保持去重分组 — ${plan.ok ? 'storylines<2' : plan.error}`);
+              continue;
+            }
+            const lines: StorylineDef[] = plan.value.storylines;
+            plannedLines += lines.length;
+            console.log(`[AutoBrief] 主线分块：簇 ${clusterId}（${us.length} 单元）→ ${lines.length} 条主线：${lines.map(l => l.name).join(' / ')}`);
+
+            // 每单元投 STORYLINE_VOTES 票。主线顺序按 (单元, 轮次) 置换——存在位置偏置
+            // （排第 1 位被选中的比率是排其他位的 3 倍），置换 + 多数票才摊得平。
+            type Ballot = { unit: number; round: number };
+            const ballots: Ballot[] = us.flatMap((_, ui) =>
+              Array.from({ length: STORYLINE_VOTES }, (_, r) => ({ unit: ui, round: r }))
+            );
+            const votes: Array<Array<number | null>> = us.map(() => []);
+            assignCalls += ballots.length;
+            await this.batchProcessParallel(ballots, 6, async (b: Ballot) => {
+              const ord = permuteStorylines(us[b.unit].indices[0], lines.length, b.round);
+              const shown = ord.map(i => lines[i]);
+              // callIndex 由 (簇, 单元, 轮次) 算出而非并发自增：自增在并发下顺序不定，
+              // 会让同一批输入在重放时落到不同的 R2 观测 key。
+              const res = await aiw.assignStoryline(
+                shown,
+                { articleTitles: titlesOf(us[b.unit]) },
+                clusterId * 10000 + b.unit * STORYLINE_VOTES + b.round
+              );
+              // 调用失败与模型弃权同样记 null：绝不静默塞进第 1 条主线。
+              const shownPick = res.ok ? res.value.storyline : null;
+              votes[b.unit].push(shownPick == null ? null : ord[shownPick - 1] + 1);
+              return null;
+            });
+
+            const assignment = votes.map(v => majorityStoryline(v));
+            abstained += assignment.filter(a => a == null).length;
+            const regrouped = regroupByStoryline(us, assignment, lines);
+            newGroupsByCluster.set(
+              clusterId,
+              regrouped.map(g => ({ indices: g.indices, title: g.title, minCos: g.minCos, confirmed: g.confirmed === true }))
+            );
+          }
+
+          if (newGroupsByCluster.size === 0) return null;
+          // 未处理的簇保持原样：只替换被分块的那些簇的组
+          const kept = dedupPlan.groups.filter(g => !newGroupsByCluster.has(stories[g.indices[0]]?.clusterId ?? -1));
+          const groups = [...kept, ...[...newGroupsByCluster.values()].flat()];
+          return { groups, clusters: newGroupsByCluster.size, plannedLines, abstained, assignCalls };
+        });
+
+        if (storylineOutcome) {
+          console.log(
+            `[AutoBrief] 主线分块：${storylineOutcome.clusters} 个簇 → ${storylineOutcome.plannedLines} 条主线，` +
+              `合并组 ${dedupPlan.groups.length} → ${storylineOutcome.groups.length}` +
+              `（归类调用 ${storylineOutcome.assignCalls} 次，弃权单元 ${storylineOutcome.abstained}）`
+          );
+          dedupPlan.groups = storylineOutcome.groups;
+        }
+      } catch (storylineErr) {
+        console.error(
+          `[AutoBrief] 主线分块失败，保持去重分组继续出简报: ${storylineErr instanceof Error ? storylineErr.message : String(storylineErr)}`
+        );
       }
 
       // 应用合并（纯代码，放在 step 外：step 只回小决策，不回整份 story 数组）

@@ -54,6 +54,11 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_revise: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
+  // 主线分块。两步都是**判定不是创作**，temperature 0。
+  // plan：输出 3-5 条 {name, covers}，900 token 实测有 2 倍余量。
+  // assign：输出一个数字加一句理由，200 token 绰绰有余；这一步会被调用几十次，别给大预算。
+  storyline_plan: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 900, skipCache: true },
+  storyline_assign: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 200, skipCache: true },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0, maxTokens: 6000, skipCache: false },
   other: { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 4000, skipCache: false },

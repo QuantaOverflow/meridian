@@ -14,6 +14,13 @@ import {
 import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
+import {
+  getStorylinePlanPrompt,
+  getStorylineAssignPrompt,
+  EVENT_SPECIFIC_LEAK,
+  type StorylineDef,
+  type StorylineUnit,
+} from './prompts/storyline'
 import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
@@ -653,6 +660,108 @@ app.post('/meridian/story/merge-check', async (c) => {
   } catch (error: any) {
     console.error('Story merge check error:', error)
     return c.json<APIResponse<null>>({ success: false, error: 'Failed to check story merge', metadata: { details: error.message } }, 500)
+  }
+})
+
+/**
+ * 主线分块第 1 步：给一个大事件的若干单元命名 3-5 条主线。不分配。
+ *
+ * 失败一律回 `storylines: []`——上游据此**跳过**主线分块、保持去重层的分组原样。
+ * 这不是静默降级：空数组是可判别的信号（正常至少 3 条），且「保持原样」是真正的安全默认，
+ * 而随便给个分组会把不同主线写成一块。
+ */
+app.post('/meridian/storyline/plan', async (c) => {
+  try {
+    const body = await c.req.json()
+    const units = body?.units as StorylineUnit[] | undefined
+    if (!Array.isArray(units) || units.length < 2) {
+      return c.json<APIResponse<null>>({ success: false, error: 'units must be an array of >= 2 units' }, 400)
+    }
+    if (units.some(u => !Array.isArray(u?.articleTitles) || u.articleTitles.length === 0)) {
+      return c.json<APIResponse<null>>({ success: false, error: 'every unit needs a non-empty articleTitles[]' }, 400)
+    }
+
+    const prompt = getStorylinePlanPrompt(units)
+    // 泛化断言：指令段（数据块之前那部分）不得含具体事件的专有词。写死角度既不泛化，
+    // 又会让离线的「角度覆盖」指标虚高——2026-09-03 就被这么骗过一次。
+    const instructions = prompt.slice(0, prompt.indexOf('[Group 1]'))
+    const leak = instructions.match(EVENT_SPECIFIC_LEAK)
+    if (leak) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: `storyline plan prompt leaked an event-specific term: "${leak[0]}"`,
+      }, 500)
+    }
+
+    const aiGateway = new AIGatewayService(c.env)
+    const res = await callLLM(aiGateway, c.env, readTraceContext(c.req.raw), 'storyline_plan',
+      [{ role: 'user', content: prompt }])
+    const content = ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+    const parsed = parseJSONFromResponse(content) as { storylines?: Array<{ name?: string; covers?: string }> } | null
+
+    const storylines: StorylineDef[] = (parsed?.storylines ?? [])
+      .filter(x => typeof x?.name === 'string' && x.name.trim().length > 0)
+      .map(x => ({ name: String(x.name).trim(), covers: String(x.covers ?? '').trim() }))
+
+    if (storylines.length < 2) {
+      console.warn(`[Storyline] 命名失败或主线不足 2 条，上游将跳过分块。原始响应: ${content.slice(0, 200)}`)
+      return c.json<APIResponse<{ storylines: StorylineDef[] }>>({
+        success: true,
+        data: { storylines: [] },
+        metadata: { parse_failed: true, units: units.length },
+      })
+    }
+    return c.json<APIResponse<{ storylines: StorylineDef[] }>>({
+      success: true,
+      data: { storylines },
+      metadata: { units: units.length, storylines: storylines.length },
+    })
+  } catch (error: any) {
+    console.error('Storyline plan error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: 'Failed to plan storylines', metadata: { details: error.message } }, 500)
+  }
+})
+
+/**
+ * 主线分块第 2 步：一个单元选一条主线。
+ *
+ * 没有「都不属于」这个出口——聚类误入是上游的锅，给了出口实测被当垃圾桶（一轮扔掉 44% 文章）。
+ * 解析失败/越界回 `storyline: null`，上游按**弃权**处理并计数，绝不静默塞进第 1 条。
+ *
+ * `storylines` 的顺序由调用方按单元置换后传入（存在位置偏置：排第 1 位被选中的比率是
+ * 排其他位的 3 倍），本端点不重排，原样用。
+ */
+app.post('/meridian/storyline/assign', async (c) => {
+  try {
+    const body = await c.req.json()
+    const storylines = body?.storylines as StorylineDef[] | undefined
+    const unit = body?.unit as StorylineUnit | undefined
+    if (!Array.isArray(storylines) || storylines.length < 2) {
+      return c.json<APIResponse<null>>({ success: false, error: 'storylines must be an array of >= 2' }, 400)
+    }
+    if (!unit || !Array.isArray(unit.articleTitles) || unit.articleTitles.length === 0) {
+      return c.json<APIResponse<null>>({ success: false, error: 'unit.articleTitles must be a non-empty array' }, 400)
+    }
+
+    const aiGateway = new AIGatewayService(c.env)
+    const res = await callLLM(aiGateway, c.env, readTraceContext(c.req.raw), 'storyline_assign',
+      [{ role: 'user', content: getStorylineAssignPrompt(storylines, unit) }])
+    const content = ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+    const parsed = parseJSONFromResponse(content) as { storyline?: unknown; reason?: unknown } | null
+    const n = Number(parsed?.storyline)
+    const ok = Number.isInteger(n) && n >= 1 && n <= storylines.length
+
+    if (!ok) {
+      console.warn(`[Storyline] 归类响应无效（弃权）。原始响应: ${content.slice(0, 160)}`)
+    }
+    return c.json<APIResponse<{ storyline: number | null; reason: string }>>({
+      success: true,
+      data: { storyline: ok ? n : null, reason: String(parsed?.reason ?? '').slice(0, 200) },
+      metadata: { abstained: !ok, storylines: storylines.length },
+    })
+  } catch (error: any) {
+    console.error('Storyline assign error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: 'Failed to assign storyline', metadata: { details: error.message } }, 500)
   }
 })
 

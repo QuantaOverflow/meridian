@@ -84,6 +84,47 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 观测/排错 → `docs/OBSERVABILITY_GUIDE.md`
 - 改算法（聚类/重要性/简报合成）→ `docs/3_智能简报算法合理性与优化分析报告.md`
 
+## 新文件放哪（落位规则）
+
+> 定这套是为了不再"边整理边有人新增"追移动靶：新增文件先对照本表，产物靠 .gitignore
+> 自动归位，不靠人记得别 `git add`。
+
+| 新增什么 | 放哪 | 入 git |
+|---|---|---|
+| 产品代码 | `<package>/src/` | ✅ |
+| 单元/集成测试 | `<package>/test/`（跟包走，**不设顶层 tests/**——monorepo 惯例） | ✅ |
+| eval harness / 金标 / rubric | `scripts/eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
+| eval 中间产物（worklist / packet / dump） | 留 `scripts/eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
+| eval 运行报告 | `eval-reports/`（根 `.gitignore` 已挡） | ❌ |
+| 原型 / 探索实验 | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | 源码✅ / 产物❌ |
+| 原型输入 fixtures | `prototypes/<name>/fixtures/` | ✅（可复现依赖） |
+| 原型结果产物（result/dump/traces/out） | 原型目录内，由 `.gitignore` 挡 | ❌ |
+| 一次性探测脚本 / 临时输出 | scratchpad，不进 repo | ❌ |
+| 工程/架构文档、ADR、engineering-notes | `docs/` `docs/adr/` `docs/engineering-notes/` | ✅ |
+| 设计交付稿（design handoff） | `docs/`（是产品资产） | ✅ |
+| session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
+| 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |
+
+**判据一句话**：能让别人**复现或验证**的（代码/测试/金标/说明书/输入 fixtures）→ 入 git；
+某次运行的**产物**或某次交接的**流水账**（dump/report/handoff/临时脚本）→ 不入。
+
+**原型 `.gitignore` 标准模板**（新建原型目录照抄；旧模板只有 `node_modules/.cache/traces/`
+漏了结果产物，是 `skeleton-planner` 1.1M dump 漏网的根因）：
+```
+node_modules/
+.cache/
+traces/
+out/
+results/
+*-result.json
+*-result*.json
+*.dump
+```
+别用宽泛 `*.json`——`fixtures/` 里的输入数据要入库。
+
+**原型"毕业"约定**：验证完 → 核心源码精简入库（样板 `prototypes/article-prompt-slim/`：
+README + 核心 `.ts` + fixtures），结果产物与一次性 TUI 清掉，别把整轮实验的滚动残渣长期堆着。
+
 ## 禁区（未明确要求不要碰）
 - `packages/database/drizzle/` — 历史 migration 不可变
 - `services/meridian-ml-service/model-cache/` — 470MB 模型，gitignored

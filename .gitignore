@@ -252,3 +252,6 @@ services/meridian-ml-service/model-cache/
 .claude/scheduled_tasks.lock
 .claude/worktrees/
 .claude/pain-log.md
+
+# session 交接记录=工作流水账，不入库（见 CLAUDE.md「新文件放哪」）
+docs/*-handoff.md

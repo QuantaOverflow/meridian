@@ -4,6 +4,13 @@
 > "为什么这样分工"见 [eval-design-principles.md](./eval-design-principles.md) 模式 A；
 > harness 代码在 `scripts/eval/clustering/`。
 
+> ⚠️ **2026-09-04：本文描述的是 LLM 产参考划分的路线，现役金标不是这么造的。**
+> 现役金标（`scripts/eval/clustering/gold/`，人读、24 个事件、五档标注）改用人工标注，
+> 原因是下一步要评的是**特征工程**——若参考划分由文本特征/模型算出，改特征就成了自己评自己。
+> 造法见 `scripts/eval/clustering/rubric.md` 第五节，负结果与实测读数见
+> [cluster-segmentation-negative-results.md](./cluster-segmentation-negative-results.md)。
+> 本文仍然有效的部分：LLM 产 gold 的抖动实测（13~49 组）、recall 审计思路、calibration 双向修订格式。
+
 ## 核心问题:LLM 产 gold 不确定
 
 直接让 qwen 分一次组当 gold 不行——**同一批文章跨重产剧烈抖动(实测 13~49 组)**。

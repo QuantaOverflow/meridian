@@ -1,0 +1,151 @@
+/**
+ * 用事件金标给一个聚类结果打分。零 LLM、零网络，纯确定性。
+ *
+ *   npx tsx gold-score.ts <labels.json> [labels.json ...]
+ *
+ * labels.json 形状：{ "labels": { "<articleId>": <clusterId 或 -1> }, ... }
+ * 金标：gold/events-F1.jsonl + gold/meta-F1.json（判据与已知偏差见 rubric.md）
+ *
+ * ## 为什么同时报两族指标
+ *
+ * B-cubed 只在「金标覆盖到的文章」上算，所以 precision 不会因为簇里混了未标注文章而变低——
+ * 它衡量的是「不同事件的文章有没有被揉进同一簇」。而簇里混进来的**未标注**文章（杂讯、别的事件）
+ * 恰恰是这条管线的头号病，B-cubed 看不见它。故另报 per-event 纯度：分母是**整个簇**。
+ *
+ *   B-cubed precision   金标内部的混淆      低 = 把不同事件揉一起
+ *   B-cubed recall      金标内部的碎裂      低 = 把一个事件拆散
+ *   per-event 完整率     = B-cubed recall 的逐事件版，便于定位是哪个事件出问题
+ *   per-event 纯度       事件所在簇有多大    低 = 簇里混了大量金标外的东西
+ *
+ * ## 两个口径（不压成一个数，故意的）
+ *
+ *   严格  只算 members             事件本身有没有被拆散
+ *   宽松  members + related        整条故事线有没有聚在一起
+ *
+ * 「洪灾引发的假信息/重建成本/电力贸易」算不算同一件事没有唯一答案（学界标注一致性约 69%），
+ * 与其靠人拍一条线，不如两个口径都报。2026-09-04 实测：两者在 eps 0.10–0.35 全段读数一致，
+ * 即当前聚类器根本没做这个区分——这个争议在数据上是空的。
+ *
+ * ## 四条样本资格规则（独立复核提出，逐条落实）
+ *
+ * 1. 单篇事件完整率恒 1.0，无信息量 → 不进宏平均；单独报「有没有被吞进大簇」
+ * 2. 标了 exclude_from_primary 的事件不进宏平均（如 Dolly Parton：讣告首报不在窗口内，
+ *    窗口里只有主题各异的回指稿，无共同事件锚点）
+ * 3. duplicate_pairs（同源同时刻重复入库）只计一次，否则重复稿让分母虚高
+ * 4. multi_label 文章确实属于该事件，算纯度时**不能当 false positive**：
+ *    算法把它放进正确簇反而被扣分是错的 → 从纯度分母中剔除
+ */
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { bcubed } from './metrics.js';
+import type { Partition } from './types.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+interface GoldEvent {
+  group: string;
+  event: string;
+  members: number[];
+  related: Array<{ id: number }>;
+  multi_label: Array<{ id: number }>;
+  exclude_from_primary: boolean;
+}
+
+/** 单篇事件的纯度低于此值即判「被吞进大簇」。阈值是拍的，未经验证——只当信号别当门。 */
+const SWALLOWED_PURITY = 0.2;
+
+export function loadGold(dir = join(HERE, 'gold')) {
+  const events: GoldEvent[] = readFileSync(join(dir, 'events-F1.jsonl'), 'utf-8')
+    .split('\n')
+    .filter(Boolean)
+    .map(l => JSON.parse(l));
+  const meta = JSON.parse(readFileSync(join(dir, 'meta-F1.json'), 'utf-8'));
+
+  // 规则 3：重复对只留 id 较小的一条
+  const drop = new Set<number>((meta.duplicate_pairs ?? []).map((p: number[]) => Math.max(...p)));
+  // 规则 4 + non_article：纯度分母的豁免集
+  const exempt = new Set<number>((meta.non_article ?? []).map((x: { id: number }) => x.id));
+  for (const e of events) for (const m of e.multi_label ?? []) exempt.add(m.id);
+
+  return { events, meta, drop, exempt };
+}
+
+function eventSet(e: GoldEvent, loose: boolean, drop: Set<number>): Set<number> {
+  const ids = loose ? [...e.members, ...(e.related ?? []).map(r => r.id)] : e.members;
+  return new Set(ids.filter(i => !drop.has(i)));
+}
+
+export function scoreOne(
+  gold: ReturnType<typeof loadGold>,
+  labels: Map<number, number>,
+  loose = false
+) {
+  const rows = [];
+  for (const e of gold.events) {
+    const E = [...eventSet(e, loose, gold.drop)].filter(i => labels.has(i));
+    if (E.length === 0) continue;
+    const spread = new Map<number, number>();
+    for (const i of E) spread.set(labels.get(i)!, (spread.get(labels.get(i)!) ?? 0) + 1);
+    const [top, topN] = [...spread.entries()].sort((a, b) => b[1] - a[1])[0];
+    // 纯度分母 = 整个簇，但剔除豁免项（multi_label / non_article）
+    let clusterSize = 0;
+    for (const [id, c] of labels) if (c === top && !gold.exempt.has(id)) clusterSize++;
+    rows.push({
+      name: e.event,
+      n: E.length,
+      完整率: topN / E.length,
+      纯度: clusterSize ? topN / clusterSize : 0,
+      碎片: [...spread.keys()].filter(c => c !== -1).length,
+      进噪声: spread.get(-1) ?? 0,
+      单篇: E.length === 1,
+      排除: e.exclude_from_primary,
+    });
+  }
+  return rows;
+}
+
+/** 规则 1+2：单篇事件与标记排除的事件不进宏平均 */
+const macro = (rows: ReturnType<typeof scoreOne>, key: '完整率' | '纯度' | '碎片') => {
+  const v = rows.filter(r => !r.单篇 && !r.排除).map(r => r[key]);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
+};
+
+/** 金标（members）作为参考划分，喂给已有的 bcubed()。它只在两个划分的交集上算。 */
+function goldPartition(gold: ReturnType<typeof loadGold>): Partition {
+  const p: Partition = new Map();
+  for (const e of gold.events) for (const i of e.members) if (!gold.drop.has(i)) p.set(i, e.event);
+  return p;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const gold = loadGold();
+  const ref = goldPartition(gold);
+  const nMacro = gold.events.filter(e => e.members.length > 1 && !e.exclude_from_primary).length;
+  console.log(
+    `金标 ${gold.events.length} 事件 / members ${[...ref.keys()].length} 篇；` +
+      `进宏平均 ${nMacro} 个（单篇与标记排除的不算）；纯度豁免 ${gold.exempt.size} 条\n`
+  );
+  console.log(
+    `${'配置'.padEnd(32)}${'B³-P'.padStart(7)}${'B³-R'.padStart(7)}${'B³-F1'.padStart(7)}` +
+      `${'严格完整'.padStart(9)}${'宽松完整'.padStart(9)}${'纯度'.padStart(7)}${'碎片'.padStart(7)}${'单篇被吞'.padStart(9)}`
+  );
+  for (const f of process.argv.slice(2)) {
+    const d = JSON.parse(readFileSync(f, 'utf-8'));
+    const labels = new Map<number, number>(
+      Object.entries(d.labels as Record<string, number>).map(([k, v]) => [Number(k), v])
+    );
+    const b = bcubed(labels as Partition, ref);
+    const s = scoreOne(gold, labels, false);
+    const l = scoreOne(gold, labels, true);
+    const singles = s.filter(r => r.单篇);
+    const swallowed = singles.filter(r => r.纯度 < SWALLOWED_PURITY).length;
+    const name = (f.split('/').pop() ?? f).replace('.json', '');
+    console.log(
+      `${name.padEnd(32)}${b.precision.toFixed(3).padStart(7)}${b.recall.toFixed(3).padStart(7)}` +
+        `${b.f1.toFixed(3).padStart(7)}${macro(s, '完整率').toFixed(3).padStart(9)}` +
+        `${macro(l, '完整率').toFixed(3).padStart(9)}${macro(s, '纯度').toFixed(3).padStart(7)}` +
+        `${macro(s, '碎片').toFixed(2).padStart(7)}${`${swallowed}/${singles.length}`.padStart(9)}`
+    );
+  }
+}

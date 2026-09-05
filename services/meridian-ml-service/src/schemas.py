@@ -25,6 +25,14 @@ class BaseClusteringConfig(BaseModel):
     hdbscan_metric: Literal['euclidean', 'manhattan', 'chebyshev'] = Field(default='euclidean', description="HDBSCAN距离度量")
     hdbscan_cluster_selection_epsilon: float = Field(default=0.0, ge=0.0, description="HDBSCAN epsilon参数")
     
+    # 聚类算法选择。见 clustering.py 的 ClusteringConfig 注释（含两窗金标实测读数）
+    clustering_algorithm: Literal['agglomerative_cosine', 'umap_hdbscan'] = Field(
+        default='agglomerative_cosine', description="聚类算法：不降维阈值凝聚(现生产) 或 UMAP+HDBSCAN(旧实现,可回滚)"
+    )
+    agglomerative_threshold: float = Field(default=0.10, gt=0.0, le=1.0, description="凝聚聚类合并阈值(余弦距离 1-cos)")
+    agglomerative_linkage: Literal['average', 'complete'] = Field(default='average', description="凝聚聚类链接方式")
+    agglomerative_min_cluster_size: int = Field(default=3, ge=2, description="成簇最小篇数，低于此数整簇记为噪声(不进简报)")
+
     # 预处理选项
     normalize_embeddings: bool = Field(default=True, description="是否L2归一化嵌入向量")
     remove_outliers: bool = Field(default=False, description="是否移除异常点")
@@ -253,6 +261,12 @@ def convert_to_internal_config(api_config: Optional[BaseClusteringConfig]) -> Di
         "hdbscan_min_samples": api_config.hdbscan_min_samples,
         "hdbscan_metric": api_config.hdbscan_metric,
         "hdbscan_cluster_selection_epsilon": api_config.hdbscan_cluster_selection_epsilon,
+
+        # 凝聚聚类配置
+        "clustering_algorithm": api_config.clustering_algorithm,
+        "agglomerative_threshold": api_config.agglomerative_threshold,
+        "agglomerative_linkage": api_config.agglomerative_linkage,
+        "agglomerative_min_cluster_size": api_config.agglomerative_min_cluster_size,
         
         # 预处理配置
         "normalize_embeddings": api_config.normalize_embeddings,

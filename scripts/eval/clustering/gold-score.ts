@@ -17,6 +17,20 @@
  *   per-event 完整率     = B-cubed recall 的逐事件版，便于定位是哪个事件出问题
  *   per-event 纯度       事件所在簇有多大    低 = 簇里混了大量金标外的东西
  *
+ * ## ⚠ per-event 纯度的适用范围（2026-09-05 实测订正）
+ *
+ * **纯度的绝对值不可信，只能做同种子配对的相对比较。**
+ *
+ * 它的分子在标注集内（人判过），分母是整个簇、越出了标注集——等于默认「未标注 = 不属于该事件」。
+ * 而标注者复核确认的只是「这 24 个事件没漏成员」，不是「窗口里没有别的同类文章」。
+ * 实测：俄乌那个 35 篇的簇人只标了 12 篇，其余 23 篇读标题全是俄乌战争报道，本该算命中却被当成
+ * 污染（报 0.34 / 实际约 0.9）；以巴簇报 0.58 / 实际约 1.0；主题层宏平均偏低约 0.12。
+ *
+ * 根因是标注只覆盖 23%，不是分母选错了——只算标注集（B³-P）会对杂讯完全失明，两个分母各瞎一半。
+ * 彻底修法是全覆盖参考划分（每篇都给归属、杂讯记单元素组），那时 B-cubed 就能看见杂讯，
+ * 本指标可以退役。F2 起按此办，见 rubric.md「F2 起改为全覆盖划分」与
+ * docs/engineering-notes/eval-design-principles.md 第五原则。
+ *
  * ## 两个口径（不压成一个数，故意的）
  *
  *   严格  只算 members             事件本身有没有被拆散
@@ -35,7 +49,7 @@
  * 4. multi_label 文章确实属于该事件，算纯度时**不能当 false positive**：
  *    算法把它放进正确簇反而被扣分是错的 → 从纯度分母中剔除
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bcubed } from './metrics.js';
@@ -71,6 +85,51 @@ export function loadGold(dir = join(HERE, 'gold')) {
   return { events, meta, drop, exempt };
 }
 
+interface GoldTopic {
+  topic: string;
+  events: string[];
+  rationale?: string;
+}
+
+/**
+ * 主题层金标（可选）。判据见 rubric.md「主题层」一节：
+ * 同一冲突 / 同一持续局势下的一切归一个主题，粒度以「占简报一段」为准。
+ * 事件层回答「同一件事的报道有没有聚在一起」，主题层回答「同一主题的事件有没有聚在一起」——
+ * 两层用同一份 labels 打两次分，一个聚类结果可能在一层好、另一层差（那是粒度问题不是杂讯）。
+ */
+export function loadTopics(dir = join(HERE, 'gold')): GoldTopic[] | null {
+  const p = join(dir, 'topics-F1.jsonl');
+  if (!existsSync(p)) return null;
+  return readFileSync(p, 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
+}
+
+/** 把事件层金标折叠成主题层：同一主题的 members / related / multi_label 取并集。 */
+export function toTopicLayer(gold: ReturnType<typeof loadGold>, topics: GoldTopic[]) {
+  const byName = new Map(gold.events.map(e => [e.event, e]));
+  const seen = new Set<string>();
+  const events: GoldEvent[] = topics.map(t => {
+    const es = t.events.map(n => {
+      const e = byName.get(n);
+      if (!e) throw new Error(`主题「${t.topic}」引用了不存在的事件：${n}`);
+      if (seen.has(n)) throw new Error(`事件被归入多个主题：${n}`);
+      seen.add(n);
+      return e;
+    });
+    return {
+      group: 'T',
+      event: t.topic,
+      members: [...new Set(es.flatMap(e => e.members))],
+      related: es.flatMap(e => e.related ?? []),
+      multi_label: es.flatMap(e => e.multi_label ?? []),
+      // 整个主题的事件都被排除才排除该主题
+      exclude_from_primary: es.every(e => e.exclude_from_primary),
+    };
+  });
+  const missing = gold.events.filter(e => !seen.has(e.event)).map(e => e.event);
+  if (missing.length) throw new Error(`这些事件没有归入任何主题：${missing.join(' / ')}`);
+  return { ...gold, events };
+}
+
 function eventSet(e: GoldEvent, loose: boolean, drop: Set<number>): Set<number> {
   const ids = loose ? [...e.members, ...(e.related ?? []).map(r => r.id)] : e.members;
   return new Set(ids.filter(i => !drop.has(i)));
@@ -88,9 +147,13 @@ export function scoreOne(
     const spread = new Map<number, number>();
     for (const i of E) spread.set(labels.get(i)!, (spread.get(labels.get(i)!) ?? 0) + 1);
     const [top, topN] = [...spread.entries()].sort((a, b) => b[1] - a[1])[0];
-    // 纯度分母 = 整个簇，但剔除豁免项（multi_label / non_article）
+    // 纯度分母 = 整个簇，但剔除豁免项（multi_label / non_article）。
+    // 例外：豁免项若本身就是本单元的成员，它已经进了分子，必须同时留在分母，否则纯度会 >1。
+    // （2026-09-05 修：主题层把多个事件的 members 取并集后，775911 同时是「加沙空袭 B」的
+    //  member 与「杰宁空袭」的 multi_label，导致「以巴冲突」主题纯度读到 1.08。）
+    const memberSet = new Set(E);
     let clusterSize = 0;
-    for (const [id, c] of labels) if (c === top && !gold.exempt.has(id)) clusterSize++;
+    for (const [id, c] of labels) if (c === top && (!gold.exempt.has(id) || memberSet.has(id))) clusterSize++;
     rows.push({
       name: e.event,
       n: E.length,
@@ -119,18 +182,29 @@ function goldPartition(gold: ReturnType<typeof loadGold>): Partition {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const gold = loadGold();
+  const argv = process.argv.slice(2);
+  const useTopic = argv.includes('--topic');
+  const files = argv.filter(a => a !== '--topic');
+  let gold = loadGold();
+  if (useTopic) {
+    const topics = loadTopics();
+    if (!topics) throw new Error('缺 gold/topics-F1.jsonl，无法按主题层打分');
+    gold = toTopicLayer(gold, topics);
+    console.log('【主题层】同一主题的事件有没有聚在一起（判据见 rubric.md 主题层一节）');
+  } else {
+    console.log('【事件层】同一件事的报道有没有聚在一起');
+  }
   const ref = goldPartition(gold);
   const nMacro = gold.events.filter(e => e.members.length > 1 && !e.exclude_from_primary).length;
   console.log(
-    `金标 ${gold.events.length} 事件 / members ${[...ref.keys()].length} 篇；` +
+    `金标 ${gold.events.length} 个 / members ${[...ref.keys()].length} 篇；` +
       `进宏平均 ${nMacro} 个（单篇与标记排除的不算）；纯度豁免 ${gold.exempt.size} 条\n`
   );
   console.log(
     `${'配置'.padEnd(32)}${'B³-P'.padStart(7)}${'B³-R'.padStart(7)}${'B³-F1'.padStart(7)}` +
       `${'严格完整'.padStart(9)}${'宽松完整'.padStart(9)}${'纯度'.padStart(7)}${'碎片'.padStart(7)}${'单篇被吞'.padStart(9)}`
   );
-  for (const f of process.argv.slice(2)) {
+  for (const f of files) {
     const d = JSON.parse(readFileSync(f, 'utf-8'));
     const labels = new Map<number, number>(
       Object.entries(d.labels as Record<string, number>).map(([k, v]) => [Number(k), v])

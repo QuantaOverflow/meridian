@@ -100,6 +100,13 @@ export class ClusteringService {
         min_samples?: number;
         epsilon?: number;
       };
+      /** 'agglomerative_cosine'(默认,现生产) | 'umap_hdbscan'(旧实现,回滚用) */
+      clusteringAlgorithm?: string;
+      /** 凝聚聚类合并阈值,作用在余弦距离 1-cos 上 */
+      agglomerativeThreshold?: number;
+      agglomerativeLinkage?: string;
+      /** 成簇最小篇数,低于此数整簇记为噪声(不进简报) */
+      agglomerativeMinClusterSize?: number;
     }
   ): Promise<ClusteringServiceResponse> {
     try {
@@ -159,7 +166,13 @@ export class ClusteringService {
           umap_metric: options?.umapParams?.metric || 'cosine',
           hdbscan_min_cluster_size: options?.hdbscanParams?.min_cluster_size || 5,
           hdbscan_min_samples: options?.hdbscanParams?.min_samples || 3,
-          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2
+          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2,
+          // 聚类算法开关。?? 而不是 ||:阈值 0 虽不合法,但 || 会把它悄悄换成默认值,
+          // 与本仓库「失败不静默降级」的口径冲突,让 ml-service 的 pydantic 去拒绝更好。
+          clustering_algorithm: options?.clusteringAlgorithm ?? 'agglomerative_cosine',
+          agglomerative_threshold: options?.agglomerativeThreshold ?? 0.1,
+          agglomerative_linkage: options?.agglomerativeLinkage ?? 'average',
+          agglomerative_min_cluster_size: options?.agglomerativeMinClusterSize ?? 3
           // 质心剪枝已移除(原 postprocess_prune_threshold: 0.92)。
           //
           // 它做的是"甄别故事",而甄别是 story-validation 的职责:剪枝按"成员到簇质心余弦"

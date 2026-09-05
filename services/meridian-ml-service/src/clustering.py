@@ -101,6 +101,60 @@ class ClusteringConfig:
     hdbscan_cluster_selection_method: str = 'eom'  # 簇选择方法
     hdbscan_cluster_selection_epsilon: float = 0.0  # epsilon参数
     
+    # 聚类算法选择（2026-09-05）
+    # 'umap_hdbscan'        原实现：384 维 → UMAP 5 维 → HDBSCAN 密度聚类
+    # 'agglomerative_cosine' 现生产：不降维，余弦距离矩阵 + average linkage 阈值聚类
+    #
+    # 换算法的理由（F1/F2 两窗人读金标实测，产品口径：<2 篇的簇与事件都不计）：
+    #                        交付率  簇纯度  题材袋率  跨簇数  完整率
+    #   UMAP+HDBSCAN (F2)    0.936   0.354   0.286    1.02   0.996
+    #   agglomerative (F2)   0.960   0.804   0.178    1.08   0.951
+    #   UMAP+HDBSCAN (F1)    0.966   0.408   0.273    1.02   0.996
+    #   agglomerative (F1)   0.915   0.864   0.099    1.10   0.970
+    #
+    # 两处机制各治一个病：
+    #  · 去 UMAP —— 它保近邻不保全局距离，把「真成员离簇心 0.027 / 外来篇 0.149」这个
+    #    98% 可分的信号打散成 45.5% 重叠。副产品：不过 UMAP 即无随机性，跨种子稳定性问题消失。
+    #  · HDBSCAN → 阈值型凝聚 —— HDBSCAN 判局部密度，一堆同题材的孤篇挤在一起也算密度区，
+    #    照样成簇；它没有「要多像才算同一件事」这个概念。凝聚认绝对相似度：同事件报道余弦
+    #    ≈0.92 以上，同题材不同事 ≈0.85-0.88，阈值卡在中间。
+    #  · 用 average 不用 complete：complete 要求组内所有对都达标，一件事里只要有一篇写法特别
+    #    （NASA 那件事有篇只写 "$4.3bn cosmic secrets"）就被踢出去，实测跨簇数 1.20 vs 1.08。
+    clustering_algorithm: str = 'agglomerative_cosine'
+
+    # 成簇的最小篇数。低于此数的簇整个记为噪声(-1)，不进简报。
+    #
+    # 3 而不是 2：2 篇的簇**本来就进不了简报**——选择层按 blockScore 排序取前 25，两窗实测
+    # 前 25 名里 2 篇的簇一个都没有（第 25 名分数 3.40/3.48，而 2 篇 2 源只有 2.38、
+    # 2 篇 1 源 1.79，够不着）。砍掉它们不损失任何实际会被读到的内容，却顺手带走了大部分
+    # 题材袋（只有题材没有事的凑堆簇）：
+    #
+    #            砍前簇数  砍前题材袋   砍后簇数  砍后题材袋
+    #   F2         157      32 (20%)      69       5 (7%)
+    #   F1         124      15 (12%)      62       0 (0%)
+    #
+    # 机制：新聚类阈值卡在 0.10，凑不出大杂堆，剩下的题材袋几乎全是 2 篇的边界样本
+    # （「两篇报道算不算同一件事」本来就是最没有确定答案的形态）。所以这里是用产品口径
+    # 的截断解决它，而不是再加一层判别——后者实测怎么调都在 0.41 召回附近打转。
+    agglomerative_min_cluster_size: int = 3
+
+    # average linkage 的合并阈值，作用在余弦距离 (1-cos) 上。
+    #
+    # 0.10 是「交付优先」的操作点。往左（更严）纯度涨、漏与碎都涨，前沿实测（F2）：
+    #   t=0.06 交付 0.776 / 纯度 0.960 / 完整 0.832    t=0.09 交付 0.944 / 纯度 0.840 / 完整 0.926
+    #   t=0.07 交付 0.864 / 纯度 0.924 / 完整 0.885    t=0.10 交付 0.960 / 纯度 0.804 / 完整 0.951
+    #   t=0.08 交付 0.928 / 纯度 0.875 / 完整 0.901
+    # 纯度与交付在这条曲线上死死绑定：试过四种绕法（源特征剥离 / 合并守卫 / 互为近邻 /
+    # 核心-挂靠），全部落在前沿上或前沿下，机制见 docs/engineering-notes/。
+    #
+    # 不取 0.08 的理由是顺序不是优劣：0.08 纯度更高（F2 0.875）但事件被切得更碎
+    # （完整率 0.951→0.901），而「把碎簇合回来」那一层还没建。合并层建好并验过判官后
+    # 再左移；候选生成已实测：簇质心余弦 ≥0.90 筛出 60-80 对/期，召回 1.00。
+    agglomerative_threshold: float = 0.10
+
+    # 'average' | 'complete'。见 clustering_algorithm 注释里的 complete 实测。
+    agglomerative_linkage: str = 'average'
+
     # 其他配置
     normalize_embeddings: bool = True
     remove_outliers: bool = False
@@ -200,6 +254,56 @@ def perform_umap_reduction(
         fallback_dims = min(safe_n_components, embeddings.shape[1])
         logger.warning(f"使用回退策略：返回前{fallback_dims}维")
         return embeddings[:, :fallback_dims], None
+
+
+def perform_agglomerative_clustering(
+    embeddings: np.ndarray,
+    config: ClusteringConfig
+) -> Tuple[np.ndarray, Any]:
+    """余弦距离矩阵 + average linkage 阈值聚类。不降维、无随机性。
+
+    与 HDBSCAN 的口径对齐：**小于 `agglomerative_min_cluster_size` 篇的簇整个记为 -1
+    （噪声）**。下游 `clusterId < 0` 直接跳过，所以这就是「不进简报」。
+    评估口径同步（product-score.ts 的 `--min`）。
+
+    内存：距离矩阵是 O(n²)。1500 篇约 18 MB，ml-service 跑 standard-1（4 GiB）无压力；
+    上到 20000 篇会是 3.2 GB，届时要改分块或换近似近邻。
+    """
+    from sklearn.cluster import AgglomerativeClustering
+
+    n_samples = embeddings.shape[0]
+    if n_samples <= 2:
+        logger.warning(f"数据集过小 (n_samples={n_samples})，全部记为噪声")
+        return np.full(n_samples, -1, dtype=int), None
+
+    # 余弦距离矩阵。embeddings 已在 preprocess 里 L2 归一化，点积即余弦。
+    sim = embeddings @ embeddings.T
+    dist = 1.0 - sim
+    dist = np.ascontiguousarray(np.clip((dist + dist.T) / 2.0, 0.0, 2.0))
+    np.fill_diagonal(dist, 0.0)
+
+    logger.info(
+        f"凝聚聚类: {embeddings.shape} (linkage={config.agglomerative_linkage}, "
+        f"threshold={config.agglomerative_threshold})"
+    )
+    model = AgglomerativeClustering(
+        n_clusters=None,
+        distance_threshold=float(config.agglomerative_threshold),
+        metric="precomputed",
+        linkage=config.agglomerative_linkage,
+    ).fit(dist)
+
+    labels = model.labels_.astype(int)
+    sizes = np.bincount(labels)
+    too_small = sizes[labels] < max(2, int(config.agglomerative_min_cluster_size))
+    labels = np.where(too_small, -1, labels)
+
+    n_clusters = len(set(int(x) for x in labels if x >= 0))
+    logger.info(
+        f"凝聚聚类完成: {n_clusters}个簇, {int(too_small.sum())}篇落在 "
+        f"<{config.agglomerative_min_cluster_size} 篇的簇里（记为噪声，不进简报）"
+    )
+    return labels, model
 
 
 def perform_hdbscan_clustering(
@@ -567,17 +671,24 @@ def cluster_embeddings(
         normalize=config.normalize_embeddings
     )
     
-    # 2. UMAP降维
-    reduced_embeddings, reducer = perform_umap_reduction(
-        processed_embeddings, 
-        config
-    )
-    
-    # 3. HDBSCAN聚类
-    cluster_labels, clusterer = perform_hdbscan_clustering(
-        reduced_embeddings, 
-        config
-    )
+    # 2-3. 聚类。两条路互斥：
+    #   agglomerative_cosine（现生产）不降维，直接在原始余弦距离上做阈值聚类
+    #   umap_hdbscan（旧实现）保留，供对照与回滚
+    if config.clustering_algorithm == 'agglomerative_cosine':
+        reduced_embeddings = processed_embeddings  # 未降维；字段名沿用，避免改下游契约
+        cluster_labels, clusterer = perform_agglomerative_clustering(
+            processed_embeddings,
+            config
+        )
+    else:
+        reduced_embeddings, reducer = perform_umap_reduction(
+            processed_embeddings,
+            config
+        )
+        cluster_labels, clusterer = perform_hdbscan_clustering(
+            reduced_embeddings,
+            config
+        )
     
     # 4. 分析结果
     unique_labels = np.unique(cluster_labels)
@@ -591,9 +702,12 @@ def cluster_embeddings(
             cluster_sizes[int(label)] = int(np.sum(cluster_labels == label))
     
     # 计算DBCV分数（如果可能）
+    # 只在 umap_hdbscan 下算：validity_index 假定欧氏空间且是密度聚类的内部指标，
+    # 拿到 384 维余弦空间上既慢又无可比性。它只是诊断输出，不进任何决策。
     dbcv_score = None
     valid_points = cluster_labels != -1
-    if (valid_points.sum() > 1 and len(set(cluster_labels[valid_points])) > 1):
+    if (config.clustering_algorithm != 'agglomerative_cosine'
+            and valid_points.sum() > 1 and len(set(cluster_labels[valid_points])) > 1):
         try:
             reduced_data_64 = reduced_embeddings[valid_points].astype(np.float64)
             dbcv_score = float(validity_index(reduced_data_64, cluster_labels[valid_points]))
@@ -633,6 +747,10 @@ def cluster_embeddings(
             'hdbscan_min_samples': int(config.hdbscan_min_samples),
             'hdbscan_epsilon': float(config.hdbscan_cluster_selection_epsilon),
             'hdbscan_metric': config.hdbscan_metric,
+            'clustering_algorithm': config.clustering_algorithm,
+            'agglomerative_threshold': float(config.agglomerative_threshold),
+            'agglomerative_linkage': config.agglomerative_linkage,
+            'agglomerative_min_cluster_size': int(config.agglomerative_min_cluster_size),
         }
     }
     

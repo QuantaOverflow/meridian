@@ -39,6 +39,29 @@ export const ARTICLE_PROCESSING = {
 // 注意:auto-brief-generation 里"未传 clusteringOptions"不是走这组值,而是走按数据规模的
 // 启发式分支(150 篇时 min_cluster_size 会算到 15),所以调用方必须显式传,不能省略。
 export const BRIEF_CLUSTERING_OPTIONS = {
+  // 2026-09-05:UMAP+HDBSCAN → 不降维 + 余弦阈值凝聚(average linkage)。
+  //
+  // 两窗人读金标(F1 1142 篇/119 事件、F2 1252 篇/130 事件)产品口径实测
+  // (口径:<2 篇的簇与 <2 篇的事件都不计入;打分器 scripts/eval/clustering/product-score.ts):
+  //
+  //                      交付率  簇纯度  题材袋率  跨簇数  完整率
+  //   旧 UMAP+HDBSCAN F2  0.936  0.354   0.286    1.02   0.996
+  //   新 凝聚 t=0.10  F2  0.960  0.804   0.178    1.08   0.951
+  //   旧 UMAP+HDBSCAN F1  0.966  0.408   0.273    1.02   0.996
+  //   新 凝聚 t=0.10  F1  0.915  0.864   0.099    1.10   0.970
+  //
+  // 交付率=该成簇的事件成没成簇;簇纯度=一块里主导事件占几成;题材袋率=有多少块其实没有事;
+  // 跨簇数/完整率=一件事有没有被切开。算法与阈值的完整来历见 ml-service clustering.py
+  // 的 ClusteringConfig 注释(含 t=0.06~0.10 的纯度-交付前沿与四条失败的绕法)。
+  //
+  // umapParams/hdbscanParams 保留:算法开关切回 'umap_hdbscan' 时它们仍是生效参数(回滚路径)。
+  clusteringAlgorithm: 'agglomerative_cosine',
+  agglomerativeThreshold: 0.1,
+  agglomerativeLinkage: 'average',
+  // 3 而不是 2:2 篇的簇本来就进不了简报(选择层取前 25,两窗实测前 25 名里 2 篇的簇一个没有
+  // ——第 25 名 blockScore 3.40/3.48,而 2 篇 2 源只有 2.38)。砍掉它们不损失会被读到的内容,
+  // 却带走了大部分题材袋:F2 32→5 个、F1 15→0 个。详见 ml-service clustering.py 的注释。
+  agglomerativeMinClusterSize: 3,
   umapParams: {
     n_neighbors: 15,
     n_components: 5,
@@ -46,18 +69,8 @@ export const BRIEF_CLUSTERING_OPTIONS = {
     metric: 'cosine',
   },
   hdbscanParams: {
-    // mcs/ms 经 2026-08-18 扫描确认现值即最优,不动:eps=0.35 下 mcs3 覆盖 95% vs mcs4 93%
-    // (事件完整率同为 93.8%);ms=1 同事件保全 97.0% 优于 ms3 的 96.2%、ms5 的 90.7%。
     min_cluster_size: 3,
     min_samples: 1,
-    // 0.5 → 0.35。0.5 把 43% 的文章粘成一个 332 篇巨团,一次 story-validation 调用吃不下,
-    // 且它让质心失准、把剪枝放大成屠杀(见 clustering.ts 剪枝移除说明)。
-    // 上限卡在 0.40 而非簇大小:0.40 会把「美伊战争」与「特朗普国内杂闻」并成一个 87 篇簇
-    // ——两堆共享 Trump 这个强实体,模型于是有现成伞状标签可用,把 78/87 篇兜进一个
-    // "Trump administration: Domestic policy, economy, and political fallout",十来件独立
-    // 事件压成一段、只占 top-15 一个名额且无法拆回。同批 98 篇的簇(无共同实体)反而正常
-    // ——所以约束是"别合并共享强实体的两条主线",不是"别让簇太大"。0.35 下两者分属独立簇。
-    // 0.25-0.38 是一段 96-98% 同事件保全的宽平台(0.42 后掉崖),取 0.35 兼顾调用数(64 簇)。
     epsilon: 0.35,
   },
 } as const;

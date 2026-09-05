@@ -1,0 +1,97 @@
+{
+ "window": [
+  "2026-08-26T00:00:00Z",
+  "2026-08-28T00:00:00Z"
+ ],
+ "fixture": "titles-F2.tsv",
+ "n_articles": 1252,
+ "built": "2026-09-05",
+ "role": "holdout（冻结判据见 HOLDOUT-F2-FROZEN.md）",
+ "criterion": "rubric.md（含三·五主题层）；全覆盖划分，未被事件认领的自动为单元素组",
+ "consensus": "三个标注者 A/B/C 独立通读全部 1252 条，全程未查看任何聚类输出；成员级多数决（≥2 人认为两篇同组则连边，取连通分量）",
+ "inter_annotator_ARI": {
+  "event": {
+   "AB": 0.961,
+   "AC": 0.978,
+   "BC": 0.95
+  },
+  "topic": {
+   "AB": 0.923,
+   "AC": 0.943,
+   "BC": 0.949
+  }
+ },
+ "non_article": [
+  {
+   "id": 741435,
+   "votes": 3
+  },
+  {
+   "id": 744400,
+   "votes": 3
+  },
+  {
+   "id": 747931,
+   "votes": 3
+  },
+  {
+   "id": 751835,
+   "votes": 3
+  },
+  {
+   "id": 752289,
+   "votes": 3
+  },
+  {
+   "id": 753469,
+   "votes": 3
+  },
+  {
+   "id": 755561,
+   "votes": 3
+  },
+  {
+   "id": 758225,
+   "votes": 2
+  },
+  {
+   "id": 758466,
+   "votes": 3
+  },
+  {
+   "id": 761893,
+   "votes": 3
+  },
+  {
+   "id": 766145,
+   "votes": 3
+  },
+  {
+   "id": 767865,
+   "votes": 3
+  },
+  {
+   "id": 746384,
+   "votes": "codex 复核补入：Quote of the day 栏目填充"
+  }
+ ],
+ "duplicate_pairs": [
+  [
+   746876,
+   756274
+  ],
+  [
+   753494,
+   755861
+  ],
+  [
+   751831,
+   751832
+  ],
+  [
+   745352,
+   745919
+  ]
+ ],
+ "codex_review": "2026-09-05 复核后修订：修 related/multi_label 按事件名匹配的合并 bug（改为按成员重叠对齐）；3 篇降 unverifiable；11 篇降 related；拆节庆服务稿/美网混双/FIFA 立场稿/马拉地语政策；Dolly 事件 exclude_from_primary"
+}

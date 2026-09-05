@@ -35,8 +35,8 @@
 
 ```bash
 cd scripts/eval/clustering
-TSX=../../../apps/backend/prototypes/dedup-band/node_modules/.bin/tsx   # 本目录无 package.json
-S=../../../apps/backend/prototypes/dedup-band/cluster-sweep
+TSX=../../../apps/backend/prototypes/cluster-postprocess/node_modules/.bin/tsx   # 本目录无 package.json
+S=../../../apps/backend/prototypes/_data/cluster-sweep
 
 $TSX gold-score.ts $S/hdb-eps0.35-eom-s42.json $S/hdb-eps0.30-eom-s42.json
 ```
@@ -172,7 +172,8 @@ UMAP(`n_components=5, n_neighbors=15, min_dist=0.1, cosine`) → HDBSCAN(`mcs=3,
 ## 配套的无标注指标
 
 金标精度高但只覆盖 26%。另有一套覆盖全库、精度较低的机械指标（杂物袋率 / 稳定性 / 进簇率），
-在 `apps/backend/prototypes/dedup-band/cluster-metrics.py`。两套互补：
+曾在 `prototypes/dedup-band/cluster-metrics.py`（该原型目录 2026-09-05 已删，脚本随之清掉；
+读数与判据留在 docs/engineering-notes/prototype-findings-dedup-storyline.md）。两套互补：
 
 - **杂物袋率**：`≥20 篇的簇中，实体共享 <0.30 或 单源占比 ≥0.8` 的比例。8 天 29 次 workflow 上
   人读复核，精度 96%（22 真 1 误）。基线 23/98 簇。

@@ -3,7 +3,7 @@
 // 0.864/0.913、题材袋率 0.072/0.000），切分的必要性消失，改由 ai-worker 的
 // `/meridian/cluster/judge` 一簇一次判定 + 起名。
 //
-// 被删掉那层的实测负结果保留在 prototypes/dedup-band/FINDINGS.md，别重跑：
+// 被删掉那层的实测负结果保留在 ../../docs/engineering-notes/prototype-findings-dedup-storyline.md，别重跑：
 //  · 让模型一次吐出「主线 + 每篇归属」：91 篇上 12 轮只有 1 轮把 id 分对
 //  · 逐篇归类给「都不属于」出口：纯簇上扔掉 25.3%，其中真该扔的只有 2 篇（精度 8.7%）
 //  · 主线命名限 3-5 条：杂物袋簇被迫硬合，跨事件同组 23-27 对

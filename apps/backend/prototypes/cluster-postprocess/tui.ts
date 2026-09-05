@@ -24,11 +24,11 @@ const args = process.argv.slice(2).filter(a => a !== '--');
 const WIN = args[0] ?? 'F2';
 const THR = args[1] ?? '0.08';
 const HERE = new URL('.', import.meta.url).pathname;
-const BAND = join(HERE, '..', 'dedup-band');
+const BAND = join(HERE, '..', '_data');
 const GOLD = join(HERE, '..', '..', '..', '..', 'scripts', 'eval', 'clustering', 'gold');
 
 // ── 载数据（真实 fixture + 真实金标，内存里跑，不写任何东西）─────────────────
-const rows = readFileSync(join(BAND, 'fixtures', `fixture-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
+const rows = readFileSync(join(BAND, `fixture-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
 const vec = new Map<number, Float64Array>();
 const titleOf = new Map<number, string>();
 for (const r of rows) {
@@ -41,8 +41,8 @@ for (const r of rows) {
   titleOf.set(r.id, r.title);
 }
 const labelPath = [
-  join(BAND, 'out', 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`),
-  join(BAND, 'out', 'cluster-sweep', `${WIN}-agglo2-average-t${THR}.json`),
+  join(BAND, 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`),
+  join(BAND, 'cluster-sweep', `${WIN}-agglo2-average-t${THR}.json`),
 ].find(existsSync);
 if (!labelPath) throw new Error(`找不到 ${WIN} t=${THR} 的标签文件`);
 const labels: Record<string, number> = JSON.parse(readFileSync(labelPath, 'utf-8')).labels;

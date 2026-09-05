@@ -24,7 +24,7 @@
 //  · 「≥3 条不确认」的依据在改全链后才真正成立：单链时代所谓「多条边互相印证」是假的
 //    （7 期实测 32 个多条组里 21 个内部存在没过线的配对），全链下组内每一对都过线。
 //    但过线 ≠ 同一发生——原型实测判官对「同题材不同发生」仍有假阳（美国遣返阿富汗人
-//    × Milo 被遣返，两两问也判成一件事）。逐对送确认是下一步，见 prototypes/dedup-band。
+//    × Milo 被遣返，两两问也判成一件事）。逐对送确认是下一步，见 docs/engineering-notes/prototype-findings-dedup-storyline.md。
 
 /** 参与去重的最小 story 形状。index 是它在 validatedStories.stories 里的下标。 */
 export interface DedupStory {

@@ -13,10 +13,10 @@ const args = process.argv.slice(2).filter(a => a !== '--');
 const WIN = args[0] ?? 'F2';
 const THR = args[1] ?? '0.08';
 const HERE = new URL('.', import.meta.url).pathname;
-const BAND = join(HERE, '..', 'dedup-band');
+const BAND = join(HERE, '..', '_data');
 const GOLD = join(HERE, '..', '..', '..', '..', 'scripts', 'eval', 'clustering', 'gold');
 
-const rows = readFileSync(join(BAND, 'fixtures', `fixture-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
+const rows = readFileSync(join(BAND, `fixture-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
 const vec = new Map<number, Float64Array>();
 for (const r of rows) {
   const v = Float64Array.from(JSON.parse(r.emb) as number[]);
@@ -24,7 +24,7 @@ for (const r of rows) {
   for (let k = 0; k < v.length; k++) v[k] /= n;
   vec.set(r.id, v);
 }
-const labels: Record<string, number> = JSON.parse(readFileSync(join(BAND, 'out', 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`), 'utf-8')).labels;
+const labels: Record<string, number> = JSON.parse(readFileSync(join(BAND, 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`), 'utf-8')).labels;
 const events = readFileSync(join(GOLD, `events-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));
 const meta = JSON.parse(readFileSync(join(GOLD, `meta-${WIN}.json`), 'utf-8'));
 const excluded = new Set<number>((meta.non_article ?? []).map((x: { id: number }) => x.id));

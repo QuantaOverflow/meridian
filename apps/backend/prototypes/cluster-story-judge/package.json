@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "go": "../dedup-band/node_modules/.bin/tsx run.ts",
-    "review": "../dedup-band/node_modules/.bin/tsx review.ts"
+    "go": "tsx run.ts",
+    "review": "tsx review.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "tsx": "^4.19.0",
+    "typescript": "5.8.2"
   }
 }

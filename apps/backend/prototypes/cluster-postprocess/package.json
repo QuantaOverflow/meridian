@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "tui": "../dedup-band/node_modules/.bin/tsx tui.ts",
-    "headless": "../dedup-band/node_modules/.bin/tsx headless.ts"
+    "tui": "tsx tui.ts",
+    "headless": "tsx headless.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "tsx": "^4.19.0",
+    "typescript": "5.8.2"
   }
 }

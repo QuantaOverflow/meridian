@@ -130,11 +130,11 @@ scratch/
 ```
 
 按目录挡而不是按文件名模式挡，是 2026-09-05 的教训：旧模板挡的是 `*-result.json`
-这类模式，而脚本都往根目录写，于是每轮都有新文件名漏网——`dedup-band` 里
+这类模式，而脚本都往根目录写，于是每轮都有新文件名漏网——已删的 `dedup-band` 原型里
 `armB-*` / `armC-*` / `armFa-*` 等 70 个产物从来没被挡住，每次提交前都要手工补规则补一次漏一次。
 按目录挡只需两行，且新脚本天然合规。
 
-fixtures 若含 embedding 会很大（`dedup-band` 两个窗口 11MB），这种在 README 里写重建方式、
+fixtures 若含 embedding 会很大（聚类 fixture 两个窗口 11MB，现放 `prototypes/_data/`），这种在 README 里写重建方式、
 `.gitignore` 里单独挡掉；小的输入 fixture 照常入库。
 
 **原型"毕业"约定**：验证完 → 核心源码精简入库（样板 `prototypes/article-prompt-slim/`：

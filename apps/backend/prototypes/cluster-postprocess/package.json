@@ -1,0 +1,9 @@
+{
+  "name": "proto-cluster-postprocess",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tui": "../dedup-band/node_modules/.bin/tsx tui.ts",
+    "headless": "../dedup-band/node_modules/.bin/tsx headless.ts"
+  }
+}

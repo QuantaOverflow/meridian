@@ -12,3 +12,17 @@ results/
 *-out.json
 bprime-*.md
 *-brief.md
+*-labels.json
+geo-seg-data.json
+geo-seg-full.json
+geo-seg-*.err
+*.npy
+geo-seg-ids-result.json
+geo-firstcut-dump.md
+# 上游聚类对照实验（Leiden / HDBSCAN 扫参）的运行产物
+cluster-sweep/
+leiden-dump-*.md
+leiden-*-summary.json
+# 聚类参数扫描的运行产物（labels 导出 + 人读 dump）
+cluster-sweep/
+cluster-sweep-dump-*.md

@@ -29,12 +29,12 @@ if (!existsSync(OUT)) mkdirSync(OUT);
 
 // ── 数据 ──────────────────────────────────────────────────────────────────────
 const fields = new Map<number, ArticleFields>();
-for (const l of readFileSync(join(BAND, `fixture-${WIN}-text-fields.jsonl`), 'utf-8').split('\n').filter(Boolean)) {
+for (const l of readFileSync(join(BAND, 'fixtures', `fixture-${WIN}-text-fields.jsonl`), 'utf-8').split('\n').filter(Boolean)) {
   const r = JSON.parse(l);
   fields.set(r.id, r);
 }
 const labels: Record<string, number> = JSON.parse(
-  readFileSync(join(BAND, 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`), 'utf-8')
+  readFileSync(join(BAND, 'out', 'cluster-sweep', `${WIN}-fine-avg-t${THR}.json`), 'utf-8')
 ).labels;
 
 const events = readFileSync(join(GOLD, `events-${WIN}.jsonl`), 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));

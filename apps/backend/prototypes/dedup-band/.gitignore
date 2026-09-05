@@ -1,28 +1,14 @@
 node_modules/
+__pycache__/
 .cache/
-traces/
+
+# 运行产物一律进 out/，一次性脚本一律进 scratch/。
+# 这样挡产物只需要两行，不用每轮追着新文件名补规则——
+# 2026-09-05 之前是按文件名模式挡（*-result.json 之类），脚本却都往根目录写，
+# 于是每轮都有漏网（armB-* / armC-* / armFa-* 等 70 个文件从没被挡住）。
 out/
-results/
-*-result.json
-*-result*.json
-*.dump
-# 本原型的运行产物：跑批日志、划分导出、生成的简报
-# 别用宽泛 *.md —— FINDINGS.md 是结论，要入库
-*.log
-*-out.json
-bprime-*.md
-*-brief.md
-*-labels.json
-geo-seg-data.json
-geo-seg-full.json
-geo-seg-*.err
-*.npy
-geo-seg-ids-result.json
-geo-firstcut-dump.md
-# 上游聚类对照实验（Leiden / HDBSCAN 扫参）的运行产物
-cluster-sweep/
-leiden-dump-*.md
-leiden-*-summary.json
-# 聚类参数扫描的运行产物（labels 导出 + 人读 dump）
-cluster-sweep/
-cluster-sweep-dump-*.md
+scratch/
+
+# 输入 fixtures：可复现依赖，但含 384 维 embedding，两个窗口就 11MB。
+# 暂不入库——重建方式见 README（gold/build-titles.sh 导 titles + DB 取 embedding）。
+fixtures/

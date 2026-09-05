@@ -108,19 +108,34 @@ wrangler workflows instances list <WORKFLOW_NAME>
 **判据一句话**：能让别人**复现或验证**的（代码/测试/金标/说明书/输入 fixtures）→ 入 git；
 某次运行的**产物**或某次交接的**流水账**（dump/report/handoff/临时脚本）→ 不入。
 
-**原型 `.gitignore` 标准模板**（新建原型目录照抄；旧模板只有 `node_modules/.cache/traces/`
-漏了结果产物，是 `skeleton-planner` 1.1M dump 漏网的根因）：
+**原型目录的三个子目录**（2026-09-05 定，新建原型照此摆）：
+
+```
+<prototype>/
+  *.ts *.py          实验源码，选择性入库
+  fixtures/          输入 fixture（可复现依赖）
+  out/               全部运行产物：labels、dump、summary、日志
+  scratch/           一次性探测脚本
+```
+
+**产物和一次性脚本必须写进 out/ 与 scratch/，不许往原型根目录写。**
+
+`.gitignore` 标准模板（照抄）：
 ```
 node_modules/
+__pycache__/
 .cache/
-traces/
 out/
-results/
-*-result.json
-*-result*.json
-*.dump
+scratch/
 ```
-别用宽泛 `*.json`——`fixtures/` 里的输入数据要入库。
+
+按目录挡而不是按文件名模式挡，是 2026-09-05 的教训：旧模板挡的是 `*-result.json`
+这类模式，而脚本都往根目录写，于是每轮都有新文件名漏网——`dedup-band` 里
+`armB-*` / `armC-*` / `armFa-*` 等 70 个产物从来没被挡住，每次提交前都要手工补规则补一次漏一次。
+按目录挡只需两行，且新脚本天然合规。
+
+fixtures 若含 embedding 会很大（`dedup-band` 两个窗口 11MB），这种在 README 里写重建方式、
+`.gitignore` 里单独挡掉；小的输入 fixture 照常入库。
 
 **原型"毕业"约定**：验证完 → 核心源码精简入库（样板 `prototypes/article-prompt-slim/`：
 README + 核心 `.ts` + fixtures），结果产物与一次性 TUI 清掉，别把整轮实验的滚动残渣长期堆着。

@@ -1,0 +1,158 @@
+{
+  "storyId": "story-qatar-pm-visits-tehran-to-de-escalate-us-iran-tensions",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, a flurry of diplomatic activity involving Qatar, Oman, and Pakistan is underway to revive dialogue between Iran and the United States as the conflict enters its sixth month. While direct fighting is largely paused, the US is intensifying economic pressure and a naval blockade, and Iran insists the Strait of Hormuz will not reopen until sanctions are lifted. Qatar's Prime Minister is visiting Tehran to discuss de-escalation and a temporary shipping corridor, though no agreement has been reached.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Monday",
+      "dateSource": "On Monday, Pakistan’s army chief Asim Munir met with several high-ranking officials in Tehran",
+      "description": "Pakistan's army chief Asim Munir visits Tehran to meet Iranian President Masoud Pezeshkian and Parliament Speaker Mohammad Bagher Ghalibaf, seeking to end the stalemate.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Tuesday",
+      "dateSource": "On Tuesday, Oman’s Foreign Minister Badr Albusaidi met his Iranian counterpart Abbas Araghchi in Tehran",
+      "description": "Oman's Foreign Minister Badr Albusaidi meets with Iran's Foreign Minister Abbas Araghchi to discuss the Strait of Hormuz.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Iran’s Revolutionary Guards said on Wednesday that Tehran and Oman had agreed on arrangements for sharing the waterway and its revenues",
+      "description": "Iran's IRGC claims an agreement with Oman on Hormuz control and revenues.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "US President Donald Trump told Al Jazeera on Wednesday that he was in 'no hurry' to resume talks with Iran",
+      "description": "US President Donald Trump states he is not in a hurry to resume talks and believes economic/military pressure is effective.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Foreign Minister Abbas Araghchi wrote to the United Nations on Wednesday calling the new sanctions an 'act of state and economic terrorism'",
+      "description": "Iran's Foreign Minister condemns new US sanctions as 'economic terrorism' in a letter to the UN.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Qatar's prime minister is due to travel to Tehran on Thursday",
+      "description": "Qatar's Prime Minister Sheikh Mohammed visits Tehran to discuss de-escalation and reviving dialogue.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Sheikh Mohammed, who also serves as Qatar’s foreign minister, held talks with Iran’s Foreign Minister Abbas Araghchi in the first high-level Qatari visit to Tehran since the war began on 28 February",
+      "description": "Qatar PM meets Iran FM Araghchi in Tehran for talks on de-escalation and a temporary Hormuz corridor.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "US staff and their family members were withdrawn after the US and Israel launched strikes on Iran, and as Tehran retaliated on neighbouring countries",
+      "description": "US staff and their family members were withdrawn from Jordan, Bahrain, Kuwait, Saudi Arabia, Lebanon and Iraq, after the US and Israel launched strikes on Iran, and as Tehran retaliated on neighbouring countries.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Posts in Jordan, Israel and Oman will be fully restored, US media reported",
+      "description": "Posts in Jordan, Israel and Oman will be fully restored, US media reported.",
+      "importance": "MEDIUM"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The Strait of Hormuz is a critical chokepoint for global oil supplies, and its closure or disruption has caused a sharp decline in oil traffic. The conflict between the US and Iran is a major geopolitical flashpoint. The diplomatic push to resolve this standoff is of critical importance to global energy markets and regional stability."
+  },
+  "entities": [
+    {
+      "name": "Sheikh Mohammed bin Abdulrahman bin Jassim Al Thani",
+      "type": "Person",
+      "role": "Qatar's Prime Minister and Foreign Minister, acting as a mediator between the US and Iran.",
+      "positions": []
+    },
+    {
+      "name": "Abbas Araghchi",
+      "type": "Person",
+      "role": "Iran's Foreign Minister, who met with Qatari and Omani officials to discuss the Hormuz dispute.",
+      "positions": []
+    },
+    {
+      "name": "Donald Trump",
+      "type": "Person",
+      "role": "US President who stated he is 'not in a hurry' to resume talks and is pursuing economic pressure.",
+      "positions": []
+    },
+    {
+      "name": "Strait of Hormuz",
+      "type": "Place",
+      "role": "A strategic waterway where Iran and Oman have differing views on control, and where shipping traffic has dropped to 5 million barrels per day.",
+      "positions": []
+    },
+    {
+      "name": "Qatar",
+      "type": "Country",
+      "role": "A US ally that hosts a major air base and shares a gas field with Iran, acting as a key mediator.",
+      "positions": []
+    },
+    {
+      "name": "Iran",
+      "type": "Country",
+      "role": "Facing mounting US economic pressure and naval blockade, insisting on control over the Hormuz strait.",
+      "positions": []
+    },
+    {
+      "name": "Oman",
+      "type": "Country",
+      "role": "Mediating between Iran and the US on the Strait of Hormuz, reportedly agreeing on a temporary shipping route.",
+      "positions": []
+    },
+    {
+      "name": "Pakistan",
+      "type": "Country",
+      "role": "Sending its army chief to Tehran to seek an end to the stalemate.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        752245,
+        754083,
+        758750,
+        761023,
+        761892,
+        762741
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting comes from established international news outlets (Times of India, Al Jazeera, Euronews) with a track record of covering Middle Eastern affairs. The articles provide detailed timelines, specific quotes from officials, and corroborating details across multiple sources regarding the diplomatic visits and the status of the Hormuz dispute."
+    }
+  ],
+  "factualBasis": [
+    "Pakistan's army chief Asim Munir visits Tehran to meet Iranian President Masoud Pezeshkian and Parliament Speaker Mohammad Bagher Ghalibaf, seeking to end the stalemate.",
+    "Oman's Foreign Minister Badr Albusaidi meets with Iran's Foreign Minister Abbas Araghchi to discuss the Strait of Hormuz.",
+    "Iran's IRGC claims an agreement with Oman on Hormuz control and revenues.",
+    "US President Donald Trump states he is not in a hurry to resume talks and believes economic/military pressure is effective.",
+    "Iran's Foreign Minister condemns new US sanctions as 'economic terrorism' in a letter to the UN.",
+    "Qatar's Prime Minister Sheikh Mohammed visits Tehran to discuss de-escalation and reviving dialogue.",
+    "Qatar PM meets Iran FM Araghchi in Tehran for talks on de-escalation and a temporary Hormuz corridor.",
+    "US staff and their family members were withdrawn from Jordan, Bahrain, Kuwait, Saudi Arabia, Lebanon and Iraq, after the US and Israel launched strikes on Iran, and as Tehran retaliated on neighbouring countries.",
+    "Posts in Jordan, Israel and Oman will be fully restored, US media reported."
+  ],
+  "informationGaps": [
+    "The specific details of the 'temporary shipping corridor' or 'joint project to clear mines' proposed by Qatar and Iran are not fully described in the articles.",
+    "The exact status of the June Memorandum of Understanding (MoU) is unclear; one article says it collapsed, another says it expired.",
+    "The specific content of the new US sanctions (beyond the sectors named) is not detailed.",
+    "The exact timeline for the US embassy staff returns is not specified (e.g., 'as early as next week' is a relative term)."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

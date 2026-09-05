@@ -1,0 +1,156 @@
+{
+  "storyId": "story-catastrophic-flash-floods-and-landslides-in-nepal-triggered-by-glacial-collapse",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, a catastrophic flash flood and mudslide triggered by a glacial collapse along the Nepal-Tibet border has caused significant loss of life and infrastructure damage. The disaster, which occurred on Wednesday, has left hundreds missing, including numerous foreign nationals and pilgrims, with death tolls ranging from 157 to 469. Rescue operations are ongoing but have been temporarily paused due to fears of a second flood from a newly formed, overflowing landslide lake on the border. There are conflicting reports regarding the exact cause of the disaster and the timeliness of warnings issued by China, with the Chinese Embassy rejecting claims it failed to issue a timely warning.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Wednesday",
+      "dateSource": "Wednesday morning",
+      "description": "A massive flash flood and mudslide, triggered by a glacial ice-rock avalanche, tears through the Nepal-Tibet border region, devastating settlements and infrastructure.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Wednesday morning",
+      "description": "A sudden surge in the Bhote Koshi River strikes the Rasuwagadhi-Timure area at around 8:40 am local time.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Wednesday",
+      "description": "The US Geological Survey rules out an earthquake as the trigger, stating the seismic activity was caused by a glacial collapse of magnitude 5.2.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Wednesday",
+      "description": "The International Centre for Integrated Mountain Development reports water levels in the Trishuli River rose by as much as nine metres (nearly 30 feet) in just 30 minutes at Galchhi.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Thursday",
+      "description": "India issues emergency helpline numbers for its citizens stranded in Nepal, with the Indian Embassy in Kathmandu providing +977 985 131 6807 or +977 970 910 7500.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Thursday",
+      "description": "The Nepal Army launches helicopter operations, rescuing more than 100 people from flood-affected areas, with Brig. Gen. Raja Ram Basnet stating the army rescued more than 100 people on Thursday morning.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Friday",
+      "description": "Nepal temporarily halts rescue operations due to fears that a newly formed, overflowing lake on the border could trigger a second flood, with authorities warning the lake has grown to more than 2.5 million cubic metres.",
+      "importance": "HIGH"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "This story involves a major natural disaster with a high death toll and significant infrastructure damage in a strategically important region. It has triggered an international response and highlights the growing threat of glacial hazards in the Hindu Kush Himalayas. The reporting describes it as a catastrophic event with a trail of destruction stretching nearly 200km downstream."
+  },
+  "entities": [
+    {
+      "name": "Nepal",
+      "type": "Country",
+      "role": "The primary country affected by the disaster, with authorities reporting hundreds of deaths and missing persons, and deploying military and police for rescue and relief operations.",
+      "positions": []
+    },
+    {
+      "name": "China",
+      "type": "Country",
+      "role": "The source of the Bhote Koshi River, with authorities reporting deaths and missing persons in Tibet's Gyirong County. China has deployed rescue personnel and is monitoring a newly formed, overflowing lake on the border.",
+      "positions": []
+    },
+    {
+      "name": "India",
+      "type": "Country",
+      "role": "Has issued emergency helpline numbers for its citizens stranded in Nepal and offered humanitarian assistance to Nepal. Indian officials have identified specific groups of missing Indian nationals.",
+      "positions": []
+    },
+    {
+      "name": "International Centre for Integrated Mountain Development (ICIMOD)",
+      "type": "Organization",
+      "role": "An international organization that has provided data on the speed of the flood surge and is assessing the risk of a second flood from a landslide dam.",
+      "positions": []
+    },
+    {
+      "name": "US Geological Survey (USGS)",
+      "type": "Organization",
+      "role": "An agency that has analyzed seismic data and concluded that the disaster was triggered by a glacial collapse, not an earthquake.",
+      "positions": []
+    },
+    {
+      "name": "Nepal Police",
+      "type": "Organization",
+      "role": "A Nepalese authority that has reported casualty figures, deployed rescue teams, and noted the loss of security personnel and infrastructure.",
+      "positions": []
+    },
+    {
+      "name": "Nepal Army",
+      "type": "Organization",
+      "role": "A Nepalese military force that has deployed helicopters for rescue operations and is searching for people trapped in hydropower projects.",
+      "positions": []
+    },
+    {
+      "name": "Kailash Mansarovar Pilgrims",
+      "type": "Group",
+      "role": "A large number of foreign nationals, particularly from India, who were travelling through the region and are among those reported missing, with at least 133 Indians and 341 foreigners listed as missing.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        746146,
+        751062,
+        754010,
+        755185,
+        755190,
+        756939,
+        757522,
+        758680,
+        759044,
+        765321,
+        768393,
+        770112,
+        770117,
+        770157
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting combines official government statements, international scientific bodies, and news agencies. However, there are significant contradictions between the Chinese Embassy and other sources regarding the cause of the disaster and the timeliness of warnings, and the casualty figures vary widely across articles."
+    }
+  ],
+  "factualBasis": [
+    "A massive flash flood and mudslide, triggered by a glacial ice-rock avalanche, tears through the Nepal-Tibet border region, devastating settlements and infrastructure.",
+    "A sudden surge in the Bhote Koshi River strikes the Rasuwagadhi-Timure area at around 8:40 am local time.",
+    "The US Geological Survey rules out an earthquake as the trigger, stating the seismic activity was caused by a glacial collapse of magnitude 5.2.",
+    "The International Centre for Integrated Mountain Development reports water levels in the Trishuli River rose by as much as nine metres (nearly 30 feet) in just 30 minutes at Galchhi.",
+    "India issues emergency helpline numbers for its citizens stranded in Nepal, with the Indian Embassy in Kathmandu providing +977 985 131 6807 or +977 970 910 7500.",
+    "The Nepal Army launches helicopter operations, rescuing more than 100 people from flood-affected areas, with Brig. Gen. Raja Ram Basnet stating the army rescued more than 100 people on Thursday morning.",
+    "Nepal temporarily halts rescue operations due to fears that a newly formed, overflowing lake on the border could trigger a second flood, with authorities warning the lake has grown to more than 2.5 million cubic metres."
+  ],
+  "informationGaps": [
+    "The exact calendar date of the event itself is not explicitly stated in the articles' body text, though they consistently refer to 'Wednesday' and satellite images are dated August 25 and 26, 2026.",
+    "The specific details of why the glacial collapse occurred (e.g., specific weather conditions, seismic activity, or human activity) are not provided.",
+    "The current status of the 'second flood' threat (whether the lake has breached or caused further damage) is not reported.",
+    "The long-term economic and environmental impact of the disaster is not covered in the available reporting."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

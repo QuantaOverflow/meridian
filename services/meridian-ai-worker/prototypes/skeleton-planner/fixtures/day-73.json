@@ -1,0 +1,17 @@
+{
+  "reportId": 73, "storyRows": 25, "actualBlocksInBrief": 4,
+  "events": [
+    { "clusterId": 25, "importance": 7, "articles": 54, "titles": ["Nepal-Tibet flash floods and glacial collapse", "Nepal flash floods triggered by earthquake-induced landslide", "Nepal — Glacial collapse triggers flash floods on Nepal-Tibet border", "Nepal — Flash floods and glacial lake outburst", "China-Nepal border — Gyirong Port landslide and rescue"] },
+    { "clusterId": 11, "importance": 7, "articles": 13, "titles": ["Fire at Islamabad PIMS hospital nursery kills 14 newborns"] },
+    { "clusterId": 15, "importance": 7, "articles": 13, "titles": ["Canada — retaliatory tariffs on U.S. goods", "Canada imposes retaliatory tariffs on US goods amid trade war"] },
+    { "clusterId": 27, "importance": 8, "articles": 11, "titles": ["China warns of retaliation over US Iran sanctions", "US announces 'Operation Economic Outcast' sanctions on Iran", "Iran's economic pressure and strategic debate over Strait of Hormuz", "US-Iran tensions and maritime pressure in Strait of Hormuz"] },
+    { "clusterId": 38, "importance": 7, "articles": 8, "titles": ["Meta agrees to $17 billion settlement with 29 US states over child safety and social media addiction", "Brazil — ANPD fines TikTok $30 million for child data privacy violations"] },
+    { "clusterId": 60, "importance": 7, "articles": 7, "titles": ["Bill Gates seeks meeting with Xi Jinping to discuss AI risks", "Bill Gates calls for global AI cooperation and 'human reserved' jobs", "US — Disruption of Chinese state-sponsored hacking operation targeting US agencies"] },
+    { "clusterId": 51, "importance": 7, "articles": 6, "titles": ["Trump administration mass visa revocation and appointment suspension", "US halts immigrant visa applications and initiates global training", "US halts immigrant visa interviews globally"] },
+    { "clusterId": 4, "importance": 6, "articles": 6, "titles": ["CIA Director John Ratcliffe visits Moscow"] },
+    { "clusterId": 31, "importance": 7, "articles": 5, "titles": ["Trump administration threatens to demolish Kennedy Center if Trump's name is removed"] },
+    { "clusterId": 39, "importance": 7, "articles": 5, "titles": ["Haiti — Gang attack in Kenscoff leaves at least 47 dead and over 50 kidnapped"] },
+    { "clusterId": 16, "importance": 7, "articles": 3, "titles": ["Syrian Kurdish SDF dissolves and integrates into Syrian army"] },
+    { "clusterId": 49, "importance": 7, "articles": 2, "titles": ["US — 9/11 trial date set for June 2028"] }
+  ]
+}

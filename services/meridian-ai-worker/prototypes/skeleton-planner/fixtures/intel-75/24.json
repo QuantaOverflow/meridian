@@ -1,0 +1,91 @@
+{
+  "storyId": "story-uefa-seeks-u.s.-court-documents-for-criminal-complaint-against-infantino",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, UEFA has filed legal requests in US federal courts to obtain testimony and documents from FIFA entities in Florida and a New York investment fund. These materials are intended for use in a planned criminal complaint in Switzerland against FIFA President Gianni Infantino. The complaint alleges criminal mismanagement related to a now-abandoned plan to transfer World Cup commercial rights into a new subsidiary called FIFA Forward Enterprise (FFE).",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "August 1",
+      "dateSource": "Infantino was forced to scrap the plan on Aug. 1",
+      "description": "Infantino scrapped the World Cup private investment plan.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "August 3",
+      "dateSource": "UEFA, which issued a blistering statement saying it had lost confidence in Infantino's leadership at FIFA, first threatened to take legal action on Aug. 3",
+      "description": "UEFA threatened to take legal action against FIFA over the FFE plan.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "UEFA said it filed a request in the southern Florida district court for authorization of discovery 'in a foreign proceeding' against FIFA",
+      "description": "UEFA filed a request in a US federal court to obtain evidence for the Swiss criminal complaint.",
+      "importance": "HIGH"
+    }
+  ],
+  "significance": {
+    "level": "HIGH",
+    "reasoning": "This story involves a direct challenge to the leadership of FIFA, the world's governing body for football, by its largest regional confederation, UEFA. The move to a criminal complaint in Switzerland, rather than a civil suit, is a significant escalation. The involvement of US courts to compel evidence further internationalizes the conflict. The reporting describes a potential major financial and governance crisis at the heart of global sport."
+  },
+  "entities": [
+    {
+      "name": "UEFA",
+      "type": "Organization",
+      "role": "The European football governing body. It is the accuser, having filed court requests to obtain evidence and is preparing a criminal complaint in Switzerland against Infantino.",
+      "positions": []
+    },
+    {
+      "name": "Gianni Infantino",
+      "type": "Person",
+      "role": "The President of FIFA. He is the target of the planned criminal complaint, accused of developing a secret plan to profit from World Cup commercial rights.",
+      "positions": []
+    },
+    {
+      "name": "FIFA",
+      "type": "Organization",
+      "role": "The international governing body of football. Its President is Infantino. Specific entities named in the discovery requests are FIFA (AMERICAS), Inc. and FWC2026 US, Inc.",
+      "positions": []
+    },
+    {
+      "name": "FIFA Forward Enterprise (FFE)",
+      "type": "Organization",
+      "role": "A proposed new subsidiary mentioned in the reporting. The plan to transfer World Cup commercial rights into this entity was the subject of the criminal complaint.",
+      "positions": []
+    },
+    {
+      "name": "Joshua Kushner",
+      "type": "Person",
+      "role": "The younger brother of Jared Kushner. He is mentioned as a potential investor in the FFE plan and is the founder of Thrive Capital Management.",
+      "positions": []
+    },
+    {
+      "name": "Thrive Capital Management",
+      "type": "Organization",
+      "role": "A New York investment fund founded by Joshua Kushner. UEFA filed a separate request in a Manhattan court to obtain evidence from this fund.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        761598,
+        762138
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The core legal claims are reported by the AFP news agency and corroborated by CBS News, a major international broadcaster. The details of the court filings and the specific allegations are directly sourced from the legal documents themselves, which provides a high level of reliability for the factual reporting."
+    }
+  ],
+  "factualBasis": [
+    "Infantino scrapped the World Cup private investment plan.",
+    "UEFA threatened to take legal action against FIFA over the FFE plan.",
+    "UEFA filed a request in a US federal court to obtain evidence for the Swiss criminal complaint."
+  ],
+  "informationGaps": [
+    "There is no reporting from FIFA, Gianni Infantino, or Thrive Capital Management providing their response or perspective to the allegations.",
+    "The articles do not provide the specific details of the 'criminal mismanagement' under Article 158 of the Swiss Criminal Code.",
+    "The reporting does not mention the involvement or reaction of other FIFA member associations or confederations beyond UEFA.",
+    "The articles do not state the outcome of the court filings or whether the discovery requests have been granted."
+  ],
+  "contradictions": []
+}

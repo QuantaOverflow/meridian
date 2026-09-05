@@ -1,0 +1,174 @@
+{
+  "storyId": "story-norway's-king-harald-v-dies,-succeeded-by-son-haakon-viii",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, Norway's King Harald V has died at age 89, with his son Haakon automatically succeeding him as King Haakon VIII. The reporting highlights Harald's legacy as a modernizing, popular monarch who refused to abdicate, as well as the recent turmoil facing the royal family, including scandals involving his daughter-in-law and son.",
+  "storyStatus": "CONCLUDING",
+  "timeline": [
+    {
+      "date": "Friday",
+      "dateSource": "passed away peacefully at 06:35 local time (04:35GMT) on Friday",
+      "description": "King Harald V died at the National Hospital in Oslo.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "August 17",
+      "dateSource": "He entered hospital on 17 August",
+      "description": "King Harald was hospitalized for a rare blood condition.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "June",
+      "dateSource": "convicted of a litany of offences by judges in Oslo in June",
+      "description": "Marius Borg Høiby was convicted of a litany of offences by judges in Oslo in June.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "January 2026",
+      "dateSource": "documents were released revealing his mother Mette-Marit's frequent contact with late sex offender Jeffrey Epstein",
+      "description": "Documents were released revealing his mother Mette-Marit's frequent contact with late sex offender Jeffrey Epstein.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "February 2026",
+      "dateSource": "while dealing with a skin infection during a February 2026 holiday on the Spanish island of Tenerife",
+      "description": "He was hospitalized twice on foreign trips after that, including... while dealing with a skin infection during a February 2026 holiday on the Spanish island of Tenerife.",
+      "importance": "LOW"
+    },
+    {
+      "date": "January 2024",
+      "dateSource": "after the abdication of Denmark’s Queen Margrethe",
+      "description": "In January 2024, after the abdication of Denmark’s Queen Margrethe — his second cousin — Harald said that he stood by the oath he made when ascending the throne: “It lasts for life”.",
+      "importance": "LOW"
+    },
+    {
+      "date": "2011",
+      "dateSource": "neo-Nazi Anders Breivik murdered eight people with a car bomb in Oslo",
+      "description": "In July 2011 Harald faced his greatest challenge yet as king, when neo-Nazi Anders Breivik murdered eight people with a car bomb in Oslo before moving on to a youth camp on the island of Utøya, where he shot dead 69 others, most of them teenagers.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2016",
+      "dateSource": "Harald made headlines again by giving an impassioned speech",
+      "description": "In 2016, the king made headlines again by giving an impassioned speech , externalsupporting diversity of religion, ethnicity and sexual orientation.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "August 29, 1968",
+      "dateSource": "Norwegians greeted the Aug. 29, 1968, wedding with jubilation",
+      "description": "The couple wed in Oslo Cathedral on 29 August 1968.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "January 21, 1991",
+      "dateSource": "Harald then ascended to the throne when Olav died on 17 January 1991",
+      "description": "Harald then ascended to the throne when Olav died on 17 January 1991.",
+      "importance": "HIGH"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The death of a reigning monarch in Europe is a significant geopolitical event. The reporting describes Harald as a unifying figure who modernized the monarchy, and his death marks a transition in a stable European democracy. The reporting also highlights the potential instability of the monarchy due to recent scandals, adding to the significance."
+  },
+  "entities": [
+    {
+      "name": "King Harald V",
+      "type": "Person",
+      "role": "The deceased King of Norway who died at age 89 after 35 years on the throne.",
+      "positions": []
+    },
+    {
+      "name": "King Haakon VIII",
+      "type": "Person",
+      "role": "The son of King Harald V who automatically succeeded him as the new King of Norway.",
+      "positions": []
+    },
+    {
+      "name": "Queen Sonja",
+      "type": "Person",
+      "role": "He is survived by his wife of almost 58 years, Queen Sonja, their daughter Princess Märtha Louise, their son, the new King Haakon, and six grandchildren.",
+      "positions": []
+    },
+    {
+      "name": "Crown Princess Mette-Marit",
+      "type": "Person",
+      "role": "The daughter-in-law of King Harald V, who faced scrutiny for her association with Jeffrey Epstein and whose son was convicted of rape.",
+      "positions": []
+    },
+    {
+      "name": "Marius Borg Høiby",
+      "type": "Person",
+      "role": "He has now appealed against a four-year jail term and appeared at Harald's bedside shortly before he died.",
+      "positions": []
+    },
+    {
+      "name": "Jeffrey Epstein",
+      "type": "Person",
+      "role": "Mette-Marit's association with the late sex offender Jeffrey Epstein, and her son Marius Borg Høiby's conviction for rape.",
+      "positions": []
+    },
+    {
+      "name": "Anders Behring Breivik",
+      "type": "Person",
+      "role": "In July 2011 Harald faced his greatest challenge yet as king, when neo-Nazi Anders Breivik murdered eight people with a car bomb in Oslo before moving on to a youth camp on the island of Utøya, where he shot dead 69 others, most of them teenagers.",
+      "positions": []
+    },
+    {
+      "name": "Norway",
+      "type": "Country",
+      "role": "Like other royal houses in Europe, the Norwegian monarchs serve a largely symbolic role, enjoying celebrity status while real power in the democracy of 5.5 million rests with an elected parliament.",
+      "positions": []
+    },
+    {
+      "name": "Royal Palace of Norway",
+      "type": "Organization",
+      "role": "The palace in Oslo said he passed away peacefully at 06:35 local time (04:35GMT) on Friday at the national hospital in Oslo.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        769791,
+        769959,
+        770032,
+        770257,
+        770281,
+        770609,
+        770734,
+        771186,
+        771314
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting comes from a diverse set of reputable international news organizations (BBC, AP, Independent, France 24, NPR, CBS, Al Jazeera). The information is consistent across these sources regarding the core facts of the death and succession, with only minor discrepancies in specific details like the day of death or spelling of a name."
+    }
+  ],
+  "factualBasis": [
+    "King Harald V died at the National Hospital in Oslo.",
+    "King Harald was hospitalized for a rare blood condition.",
+    "Marius Borg Høiby was convicted of a litany of offences by judges in Oslo in June.",
+    "Documents were released revealing his mother Mette-Marit's frequent contact with late sex offender Jeffrey Epstein.",
+    "He was hospitalized twice on foreign trips after that, including... while dealing with a skin infection during a February 2026 holiday on the Spanish island of Tenerife.",
+    "In January 2024, after the abdication of Denmark’s Queen Margrethe — his second cousin — Harald said that he stood by the oath he made when ascending the throne: “It lasts for life”.",
+    "In July 2011 Harald faced his greatest challenge yet as king, when neo-Nazi Anders Breivik murdered eight people with a car bomb in Oslo before moving on to a youth camp on the island of Utøya, where he shot dead 69 others, most of them teenagers.",
+    "In 2016, the king made headlines again by giving an impassioned speech , externalsupporting diversity of religion, ethnicity and sexual orientation.",
+    "The couple wed in Oslo Cathedral on 29 August 1968.",
+    "Harald then ascended to the throne when Olav died on 17 January 1991."
+  ],
+  "informationGaps": [
+    "The articles do not provide specific details on the immediate political or constitutional implications of the succession, other than that Haakon automatically succeeds him.",
+    "There is no reporting on the specific plans for the state funeral or the duration of the mourning period.",
+    "The articles do not mention the reaction of the Norwegian government or parliament specifically, other than a general statement from Prime Minister Jonas Gahr Støre.",
+    "The reporting does not specify the exact cause of death beyond the rare blood condition and general health decline."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

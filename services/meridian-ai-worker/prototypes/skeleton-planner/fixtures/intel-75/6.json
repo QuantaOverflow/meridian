@@ -1,0 +1,158 @@
+{
+  "storyId": "story-flash-floods-and-mudslide-at-china-nepal-border",
+  "status": "COMPLETE",
+  "executiveSummary": "A catastrophic landslide and flash flood struck the Gyirong Port border crossing between China and Nepal on Wednesday, causing widespread destruction and a significant loss of life. The event, initially reported as an earthquake, was later confirmed to be caused by a glacial collapse. Reporting on casualties is highly inconsistent, with figures ranging from 'major casualties' to over 1,000 missing, and death tolls varying between 3 and 469. China has mobilized a massive rescue operation and pledged emergency aid to Nepal.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Wednesday",
+      "dateSource": "A landslide struck the China-Nepal border in Tibet's Gyirong county on Wednesday",
+      "description": "A massive mudslide and flash flood struck the Gyirong Port area along the China-Nepal border on Wednesday.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "The landslide occurred at around 10.30am (local time)",
+      "description": "The landslide occurred at around 10.30am (local time).",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Authorities closed roads leading to the checkpoint for seven days",
+      "description": "Authorities closed roads leading to the checkpoint for seven days.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "Nepal's Tourism Board said 384 travellers were initially reported missing",
+      "description": "Nepal's Tourism Board reported 384 travellers missing, including 291 foreign nationals.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday morning",
+      "dateSource": "According to the latest official update from the Shigatse municipal government press conference on Thursday morning",
+      "description": "According to the latest official update from the Shigatse municipal government press conference on Thursday morning, three people have been confirmed dead and 558 remain missing on the Chinese side.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "China’s Ministry of Natural Resources said on Thursday that the deadly mudslide was initially triggered by a high-altitude glacier collapse inside Nepal",
+      "description": "China's Ministry of Natural Resources confirmed the cause as a high-altitude glacier collapse in Nepal.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "On 27 August, Nepalese authorities said at least 270 people had died",
+      "description": "On 27 August, Nepalese authorities said at least 270 people had died and 823 remained unaccounted for, including 517 foreign tourists.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday morning",
+      "dateSource": "As of Friday morning, three people were confirmed dead and 558 missing on the Chinese side of the border",
+      "description": "As of Friday morning, three people were confirmed dead and 558 missing on the Chinese side of the border, with 469 dead and at least 644 missing in Nepal.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Friday’s meeting, which began with a moment of silence for the victims",
+      "description": "The Politburo held a meeting chaired by Xi Jinping to coordinate the response.",
+      "importance": "HIGH"
+    }
+  ],
+  "significance": {
+    "level": "HIGH",
+    "reasoning": "The disaster occurred at a strategically important trade corridor between China and Nepal, disrupting critical infrastructure and trade. The event has triggered a high-level diplomatic and rescue response from China, including a Politburo meeting and the pledge of emergency aid. The involvement of foreign nationals and the potential for further geological hazards add to the global significance of the event."
+  },
+  "entities": [
+    {
+      "name": "Gyirong Port",
+      "type": "Location",
+      "role": "Tibet's main foreign trade port and a strategic border crossing with Nepal, which was devastated by the flash flood.",
+      "positions": []
+    },
+    {
+      "name": "Xi Jinping",
+      "type": "Person",
+      "role": "Chinese President who ordered an 'all-out' search and rescue operation and chaired a Politburo meeting to coordinate the response.",
+      "positions": []
+    },
+    {
+      "name": "Ram Chandra Poudel",
+      "type": "Person",
+      "role": "Nepalese counterpart to Xi Jinping, to whom Xi Jinping sent a message of condolence.",
+      "positions": []
+    },
+    {
+      "name": "China",
+      "type": "Country",
+      "role": "Chinese authorities have mobilised more than 1,500 personnel, including firefighters, military troops and engineering teams.",
+      "positions": []
+    },
+    {
+      "name": "Nepal",
+      "type": "Country",
+      "role": "Reported significant casualties and missing persons, with infrastructure including villages, roads, and bridges destroyed.",
+      "positions": []
+    },
+    {
+      "name": "Xinhua",
+      "type": "Organization",
+      "role": "Chinese state news agency that reported on the landslide, casualties, and rescue operations.",
+      "positions": []
+    },
+    {
+      "name": "CCTV",
+      "type": "Organization",
+      "role": "Chinese state broadcaster CCTV that reported on the disaster, casualties, and the formation of a barrier lake.",
+      "positions": []
+    },
+    {
+      "name": "US Geological Survey",
+      "type": "Organization",
+      "role": "The US Geological Survey said the disaster was caused by a glacial collapse that triggered a huge debris flow, rather than the magnitude 4.4 earthquake initially reported.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        746364,
+        754465,
+        759674,
+        762462,
+        768263,
+        771141
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting comes from a mix of reputable international outlets (SCMP, Times of India, Euronews) and Chinese state media (Xinhua, CCTV). While the international outlets provide detailed timelines and diverse perspectives, the casualty figures are highly contradictory and fluid, suggesting either a rapidly evolving situation or significant discrepancies in reporting between the two nations. The initial report of an earthquake being corrected to a glacial collapse indicates a dynamic information environment."
+    }
+  ],
+  "factualBasis": [
+    "A massive mudslide and flash flood struck the Gyirong Port area along the China-Nepal border on Wednesday.",
+    "The landslide occurred at around 10.30am (local time).",
+    "Authorities closed roads leading to the checkpoint for seven days.",
+    "Nepal's Tourism Board reported 384 travellers missing, including 291 foreign nationals.",
+    "According to the latest official update from the Shigatse municipal government press conference on Thursday morning, three people have been confirmed dead and 558 remain missing on the Chinese side.",
+    "China's Ministry of Natural Resources confirmed the cause as a high-altitude glacier collapse in Nepal.",
+    "On 27 August, Nepalese authorities said at least 270 people had died and 823 remained unaccounted for, including 517 foreign tourists.",
+    "As of Friday morning, three people were confirmed dead and 558 missing on the Chinese side of the border, with 469 dead and at least 644 missing in Nepal.",
+    "The Politburo held a meeting chaired by Xi Jinping to coordinate the response."
+  ],
+  "informationGaps": [
+    "The exact total number of casualties and missing persons remains unclear due to the conflicting reports from both sides.",
+    "The specific details of the rescue operations, such as the number of people successfully rescued, are not fully detailed in the provided articles.",
+    "The long-term impact on the China-Nepal trade corridor and the Trans-Himalayan connectivity network is not yet assessed.",
+    "The status of the barrier lake and the potential for further flooding or geological hazards is not fully resolved."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

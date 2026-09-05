@@ -3,6 +3,12 @@ packages:
   - packages/*
   - services/*
   - services/meridian-ml-service/cf-worker
+  # 原型与 eval harness 也纳入 workspace：此前它们不在任何 glob 里，pnpm 把每个都当独立项目，
+  # 16 个目录各装一份依赖、各维护一份 lock，新建原型还要记得 `--ignore-workspace`。
+  # 纳入后 `pnpm install` 一次装完，各目录只留 package.json。
+  - apps/*/prototypes/*
+  - services/*/prototypes/*
+  - scripts/eval/*
 
 ignoredBuiltDependencies:
   - workerd

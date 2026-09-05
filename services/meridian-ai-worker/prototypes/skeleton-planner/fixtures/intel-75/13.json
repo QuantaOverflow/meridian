@@ -1,0 +1,101 @@
+{
+  "storyId": "story-netherlands-—-dutch-court-convicts-rwandan-man-for-1994-genocide",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, a Dutch court has sentenced a 66-year-old Rwandan man to life imprisonment for his role in the 1994 genocide. The court found him guilty of participating in attacks that included looting, arson, and throwing a grenade into a crowd of Tutsis sheltering in a football stadium in Mbazi, southern Rwanda. The verdict was delivered on Friday, with the court stating that only a lifelong prison sentence does justice to the immense suffering that has been inflicted on the victims and the bereaved families.",
+  "storyStatus": "CONCLUDING",
+  "timeline": [
+    {
+      "date": "Friday",
+      "dateSource": "A Dutch court on Friday handed a life sentence to a 66-year-old man for his role in the massacre of 3,000 Tutsis during the 1994 Rwanda genocide.",
+      "description": "The Dutch court delivers a life sentence to the defendant for his role in the Rwandan genocide.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "1994",
+      "dateSource": "During the violence that took place in April 1994, terrified victims sought refuge in a football stadium in Mbazi, southern Rwanda, only to be systematically slaughtered.",
+      "description": "During the violence that took place in April 1994, terrified victims sought refuge in a football stadium in Mbazi, southern Rwanda, only to be systematically slaughtered.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Earlier this year",
+      "dateSource": "Nine victims or their next of kin attended the trial earlier this year.",
+      "description": "Victims or their next of kin attended the trial.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "After the genocide",
+      "dateSource": "The defendant left Rwanda after the genocide and settled in the Netherlands, where he was arrested and prosecuted.",
+      "description": "The defendant leaves Rwanda, settles in the Netherlands, and is subsequently arrested and prosecuted.",
+      "importance": "MEDIUM"
+    }
+  ],
+  "significance": {
+    "level": "HIGH",
+    "reasoning": "This story represents a significant application of international justice, as it involves the prosecution of a foreign national for crimes committed abroad. The sentencing of a defendant to life imprisonment for participation in the 1994 genocide underscores the ongoing efforts to hold perpetrators accountable for one of the 20th century's worst atrocities."
+  },
+  "entities": [
+    {
+      "name": "Eugene N.",
+      "type": "Person",
+      "role": "A 66-year-old man identified by the SCMP as the defendant who was sentenced to life imprisonment by a Dutch court for his role in the Rwandan genocide.",
+      "positions": []
+    },
+    {
+      "name": "Dutch Court",
+      "type": "Organization",
+      "role": "The court in The Hague that convicted the defendant and sentenced him to life imprisonment, stating that his actions were committed with 'genocidal intent', said the presiding judge handing down the verdict.",
+      "positions": []
+    },
+    {
+      "name": "Mbazi",
+      "type": "Location",
+      "role": "A location in southern Rwanda where victims sought refuge in a football stadium before being systematically slaughtered.",
+      "positions": []
+    },
+    {
+      "name": "Tutsis",
+      "type": "Group",
+      "role": "The victims of the genocide, with the SCMP reporting a massacre of 3,000 Tutsis during the 1994 Rwanda genocide in Mbazi and the ABC News reporting over 800,000 Tutsis and moderate Hutus killed in total.",
+      "positions": []
+    },
+    {
+      "name": "Rwandan Government / Hutu Extremists",
+      "type": "Organization",
+      "role": "The ABC News article states the genocide was orchestrated by Hutu extremists, though the specific individuals or government bodies are not named in the provided text.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        772270,
+        772819
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting comes from two distinct sources, SCMP and ABC News, which provide different details about the defendant's identity and the specific victim count. This discrepancy suggests a need for cross-verification, though both appear to be standard wire services reporting on the same court event."
+    }
+  ],
+  "factualBasis": [
+    "The Dutch court delivers a life sentence to the defendant for his role in the Rwandan genocide.",
+    "During the violence that took place in April 1994, terrified victims sought refuge in a football stadium in Mbazi, southern Rwanda, only to be systematically slaughtered.",
+    "Victims or their next of kin attended the trial.",
+    "The defendant leaves Rwanda, settles in the Netherlands, and is subsequently arrested and prosecuted."
+  ],
+  "informationGaps": [
+    "The articles do not specify the exact charges or the specific laws under which the defendant was convicted.",
+    "There is no information provided regarding the appeals process or whether the defendant plans to appeal the life sentence.",
+    "The ABC News article mentions that 'many leaders of the slaughter were tried and convicted by a United Nations war crimes tribunal that has now closed down,' but does not name any of these leaders or provide details on the tribunal's final cases.",
+    "The specific role of the defendant in the 'attacks preceding the stadium massacre' is not detailed beyond the general description of 'houses were looted and set on fire'."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

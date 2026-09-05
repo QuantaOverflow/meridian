@@ -1,0 +1,121 @@
+{
+  "storyId": "story-meta-agrees-to-$17b+-settlement-over-child-safety-and-teen-app-changes",
+  "status": "COMPLETE",
+  "executiveSummary": "A landmark lawsuit against Meta has resulted in a settlement requiring the company to pay up to $17 billion and implement sweeping changes to its apps for teenage users, including default time limits and night-time blocks. Separately, catastrophic flash floods in Nepal and Tibet have caused conflicting casualty reports, while the Trump administration advances regulatory changes to nuclear safety standards and mail-in voting. A federal judge has, for a second time, struck down a Texas state law banning drag performances in settings where children may be present. US district judge David Hittner said Texas cannot enforce its drag show ban. He said the measure improperly restricted speech and violated the first amendment of the constitution.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Wednesday",
+      "dateSource": "As this visual guide explains, at 8:37am on Wednesday an enormous section of a glacier in the Himalayas sheared free",
+      "description": "A glacier collapsed in Nepal's Langtang national park, triggering massive flash floods that swept through valleys and villages.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Yesterday",
+      "dateSource": "A federal judge in Boston yesterday canceled her nationwide ruling",
+      "description": "A federal judge canceled a ruling that blocked the USPS from following President Trump's executive order limiting mail-in voting.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Tuesday",
+      "dateSource": "Actor Tim Curry died on Tuesday at the age of 80.",
+      "description": "Actor Tim Curry, known for his role in The Rocky Horror Picture Show, died.",
+      "importance": "LOW"
+    },
+    {
+      "date": "August 18, 2026",
+      "dateSource": "California Attorney General Rob Bonta speaks to reporters at a press conference after opening arguments took place in the Meta trial",
+      "description": "Opening arguments took place in the Meta trial regarding social media addiction.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "August 31",
+      "dateSource": "The public comment period ends on Aug. 31",
+      "description": "The public comment period for the Nuclear Regulatory Commission's proposed radiation safety rule ends.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "2026",
+      "dateSource": "By 2018, student suspensions had decreased from 5.6% to 4.7%, NPR reported.",
+      "description": "Data indicates a reduction in student suspensions following the 2014 Obama administration guidance.",
+      "importance": "LOW"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The Meta settlement represents a major shift in corporate liability for social media addiction and sets a potential precedent for industry-wide regulation. The Nepal-Tibet floods constitute a significant humanitarian crisis with international implications. The regulatory changes to nuclear safety and voting access have profound implications for public health and democratic processes."
+  },
+  "entities": [
+    {
+      "name": "Meta",
+      "type": "Organization",
+      "role": "The parent company of Facebook and Instagram, which has agreed to pay up to $18 billion in penalties and change its app design for teenage users.",
+      "positions": []
+    },
+    {
+      "name": "California Attorney General Rob Bonta",
+      "type": "Person",
+      "role": "The California Attorney General Rob Bonta who accused Meta of designing addictive products for children and spoke at a press conference during the trial.",
+      "positions": []
+    },
+    {
+      "name": "Nepal and Tibet",
+      "type": "Location",
+      "role": "The site of massive flash floods caused by a glacier collapse, resulting in conflicting reports of at least 270 deaths and more than 1,500 people are confirmed missing.",
+      "positions": []
+    },
+    {
+      "name": "Trump Administration",
+      "type": "Organization",
+      "role": "The current US administration associated with executive orders limiting mail-in voting and promoting nuclear energy, which aligns with the Nuclear Regulatory Commission's proposed rule changes.",
+      "positions": []
+    },
+    {
+      "name": "Nuclear Regulatory Commission (NRC)",
+      "type": "Organization",
+      "role": "The agency preparing to eliminate a 50-year-old radiation safety rule known as 'As Low As Reasonably Achievable' (ALARA) to promote nuclear energy.",
+      "positions": []
+    },
+    {
+      "name": "CIA Director John Ratcliffe",
+      "type": "Person",
+      "role": "The CIA Director John Ratcliffe who visited Moscow unannounced, a visit the White House has downplayed as 'semi-routine'.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        758843,
+        759361
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting comes from reputable sources (NPR and The Guardian), but the articles contain significant numerical contradictions regarding the financial settlement ($17B vs $18B) and the death toll of the Nepal-Tibet floods (270 vs 165). This inconsistency suggests potential errors in reporting or conflicting data sources."
+    }
+  ],
+  "factualBasis": [
+    "A glacier collapsed in Nepal's Langtang national park, triggering massive flash floods that swept through valleys and villages.",
+    "A federal judge canceled a ruling that blocked the USPS from following President Trump's executive order limiting mail-in voting.",
+    "Actor Tim Curry, known for his role in The Rocky Horror Picture Show, died.",
+    "Opening arguments took place in the Meta trial regarding social media addiction.",
+    "The public comment period for the Nuclear Regulatory Commission's proposed radiation safety rule ends.",
+    "Data indicates a reduction in student suspensions following the 2014 Obama administration guidance."
+  ],
+  "informationGaps": [
+    "The articles do not specify the exact date the Meta settlement agreement was reached, only that it ended a trial that began on August 18, 2026.",
+    "The articles do not specify the exact date the Nuclear Regulatory Commission's proposed rule changes were announced, only that the public comment period ends on Aug. 31.",
+    "The articles do not specify the exact date the Nepal-Tibet floods occurred, only that they happened 'on Wednesday'.",
+    "The articles do not specify the exact date the US District Judge Indira Talwani made her ruling regarding the USPS executive order, only that she did so 'yesterday'."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

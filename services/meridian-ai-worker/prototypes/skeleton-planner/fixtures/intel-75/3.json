@@ -1,0 +1,122 @@
+{
+  "storyId": "story-meta-agrees-to-$17-billion-settlement-with-29-us-states-over-child-safety",
+  "status": "COMPLETE",
+  "executiveSummary": "Meta has agreed to a landmark settlement with a coalition of US state attorneys general to resolve a lawsuit alleging the company knowingly harmed young people's mental health through addictive design features. The settlement requires Meta to pay up to $17.1 billion and implement sweeping changes to Instagram and Facebook, including daily time limits, nighttime blocks, and restrictions on 'like' counts. The deal, described as the largest consumer protection settlement in history outside of Big Tobacco, was announced on Wednesday and is expected to be approved by a federal judge.",
+  "storyStatus": "CONCLUDING",
+  "timeline": [
+    {
+      "date": "2023",
+      "dateSource": "sued the tech giant in 2023",
+      "description": "Meta was sued by 29 state attorneys general.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "August 18",
+      "dateSource": "The case, which started on August 18",
+      "description": "The trial began in Oakland, California, on August 18.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "late Tuesday",
+      "dateSource": "Adam Mosseri, the head of Instagram, began his testimony late Tuesday",
+      "description": "Adam Mosseri, the head of Instagram, testified during the trial.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Wednesday",
+      "dateSource": "state attorneys general announced on Wednesday",
+      "description": "Meta and the state attorneys general reached a settlement on Wednesday.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "September 4, 2025",
+      "dateSource": "Meta CEO Mark Zuckerberg attends a dinner hosted by US President Donald Trump... on September 4, 2025",
+      "description": "Meta CEO Mark Zuckerberg attended a dinner hosted by US President Donald Trump with tech leaders for a dinner in the State Dining Room of the White House in Washington, DC, on September 4, 2025.",
+      "importance": "LOW"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "This story represents a major regulatory and legal victory for state governments over a global technology giant, setting a precedent for future actions against social media companies. The reporting describes a settlement that could fundamentally alter the design and operation of two of the world's most popular social media platforms, with direct implications for the mental health and safety of millions of young users globally."
+  },
+  "entities": [
+    {
+      "name": "Meta Platforms",
+      "type": "Organization",
+      "role": "The social media giant that agreed to the settlement and is required to pay fines and implement platform changes.",
+      "positions": []
+    },
+    {
+      "name": "Mark Zuckerberg",
+      "type": "Person",
+      "role": "The CEO of Meta, who was expected to testify but whose testimony was cut short by the settlement.",
+      "positions": []
+    },
+    {
+      "name": "State Attorneys General",
+      "type": "Organization",
+      "role": "A coalition of attorneys general from 29 US states who filed the lawsuit and announced the settlement.",
+      "positions": []
+    },
+    {
+      "name": "Jay Jones",
+      "type": "Person",
+      "role": "Attorney General Jay Jones, who described the settlement as one of the biggest in state consumer protection history.",
+      "positions": []
+    },
+    {
+      "name": "Adam Mosseri",
+      "type": "Person",
+      "role": "The head of Instagram, who testified during the trial and defended Meta's record on child safety.",
+      "positions": []
+    },
+    {
+      "name": "US District Judge Yvonne Gonzalez Rogers",
+      "type": "Person",
+      "role": "US District Judge Yvonne Gonzalez Rogers, who was overseeing the proceedings.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        746271,
+        746818,
+        746872,
+        747041,
+        747116,
+        751139
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting comes from a mix of reputable international news outlets (Independent, SCMP, France 24, Al Jazeera), which generally increases reliability. However, there are significant contradictions in the reporting, particularly regarding the number of states involved (29 vs. 47) and the exact settlement amount ($16.68bn vs. $17.1bn). The Independent also reports on a future event (the Trump dinner), which suggests a potential error in its reporting or a misunderstanding of the timeline."
+    }
+  ],
+  "factualBasis": [
+    "Meta was sued by 29 state attorneys general.",
+    "The trial began in Oakland, California, on August 18.",
+    "Adam Mosseri, the head of Instagram, testified during the trial.",
+    "Meta and the state attorneys general reached a settlement on Wednesday.",
+    "Meta CEO Mark Zuckerberg attended a dinner hosted by US President Donald Trump with tech leaders for a dinner in the State Dining Room of the White House in Washington, DC, on September 4, 2025."
+  ],
+  "informationGaps": [
+    "The articles do not specify which states are part of the 29 or 47-state coalition, beyond naming California, Colorado, Kentucky, New Jersey, Virginia, and the District of Columbia.",
+    "The exact timeline for the implementation of the platform changes is not detailed in the reporting.",
+    "The articles do not mention whether the settlement has been officially approved by the court.",
+    "The Independent's report on the Trump dinner raises questions about the accuracy of its timeline and reporting of events."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

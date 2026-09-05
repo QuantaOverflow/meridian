@@ -1,0 +1,162 @@
+{
+  "storyId": "story-russia-threatens-uk-military-bases-over-ukraine-missile-support",
+  "status": "COMPLETE",
+  "executiveSummary": "Russian officials have issued explicit threats to strike British military targets both within and outside Ukraine following the UK and France's decision to provide Ukraine with classified technology for domestic production of Storm Shadow cruise missiles. Russia’s foreign ministry spokeswoman told Britain to back off on what she called London's hostile stance on Ukraine, which she said risked taking the conflict to an entirely new level. She also told the same briefing that Britain and France were 'playing with fire' by supplying sensitive missile technology to Ukraine. while UK Prime Minister Andy Burnham has dismissed the threats and reaffirmed his commitment to Ukraine. The reporting also notes a visit by CIA Director John Ratcliffe to Moscow, which Moscow and US President Donald Trump have dismissed as routine.",
+  "storyStatus": "ESCALATING",
+  "timeline": [
+    {
+      "date": "Monday",
+      "dateSource": "Britain announced on Monday it would allow Kyiv access to classified technology to start its own production of Storm Shadow long-range cruise missiles",
+      "description": "UK government decision to grant Ukraine access to classified technology for domestic production of Storm Shadow missiles.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Russia has warned it could strike British military targets both inside and outside Ukraine over the UK’s support for Kyiv.",
+      "description": "Russian Foreign Ministry Spokeswoman Maria Zakharova issues a formal threat to target UK military sites in response to the UK's actions.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Russia’s foreign ministry spokeswoman told Britain to back off on what she called London's hostile stance on Ukraine",
+      "description": "Zakharova told Britain to back off on what she called London's hostile stance on Ukraine, which she said risked taking the conflict to an entirely new level. She also told the same briefing that Britain and France were 'playing with fire' by supplying sensitive missile technology to Ukraine.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Kremlin spokesman Dmitry Peskov said it would add “fuel to the fire” of the conflict.",
+      "description": "Peskov condemns the UK's decision, stating it will escalate the conflict.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Kremlin adviser Andrei Fedorov warned British factories manufacturing drones for Ukraine could face targeting by 'unknown sources.'",
+      "description": "Fedorov warned British factories manufacturing drones for Ukraine could face targeting by 'unknown sources' and could be attacked, not by Russia, but by 'unknown sources'.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Thursday",
+      "dateSource": "Kremlin spokesperson Dmitry Peskov has dismissed reports that CIA chief John Ratcliffe warned Moscow against attacking Nato",
+      "description": "Peskov calls reports of a CIA warning 'scare-story material' and says they have 'nothing to do with reality'.",
+      "importance": "LOW"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The threat to strike UK military targets directly involves a NATO member state and escalates the conflict beyond the borders of Ukraine, with Russia warning it could strike targets 'inside and outside Ukraine'. The decision to allow Ukraine access to classified technology to begin domestic production of Storm Shadow long-range cruise missiles represents a significant deepening of Western support, which Russia has explicitly linked to potential attacks on the UK."
+  },
+  "entities": [
+    {
+      "name": "Maria Zakharova",
+      "type": "Person",
+      "role": "Russian Foreign Ministry Spokeswoman who issued threats against the UK and accused it of 'playing with fire'.",
+      "positions": []
+    },
+    {
+      "name": "Dmitry Peskov",
+      "type": "Person",
+      "role": "Kremlin Spokesman who condemned the UK's actions and dismissed reports of a CIA warning against attacking NATO.",
+      "positions": []
+    },
+    {
+      "name": "Andy Burnham",
+      "type": "Person",
+      "role": "UK Prime Minister who visited Kyiv, announced the missile technology transfer, and dismissed Russian threats.",
+      "positions": []
+    },
+    {
+      "name": "John Ratcliffe",
+      "type": "Person",
+      "role": "CIA Director who reportedly visited Moscow and warned Russia against attacking NATO, though this visit was dismissed by the Kremlin and US President.",
+      "positions": []
+    },
+    {
+      "name": "Donald Trump",
+      "type": "Person",
+      "role": "US President who dismissed concerns about a potential Russian attack on NATO and called the CIA director's visit 'standard business'.",
+      "positions": []
+    },
+    {
+      "name": "Russia",
+      "type": "Country",
+      "role": "The state issuing threats against the UK and accusing it of a 'hostile stance' and seeking to 'contain' Russia.",
+      "positions": []
+    },
+    {
+      "name": "United Kingdom",
+      "type": "Country",
+      "role": "The state providing missile technology to Ukraine and facing threats of military retaliation.",
+      "positions": []
+    },
+    {
+      "name": "France",
+      "type": "Country",
+      "role": "The state that agreed to license missile technology for Ukraine alongside the UK.",
+      "positions": []
+    },
+    {
+      "name": "Ukraine",
+      "type": "Country",
+      "role": "The recipient of missile technology and the subject of the conflict with Russia.",
+      "positions": []
+    },
+    {
+      "name": "Storm Shadow",
+      "type": "Weapon",
+      "role": "A long-range cruise missile for which the UK is providing classified technology to Ukraine for domestic production.",
+      "positions": []
+    },
+    {
+      "name": "Scalp Missile",
+      "type": "Weapon",
+      "role": "The French version of the Storm Shadow missile, the Scalp missile, for which the UK is releasing blueprints for Ukraine to produce.",
+      "positions": []
+    },
+    {
+      "name": "RAF Akrotiri",
+      "type": "Location",
+      "role": "A UK military base in Cyprus that was targeted by an unmanned drone strike from Iran, which hit the airport runway at RAF Akrotiri.",
+      "positions": []
+    },
+    {
+      "name": "NATO",
+      "type": "Organization",
+      "role": "The alliance of which the UK is a member, which US intelligence assessments suggest Russia might test with a limited assault on an allied country.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        758017,
+        758102,
+        758543,
+        760293,
+        768884
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting is based on official statements from the Russian Foreign Ministry and Kremlin, as well as direct quotes from UK Prime Minister Andy Burnham and Kremlin adviser Andrei Fedorov. The articles are from reputable news organizations (The Independent, Times of India, SCMP) and provide consistent accounts of the events."
+    }
+  ],
+  "factualBasis": [
+    "UK government decision to grant Ukraine access to classified technology for domestic production of Storm Shadow missiles.",
+    "Russian Foreign Ministry Spokeswoman Maria Zakharova issues a formal threat to target UK military sites in response to the UK's actions.",
+    "Zakharova told Britain to back off on what she called London's hostile stance on Ukraine, which she said risked taking the conflict to an entirely new level. She also told the same briefing that Britain and France were 'playing with fire' by supplying sensitive missile technology to Ukraine.",
+    "Peskov condemns the UK's decision, stating it will escalate the conflict.",
+    "Fedorov warned British factories manufacturing drones for Ukraine could face targeting by 'unknown sources' and could be attacked, not by Russia, but by 'unknown sources'.",
+    "Peskov calls reports of a CIA warning 'scare-story material' and says they have 'nothing to do with reality'."
+  ],
+  "informationGaps": [
+    "Specific Targets: While the Independent's 'Mapped' article lists specific UK military bases as potential targets, the other articles only state the general threat to targets 'inside and outside Ukraine.' It is unclear if the specific list in the 'Mapped' article is based on official Russian statements or independent analysis.",
+    "Nature of the Threat: The reporting does not specify the *type* of retaliation (e.g., cyberattack, kinetic strike, propaganda) or the *timing* of any potential attack.",
+    "Details of the Tech Transfer: The articles do not specify the exact nature of the 'classified technology' or 'blueprints' being shared with Ukraine.",
+    "UK Government Response: The articles report that Prime Minister Burnham dismissed the threats but do not detail the official response from the UK Foreign Office or Ministry of Defence."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

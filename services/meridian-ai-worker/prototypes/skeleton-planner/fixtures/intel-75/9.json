@@ -1,0 +1,119 @@
+{
+  "storyId": "story-us-—-9/11-mastermind-khalid-sheikh-mohammed-trial-set-for-june-2028",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, a U.S. military judge has set a trial date of June 5, 2028, for Khalid Sheikh Mohammed and three co-defendants accused of the September 11 attacks. This date is 18 months later than prosecutors requested, due to unresolved pretrial disputes over evidence. The trial is set to proceed despite a previous federal appeals court rejection of a plea deal that would have spared the defendants the death penalty.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "2026-08-27",
+      "dateSource": "A US military judge has set a 5 June 2028 trial date",
+      "description": "A U.S. military judge sets the trial date for Khalid Sheikh Mohammed and three co-defendants for June 5, 2028.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "last year",
+      "dateSource": "A federal appeals court last year rejected a plea deal",
+      "description": "A federal appeals court last year rejected a plea deal that would have allowed Mohammed to plead guilty and avoid the possibility of execution.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2024",
+      "dateSource": "Mohammed and two of his co-defendants struck a deal in 2024",
+      "description": "Mohammed and two of his co-defendants struck a deal in 2024 that would have spared them the possibility of the death penalty in exchange for a guilty plea.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "March 2003",
+      "dateSource": "captured in March 2003 in Pakistan",
+      "description": "Khalid Sheikh Mohammed is captured by U.S. forces in Pakistan.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "2021",
+      "dateSource": "A previous trial scheduled for 2021 was cancelled",
+      "description": "A trial previously scheduled for 2021 is cancelled.",
+      "importance": "MEDIUM"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "This story concerns the prosecution of the alleged mastermind of the deadliest terrorist attack in U.S. history. The outcome of this trial and the legal precedents it sets regarding evidence obtained through torture and the death penalty are of profound global importance. The reporting indicates a significant milestone in the long-delayed pursuit of justice for the 9/11 attacks."
+  },
+  "entities": [
+    {
+      "name": "Khalid Sheikh Mohammed",
+      "type": "Person",
+      "role": "The alleged mastermind of the September 11 attacks and one of Osama bin Laden's top lieutenants. He is accused of developing and directing the plot to hijack passenger planes.",
+      "positions": []
+    },
+    {
+      "name": "Walid bin Attash",
+      "type": "Person",
+      "role": "An alleged accomplice of Khalid Sheikh Mohammed, accused of helping organize or facilitate the attacks.",
+      "positions": []
+    },
+    {
+      "name": "Ali Abdul Aziz Ali",
+      "type": "Person",
+      "role": "An alleged accomplice of Khalid Sheikh Mohammed, accused of helping organize or facilitate the attacks.",
+      "positions": []
+    },
+    {
+      "name": "Mustafa al-Hawsawi",
+      "type": "Person",
+      "role": "An alleged accomplice of Khalid Sheikh Mohammed, accused of helping organize or facilitate the attacks.",
+      "positions": []
+    },
+    {
+      "name": "Michael Schrama",
+      "type": "Person",
+      "role": "Air Force Lieutenant Colonel Michael Schrama issued the scheduling order on Wednesday, setting opening proceedings for June 5, 2028.",
+      "positions": []
+    },
+    {
+      "name": "Lloyd Austin",
+      "type": "Person",
+      "role": "Then-Defense Secretary Lloyd Austin revoked that deal within days and an appeals court backed his move last month.",
+      "positions": []
+    },
+    {
+      "name": "Joe Biden",
+      "type": "Person",
+      "role": "The Biden administration later rejected the deal after two years of negotiations.",
+      "positions": []
+    },
+    {
+      "name": "Osama bin Laden",
+      "type": "Person",
+      "role": "The deceased leader of Al-Qaeda, regarded by the articles as the chief for whom Mohammed was a key lieutenant.",
+      "positions": []
+    },
+    {
+      "name": "Guantanamo Bay",
+      "type": "Location",
+      "role": "The U.S. military base in Cuba where Mohammed and his co-defendants have been held for more than two decades.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        756731,
+        758749,
+        760296
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting comes from three distinct, reputable international news organizations (Euronews, Al Jazeera, The Independent) that consistently corroborate the key facts, including the specific trial date, the defendants, and the rejection of the plea deal. The information is detailed and provides a clear, unified narrative."
+    }
+  ],
+  "factualBasis": [
+    "A U.S. military judge sets the trial date for Khalid Sheikh Mohammed and three co-defendants for June 5, 2028.",
+    "A federal appeals court last year rejected a plea deal that would have allowed Mohammed to plead guilty and avoid the possibility of execution.",
+    "Mohammed and two of his co-defendants struck a deal in 2024 that would have spared them the possibility of the death penalty in exchange for a guilty plea.",
+    "Khalid Sheikh Mohammed is captured by U.S. forces in Pakistan.",
+    "A trial previously scheduled for 2021 is cancelled."
+  ],
+  "informationGaps": [],
+  "contradictions": []
+}

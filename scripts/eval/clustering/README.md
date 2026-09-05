@@ -35,10 +35,10 @@
 
 ```bash
 cd scripts/eval/clustering
-TSX=../../../apps/backend/prototypes/cluster-postprocess/node_modules/.bin/tsx   # 本目录无 package.json
 S=../../../apps/backend/prototypes/_data/cluster-sweep
 
-$TSX gold-score.ts $S/hdb-eps0.35-eom-s42.json $S/hdb-eps0.30-eom-s42.json
+pnpm run score -- --window=F2 --min=3 $S/F2-fine-avg-t0.10.json      # 产品口径（主用）
+pnpm run score:full -- --window=F2 --loose $S/F2-fine-avg-t0.10.json # ARI / B-cubed（诊断）
 ```
 
 输入是 `{ "labels": { "<articleId>": <clusterId 或 -1> } }`。任何聚类实现只要能吐这个形状就能被评。

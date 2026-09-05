@@ -1,0 +1,168 @@
+{
+  "storyId": "story-iran,-oman-negotiate-temporary-shipping-corridor-in-strait-of-hormuz",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, US President Donald Trump and US Central Command claim the Strait of Hormuz is open and mines have been cleared, while Iranian officials deny this and maintain the waterway remains closed or dangerous. Concurrently, Iran and Oman are negotiating a temporary shipping corridor that would exclude military vessels, though the status of a final agreement remains unclear. The US maintains a naval blockade and sanctions campaign, while the UN reports thousands of sailors remain trapped and global oil supply chains are disrupted.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "2026-08-26",
+      "dateSource": "Published: 2026-08-26T17:05:57.000Z",
+      "description": "US President Donald Trump claimed on his Truth Social platform that Iran has been notified that any ship or boat placing new mines will be immediately and systematically destroyed.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-26",
+      "dateSource": "Published: 2026-08-26T17:05:57.000Z",
+      "description": "Iran’s Deputy Foreign Minister Kazem Gharibabadi said the strait remains closed, while he dismissed Trump’s claim that all mines had been cleared.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-26",
+      "dateSource": "Published: 2026-08-26T20:29:00.000Z",
+      "description": "In Tehran on Tuesday, the Iranian and Omani foreign ministers discussed a framework agreement that would establish a 'temporary corridor' for shipping and a project to clear mines in the strait, according to a joint statement.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-27",
+      "dateSource": "Published: 2026-08-27T04:20:30.000Z",
+      "description": "Tehran won’t allow military vessels to transit through the Strait of Hormuz under the agreement that the Islamic Republic is negotiating with Oman, Minister Kazem Gharibabadi, Iran’s deputy foreign minister, said on Tuesday.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-27",
+      "dateSource": "Published: 2026-08-27T05:55:50.000Z",
+      "description": "Speaking to Fox News on Wednesday, the US president repeated his claim that the vital oil waterway is 'open' and had been fully demined despite continued attacks on ships.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-27",
+      "dateSource": "Published: 2026-08-27T05:55:50.000Z",
+      "description": "The Islamic Revolutionary Guard Corps said Iran and Oman had reached an understanding on their respective shares of the strait’s waters and revenues.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "2026-08-27",
+      "dateSource": "Published: 2026-08-27T05:55:50.000Z",
+      "description": "A senior Iranian source said no final agreement had been reached, adding that talks were continuing.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "2026-08-28",
+      "dateSource": "Published: 2026-08-28T05:39:27.000Z",
+      "description": "Iran’s Supreme National Security Council secretary Mohsen Rezaei has warned that Tehran would retaliate against US economic interests if the US continued with the blockade of Iranian ports.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-28",
+      "dateSource": "Published: 2026-08-28T05:39:27.000Z",
+      "description": "US military commanders have claimed that American forces have cleared sea mines from the Strait of Hormuz that had been laid months ago by Iran's Islamic Revolutionary Guard Corps.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "2026-08-28",
+      "dateSource": "Published: 2026-08-28T11:17:34.000Z",
+      "description": "Around 6,000 sailors on 400 ships are still unable to leave the Strait of Hormuz, the United Nations' International Maritime Organization (IMO) said Friday.",
+      "importance": "HIGH"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The Strait of Hormuz is a vital global energy chokepoint, and its status directly impacts global oil supplies and prices. The reporting describes a high-risk environment with ongoing military posturing, economic warfare, and diplomatic stalemate. The potential for renewed conflict or a negotiated settlement in this region has immediate and far-reaching consequences for the global economy and international security."
+  },
+  "entities": [
+    {
+      "name": "Donald Trump",
+      "type": "Person",
+      "role": "US President who claimed the Strait of Hormuz is open and mines are cleared, threatened Oman with bombing, and stated he has 'no time schedule' for talks with Iran.",
+      "positions": []
+    },
+    {
+      "name": "Kazem Gharibabadi",
+      "type": "Person",
+      "role": "Iran’s Deputy Foreign Minister who stated the strait remains closed, dismissed US mine-clearing claims, and outlined Iran's conditions for reopening the waterway.",
+      "positions": []
+    },
+    {
+      "name": "Oman",
+      "type": "Country",
+      "role": "A Gulf state negotiating with Iran to establish a temporary shipping corridor and clear mines, while trying to balance its relationship with the US.",
+      "positions": []
+    },
+    {
+      "name": "US Navy / US Central Command",
+      "type": "Organization",
+      "role": "US military forces that claim to have cleared mines from the Strait of Hormuz, helped 1,500 vessels transit, and maintain a naval blockade on Iranian ports.",
+      "positions": []
+    },
+    {
+      "name": "Islamic Revolutionary Guard Corps (IRGC)",
+      "type": "Organization",
+      "role": "Iran's paramilitary force that reportedly laid mines in the Strait, claimed to have reached an agreement with Oman on sharing revenues, and is involved in the negotiations.",
+      "positions": []
+    },
+    {
+      "name": "Strait of Hormuz",
+      "type": "Place",
+      "role": "A vital waterway through which about one-fifth of the world's oil and natural gas supplies pass, which has been the subject of conflict, blockade, and negotiation.",
+      "positions": []
+    },
+    {
+      "name": "Scott Bessent",
+      "type": "Person",
+      "role": "US Treasury Secretary who announced 'Operation Economic Outcast' to destroy Iran's economy and warned China to 'get with the program'.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        748220,
+        750620,
+        754973,
+        755686,
+        769460,
+        772444
+      ],
+      "reliabilityLevel": "MODERATE",
+      "bias": "The reporting comes from a mix of established international news outlets (Al Jazeera, France 24, CBS News) and wire services (Reuters, AFP). While these sources generally have high reliability, the content contains significant contradictions between US and Iranian claims, as well as conflicting internal reports from Iran (e.g., IRGC vs. senior source). The inclusion of unverified claims about the health of Iran's Supreme Leader further complicates the assessment of reliability."
+    }
+  ],
+  "factualBasis": [
+    "US President Donald Trump claimed on his Truth Social platform that Iran has been notified that any ship or boat placing new mines will be immediately and systematically destroyed.",
+    "Iran’s Deputy Foreign Minister Kazem Gharibabadi said the strait remains closed, while he dismissed Trump’s claim that all mines had been cleared.",
+    "In Tehran on Tuesday, the Iranian and Omani foreign ministers discussed a framework agreement that would establish a 'temporary corridor' for shipping and a project to clear mines in the strait, according to a joint statement.",
+    "Tehran won’t allow military vessels to transit through the Strait of Hormuz under the agreement that the Islamic Republic is negotiating with Oman, Minister Kazem Gharibabadi, Iran’s deputy foreign minister, said on Tuesday.",
+    "Speaking to Fox News on Wednesday, the US president repeated his claim that the vital oil waterway is 'open' and had been fully demined despite continued attacks on ships.",
+    "The Islamic Revolutionary Guard Corps said Iran and Oman had reached an understanding on their respective shares of the strait’s waters and revenues.",
+    "A senior Iranian source said no final agreement had been reached, adding that talks were continuing.",
+    "Iran’s Supreme National Security Council secretary Mohsen Rezaei has warned that Tehran would retaliate against US economic interests if the US continued with the blockade of Iranian ports.",
+    "US military commanders have claimed that American forces have cleared sea mines from the Strait of Hormuz that had been laid months ago by Iran's Islamic Revolutionary Guard Corps.",
+    "Around 6,000 sailors on 400 ships are still unable to leave the Strait of Hormuz, the United Nations' International Maritime Organization (IMO) said Friday."
+  ],
+  "informationGaps": [
+    "The articles do not provide a definitive calendar date for when the war between the US and Iran began (only that it is 'nearly six months ago' from the August 2026 reporting).",
+    "There is no information on the specific details of the 'temporary transit-route agreement with Oman' mentioned by Iran, other than the proposed framework.",
+    "The reporting does not specify the exact number of mines cleared or the methods used by the US Navy, beyond general references to drones and surveillance.",
+    "The articles do not mention the status of the 'interim ceasefire agreement reached in June' that Iran claims is the basis for its demands.",
+    "There is no information on the specific terms of the 'voluntary fees' Oman agreed to collect from vessels, other than that Washington opposes them."
+  ],
+  "contradictions": [
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    },
+    {
+      "issue": "Contradiction",
+      "conflictingClaims": []
+    }
+  ]
+}

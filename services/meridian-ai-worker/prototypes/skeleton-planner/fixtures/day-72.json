@@ -1,0 +1,19 @@
+{
+  "reportId": 72, "storyRows": 25, "actualBlocksInBrief": 14,
+  "events": [
+    { "clusterId": 67, "importance": 7, "articles": 35, "titles": ["US announces 'economic D-Day' sanctions against Iran", "US-Iran economic tensions and China's role", "US — Trump administration announces 'Operation Economic Outcast' and new Iran sanctions", "US — Trump administration announces new sanctions plan against Iran", "US sanctions on Iran and Chinese entities", "Pakistan's mediation efforts and US-Iran tensions"] },
+    { "clusterId": 14, "importance": 7, "articles": 22, "titles": ["US — Trump announces 50% auto tariffs on Canada effective Jan 1, 2027", "US imposes 50% tariffs on $20bn of Canadian goods, triggering retaliation", "Trump threatens to rename Lake Ontario to 'Lake America'", "US-Canada trade war escalates with tariff threats and retaliatory measures"] },
+    { "clusterId": 1, "importance": 7, "articles": 15, "titles": ["UK PM Burnham visits Kyiv and announces missile tech transfer to Ukraine", "UK PM Andy Burnham visits Kyiv and announces missile support"] },
+    { "clusterId": 62, "importance": 7, "articles": 9, "titles": ["Colombia — President orders immigration raids and deportations", "US to revoke 200,000 visas of asylum seekers"] },
+    { "clusterId": 47, "importance": 7, "articles": 8, "titles": ["US — Trump administration proposes $103,265 H-1B visa fee"] },
+    { "clusterId": 40, "importance": 7, "articles": 8, "titles": ["France and Saudi Arabia plan $7bn theme park project near Paris", "US — Syria removed from state sponsors of terrorism list"] },
+    { "clusterId": 65, "importance": 7, "articles": 5, "titles": ["US Supreme Court rules on Trump's mail-in voting restrictions"] },
+    { "clusterId": 60, "importance": 7, "articles": 5, "titles": ["FIFA — Governance crisis and calls for Infantino to resign"] },
+    { "clusterId": 48, "importance": 7, "articles": 3, "titles": ["India — UPI payment system celebrates 10th anniversary"] },
+    { "clusterId": 70, "importance": 7, "articles": 2, "titles": ["Hong Kong — Shein stock market debut"] },
+    { "clusterId": 34, "importance": 6, "articles": 6, "titles": ["New Zealand — government introduces bill to ban social media for under-16s"] },
+    { "clusterId": 21, "importance": 6, "articles": 5, "titles": ["Netanyahu claims Iran attempted to assassinate his son"] },
+    { "clusterId": 5, "importance": 6, "articles": 4, "titles": ["US — Judge postpones trial of Libyan man in 1988 Lockerbie bombing"] },
+    { "clusterId": 39, "importance": 6, "articles": 2, "titles": ["USA — Lindsay Clancy murder trial testimony on mental state"] }
+  ]
+}

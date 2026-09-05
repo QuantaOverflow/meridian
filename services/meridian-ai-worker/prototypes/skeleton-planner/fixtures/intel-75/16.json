@@ -1,0 +1,125 @@
+{
+  "storyId": "story-nepal-—-rescue-of-tourists-and-pilgrims-from-nepal-floods",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, flash floods in Nepal have killed at least 538 people and left nearly 1,000 missing, with rescue operations ongoing for a third day. The disaster has caused widespread damage and prompted warnings of a second wave of flooding due to a newly formed barrier lake near the Nepal-Tibet border. Indian External Affairs Minister S. Jaishankar received 21 rescued Tamil Nadu pilgrims and stated that approximately 315 Indians remain unaccounted for.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Wednesday",
+      "dateSource": "flash floods that swept through Rasuwa and other parts of central Nepal on Wednesday",
+      "description": "Devastating flash floods swept through Rasuwa and other parts of central Nepal.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Nepal Tourism Board said on Friday",
+      "description": "A total of 117 tourists have been rescued from flood-hit areas of Nepal, including 85 Indians.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "China issued a Level-IV emergency alert late Thursday",
+      "description": "China issued a Level-IV emergency alert late Thursday after a large barrier lake formed near the confluence of the Chhochen Khola and Purepu Tsangpo rivers near the Nepal-Tibet border.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Nepal Police also issued a warning after receiving information that a water dam on the Tibetan side had burst again",
+      "description": "Nepal Police also issued a warning after receiving information that a water dam on the Tibetan side had burst again.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Jaishankar received 21 TN pilgrims rescued from Nepal",
+      "description": "External Affairs Minister S. Jaishankar received 21 Tamil Nadu pilgrims rescued from the floods in Nepal.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Friday",
+      "dateSource": "Nepal government has decided to suspend all examinations from August 29",
+      "description": "The Nepal government has decided to suspend all examinations from August 29 in view of the disaster situation.",
+      "importance": "LOW"
+    }
+  ],
+  "significance": {
+    "level": "MODERATE",
+    "reasoning": "The event is a significant natural disaster with a high human toll and cross-border implications, particularly for India and China. However, the reporting does not indicate any direct geopolitical conflict, major economic disruption beyond local infrastructure, or international security threats. The focus is on humanitarian relief and disaster management."
+  },
+  "entities": [
+    {
+      "name": "S. Jaishankar",
+      "type": "Person",
+      "role": "India's External Affairs Minister, who received 21 rescued Tamil Nadu pilgrims and stated that approximately 315 Indians remain unaccounted for.",
+      "positions": []
+    },
+    {
+      "name": "Nepal Tourism Board",
+      "type": "Organization",
+      "role": "An organization that reported a total of 117 tourists have been rescued from flood-hit areas of Nepal, including 85 Indians.",
+      "positions": []
+    },
+    {
+      "name": "Nepal Police",
+      "type": "Organization",
+      "role": "A security force that reported 1,545 injured and stranded people have been rescued so far, 7,451 security personnel have been deployed for search-and-rescue operations, and 977 people are still missing.",
+      "positions": []
+    },
+    {
+      "name": "NDRRMA",
+      "type": "Organization",
+      "role": "The National Disaster Risk Reduction and Management Authority, which reported the death toll has risen to 538 and 977 people are still missing.",
+      "positions": []
+    },
+    {
+      "name": "China",
+      "type": "Country",
+      "role": "Issued a Level-IV emergency alert after a large barrier lake formed near the Nepal-Tibet border and informed Nepal that around 2 million cubic metres of water had accumulated in the lake.",
+      "positions": []
+    },
+    {
+      "name": "India",
+      "type": "Country",
+      "role": "Has approximately 315 citizens still unaccounted for in Nepal, with 21 Tamil Nadu pilgrims rescued and received by External Affairs Minister S. Jaishankar. The government is focused on contacting all the Indians who are stranded in Nepal.",
+      "positions": []
+    },
+    {
+      "name": "Tamil Nadu",
+      "type": "Region",
+      "role": "A region in India from which 21 pilgrims were rescued from the floods in Nepal.",
+      "positions": []
+    },
+    {
+      "name": "Tibet",
+      "type": "Region",
+      "role": "A region in China where a large barrier lake formed near the confluence of the Chhochen Khola and Purepu Tsangpo rivers near the Nepal-Tibet border, causing a fresh flood threat in Nepal.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        772411,
+        772977
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting is based on multiple credible sources, including the Nepal Tourism Board, Nepal Police, the National Disaster Risk Reduction and Management Authority (NDRRMA), the Associated Press, ANI, and the Indian Ministry of External Affairs. The figures for casualties and rescue operations are cross-referenced across these sources, lending high reliability to the core disaster statistics."
+    }
+  ],
+  "factualBasis": [
+    "Devastating flash floods swept through Rasuwa and other parts of central Nepal.",
+    "A total of 117 tourists have been rescued from flood-hit areas of Nepal, including 85 Indians.",
+    "China issued a Level-IV emergency alert late Thursday after a large barrier lake formed near the confluence of the Chhochen Khola and Purepu Tsangpo rivers near the Nepal-Tibet border.",
+    "Nepal Police also issued a warning after receiving information that a water dam on the Tibetan side had burst again.",
+    "External Affairs Minister S. Jaishankar received 21 Tamil Nadu pilgrims rescued from the floods in Nepal.",
+    "The Nepal government has decided to suspend all examinations from August 29 in view of the disaster situation."
+  ],
+  "informationGaps": [
+    "The exact number of missing Indians is reported to be 'a little more than 300' and 'about 315', with the figure 'keeps going up and down'.",
+    "The identities of three tourists rescued are yet to be confirmed.",
+    "The specific cause of the flash floods is not mentioned in the provided articles.",
+    "The extent of damage to hydropower projects is mentioned but not quantified.",
+    "The specific locations of the 21 Tamil Nadu pilgrims before rescue are not described."
+  ],
+  "contradictions": []
+}

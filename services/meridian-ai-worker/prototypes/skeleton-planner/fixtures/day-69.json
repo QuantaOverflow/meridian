@@ -1,0 +1,17 @@
+{
+  "reportId": 69, "storyRows": 25, "actualBlocksInBrief": 8,
+  "events": [
+    { "clusterId": 46, "importance": 10, "articles": 20, "titles": ["Trump claims Strait of Hormuz is 'American territory'", "US-Iran conflict disrupts Strait of Hormuz oil flows", "US urges partners to back economic pressure campaign against Iran", "Iran rejects Trump's claim of total control over Strait of Hormuz", "US — Trump administration intensifies economic campaign against Iran", "US — Trump administration intensifies economic campaign against Iran", "Iran claims victory over U.S. and U.S. sanctions", "US escalates economic sanctions and threats against Iran"] },
+    { "clusterId": 33, "importance": 8, "articles": 9, "titles": ["Panama Canal — Drought-driven reduction in daily ship transits", "Global — 2026-2027 El Niño event forecast to be strongest in a lifetime", "UK — Met Office forecasts strongest El Niño in over a century"] },
+    { "clusterId": 45, "importance": 7, "articles": 18, "titles": ["Ukraine — Russian attacks in Kyiv and Zaporizhzhia following Kryvyi Rih strike", "Germany — Russian-linked weapons cache discovered near Berlin", "Ukraine — Kryvyi Rih shopping centre drone attack"] },
+    { "clusterId": 4, "importance": 7, "articles": 10, "titles": ["Canada — US imposes 50% tariffs on $20bn of Canadian goods"] },
+    { "clusterId": 27, "importance": 7, "articles": 8, "titles": ["Israel — E1 West Bank settlement tender and international condemnation", "Turkey seeks Interpol warrant for Netanyahu over Gaza flotilla"] },
+    { "clusterId": 36, "importance": 7, "articles": 6, "titles": ["Haiti — First group of deportees arrives in Haiti after U.S. ends TPS program", "US — Federal judge strikes down Trump immigrant visa ban"] },
+    { "clusterId": 12, "importance": 7, "articles": 6, "titles": ["Hong Kong — Verdict in national security trial of Tiananmen vigil organizers"] },
+    { "clusterId": 42, "importance": 7, "articles": 3, "titles": ["USA — Texas appeals court reduces Alex Jones' Sandy Hook judgment"] },
+    { "clusterId": 8, "importance": 6, "articles": 3, "titles": ["DR Congo — Ebola outbreak death toll passes 2,500"] },
+    { "clusterId": 24, "importance": 6, "articles": 3, "titles": ["Bangladesh — Mirza Fakhrul Islam Alamgir elected and sworn in as president"] },
+    { "clusterId": 35, "importance": 6, "articles": 2, "titles": ["Australia — ACT joins national gun buyback program"] },
+    { "clusterId": 23, "importance": 5, "articles": 3, "titles": ["Cameroon — President Paul Biya returns from long absence"] }
+  ]
+}

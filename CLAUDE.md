@@ -101,7 +101,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 | 原型结果产物（result/dump/traces/out） | 原型目录内，由 `.gitignore` 挡 | ❌ |
 | 一次性探测脚本 / 临时输出 | scratchpad，不进 repo | ❌ |
 | 工程/架构文档、ADR、engineering-notes | `docs/` `docs/adr/` `docs/engineering-notes/` | ✅ |
-| 设计交付稿（design handoff） | `docs/`（是产品资产） | ✅ |
+| 设计交付稿（design handoff） | `docs/design/<name>/` | ✅ |
 | session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
 | 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |
 
@@ -119,6 +119,11 @@ wrangler workflows instances list <WORKFLOW_NAME>
 ```
 
 **产物和一次性脚本必须写进 out/ 与 scratch/，不许往原型根目录写。**
+
+原型与 eval harness 都是 pnpm workspace 成员（`pnpm-workspace.yaml` 里的
+`apps/*/prototypes/*` / `services/*/prototypes/*` / `scripts/eval/*`），各目录只留 `package.json`，
+根目录 `pnpm install` 一次装完，**不要**再单独 `pnpm install --ignore-workspace`——
+2026-09-05 之前它们不在任何 glob 里，16 个目录各装一份依赖、各维护一份 lock。
 
 `.gitignore` 标准模板（照抄）：
 ```

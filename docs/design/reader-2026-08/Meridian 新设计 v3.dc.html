@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Serif+SC:wght@400;500;600&family=Noto+Sans+SC:wght@400;500&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#ffffff; --text:#1b1b1b; --text2:#4a4a4a; --text3:#8a8a8a;
+    --rule:#e2e2e2; --rule-soft:#f0f0f0; --accent:#9c3a2c; --quote-bg:#faf9f7;
+    --serif:'Newsreader','Noto Serif SC',Georgia,serif;
+    --sans:'Archivo','Noto Sans SC',ui-sans-serif,system-ui,sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg:#131313; --text:#e9e7e4; --text2:#b3afaa; --text3:#84807b;
+    --rule:#2e2e2e; --rule-soft:#222222; --accent:#e07a63; --quote-bg:#191919;
+  }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased; transition:background .2s ease; }
+  a { color:inherit; text-decoration:none; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--bg)">
+
+  <div style="position:sticky;top:0;z-index:60;background:var(--bg);border-bottom:1px solid var(--rule-soft)">
+    <div style="max-width:1160px;margin:0 auto;padding:0 32px;display:flex;align-items:center;gap:22px;height:58px">
+      <span style="font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--text)">Meridian</span>
+      <span style="width:1px;height:18px;background:var(--rule)"></span>
+      <div style="display:flex;gap:20px;font-size:14px">
+        <span onClick="{{ goToday }}" style="cursor:pointer;color: {{ navTodayColor }}">今日简报</span>
+        <span onClick="{{ goArchive }}" style="cursor:pointer;color: {{ navArchiveColor }}">归档</span>
+        <span onClick="{{ goStories }}" style="cursor:pointer;color: {{ navStoryColor }}">事件追踪</span>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;border:1px solid var(--rule);border-radius:100px;overflow:hidden;font-size:13px">
+        <span onClick="{{ setSkim }}" style="padding:5px 14px;cursor:pointer;background: {{ skimBg }};color: {{ skimColor }}">速读</span>
+        <span onClick="{{ setDeep }}" style="padding:5px 14px;cursor:pointer;background: {{ deepBg }};color: {{ deepColor }}">深读</span>
+      </div>
+      <span onClick="{{ toggleTheme }}" title="切换深浅色" style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:100px;color:var(--text2)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:17px;height:17px;display: {{ sunDisplay }}"><circle cx="10" cy="10" r="3.6"></circle><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.5 4.5l1.4 1.4M14.1 14.1l1.4 1.4M15.5 4.5l-1.4 1.4M5.9 14.1L4.5 15.5"></path></svg>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:17px;height:17px;display: {{ moonDisplay }}"><path d="M16.5 12.4A7 7 0 1 1 8.1 3.6a5.6 5.6 0 0 0 8.4 8.8z"></path></svg>
+      </span>
+      <button style="background:var(--accent);color:#fff;border:none;border-radius:100px;padding:7px 16px;font-size:13.5px;font-family:var(--sans);cursor:pointer">订阅</button>
+    </div>
+    <div style="height:2px;background:transparent"><div style="height:2px;background:var(--accent);width: {{ progress }};transition:width .1s linear"></div></div>
+  </div>
+
+  <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+  <div style="max-width:1160px;margin:0 auto;padding:0 32px;position:relative">
+
+    <aside style="position:absolute;top:74px;left:0;width:186px;display: {{ railDisplay }}">
+      <div style="position:sticky;top:106px">
+        <div style="font-size:11.5px;letter-spacing:.12em;color:var(--text3);margin-bottom:14px">本期 7 条</div>
+        <div style="display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--rule-soft);text-align:left">
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;box-shadow:inset 2px 0 0 var(--text);color:var(--text);cursor:pointer">美伊互相打击</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">以军扩大黎南行动</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">伊朗中止美伊谈判</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">加州州长初选出线</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">五角大楼新闻办改密级</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">Alphabet 增发 800 亿</span>
+          <span style="font-size:13px;line-height:1.45;padding:6px 0 6px 14px;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">Anthropic 递交 IPO</span>
+        </div>
+      </div>
+    </aside>
+
+    <main style="max-width:668px;margin:0 auto;padding:70px 0 140px">
+      <div style="font-size:12.5px;letter-spacing:.1em;color:var(--text3);margin-bottom:16px">每日情报简报 · 第 412 期</div>
+      <h1 style="font-family:var(--serif);font-size:44px;line-height:1.24;letter-spacing:-.01em;font-weight:600;margin:0 0 18px;color:var(--text)">美伊互击、黎南升级、Anthropic 递表</h1>
+      <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--text3);margin-bottom:42px;padding-bottom:20px;border-bottom:1px solid var(--rule-soft)">
+        <span>2026 年 6 月 3 日</span><span>·</span><span>7 条事件</span><span>·</span><span>15 分钟阅读</span>
+      </div>
+
+      <p style="font-family:var(--serif);font-size:21px;line-height:1.9;letter-spacing:.01em;margin:0 0 52px;color:var(--text)">中东进入直接交火阶段——美国空袭格什姆岛后，伊朗报复科威特与巴林，并中止与华盛顿的谈判；以军无视停火安排在黎南推进。美国国内，加州初选定下十一月的对决格局。科技侧，Alphabet 为 AI 基建增发 800 亿美元，Anthropic 已秘密递交 IPO 申请。</p>
+
+      <div style="display:flex;align-items:center;gap:14px;margin:0 0 30px">
+        <h2 style="font-family:var(--sans);font-size:16px;font-weight:600;letter-spacing:.02em;margin:0;color:var(--text);white-space:nowrap">地缘 · 中东</h2>
+        <span style="height:1px;flex:1;background:var(--rule)"></span>
+      </div>
+
+      <article style="margin-bottom:62px">
+        <h3 style="font-family:var(--serif);font-size:30px;line-height:1.36;letter-spacing:-.005em;font-weight:600;margin:0 0 16px;color:var(--text)">美军空袭格什姆岛，伊朗报复科威特与巴林</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 24px;color:var(--text)">6 月 3 至 4 日，美军对格什姆岛发动打击，伊朗随即对科威特与巴林境内目标实施报复。</p>
+        <div style="display: {{ deepDisplay }}">
+          <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 24px;color:var(--text)">这是双方首次直接、公开地对对方本土及海湾盟国的目标动手。过去两年支撑着这场冲突的代理人缓冲层就此消失，而当海湾产油国被卷入，霍尔木兹海峡的通行风险会立刻被定价到能源市场里——<a href="#" style="border-bottom:1px solid var(--text3)">美国国防部</a>与<a href="#" style="border-bottom:1px solid var(--text3)">伊朗革命卫队</a>之外，科威特、巴林和整个海湾合作委员会都成了直接当事方。</p>
+          <div style="background:var(--quote-bg);border-left:2px solid var(--rule);padding:18px 22px;margin:0 0 24px">
+            <p style="font-family:var(--serif);font-size:17.5px;line-height:1.82;letter-spacing:.01em;margin:0 0 8px;color:var(--text2)">两家媒体称美方同时对一艘驶往伊朗的油轮实施了导弹打击，其余七家均未提及。该说法证据不足，未并入本条事件。</p>
+            <a href="#" style="font-size:12.5px;color:var(--text3);border-bottom:1px solid var(--rule)">查看这两篇报道</a>
+          </div>
+          <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 28px;color:var(--text)">接下来盯两件事：海湾国家是否要求美军撤出其境内基地，以及伊朗是否把打击范围扩大到航运。任何一件发生，冲突就从边境摩擦变成对全球能源通道的直接威胁。</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--text3)">
+            <span>来源</span>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Reuters</a>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Al Jazeera</a>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Le Monde</a>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Financial Times</a>
+            <span>+5</span>
+            <span style="flex:1"></span>
+            <span onClick="{{ goStory }}" style="cursor:pointer;color:var(--accent)">追踪此事件 →</span>
+          </div>
+        </div>
+      </article>
+
+      <article style="margin-bottom:62px">
+        <h3 style="font-family:var(--serif);font-size:30px;line-height:1.36;letter-spacing:-.005em;font-weight:600;margin:0 0 16px;color:var(--text)">以军无视停火安排，在黎巴嫩南部扩大军事行动</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 24px;color:var(--text)">升级线很清晰：以军攻占博福特堡、空袭杰贝勒阿米勒医院，真主党随后回击，特朗普亲自介入调停但三度未果。</p>
+        <div style="display: {{ deepDisplay }}">
+          <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 24px;color:var(--text)">五月底达成的停火机制事实上已经失效，而这次的调停方是美国总统本人——这意味着华盛顿在黎巴嫩和伊朗两条线上同时失去了筹码。</p>
+          <div style="background:var(--quote-bg);padding:18px 22px;margin:0 0 26px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:grid;grid-template-columns:54px 1fr;gap:16px;font-size:15px;line-height:1.6;color:var(--text2)"><span style="color:var(--text3)">05-29</span><span>停火协议达成，特朗普宣布"已解决"</span></div>
+            <div style="display:grid;grid-template-columns:54px 1fr;gap:16px;font-size:15px;line-height:1.6;color:var(--text2)"><span style="color:var(--text3)">06-01</span><span>以军攻占博福特堡</span></div>
+            <div style="display:grid;grid-template-columns:54px 1fr;gap:16px;font-size:15px;line-height:1.6;color:var(--text2)"><span style="color:var(--text3)">06-02</span><span>杰贝勒阿米勒医院遭空袭</span></div>
+            <div style="display:grid;grid-template-columns:54px 1fr;gap:16px;font-size:15px;line-height:1.6;color:var(--text)"><span style="color:var(--accent)">06-03</span><span>真主党火箭弹回击，调停中断</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--text3)">
+            <span>来源</span>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Reuters</a>
+            <a href="#" style="border-bottom:1px solid var(--rule)">Haaretz</a>
+            <a href="#" style="border-bottom:1px solid var(--rule)">L'Orient</a>
+            <span>+14</span>
+            <span style="flex:1"></span>
+            <span onClick="{{ goStory }}" style="cursor:pointer;color:var(--accent)">追踪此事件 →</span>
+          </div>
+        </div>
+      </article>
+
+      <article style="margin-bottom:70px">
+        <h3 style="font-family:var(--serif);font-size:25px;line-height:1.4;font-weight:600;margin:0 0 14px;color:var(--text)">伊朗中止美伊谈判，回应以方在黎巴嫩与加沙的行动</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0;color:var(--text)">德黑兰把暂停谈判明确定性为对以色列同期军事行动的回应，并未给出重启的时间条件。</p>
+      </article>
+
+      <div style="display:flex;align-items:center;gap:14px;margin:0 0 30px">
+        <h2 style="font-family:var(--sans);font-size:16px;font-weight:600;letter-spacing:.02em;margin:0;color:var(--text);white-space:nowrap">美国政治</h2>
+        <span style="height:1px;flex:1;background:var(--rule)"></span>
+      </div>
+
+      <article style="margin-bottom:58px">
+        <h3 style="font-family:var(--serif);font-size:25px;line-height:1.4;font-weight:600;margin:0 0 14px;color:var(--text)">加州州长初选：Becerra 与 Hilton 进入十一月大选</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0;color:var(--text)">前两名晋级制下，一名民主党人对一名共和党人的格局就此落定，十一月的加州将成为全国风向的样本。</p>
+      </article>
+
+      <article style="margin-bottom:70px">
+        <h3 style="font-family:var(--serif);font-size:25px;line-height:1.4;font-weight:600;margin:0 0 14px;color:var(--text)">五角大楼将新闻办重新划为密级区，记者被挡在门外</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0;color:var(--text)">常驻记者失去了自里根时代以来的办公与采访通道，五角大楼给出的理由是防范敏感信息外泄。</p>
+      </article>
+
+      <div style="display:flex;align-items:center;gap:14px;margin:0 0 30px">
+        <h2 style="font-family:var(--sans);font-size:16px;font-weight:600;letter-spacing:.02em;margin:0;color:var(--text);white-space:nowrap">科技 &amp; AI</h2>
+        <span style="height:1px;flex:1;background:var(--rule)"></span>
+      </div>
+
+      <article style="margin-bottom:58px">
+        <h3 style="font-family:var(--serif);font-size:25px;line-height:1.4;font-weight:600;margin:0 0 14px;color:var(--text)">Alphabet 拟增发 800 亿美元股票，为 AI 基建扩张融资</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0;color:var(--text)">规模罕见，指向数据中心与自研芯片产能，也给同业设定了新的资本开支基准。</p>
+      </article>
+
+      <article style="margin-bottom:80px">
+        <h3 style="font-family:var(--serif);font-size:25px;line-height:1.4;font-weight:600;margin:0 0 14px;color:var(--text)">Anthropic 秘密递交美国 IPO 申请</h3>
+        <p style="font-family:var(--serif);font-size:19.5px;line-height:1.9;letter-spacing:.01em;margin:0;color:var(--text)">若成行，将是首家进入公开市场的前沿模型公司，其估值与披露口径会成为整个赛道的参照。</p>
+      </article>
+
+      <div style="border-top:1px solid var(--rule-soft);padding-top:34px">
+        <h4 style="font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 8px;color:var(--text)">明早 7 点，同样一封</h4>
+        <p style="font-size:14px;line-height:1.7;margin:0 0 16px;color:var(--text2)">邮件版和这里读到的内容完全一致。</p>
+        <div style="display:flex;gap:8px;max-width:390px">
+          <input placeholder="your@email.com" style="flex:1;padding:11px 15px;border:1px solid var(--rule);border-radius:100px;outline:none;font-size:13.5px;font-family:var(--sans);background:transparent;color:var(--text);min-width:0" />
+          <button style="background:var(--accent);color:#fff;border:none;border-radius:100px;padding:11px 22px;font-size:13.5px;font-family:var(--sans);cursor:pointer;white-space:nowrap">订阅</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isArchive }}" hint-placeholder-val="{{ false }}">
+  <div style="max-width:740px;margin:0 auto;padding:70px 32px 140px">
+    <h1 style="font-family:var(--serif);font-size:38px;line-height:1.26;letter-spacing:-.01em;font-weight:600;margin:0 0 8px;color:var(--text)">归档</h1>
+    <p style="font-size:14px;color:var(--text3);margin:0 0 34px">412 期 · 覆盖 2025 年 3 月至今</p>
+
+    <div style="display:flex;align-items:center;gap:9px;border:1px solid var(--rule);border-radius:100px;padding:10px 17px;margin-bottom:6px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:15px;height:15px;color:var(--text3)"><circle cx="9" cy="9" r="6"></circle><path d="M13.5 13.5 L17 17"></path></svg>
+      <input placeholder="搜索事件、人物、地区…" style="border:none;outline:none;background:transparent;font-size:13.5px;font-family:var(--sans);color:var(--text);flex:1;min-width:0" />
+    </div>
+    <div style="display:flex;gap:24px;align-items:center;border-bottom:1px solid var(--rule-soft);margin-bottom:10px;font-size:14px">
+      <span style="padding:14px 0;box-shadow:inset 0 -1px 0 var(--text);color:var(--text);cursor:pointer">全部</span>
+      <span style="padding:14px 0;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">地缘</span>
+      <span style="padding:14px 0;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">美国政治</span>
+      <span style="padding:14px 0;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">科技</span>
+    </div>
+
+    <div onClick="{{ goToday }}" style="padding:28px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <div style="font-size:12.5px;color:var(--text3);margin-bottom:9px">6 月 3 日 · 第 412 期 · 7 条 · 15 分钟</div>
+      <h3 style="font-family:var(--serif);font-size:23px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">美伊互击、黎南升级、Anthropic 递表</h3>
+      <p style="font-size:15px;line-height:1.75;color:var(--text2);margin:0 0 14px">中东进入直接交火阶段，海湾国家被卷入；美国国内加州初选定局；科技侧两笔资本动作。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">地缘</span>
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">美国政治</span>
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">科技</span>
+      </div>
+    </div>
+
+    <div style="padding:28px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <div style="font-size:12.5px;color:var(--text3);margin-bottom:9px">6 月 2 日 · 第 411 期 · 5 条 · 11 分钟</div>
+      <h3 style="font-family:var(--serif);font-size:23px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">乌军无人机袭圣彼得堡、EU 移民新规、USMCA 倒计时</h3>
+      <p style="font-size:15px;line-height:1.75;color:var(--text2);margin:0 0 14px">SPIEF 前夕的袭击改变了会场安保安排；欧盟通过遣返新规；加墨推动 16 年续约。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">地缘</span>
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">贸易</span>
+      </div>
+    </div>
+
+    <div style="padding:28px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <div style="font-size:12.5px;color:var(--text3);margin-bottom:9px">6 月 1 日 · 第 410 期 · 6 条 · 13 分钟</div>
+      <h3 style="font-family:var(--serif);font-size:23px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">AUKUS 潜艇争议、佛州起诉 OpenAI、卢旺达协议终止</h3>
+      <p style="font-size:15px;line-height:1.75;color:var(--text2);margin:0 0 14px">澳方启动独立调查；美国首个州级 AI 诉讼落地；英卢遣返安排正式结束。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">科技</span>
+        <span style="font-size:12.5px;border:1px solid var(--rule);border-radius:100px;padding:4px 12px;color:var(--text2)">法律</span>
+      </div>
+    </div>
+
+    <div style="padding-top:34px;text-align:center">
+      <span style="font-size:13.5px;border:1px solid var(--rule);border-radius:100px;padding:10px 24px;cursor:pointer;color:var(--text2)" style-hover="border-color:var(--text);color:var(--text)">加载更早的 409 期</span>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isStories }}" hint-placeholder-val="{{ false }}">
+  <div style="max-width:740px;margin:0 auto;padding:70px 32px 140px">
+    <h1 style="font-family:var(--serif);font-size:38px;line-height:1.26;letter-spacing:-.01em;font-weight:600;margin:0 0 12px;color:var(--text)">事件追踪</h1>
+    <p style="font-family:var(--serif);font-size:19px;line-height:1.85;letter-spacing:.01em;margin:0 0 36px;color:var(--text2)">跨期存续的线索。同一件事只要还在发展，就并到一条时间线上，不必每天从零读起。</p>
+
+    <div style="display:flex;gap:24px;align-items:center;border-bottom:1px solid var(--rule-soft);margin-bottom:8px;font-size:14px">
+      <span style="padding:14px 0;box-shadow:inset 0 -1px 0 var(--text);color:var(--text);cursor:pointer">进行中 5</span>
+      <span style="padding:14px 0;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">已平息 23</span>
+      <span style="padding:14px 0;color:var(--text3);cursor:pointer" style-hover="color:var(--text)">全部</span>
+    </div>
+
+    <div onClick="{{ goStory }}" style="padding:26px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px">
+        <h3 style="font-family:var(--serif);font-size:24px;line-height:1.42;font-weight:600;margin:0;color:var(--text)">美伊直接冲突</h3>
+        <span style="font-size:12.5px;color:var(--accent)">升级中</span>
+      </div>
+      <p style="font-size:15.5px;line-height:1.78;color:var(--text2);margin:0 0 12px">从代理人交火到本土互击。美军空袭格什姆岛后，伊朗报复科威特与巴林并中止谈判。</p>
+      <div style="font-size:12.5px;color:var(--text3)">持续 11 天 · 8 期简报 · 今日更新</div>
+    </div>
+
+    <div style="padding:26px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px">
+        <h3 style="font-family:var(--serif);font-size:24px;line-height:1.42;font-weight:600;margin:0;color:var(--text)">黎巴嫩南部停火崩解</h3>
+        <span style="font-size:12.5px;color:var(--accent)">升级中</span>
+      </div>
+      <p style="font-size:15.5px;line-height:1.78;color:var(--text2);margin:0 0 12px">五月底的停火机制在六天内失效，特朗普三度调停未果，以军持续向北推进。</p>
+      <div style="font-size:12.5px;color:var(--text3)">持续 6 天 · 5 期简报 · 今日更新</div>
+    </div>
+
+    <div style="padding:26px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <h3 style="font-family:var(--serif);font-size:24px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">美国 2026 中期选举</h3>
+      <p style="font-size:15.5px;line-height:1.78;color:var(--text2);margin:0 0 12px">各州初选逐周落定。加州州长之争进入两党对决，全国风向的第一个样本。</p>
+      <div style="font-size:12.5px;color:var(--text3)">持续 94 天 · 31 期简报 · 今日更新</div>
+    </div>
+
+    <div style="padding:26px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <h3 style="font-family:var(--serif);font-size:24px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">前沿模型公司走向公开市场</h3>
+      <p style="font-size:15.5px;line-height:1.78;color:var(--text2);margin:0 0 12px">Alphabet 增发 800 亿、Anthropic 秘密递表——AI 的资本结构正在从私募转向二级市场。</p>
+      <div style="font-size:12.5px;color:var(--text3)">持续 22 天 · 9 期简报 · 今日更新</div>
+    </div>
+
+    <div style="padding:26px 0;border-bottom:1px solid var(--rule-soft);cursor:pointer">
+      <h3 style="font-family:var(--serif);font-size:24px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">USMCA 续约谈判</h3>
+      <p style="font-size:15.5px;line-height:1.78;color:var(--text2);margin:0 0 12px">加墨推动 16 年期续约，关税豁免条款是分歧核心，七月为最后窗口。</p>
+      <div style="font-size:12.5px;color:var(--text3)">持续 41 天 · 12 期简报 · 3 天前更新</div>
+    </div>
+
+    <div style="padding-top:34px;text-align:center">
+      <span style="font-size:13.5px;border:1px solid var(--rule);border-radius:100px;padding:10px 24px;cursor:pointer;color:var(--text2)" style-hover="border-color:var(--text);color:var(--text)">查看已平息的 23 条</span>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isStory }}" hint-placeholder-val="{{ false }}">
+  <div style="max-width:700px;margin:0 auto;padding:70px 32px 140px">
+    <span onClick="{{ goStories }}" style="display:inline-block;font-size:13px;color:var(--text3);margin-bottom:22px;cursor:pointer" style-hover="color:var(--text)">← 全部追踪</span>
+    <div style="font-size:12.5px;letter-spacing:.1em;color:var(--text3);margin-bottom:16px">事件追踪 · 持续 11 天 · 升级中</div>
+    <h1 style="font-family:var(--serif);font-size:42px;line-height:1.26;letter-spacing:-.01em;font-weight:600;margin:0 0 18px;color:var(--text)">美伊直接冲突</h1>
+    <p style="font-family:var(--serif);font-size:20.5px;line-height:1.9;letter-spacing:.01em;margin:0 0 22px;color:var(--text)">从代理人交火到本土互击的十一天。这一页把散落在 8 期简报里的同一条线索合成一条时间线，被剔除的说法单独标出备查。</p>
+    <div style="font-size:13px;color:var(--text3);padding-bottom:28px;border-bottom:1px solid var(--rule-soft);margin-bottom:44px">8 期简报提及 · 63 篇原文</div>
+
+    <div style="display:flex;flex-direction:column">
+      <div style="display:grid;grid-template-columns:58px 1fr;gap:20px;padding:0 0 34px 24px;border-left:1px solid var(--rule-soft);margin-left:5px;position:relative">
+        <span style="position:absolute;left:-4px;top:8px;width:7px;height:7px;border-radius:50%;background:var(--accent)"></span>
+        <span style="font-size:12.5px;color:var(--text3);padding-top:6px">06-03</span>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:22px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">美军空袭格什姆岛，伊朗报复科威特与巴林</h3>
+          <p style="font-family:var(--serif);font-size:18px;line-height:1.85;letter-spacing:.01em;color:var(--text2);margin:0 0 9px">首次出现双方对彼此本土及盟国目标的公开打击。</p>
+          <span style="font-size:12.5px;color:var(--text3)">第 412 期</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:58px 1fr;gap:20px;padding:0 0 34px 24px;border-left:1px solid var(--rule-soft);margin-left:5px;position:relative">
+        <span style="position:absolute;left:-4px;top:8px;width:7px;height:7px;border-radius:50%;background:var(--rule)"></span>
+        <span style="font-size:12.5px;color:var(--text3);padding-top:6px">06-03</span>
+        <div style="background:var(--quote-bg);padding:16px 20px;border-left:2px solid var(--rule);margin-top:-2px">
+          <h3 style="font-family:var(--serif);font-size:19px;line-height:1.45;font-weight:500;margin:0 0 8px;color:var(--text2)">存疑：美方封锁霍尔木兹海峡、袭击油轮</h3>
+          <p style="font-family:var(--serif);font-size:17px;line-height:1.82;letter-spacing:.01em;color:var(--text2);margin:0 0 8px">四篇报道把三件不同的事拼成一条，缺少共同的具体事件与因果链，已从主线剔除。</p>
+          <span style="font-size:12.5px;color:var(--text3)">未进入简报</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:58px 1fr;gap:20px;padding:0 0 34px 24px;border-left:1px solid var(--rule-soft);margin-left:5px;position:relative">
+        <span style="position:absolute;left:-4px;top:8px;width:7px;height:7px;border-radius:50%;background:var(--rule)"></span>
+        <span style="font-size:12.5px;color:var(--text3);padding-top:6px">05-31</span>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:22px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">伊朗中止与美国的核谈判</h3>
+          <p style="font-family:var(--serif);font-size:18px;line-height:1.85;letter-spacing:.01em;color:var(--text2);margin:0 0 9px">德黑兰把暂停定性为对以方在黎巴嫩、加沙行动的回应。</p>
+          <span style="font-size:12.5px;color:var(--text3)">第 409 期</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:58px 1fr;gap:20px;padding:0 0 0 24px;margin-left:5px;position:relative">
+        <span style="position:absolute;left:-4px;top:8px;width:7px;height:7px;border-radius:50%;background:var(--rule)"></span>
+        <span style="font-size:12.5px;color:var(--text3);padding-top:6px">05-24</span>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:22px;line-height:1.42;font-weight:600;margin:0 0 9px;color:var(--text)">海湾水域出现首次无人艇袭击</h3>
+          <p style="font-family:var(--serif);font-size:18px;line-height:1.85;letter-spacing:.01em;color:var(--text2);margin:0 0 9px">当时归因不明，事后被多家媒体追认为本轮升级的起点。</p>
+          <span style="font-size:12.5px;color:var(--text3)">第 404 期</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { screen: 'today', mode: 'deep', theme: 'light', progress: 0, w: 1280 };
+  componentDidMount() {
+    this._onScroll = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      this.setState({ progress: max > 0 ? Math.round((h.scrollTop / max) * 100) : 0 });
+    };
+    this._onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    window.addEventListener('resize', this._onResize);
+    this._onResize();
+  }
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this._onScroll);
+    window.removeEventListener('resize', this._onResize);
+  }
+  go(s) { return () => { this.setState({ screen: s }); window.scrollTo(0, 0); }; }
+  renderVals() {
+    const s = this.state.screen, deep = this.state.mode === 'deep', dark = this.state.theme === 'dark';
+    const on = k => (s === k ? 'var(--text)' : 'var(--text3)');
+    return {
+      isToday: s === 'today', isArchive: s === 'archive', isStories: s === 'stories', isStory: s === 'story',
+      goToday: this.go('today'), goArchive: this.go('archive'), goStories: this.go('stories'), goStory: this.go('story'),
+      navTodayColor: on('today'), navArchiveColor: on('archive'),
+      navStoryColor: (s === 'stories' || s === 'story') ? 'var(--text)' : 'var(--text3)',
+      setSkim: () => this.setState({ mode: 'skim' }),
+      setDeep: () => this.setState({ mode: 'deep' }),
+      skimBg: deep ? 'transparent' : 'var(--text)',
+      skimColor: deep ? 'var(--text3)' : 'var(--bg)',
+      deepBg: deep ? 'var(--text)' : 'transparent',
+      deepColor: deep ? 'var(--bg)' : 'var(--text3)',
+      deepDisplay: deep ? 'block' : 'none',
+      toggleTheme: () => {
+        const next = dark ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        this.setState({ theme: next });
+      },
+      sunDisplay: dark ? 'block' : 'none',
+      moonDisplay: dark ? 'none' : 'block',
+      railDisplay: this.state.w >= 1120 ? 'block' : 'none',
+      progress: this.state.progress + '%'
+    };
+  }
+}
+</script>
+</body>
+</html>

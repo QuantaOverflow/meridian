@@ -1,0 +1,130 @@
+{
+  "storyId": "story-syria-—-president-uses-visa-card-after-sanctions-removal",
+  "status": "COMPLETE",
+  "executiveSummary": "According to these articles, Syrian President Ahmed al-Sharaa used a Visa card to pay for coffee in Damascus, a symbolic act marking the country's re-entry into the global financial system following the US removal of Syria from the State Sponsor of Terrorism list. The reporting details the lifting of US and EU sanctions, including the repeal of the Caesar Act, and cites officials and analysts predicting a surge in reconstruction investment.",
+  "storyStatus": "DEVELOPING",
+  "timeline": [
+    {
+      "date": "Monday",
+      "dateSource": "The US State Department rescinded Syria's designation as a state sponsor of terrorism on Monday",
+      "description": "The US State Department removes Syria from the State Sponsor of Terrorism list.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "27 Aug 2026",
+      "dateSource": "A cup of coffee in the Old City of Damascus became Syria's chosen symbol of global economic reintegration.",
+      "description": "Syrian President Ahmed al-Sharaa uses a Visa card to pay for coffee in Damascus, accompanied by Central Bank Governor Mohammed Safwat Raslan.",
+      "importance": "HIGH"
+    },
+    {
+      "date": "July 2026",
+      "dateSource": "US President Donald Trump's July notification to lawmakers",
+      "description": "Timeline event",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "45 days",
+      "dateSource": "It took effect after a 45-day congressional review triggered by US President Donald Trump's July notification to lawmakers",
+      "description": "The delisting takes effect after a 45-day congressional review period.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "Mid-2025",
+      "dateSource": "The comprehensive programme was terminated in mid-2025",
+      "description": "Most US sanctions are terminated.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "December 2025",
+      "dateSource": "Congress repealed the Caesar Act — its most severe secondary sanctions regime — in a December 2025 defence spending bill",
+      "description": "Timeline event",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "11 May 2025",
+      "dateSource": "On 11 May the Council restored full application of the EU-Syria Cooperation Agreement",
+      "description": "The European Council restores full application of the EU-Syria Cooperation Agreement.",
+      "importance": "MEDIUM"
+    },
+    {
+      "date": "A week later",
+      "dateSource": "A week later it renewed measures against figures linked to the former regime until June 2027",
+      "description": "Timeline event",
+      "importance": "MEDIUM"
+    }
+  ],
+  "significance": {
+    "level": "CRITICAL",
+    "reasoning": "The removal of sanctions and reintegration into the global financial system represent a fundamental shift in Syria's geopolitical standing and economic future. This reporting describes a pivotal moment in the post-conflict reconstruction phase, with potential global implications for financial markets and international relations."
+  },
+  "entities": [
+    {
+      "name": "Ahmed al-Sharaa",
+      "type": "Person",
+      "role": "Syrian President who used a Visa card to pay for coffee in Damascus, symbolizing the country's economic reintegration.",
+      "positions": []
+    },
+    {
+      "name": "Mohammed Safwat Raslan",
+      "type": "Person",
+      "role": "Central Bank Governor of Syria who accompanied President al-Sharaa during the Visa transaction.",
+      "positions": []
+    },
+    {
+      "name": "Donald Trump",
+      "type": "Person",
+      "role": "US President who notified Congress of the decision to delist Syria from the terrorism blacklist.",
+      "positions": []
+    },
+    {
+      "name": "Scott Bessent",
+      "type": "Person",
+      "role": "US Treasury Secretary who stated the delisting will help foster investment in Syria.",
+      "positions": []
+    },
+    {
+      "name": "Syria",
+      "type": "Country",
+      "role": "The subject of the sanctions relief, having been removed from the State Sponsor of Terrorism list and the EU's terrorism list.",
+      "positions": []
+    },
+    {
+      "name": "US State Department",
+      "type": "Organization",
+      "role": "The agency that rescinded Syria's designation as a state sponsor of terrorism.",
+      "positions": []
+    },
+    {
+      "name": "European Council",
+      "type": "Organization",
+      "role": "The body that lifted all economic sanctions on Syria in May 2025 and restored the EU-Syria Cooperation Agreement.",
+      "positions": []
+    },
+    {
+      "name": "Tellimer",
+      "type": "Organization",
+      "role": "A Dubai-based emerging markets research firm that expects banking, technology, and telecommunications to gain from restored SWIFT access.",
+      "positions": []
+    }
+  ],
+  "sources": [
+    {
+      "sourceName": "AI Analysis Source",
+      "articleIds": [
+        753499,
+        757894
+      ],
+      "reliabilityLevel": "HIGH",
+      "bias": "The reporting is based on official government accounts, government statements from the US and EU, and reputable international news organizations (Al Jazeera, Euronews). The information is corroborated across multiple sources."
+    }
+  ],
+  "factualBasis": [
+    "The US State Department removes Syria from the State Sponsor of Terrorism list.",
+    "Syrian President Ahmed al-Sharaa uses a Visa card to pay for coffee in Damascus, accompanied by Central Bank Governor Mohammed Safwat Raslan.",
+    "The delisting takes effect after a 45-day congressional review period.",
+    "Most US sanctions are terminated.",
+    "The European Council restores full application of the EU-Syria Cooperation Agreement."
+  ],
+  "informationGaps": [],
+  "contradictions": []
+}

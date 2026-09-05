@@ -79,7 +79,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 
 ## 何时读哪份 docs
 - 改工作流编排 → `docs/meridian-workflow-architecture.md`
-- 跨 service 调用 → `docs/worker-communication.md`
+- 跨 service 调用 → `apps/backend/src/lib/services/ai-services.ts`（客户端方法即契约，比文档准）
 - 部署前 → `docs/DEPLOYMENT_GUIDE.md`
 - 观测/排错 → `docs/OBSERVABILITY_GUIDE.md`
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）

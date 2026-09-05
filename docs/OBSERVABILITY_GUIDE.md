@@ -64,7 +64,10 @@ console.log(`平均聚类大小: ${clusterQuality.avgClusterSize}`);
 
 ### 4. API监控端点
 
-Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列RESTful API 端点，使得外部系统、监控工具或前端面板能够方便地查询和展示可观测性数据。
+Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列 RESTful API 端点，使得外部系统、监控工具或前端面板能够方便地查询和展示可观测性数据。
+
+> 共 14 个路由。**以代码为准**——本文档 2025-07 只记了前 5 个，2026-09-06 补齐了按 run
+> 排错的那一组；再有新增以 `observability.ts` 里的注册顺序为准。
 
 #### `/observability/dashboard` - 实时监控面板
 - **目的**：提供Meridian系统当前运行状态的**高层次、实时概览**。
@@ -85,6 +88,27 @@ Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列
 #### `/observability/quality/analysis` - 数据质量分析 (待实现)
 - **目的**：未来将用于提供更细粒度的、聚合的数据质量分析报告。
 - **当前状态**：目前是一个占位符，但规划中将包含文章质量分布、聚类质量得分、故事质量等详细指标。
+
+#### 按 run 排错的一组（2026 年新增，本节此前缺失）
+
+排一次简报的错，主入口是这一组——按 `workflow_id` 把四层落盘串起来，不用逐个翻 R2。
+
+| 端点 | 给什么 |
+|---|---|
+| `/observability/runs/:workflowId` | 这次 run 的病历袋总目录：各步骤状态、耗时、失败原因 |
+| `/observability/runs/:workflowId/clustering` | `cluster_id → article_ids` 映射。被毙的簇也在里面（簇成员是 workflow 内的临时数据，不落盘就无处可查） |
+| `/observability/runs/:workflowId/candidate-groups` | 候选组划分（几何分组时代的产物，现行链路已不产出） |
+| `/observability/runs/:workflowId/coverage` | 覆盖对账：`selected_for_intel=true` 但最终 `disposition=dropped` 的条目，用于定位合成层漏报 |
+| `/observability/runs/:workflowId/stories/:storyId/intel` | 单条故事的情报报告全文（从 R2 取，报告本身不进 workflow step） |
+| `/observability/runs/:workflowId/llm-calls` | 这次 run 的全部 LLM 调用记录（按 `{phase}-{callIndex}` 归档） |
+| `/observability/llm-calls/*` | 跨 run 直接按归档路径取单次调用 |
+
+#### 趋势与健康
+
+| 端点 | 给什么 |
+|---|---|
+| `/observability/trends` | 跨 run 的指标趋势 |
+| `/observability/health/summary` | 健康摘要 |
 
 ## 监控指标说明
 

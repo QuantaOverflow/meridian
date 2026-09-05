@@ -32,13 +32,16 @@
 # 进入AI Worker目录
 cd services/meridian-ai-worker
 
-# 设置环境变量
+# 设置环境变量（清单以 .dev.vars.example 为准）
 wrangler secret put CLOUDFLARE_ACCOUNT_ID
 wrangler secret put CLOUDFLARE_GATEWAY_ID
 wrangler secret put CLOUDFLARE_API_TOKEN
-wrangler secret put GOOGLE_AI_API_KEY
+wrangler secret put AI_GATEWAY_TOKEN
+wrangler secret put DASHSCOPE_API_KEY
 
-# 可选的其他提供商
+# 可选：其他 provider。**生产链路不走它们**——2026-08 起 LLM 全量走 Workers AI
+# （binding，无需 key），DashScope 作跨 provider 兜底。这几个只在离线对照实验里用。
+wrangler secret put GOOGLE_AI_API_KEY
 wrangler secret put OPENAI_API_KEY
 wrangler secret put ANTHROPIC_API_KEY
 

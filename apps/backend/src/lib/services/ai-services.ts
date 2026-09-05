@@ -225,42 +225,23 @@ export class AIWorkerService {
   }
 
   /**
-   * 主线分块第 1 步：给一个大事件的若干单元命名 3-5 条主线。
-   * 失败回空数组（端点保证），上游据此跳过分块、保持去重分组原样。
-   */
-  async planStorylines(
-    units: Array<{ articleTitles: string[] }>,
-    callIndex?: number
-  ): Promise<ServiceResult<{ storylines: Array<{ name: string; covers: string }> }>> {
-    const extra: Record<string, string> = {};
-    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
-    const request = new Request(`${this.baseUrl}/meridian/storyline/plan`, {
-      method: 'POST',
-      headers: this.buildHeaders(extra),
-      body: JSON.stringify({ units }),
-    });
-    return await this.callJson<{ storylines: Array<{ name: string; covers: string }> }>(request);
-  }
-
-  /**
-   * 主线分块第 2 步：一个单元选一条主线（1 基序号；null = 弃权）。
+   * 簇判定：一个聚类簇 = 简报里的一条。一次调用同时判「是不是一件事」与起名。
    *
-   * `storylines` 必须由调用方**按 (单元, 轮次) 置换后**传入——端点原样用，不重排。
-   * 位置偏置是实测的（排第 1 位被选中的比率是排其他位的 3 倍），置换 + 多数票才摊得平。
+   * 失败（含解析失败）回 ok:false，**不会**伪装成 NO_EVENT——调用方据此走退化路径
+   * （整簇保留成一块），而不是把一条真新闻毙掉。
    */
-  async assignStoryline(
-    storylines: Array<{ name: string; covers: string }>,
-    unit: { articleTitles: string[] },
+  async judgeCluster(
+    articles: Array<{ id: number; title: string }>,
     callIndex?: number
-  ): Promise<ServiceResult<{ storyline: number | null; reason: string }>> {
+  ): Promise<ServiceResult<{ verdict: 'EVENT' | 'NO_EVENT' | 'UNSURE'; title: string; event: string; reason: string }>> {
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
-    const request = new Request(`${this.baseUrl}/meridian/storyline/assign`, {
+    const request = new Request(`${this.baseUrl}/meridian/cluster/judge`, {
       method: 'POST',
       headers: this.buildHeaders(extra),
-      body: JSON.stringify({ storylines, unit }),
+      body: JSON.stringify({ articles }),
     });
-    return await this.callJson<{ storyline: number | null; reason: string }>(request);
+    return await this.callJson<{ verdict: 'EVENT' | 'NO_EVENT' | 'UNSURE'; title: string; event: string; reason: string }>(request);
   }
 
   /**

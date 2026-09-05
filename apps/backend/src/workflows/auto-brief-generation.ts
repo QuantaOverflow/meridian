@@ -2,24 +2,13 @@ import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } f
 import { getDb } from '../lib/database';
 import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
-import { backfillStoryCentroids } from '../lib/story-clusters';
+import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
-  buildMergeGroups,
-  collapseGroup,
-  DEFAULT_ARTICLE_CAP,
-  DEFAULT_MIN_COSINE,
-  type CosinePair,
-  type DedupStory,
-} from '../lib/core/story-dedup';
-import {
-  majorityStoryline,
-  permuteStorylines,
-  regroupByStoryline,
-  STORYLINE_MIN_UNITS,
-  STORYLINE_VOTES,
-  type StorylineDef,
-  type StorylineUnit,
+  blockImportance,
+  dominantEntity,
+  PER_EVENT_BLOCK_CAP,
 } from '../lib/core/storyline';
+import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
@@ -27,8 +16,6 @@ import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
 import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
-import { buildCandidateGroups } from '../lib/core/candidate-grouping';
-import { CANDIDATE_GROUP_THRESHOLD } from '../lib/core/constants';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -100,6 +87,10 @@ export interface BriefGenerationParams {
       min_samples?: number;
       epsilon?: number;
     };
+    clusteringAlgorithm?: string;
+    agglomerativeThreshold?: number;
+    agglomerativeLinkage?: string;
+    agglomerativeMinClusterSize?: number;
   };
   
   // 业务控制参数
@@ -146,23 +137,44 @@ const dbStepConfig: WorkflowStepConfig = {
   timeout: '30 seconds',
 };
 
-// 去重步单列配置：这一步不是纯 DB 步，体里有 11-15 次**串行** LLM 确认调用
-// （实测 workflow admin-brief-1788170117190：41 条过阈配对、11 个簇），每次 2-4 秒 → 22-60 秒，
-// 而 dbStepConfig 只给 30 秒。那次生产跑压线过关纯属侥幸；一旦超时，retries 会把整组 LLM
-// 重打 3 遍（4 倍成本）后整期简报失败。5 分钟对当前规模约 10 倍余量。
-// retries 降到 2：这一步重试的代价是整组 LLM 重跑，不像纯 DB 步那样近乎免费。
-const dedupStepConfig: WorkflowStepConfig = {
-  retries: { limit: 2, delay: '5 seconds', backoff: 'linear' },
-  timeout: '5 minutes',
-};
-
-// 主线分块：1 次命名 + 单元数 × 5 票归类。最坏情况一个 20 单元的簇要 101 次调用，
-// 并发 6 下约 1-2 分钟；再算上可能有两个大簇，10 分钟约 3-5 倍余量。
-// retries 降到 1：重试代价是整簇 LLM 重跑，而这一步失败不影响出简报（保持去重分组原样）。
+// 簇判定：每簇 1 次调用。全量一期约 70 个簇（不降维凝聚 + 最小 3 篇成簇），并发 6 下
+// 约 1 分钟；30 分钟有大量余量。上一代 storyline 两段式是每篇一次归类、约 480 次调用、
+// 约 4 分钟，换掉之后这一步的时间与成本都降了一个量级。
+// retries 降到 1：重试代价是整期 LLM 重跑（无断点），而这一步失败等于当天没有简报——
+// 与其烧三轮不如失败一次看日志。
 const storylineStepConfig: WorkflowStepConfig = {
   retries: { limit: 1, delay: '10 seconds', backoff: 'linear' },
-  timeout: '10 minutes',
+  timeout: '30 minutes',
 };
+
+/**
+ * 簇判定调用的并发。与情报分析、简报块写作同档：不让 N 路同时打 provider，撞限流由
+ * AIGateway 配额退避兜底。不能再提：判定 1-5 秒/次 × 并发 6 ≈ 100-300 rpm，
+ * Workers AI 限流 300 rpm。
+ */
+const STORYLINE_CONCURRENCY = 6;
+
+/**
+ * 簇判定调用最多喂多少条标题。**这是输入侧的封顶。**
+ *
+ * 上一代（命名主线）时它是输出侧封顶——那时模型会逐篇起名、输出随输入线性涨。现在一次
+ * 判定只吐一个 verdict + 一个标题 + 一句话，输出恒定，封顶是为了不让 81 篇的大簇把输入
+ * 撑爆。下面这段是上一代的实测来历，保留备查：**这是输出侧的封顶，不是省钱。**
+ *
+ * 2026-09-04 起 prompt 要求「一件事一条主线、起不出具体名字就继续拆」，于是在垃圾袋簇上
+ * 模型会逐篇起名，输出量随输入篇数线性涨（实测约 47 token/篇）：58 篇的袋子吐 2700-3500
+ * token，147 篇的要 ~7000，必然撑爆 storyline_plan 的 maxTokens=4000 → JSON 截断 → 解析 0 条
+ * → 走退化。**抬上限不解决**：实测把 4000 抬到 8000，同一个簇照样打满，还触发间歇性复读，
+ * 单次调用从 40 秒变成 150 秒。
+ *
+ * 封 60 条：最坏 60 条主线 ≈ 2800 token，留足余量。超出的文章第 1 步看不见，但第 2 步照样
+ * 逐篇归类——真事件簇 60 条标题足够把角度都命名出来（91 篇的尼泊尔簇本来也只出 5 条主线）；
+ * 垃圾袋簇里没被采样到的文章会被塞进某个小块，仍然是小块，仍然排不上去。
+ *
+ * 取样按发表时间等距（复用 pickSpreadArticles），不是取前 60 条——取前 N 会让命名只看见
+ * 事件早期的报道。
+ */
+const PLAN_TITLE_CAP = 60;
 
 // ============================================================================
 // R2并行读取配置
@@ -798,19 +810,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         
         // 优先使用用户传入的 clusteringOptions（来自 generate API 的 body），
         // 否则根据数据规模启发式生成默认值
-        const effectiveClusteringOptions = clusteringOptions ?? {
-          umapParams: {
-            n_neighbors: Math.min(15, Math.max(3, Math.floor(dataset.articles.length / 3))),
-            n_components: Math.min(10, Math.max(2, Math.floor(dataset.articles.length / 5))),
-            min_dist: 0.1,
-            metric: 'cosine'
-          },
-          hdbscanParams: {
-            min_cluster_size: Math.max(2, Math.floor(dataset.articles.length / 10)),
-            min_samples: 1,
-            epsilon: 0.5
-          }
-        };
+        // 2026-09-05:启发式默认改成直接用 BRIEF_CLUSTERING_OPTIONS。
+        // 原来那套按数据规模算 min_cluster_size / n_components 的分支是 UMAP+HDBSCAN 时代的
+        // 遗留,凝聚聚类只有一个阈值参数、与数据规模无关,继续留着只会让「没传参数」这条路径
+        // 悄悄跑在另一套算法上(150 篇时 min_cluster_size 会算到 15)。
+        const effectiveClusteringOptions = clusteringOptions ?? BRIEF_CLUSTERING_OPTIONS;
         console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'heuristic-default'}):`, JSON.stringify(effectiveClusteringOptions));
 
         const response = await clusteringService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
@@ -861,183 +865,210 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('story_validation', 'started');
 
-      // 这一步在 ai-worker 内限并发(VALIDATION_CONCURRENCY=6)逐簇调 LLM，wall-clock 随簇数
-      // 线性涨，实测约 8s/簇(24 簇 191s)。2026-08-12 迁 Workers AI 后曾因预算过紧超时重试 3 次
-      // 才侥幸通过，而 step.do 的重试是**整步重来、无断点**——每次重试把全部 LLM 调用重跑一遍。
+      // 一簇 = 一份情报报告 = 简报里一块。2026-09-05 起不再切分：聚类换成不降维凝聚后
+      // 一簇 ≈ 一件事（两窗人读金标实测簇纯度 0.864/0.913），切分的必要性没有了。
       //
-      // 10 → 25 分钟(2026-08-18)：移除质心剪枝 + eps 0.5→0.35(167f4c3)后簇数 28 → 87
-      // (1045 篇窗口)，87 × 8s ≈ 692s 直接撑破 600s。当日实测 admin-brief-1787048524613
-      // 正是死在这里：`WorkflowTimeoutError: Execution timed out after 600000ms`,且因 retries=3
-      // 会连撞三次、白烧三轮 LLM 调用。原注释的"单簇 20s × 约 30 簇"预算随簇数变化已失效。
-      //
-      // 25 分钟按当前 1045 篇/87 簇留 2 倍余量;进稿再涨需重估(线性外推:约 172 簇撑破 25 分钟)。
-      // **这是放宽预算不是修性能**——真正的修法是把并发 6 提高、并把"分批+批间栅栏"换成
-      // worker pool(现在一个慢簇会拖住整批)，属 story-validation 的题目，另行处理。
-      const storyValidationStepConfig: WorkflowStepConfig = {
-        retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
-        timeout: '25 minutes',
+      // 失败不连坐：判定调用失败 → 该簇退化成一块、名字用零 LLM 的主导专名（不丢文章）。
+      // 这不是「静默降级成安全默认值」：judgeFailures / pocketFlagged / unsureClusters
+      // 都是可判别的信号，正常值为 0，且都进了 observability。
+      type StoryBlock = {
+        title: string;
+        importance: number;
+        articleIds: number[];
+        storyType: string;
+        clusterId: number;
+        /** 主线的 covers 一句话，纯观测 */
+        covers: string;
+        /** 跨簇事件键（块内文章标题的主导专有名词），选择层的同事件配额用它 */
+        eventKey: string;
       };
+      const validatedStories = await step.do('簇判定', storylineStepConfig, async (): Promise<{
+        stories: StoryBlock[];
+        rejectedClusters: any[];
+        judgeCalls: number;
+        judgeFailures: number;
+        pocketFlagged: number;
+        unsureClusters: number;
+        cappedBlocks: number;
+        droppedArticles: number;
+        judgeTitleCapped: number;
+        crossClusterMerges: number;
+      }> => {
+        // 整步重跑留痕：2026-09-03 真实 workflow 实测这一步执行了两遍（每个簇的日志都出现两次），
+        // 原因未查明。step.do 不暴露 attempt 序号，故用进入时刻区分两次执行。
+        console.log(`[AutoBrief] 簇判定 step 进入 @ ${new Date().toISOString()}`);
+        const titleOf = new Map<number, string>();
+        for (const a of dataset.articles) titleOf.set(a.id, a.title ?? '');
 
-      const validatedStories = await step.do('执行故事验证', storyValidationStepConfig, async () => {
-        console.log(`[AutoBrief] 开始故事验证，处理 ${clusteringResult.clusters.length} 个聚类`);
-        
-        // 创建 AI 服务实例（注入 trace_id 以贯通跨 service 日志）
-        const aiServices = createAIServices(this.env, workflowId);
-
-        // 构建故事验证请求数据 - 使用真实的数据库字段
+        // 独立源数：blockImportance 的输入。选择层排序也用它（story-ranking 那边独立再查一次，
+        // 这里只为落库的 importance 字段，两边口径相同）。
         const db = getDb(this.env.HYPERDRIVE);
-        const articleIds = dataset.articles.map(a => a.id);
-        
-        // 这里回查的唯一目的是拿回**完整** event_summary_points：dataset.articles 只带
-        // summary = event_summary_points[0]（:619），而完整要点(近 3 天均值 7.88 条/篇)
-        // 若随 dataset 走 step 输出约 960KB，会顶在 CF Workflow 单 step ~1MB 上限上，
-        // 故设计上就该在步内回查、不进 step 输出。
-        //
-        // 2026-08-19 修：WHERE 漏了 `inArray(id, articleIds)`（上一行算出的 articleIds
-        // 从未被使用），配 `.limit(50)` 无排序 → 实际取到的是全表最早的 50 篇
-        // (id 1..3758, publish_date 2026-05-19..22)，与当前窗口(id 61 万量级)**交集为零**。
-        // 于是 metadataMap 每篇都 miss、每篇都走兜底 `[article.summary]` → 模型只看到
-        // 标题 + 一条导语，判别信号被砍到约 1/8。Map.get miss 有合法兜底路径，
-        // 100% miss 与 0% miss 在日志里完全同形，无计数器可响（「静默降级成安全默认值」
-        // 模式的又一实例，此处发生在数据装配而非 LLM 边界）。
-        //
-        // 剪枝时代簇最大 15 篇，标题+导语够拆，故长期无症状；移除剪枝后簇涨到 96 篇，
-        // 判别难度陡升才显形——上游改动叫醒的休眠 bug。
-        const articleMetadata = await db
-          .select({
-            id: $articles.id,
-            title: $articles.title,
-            url: $articles.url,
-            event_summary_points: $articles.event_summary_points
-          })
+        const srcRows = await db
+          .select({ id: $articles.id, sourceId: $articles.sourceId })
           .from($articles)
-          .where(inArray($articles.id, articleIds));
-        
-        const metadataMap = new Map(articleMetadata.map(a => [a.id, a]));
-        
-        const articlesData = dataset.articles.map(article => {
-          const metadata = metadataMap.get(article.id);
-          return {
-            id: article.id,
-            title: article.title,
-            url: article.url,
-            // 使用数据库中的实际event_summary_points，如果为空则回退到构建的summary
-            event_summary_points: Array.isArray((metadata as any)?.event_summary_points) && (metadata as any).event_summary_points.length > 0
-              ? (metadata as any).event_summary_points as string[]
-              : [article.summary] // 回退选项
-          };
-        });
-        
-        // 簇内几何候选分组(全链 cos≥CANDIDATE_GROUP_THRESHOLD)。2026-08-21 起 story-validation
-        // 的判定单位由「整簇」改为「候选组」——原因与实测见 lib/core/candidate-grouping.ts。
-        //
-        // 为什么算在**步内**而不是单开一步：向量是 384 维 float，1254 篇约 3.7MB，
-        // 跨 step 传会撞 CF Workflow 单 step ~1MB 输出上限（与 embeddings 卸 R2 同一个约束）。
-        // 成本上也不需要单开：全量 57 簇 1254 篇实测单线程 28ms。
-        const { groups: candidateGroups, skippedNoEmbedding } = buildCandidateGroups(
-          clusteringResult.clusters,
-          dataset.embeddings,
-          CANDIDATE_GROUP_THRESHOLD
-        );
-        if (skippedNoEmbedding.length > 0) {
-          // 缺向量的文章无法参与几何分组。正常应为 0（进稿侧已补算），非 0 说明补算漏了，
-          // 而它会静默表现为「这些文章没进任何故事」，故显式告警。
-          console.warn(`[AutoBrief] ${skippedNoEmbedding.length} 篇文章缺 embedding，未参与候选分组`);
-        }
-        const groupedArticles = new Set(candidateGroups.flatMap(g => g.articleIds));
-        // 落单 = 在真实簇里（非 -1 噪声桶）但够不上任何候选组的文章。
-        // 全链要求组内**每一对**都 ≥ 阈值，落单的多是「只有一家媒体报道」的事件——
-        // candidate-grouping.ts 文件头记着这个偏置（宝莱坞票房 5 篇进简报、跨邦调水裁决 1 篇出局）。
-        const clusteredIds = clusteringResult.clusters
-          .filter((c: any) => c.clusterId !== -1)
-          .flatMap((c: any) => c.articleIds as number[]);
-        const droppedArticleIds = [...new Set(clusteredIds)].filter(id => !groupedArticles.has(id));
-        console.log(
-          `[AutoBrief] 候选分组：${clusteringResult.clusters.length} 簇 → ${candidateGroups.length} 组，` +
-          `进组 ${groupedArticles.size}/${dataset.articles.length} 篇，落单 ${droppedArticleIds.length} 篇`
-        );
+          .where(inArray($articles.id, dataset.articles.map(a => a.id)));
+        const srcOf = new Map<number, number | null>(srcRows.map(r => [r.id, r.sourceId]));
+        const distinctSources = (ids: number[]) =>
+          new Set(ids.map(i => srcOf.get(i)).filter(x => x != null)).size;
 
-        // 观测性：落一份候选分组结果 + **落单清单**到 R2。
-        //
-        // 这一步是全管线丢弃量最大的一处（8 期实测：进簇文章的 ~54% 够不上任何组），
-        // 而在此之前它是唯一**不落盘**的丢弃点——聚类的噪声桶落了、被毙簇落了、
-        // 落选故事在 brief_stories 里查得到，唯独这里丢掉的文章无处可查，
-        // 只在一行 console.log 里报个总数（而 wrangler tail 在开发机上是死的）。
-        //
-        // 支持「丢一半可以接受」的唯一证据是 2026-08-20 的人工复验「85/85 全捕获真事件」，
-        // 而源池 08-17 才扩过一倍（11→17 行，进稿 230→600/天），那个背书没重验过。
-        // 落了这份清单，重验只需读它，不必再拿 R2 快照重算几何。
-        try {
-          await this.env.ARTICLES_BUCKET.put(
-            `observability/candidate-groups/${workflowId}.json`,
-            JSON.stringify({
-              workflowId,
-              createdAt: new Date().toISOString(),
-              threshold: CANDIDATE_GROUP_THRESHOLD,
-              stats: {
-                clusters: clusteringResult.clusters.length,
-                groups: candidateGroups.length,
-                articlesInClusters: new Set(clusteredIds).size,
-                articlesGrouped: groupedArticles.size,
-                articlesDropped: droppedArticleIds.length,
-                skippedNoEmbedding: skippedNoEmbedding.length,
-              },
-              groups: candidateGroups.map(g => ({
-                clusterId: g.clusterId, groupId: g.groupId, articleIds: g.articleIds,
-              })),
-              // 只存 id：标题/正文按 id 去 articles 表取，不在这里冗余一份会漂的副本
-              droppedArticleIds,
-              skippedNoEmbedding,
-            }, null, 2)
-          );
-        } catch (persistErr) {
-          console.warn(`[AutoBrief] 候选分组落盘失败 (workflow=${workflowId}):`, persistErr);
-        }
+        const aiw = createAIServices(this.env, workflowId).aiWorker;
+        const stories: StoryBlock[] = [];
+        let judgeCalls = 0;
+        let judgeFailures = 0;
+        let pocketFlagged = 0;
+        let unsureClusters = 0;
 
-        console.log(`[AutoBrief] 调用真正的AI Worker故事验证服务，处理 ${candidateGroups.length} 个候选组`);
-        
-        // 使用真正的AI Worker故事验证服务
-        const validation = await aiServices.aiWorker.validateStory(
-          clusteringResult, // ClusteringResult 对象（供 ai-worker 统计口径与落单留痕）
-          candidateGroups,  // CandidateGroup[] 判定单位
-          articlesData,     // MinimalArticleInfo[] 数组
-          {
-            // 不传 aiOptions：provider/model 由 ai-worker 的 PHASE_DEFAULTS 决定（调 LLM 的单一
-            // 配置入口）。跨 service 传 provider/model 等于在网线这头开第二个真源——2026-08-12
-            // 迁 Workers AI 时正是这里把 story_validation 拽回已失效的 DashScope，15 个聚类
-            // 全部 401 → 降级 no_stories → 工作流「未发现有效故事」终止。
+        // 一块最多 DEFAULT_ARTICLE_CAP(30) 篇，按时间等距取样、两端锚定。
+        // 这个上限不是优化是**必须**：pickSpreadArticles 的文档记着「91 篇（283k 字符）→
+        // 300 秒超时硬失败」。旧去重层用 collapseGroup 施加它，本层取代去重时漏补 ——
+        // 2026-09-03 真实 workflow 实证：67 篇的块把情报分析打成 HTTP 500，另有 60/58 篇两块。
+        const publishedAt = new Map<number, number>();
+        for (const a of dataset.articles) {
+          const t = Date.parse(a.publishDate);
+          if (Number.isFinite(t)) publishedAt.set(a.id, t);
+        }
+        let cappedBlocks = 0;
+        let droppedArticles = 0;
+        // 先收集**未截断**的块，全部簇跑完后再统一「跨簇同名合并 → 截 30 篇 → 算分」。
+        // 顺序不能反：先截后合会对同一个块采样两次，且合并后的篇数不对。
+        type PendingBlock = { clusterId: number; title: string; covers: string; ids: number[] };
+        const pending: PendingBlock[] = [];
+        const mkBlock = (clusterId: number, title: string, covers: string, ids: number[]): void => {
+          pending.push({ clusterId, title, covers, ids });
+        };
+        const materialize = (b: PendingBlock): StoryBlock => {
+          const picked = pickSpreadArticles(b.ids, publishedAt, DEFAULT_ARTICLE_CAP);
+          if (picked.length < b.ids.length) {
+            cappedBlocks++;
+            droppedArticles += b.ids.length - picked.length;
           }
+          return {
+            title: b.title,
+            importance: blockImportance(distinctSources(picked), picked.length),
+            articleIds: picked,
+            storyType: 'SINGLE_STORY',
+            clusterId: b.clusterId,
+            covers: b.covers,
+            eventKey: dominantEntity(picked.map(id => titleOf.get(id) ?? '')),
+          };
+        };
+
+        // ── 逐簇判定：一簇一次调用，同时判「是不是一件事」与起名 ───────────────
+        // 2026-09-05 取代 storyline 两段式（命名主线 + 逐篇归类）。前提是聚类换成不降维凝聚
+        // （余弦阈值 0.10、最小 3 篇成簇）之后一簇 ≈ 一件事：两窗人读全覆盖金标实测
+        // 簇纯度 0.864/0.913、题材袋率 0.072/0.000（旧的 UMAP+HDBSCAN 是 0.354/0.408 与
+        // 0.286/0.273）。簇内已经基本只有一件事，就不需要再让模型切分了。
+        // 调用量随之从每期 430+ 次（每篇一次归类）降到约 70 次（每簇一次）。
+        //
+        // NO_EVENT **只标记不丢弃**。让 LLM 毙掉整簇 = 簇级硬门的 LLM 版，全有全无；
+        // 零 LLM 的硬门就这么把 8 篇的 NASA 望远镜簇、11 篇的阿富汗驱逐簇整个抹掉过。
+        // 而且实测题材袋在 3 篇截断之后只剩 0-5 个、blockScore 全在前 25 之外，
+        // 丢与不丢对读者没有差别，先留着看生产数据。
+        type Target = { clusterId: number; ids: number[]; judgeIds: number[] };
+        const targets: Target[] = [];
+        let judgeTitleCapped = 0;
+        for (const cluster of clusteringResult.clusters) {
+          if (cluster.clusterId < 0) continue; // -1 噪声桶不进简报
+          const ids = [...new Set(cluster.articleIds)].filter(id => titleOf.has(id)).sort((x, y) => x - y);
+          if (ids.length === 0) continue;
+          // ml-service 已保证 <3 篇的簇记为噪声；真收到小簇也不浪费一次调用
+          if (ids.length < 2) { mkBlock(cluster.clusterId, titleOf.get(ids[0])!, '', ids); continue; }
+          // 判定只喂 PLAN_TITLE_CAP 条标题（按时间等距取样），封住输入规模
+          const judgeIds = pickSpreadArticles(ids, publishedAt, PLAN_TITLE_CAP);
+          if (judgeIds.length < ids.length) judgeTitleCapped++;
+          targets.push({ clusterId: cluster.clusterId, ids, judgeIds });
+        }
+
+        // 并发 6：判定实测 1-5 秒/次，6 路约 100-300 rpm，Workers AI 限流 300 rpm 内。
+        // ⚠️ processor 内必须自己接住异常：batchProcessParallel 对 rejected 的项只 console.warn
+        // 然后**丢弃**，那样这个簇会从结果里整个消失、它的文章静默不进简报。
+        const judged = await this.batchProcessParallel(targets, STORYLINE_CONCURRENCY, async (t: Target) => {
+          const articles = t.judgeIds.map(id => ({ id, title: titleOf.get(id)! }));
+          try {
+            let res = await aiw.judgeCluster(articles, t.clusterId);
+            if (!res.ok) {
+              console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId} 首次失败，重试一次 — ${res.error}`);
+              res = await aiw.judgeCluster(articles, t.clusterId);
+            }
+            return { t, res };
+          } catch (e) {
+            return { t, res: { ok: false as const, error: `判定调用抛异常: ${e instanceof Error ? e.message : String(e)}` } };
+          }
+        });
+        judgeCalls += targets.length;
+        // 覆盖断言：判定阶段不许吞掉任何簇。丢了就是静默丢内容，宁可整步失败重试。
+        if (judged.length !== targets.length) {
+          throw new Error(`簇判定：丢失 ${targets.length - judged.length} 个簇（${targets.length} → ${judged.length}），拒绝静默继续`);
+        }
+
+        for (const { t, res } of judged) {
+          if (!res.ok) {
+            // 判定失败 ≠ NO_EVENT。失败走退化：整簇保留成一块，名字用零 LLM 的主导专名。
+            // 把失败读成「这簇没有故事」会让一次网络抖动毙掉一条真新闻，这个仓库栽过。
+            judgeFailures++;
+            const key = dominantEntity(t.ids.map(id => titleOf.get(id) ?? ''));
+            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判定失败，退化成一块「${key}」 — ${res.error}`);
+            mkBlock(t.clusterId, key, '', t.ids);
+            continue;
+          }
+          const { verdict, title, event, reason } = res.value;
+          if (verdict === 'NO_EVENT') pocketFlagged++;
+          if (verdict === 'UNSURE') unsureClusters++;
+          if (verdict !== 'EVENT') {
+            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判为 ${verdict} — ${reason}`);
+          }
+          // 标题兜底：模型没给名字（NO_EVENT 时按 prompt 就该留空）→ 用主导专名，不留空格名
+          const blockTitle = title.trim() || dominantEntity(t.ids.map(id => titleOf.get(id) ?? ''));
+          mkBlock(t.clusterId, blockTitle, event, t.ids);
+        }
+
+        // ── 阶段 4：跨簇同名合并 → 物化 ──────────────────────────────────────
+        // 第 1 步是**按簇独立**命名的，一次只看一个簇。聚类把同一个事件分到两个簇时，
+        // 两边会各自起出**逐字相同**的主线名：2026-09-04 实测簇 55 与簇 54 都产出
+        // `Nepal-Tibet flash floods`，读者在一份简报里看到两个同名的格。
+        // 判据只认**逐字相同**（去空白、忽略大小写）——近义合并要判语义，那是另一回事，
+        // 且误合的代价（两件事被塞进一格）正是这轮刚治好的病。
+        const byTitle = new Map<string, PendingBlock[]>();
+        for (const b of pending) {
+          const k = b.title.trim().toLowerCase();
+          byTitle.set(k, [...(byTitle.get(k) ?? []), b]);
+        }
+        let crossClusterMerges = 0;
+        for (const group of byTitle.values()) {
+          if (group.length === 1) { stories.push(materialize(group[0])); continue; }
+          // 取篇数最多的那块的 clusterId 与 covers，文章并集
+          const lead = [...group].sort((a, b) => b.ids.length - a.ids.length)[0];
+          const ids = [...new Set(group.flatMap(g => g.ids))].sort((x, y) => x - y);
+          crossClusterMerges += group.length - 1;
+          console.warn(
+            `[AutoBrief] 主线分块：${group.length} 个块同名「${lead.title}」（簇 ${group.map(g => g.clusterId).join('/')}），` +
+              `合并成 1 块共 ${ids.length} 篇`
+          );
+          stories.push(materialize({ clusterId: lead.clusterId, title: lead.title, covers: lead.covers, ids }));
+        }
+
+        console.log(
+          `[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +
+            `判为 NO_EVENT ${pocketFlagged} 簇、UNSURE ${unsureClusters} 簇（均只标记不丢弃），` +
+            `判定输入超 ${PLAN_TITLE_CAP} 条被取样 ${judgeTitleCapped} 簇，跨簇同名合并 ${crossClusterMerges} 次，` +
+            `超 ${DEFAULT_ARTICLE_CAP} 篇被截 ${cappedBlocks} 块共丢 ${droppedArticles} 篇）`
         );
-
-        if (!validation.ok) {
-          console.error(`[AutoBrief] 故事验证失败: ${validation.error}`);
-          throw new Error(`故事验证失败: ${validation.error}`);
-        }
-
-        const validatedStories = validation.value;
-        console.log(`[AutoBrief] 故事验证成功: ${validatedStories.stories.length} 个有效故事, ${validatedStories.rejectedClusters.length} 个拒绝聚类`);
-        
-        // 记录验证结果详情
-        if (validatedStories.stories.length > 0) {
-          console.log(`[AutoBrief] 有效故事列表:`);
-          validatedStories.stories.forEach((story: any, index: number) => {
-            console.log(`  ${index + 1}. ${story.title} (重要性: ${story.importance}, 文章数: ${story.articleIds.length})`);
-          });
-        }
-        
-        if (validatedStories.rejectedClusters.length > 0) {
-          console.log(`[AutoBrief] 拒绝聚类列表:`);
-          validatedStories.rejectedClusters.forEach((cluster: any, index: number) => {
-            console.log(`  ${index + 1}. 聚类 ${cluster.clusterId} - 原因: ${cluster.rejectionReason} (文章数: ${cluster.originalArticleIds.length})`);
-          });
-        }
-        
-        return validatedStories;
+        // rejectedClusters 恒为空：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
+        // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。保留字段是为下游形状不变。
+        return { stories, rejectedClusters: [], judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
+          cappedBlocks, droppedArticles, judgeTitleCapped, crossClusterMerges };
       });
 
       await observability.logStep('story_validation', 'completed', {
         validStoriesCount: validatedStories.stories.length,
         rejectedClustersCount: validatedStories.rejectedClusters.length,
+        judgeCalls: validatedStories.judgeCalls,
+        judgeFailures: validatedStories.judgeFailures,
+        pocketFlagged: validatedStories.pocketFlagged,
+        unsureClusters: validatedStories.unsureClusters,
+        judgeTitleCapped: validatedStories.judgeTitleCapped,
+        cappedBlocks: validatedStories.cappedBlocks,
+        droppedArticles: validatedStories.droppedArticles,
         stories: validatedStories.stories,
         rejectedClusters: validatedStories.rejectedClusters,
       });
@@ -1264,333 +1295,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         timeout: '10 minutes',
       };
 
-      // ======================================================================
-      // 去重：把 story-validation 从**同一个簇**里切出来的重复故事并回去。
+      // story 去重层（story-dedup）与「去重后再分主线」的两段式都已退役：文章级划分下
+      // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。相关代码留在
+      // lib/core/story-dedup.ts 里未删（跨期线索合并仍可能用到），但不在简报主链路上。
       //
-      // 病灶（2026-08-30 实测 + 94 条人工金标）：一场尼泊尔冰川溃决洪水的 91 篇报道被切成
-      // 22 个故事，占掉 25 个名额里的 11 个，把基辅无人机袭击致 37 死等挤出简报；8/28 同一场
-      // 灾难复现（74 篇 → 14 个）。判据与阈值来历见 lib/core/story-dedup.ts 的文件头。
-      //
-      // 位置在覆盖度与排序**之前**：放在 b′ 那层只能治观感，名额早已花掉，被挤走的真新闻
-      // 追不回来。落库在此之前已完成，故 centroid 可现场补算。
-      // ======================================================================
-      // 去重失败不该连坐整期：合不上顶多是大事件多占几个名额，简报照出；抛出去则今天没有简报。
-      // 不是静默降级——失败走 error 级日志，且 candidateGroups=-1 是"这一步压根没跑成"的可判别信号
-      // （正常至少是 0）。
-      type DedupPlan = {
-        groups: Array<{ indices: number[]; title: string; minCos: number; confirmed: boolean }>;
-        candidateGroups: number;
-        centroidsFilled: number;
-      };
-      let dedupPlan: DedupPlan;
-      try {
-        dedupPlan = await step.do('故事去重', dedupStepConfig, async (): Promise<DedupPlan> => {
-          const db = getDb(this.env.HYPERDRIVE);
-          // 幂等：只补 centroid IS NULL 的行。工作流末尾的 assignStoryClustersForWorkflow 仍会再调一次。
-          const filled = await backfillStoryCentroids(db, workflowId);
-          console.log(`[AutoBrief] 去重：补算 ${filled} 条 story centroid`);
-
-          const rows = (await db.execute(sql`
-            SELECT a.id AS a_id, b.id AS b_id, (1 - (a.centroid <=> b.centroid)) AS cos
-            FROM brief_stories a
-            JOIN brief_stories b
-              ON b.workflow_id = a.workflow_id AND b.cluster_id = a.cluster_id AND a.id < b.id
-            WHERE a.workflow_id = ${workflowId}
-              AND a.centroid IS NOT NULL AND b.centroid IS NOT NULL
-              AND (1 - (a.centroid <=> b.centroid)) >= ${DEFAULT_MIN_COSINE}
-          `)) as unknown as Array<{ a_id: number; b_id: number; cos: number }>;
-
-          // rowId → stories 下标。briefStoryRowIds 是按 stories 顺序插入返回的主键。
-          const rowIdToIndex = new Map<number, number>();
-          briefStoryRowIds.forEach((rowId, i) => { if (typeof rowId === 'number') rowIdToIndex.set(rowId, i); });
-
-          const items: DedupStory[] = validatedStories.stories.map((st: any, i: number) => ({
-            index: i,
-            clusterId: st.clusterId ?? -1,
-            importance: st.importance ?? 0,
-            articleIds: Array.isArray(st.articleIds) ? st.articleIds : [],
-            title: st.title ?? '',
-          }));
-          const pairs: CosinePair[] = rows
-            .map(r => ({ a: rowIdToIndex.get(Number(r.a_id))!, b: rowIdToIndex.get(Number(r.b_id))!, cos: Number(r.cos) }))
-            .filter(p => Number.isInteger(p.a) && Number.isInteger(p.b));
-
-          const groups = buildMergeGroups(items, pairs);
-          console.log(`[AutoBrief] 去重：候选合并组 ${groups.length} 个（需 LLM 确认 ${groups.filter(g => g.needsConfirm).length} 个）`);
-
-          // 确认 + 起标题。两条一组才确认（单边支撑，余弦分不开真假）；≥3 条只起标题。
-          const dedupAi = createAIServices(this.env, workflowId);
-          const decided: Array<{ indices: number[]; title: string; minCos: number; confirmed: boolean }> = [];
-          for (const [groupIdx, g] of groups.entries()) {
-            const candidates = g.indices.map(i => ({
-              title: items[i].title,
-              articleTitles: items[i].articleIds
-                .map(aid => dataset.articles.find(a => a.id === aid)?.title)
-                .filter((t): t is string => !!t)
-                .slice(0, 4),
-            }));
-            // groupIdx 作为 call index：不传的话 R2 日志 key 恒为 story_merge-000.json，
-            // 10+ 个组只留得下最后一个——而这一层最需要人工复核"判得对不对"。
-            const res = await dedupAi.aiWorker.checkStoryMerge(candidates, groupIdx);
-            if (!res.ok) {
-              // 调用失败不静默合并：合错的代价是两件事被写成一件，读者看不出来。
-              console.warn(`[AutoBrief] 去重确认失败，放弃本组: ${res.error}`);
-              continue;
-            }
-            if (!res.value.same_occurrence || !res.value.title) {
-              console.log(`[AutoBrief] 去重：LLM 判为不同发生，放弃合并 [${g.indices.join(',')}] — ${res.value.reason}`);
-              continue;
-            }
-            decided.push({ indices: g.indices, title: res.value.title, minCos: g.minCos, confirmed: g.needsConfirm });
-          }
-          return { groups: decided, candidateGroups: groups.length, centroidsFilled: filled };
-        });
-      } catch (dedupErr) {
-        console.error(
-          `[AutoBrief] 去重步失败，跳过去重继续出简报: ${dedupErr instanceof Error ? dedupErr.message : String(dedupErr)}`
-        );
-        dedupPlan = { groups: [], candidateGroups: -1, centroidsFilled: 0 };
-      }
-
-      // ======================================================================
-      // 主线分块：把去重后**仍然过多**的同簇单元，按叙事主线归并成 3-5 块。
-      //
-      // 与去重层正交：去重问「底层发生是不是同一个」，这一层问「读者读起来是不是同一条主线」。
-      // 一场洪灾的救援与成因复盘确实是同一个发生（去重判准原文如此），但它们是两条主线。
-      //
-      // 不做这一层的代价（2026-08-30 实测，cluster 47 的 22 条 story / 91 篇）：去重只能压到
-      // 11 条，简报里就是 11 个块，「伤亡」占 2 块、「堰塞湖」占 2 块、「国际援助」占 3 块。
-      // 接上这一层后 11 块 → 5 块，尼泊尔占版面 44% → 26%（走生产 b′ 路径实测）。
-      //
-      // 失败不连坐：任何一步出问题都保持 dedupPlan 原样，简报照出。这不是静默降级——
-      // 走 error 级日志，且「没有任何主线组」与「分块跑成了」在 groups 的 minCos 上可判别
-      // （主线组恒为 SENTINEL_NO_COSINE = -1）。
-      // ======================================================================
-      try {
-        const storylineOutcome = await step.do('主线分块', storylineStepConfig, async () => {
-          const stories = validatedStories.stories as any[];
-          const titleOf = new Map<number, string>();
-          for (const a of dataset.articles) titleOf.set(a.id, a.title ?? '');
-
-          const inGroup = new Set<number>();
-          dedupPlan.groups.forEach(g => g.indices.forEach(i => inGroup.add(i)));
-          // 单元 = 去重合并组，或未被合并的单条 story。两者形状统一，分块结果才能原样替换 groups。
-          type Unit = StorylineUnit & { clusterId: number };
-          const units: Unit[] = [
-            ...dedupPlan.groups.map(g => ({
-              indices: g.indices,
-              title: g.title,
-              minCos: g.minCos,
-              confirmed: g.confirmed,
-              clusterId: stories[g.indices[0]]?.clusterId ?? -1,
-            })),
-            ...stories
-              .map((st: any, i: number) => ({ st, i }))
-              .filter(x => !inGroup.has(x.i))
-              .map(x => ({
-                indices: [x.i],
-                title: x.st.title ?? '',
-                minCos: 1,
-                confirmed: false,
-                clusterId: x.st.clusterId ?? -1,
-              })),
-          ];
-
-          const byCluster = new Map<number, Unit[]>();
-          for (const u of units) {
-            if (u.clusterId < 0) continue; // -1 噪声桶不参与
-            byCluster.set(u.clusterId, [...(byCluster.get(u.clusterId) ?? []), u]);
-          }
-          const targets = [...byCluster.entries()].filter(([, us]) => us.length >= STORYLINE_MIN_UNITS);
-          if (targets.length === 0) {
-            console.log(`[AutoBrief] 主线分块：无簇达到 ${STORYLINE_MIN_UNITS} 单元的触发阈值，跳过`);
-            return null;
-          }
-
-          // 成员报道标题，**不截断**：实测每条只给前 4 篇会让 18 篇的大 story 只露冰山一角，
-          // 而那 4 篇恰好全是同一角度。仅在整簇标题过多时按预算等比缩，且留痕。
-          const PLAN_TITLE_BUDGET = 400;
-          const titlesOf = (u: Unit, cap = Infinity) =>
-            u.indices
-              .flatMap(i => (stories[i]?.articleIds ?? []) as number[])
-              .map(aid => titleOf.get(aid))
-              .filter((t): t is string => !!t)
-              .slice(0, cap === Infinity ? undefined : cap);
-
-          const aiw = createAIServices(this.env, workflowId).aiWorker;
-          const newGroupsByCluster = new Map<number, DedupPlan['groups']>();
-          let plannedLines = 0;
-          let abstained = 0;
-          let assignCalls = 0; // 仅用于日志计数
-
-          for (const [clusterId, us] of targets) {
-            const total = us.reduce((n, u) => n + titlesOf(u).length, 0);
-            const cap = total > PLAN_TITLE_BUDGET ? Math.max(3, Math.floor(PLAN_TITLE_BUDGET / us.length)) : Infinity;
-            if (cap !== Infinity) {
-              console.warn(`[AutoBrief] 主线分块：簇 ${clusterId} 共 ${total} 条标题超预算，命名步每单元截到 ${cap} 条`);
-            }
-            const plan = await aiw.planStorylines(us.map(u => ({ articleTitles: titlesOf(u, cap) })), clusterId);
-            if (!plan.ok || plan.value.storylines.length < 2) {
-              console.warn(`[AutoBrief] 主线分块：簇 ${clusterId} 命名失败或主线不足，保持去重分组 — ${plan.ok ? 'storylines<2' : plan.error}`);
-              continue;
-            }
-            const lines: StorylineDef[] = plan.value.storylines;
-            plannedLines += lines.length;
-            console.log(`[AutoBrief] 主线分块：簇 ${clusterId}（${us.length} 单元）→ ${lines.length} 条主线：${lines.map(l => l.name).join(' / ')}`);
-
-            // 每单元投 STORYLINE_VOTES 票。主线顺序按 (单元, 轮次) 置换——存在位置偏置
-            // （排第 1 位被选中的比率是排其他位的 3 倍），置换 + 多数票才摊得平。
-            type Ballot = { unit: number; round: number };
-            const ballots: Ballot[] = us.flatMap((_, ui) =>
-              Array.from({ length: STORYLINE_VOTES }, (_, r) => ({ unit: ui, round: r }))
-            );
-            const votes: Array<Array<number | null>> = us.map(() => []);
-            assignCalls += ballots.length;
-            await this.batchProcessParallel(ballots, 6, async (b: Ballot) => {
-              const ord = permuteStorylines(us[b.unit].indices[0], lines.length, b.round);
-              const shown = ord.map(i => lines[i]);
-              // callIndex 由 (簇, 单元, 轮次) 算出而非并发自增：自增在并发下顺序不定，
-              // 会让同一批输入在重放时落到不同的 R2 观测 key。
-              const res = await aiw.assignStoryline(
-                shown,
-                { articleTitles: titlesOf(us[b.unit]) },
-                clusterId * 10000 + b.unit * STORYLINE_VOTES + b.round
-              );
-              // 调用失败与模型弃权同样记 null：绝不静默塞进第 1 条主线。
-              const shownPick = res.ok ? res.value.storyline : null;
-              votes[b.unit].push(shownPick == null ? null : ord[shownPick - 1] + 1);
-              return null;
-            });
-
-            const assignment = votes.map(v => majorityStoryline(v));
-            abstained += assignment.filter(a => a == null).length;
-            const regrouped = regroupByStoryline(us, assignment, lines);
-            newGroupsByCluster.set(
-              clusterId,
-              regrouped.map(g => ({ indices: g.indices, title: g.title, minCos: g.minCos, confirmed: g.confirmed === true }))
-            );
-          }
-
-          if (newGroupsByCluster.size === 0) return null;
-          // 未处理的簇保持原样：只替换被分块的那些簇的组
-          const kept = dedupPlan.groups.filter(g => !newGroupsByCluster.has(stories[g.indices[0]]?.clusterId ?? -1));
-          const groups = [...kept, ...[...newGroupsByCluster.values()].flat()];
-          return { groups, clusters: newGroupsByCluster.size, plannedLines, abstained, assignCalls };
-        });
-
-        if (storylineOutcome) {
-          console.log(
-            `[AutoBrief] 主线分块：${storylineOutcome.clusters} 个簇 → ${storylineOutcome.plannedLines} 条主线，` +
-              `合并组 ${dedupPlan.groups.length} → ${storylineOutcome.groups.length}` +
-              `（归类调用 ${storylineOutcome.assignCalls} 次，弃权单元 ${storylineOutcome.abstained}）`
-          );
-          dedupPlan.groups = storylineOutcome.groups;
-        }
-      } catch (storylineErr) {
-        console.error(
-          `[AutoBrief] 主线分块失败，保持去重分组继续出简报: ${storylineErr instanceof Error ? storylineErr.message : String(storylineErr)}`
-        );
-      }
-
-      // 应用合并（纯代码，放在 step 外：step 只回小决策，不回整份 story 数组）
-      if (dedupPlan.groups.length > 0) {
-        const publishedAt = new Map<number, number>();
-        for (const a of dataset.articles) {
-          const t = Date.parse(a.publishDate);
-          if (Number.isFinite(t)) publishedAt.set(a.id, t);
-        }
-        const mergedIn = new Set<number>();
-        const additions: any[] = [];
-        // 合并结果待回写 DB 的主行。见下方 persist:story_dedup_merge 的注释。
-        const mergeWriteback: Array<{ rowId: number; title: string; importance: number; articleIds: number[] }> = [];
-        for (const g of dedupPlan.groups) {
-          const members: DedupStory[] = g.indices.map((i: number) => ({
-            index: i,
-            clusterId: validatedStories.stories[i].clusterId ?? -1,
-            importance: validatedStories.stories[i].importance ?? 0,
-            articleIds: validatedStories.stories[i].articleIds ?? [],
-            title: validatedStories.stories[i].title ?? '',
-          }));
-          const merged = collapseGroup(members, g.title, publishedAt, DEFAULT_ARTICLE_CAP);
-          const survivors = new Set(merged.articleIds);
-          // 一个合并组 = 一条 story = 一份情报报告 = 简报里的一块，所以 DB 侧也只认**一行**。
-          //
-          // 曾经这里标的是「全部还有文章活下来的成员」。那会让下游把同一份报告数成 N 条：
-          // 覆盖对账的母集是 selected_for_intel=true 且 intel_report_r2_key 非空，尼泊尔 11 条
-          // 全标上就变成 1 条进简报、10 条判「合成层漏报」——凭空造出十条不存在的缺陷，
-          // 而合成漏报正是 memory synthesis-omission-fix 那条线的核心读数。
-          // 前端来源清单、story 线索建线同理，都会按 N 倍虚增。
-          //
-          // 主行取「第一个有文章活下来的成员」，其余成员留在库里、保持 selected_for_intel=false
-          // ——它们是 story-validation 过拆的证据，不该删，但确实没有作为独立故事送进情报分析。
-          // 主行的 title/article_ids 由下面的回写步改成合并后的值，否则库里那行仍是拆碎的旧样子。
-          const contributing = g.indices.filter(
-            (i: number) => (validatedStories.stories[i].articleIds ?? []).some((aid: number) => survivors.has(aid))
-          );
-          const primaryIdx: number = contributing.length > 0 ? contributing[0] : g.indices[0];
-          const primaryRowId = briefStoryRowIds[primaryIdx];
-          if (typeof primaryRowId === 'number') {
-            mergeWriteback.push({
-              rowId: primaryRowId,
-              title: merged.title,
-              importance: merged.importance,
-              articleIds: merged.articleIds,
-            });
-          }
-          additions.push({
-            title: merged.title,
-            importance: merged.importance,
-            articleIds: merged.articleIds,
-            storyType: merged.storyType,
-            clusterId: members[0].clusterId,
-            // 下游 mark_selected_for_intel 用它精确标记，不能再靠 stories.indexOf（合并后下标全变）。
-            __briefStoryRowIds: typeof primaryRowId === 'number' ? [primaryRowId] : [],
-          });
-          g.indices.forEach((i: number) => mergedIn.add(i));
-          console.log(
-            `[AutoBrief] 去重：${g.indices.length} 条 → 1（余弦≥${g.minCos.toFixed(4)}${g.confirmed ? '，已确认' : ''}）` +
-            `文章 ${members.reduce((n, m) => n + m.articleIds.length, 0)} → ${merged.articleIds.length}｜${g.title}`
-          );
-        }
-        const kept = validatedStories.stories
-          .map((st: any, i: number) => ({ st, i }))
-          .filter(({ i }: { i: number }) => !mergedIn.has(i))
-          .map(({ st, i }: { st: any; i: number }) => ({ ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number') }));
-        const before = validatedStories.stories.length;
-        validatedStories.stories = [...kept, ...additions];
-        console.log(`[AutoBrief] 去重完成：${before} → ${validatedStories.stories.length} 个故事`);
-
-        // 合并结果回写主行。不回写的话合并只活在内存里：库里主行还挂着拆碎前的旧标题和
-        // 只属于自己那几篇的 article_ids，而简报正文用的是 LLM 起的合并标题——那个标题
-        // **在数据库里不存在**，简报正文就再也对不回 brief_stories（eval 与前端来源都靠这个对齐）。
-        // 值由确定性代码算出，重放时写入同样的值，故幂等。
-        if (mergeWriteback.length > 0) {
-          await step.do('persist:story_dedup_merge', dbStepConfig, async () => {
-            const db = getDb(this.env.HYPERDRIVE);
-            for (const m of mergeWriteback) {
-              await db
-                .update($brief_stories)
-                .set({
-                  title: m.title,
-                  importance: m.importance,
-                  article_count: m.articleIds.length,
-                  article_ids: m.articleIds,
-                  // centroid 置空让工作流末尾的 assignStoryClustersForWorkflow 按合并后的
-                  // article_ids 重算（backfillStoryCentroids 只补 NULL 的行）。留着旧值的话，
-                  // 这行的向量还是拆碎前那几篇算的，跨期线索匹配与代表文章都会挑错。
-                  centroid: null,
-                })
-                .where(and(eq($brief_stories.workflow_id, workflowId), eq($brief_stories.id, m.rowId)));
-            }
-            console.log(`[AutoBrief] 去重：回写 ${mergeWriteback.length} 条合并主行`);
-          });
-        }
-      } else {
-        // 没有合并也要补 __briefStoryRowIds，否则下游标记逻辑得分叉
-        validatedStories.stories = validatedStories.stories.map((st: any, i: number) => ({
-          ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number'),
-        }));
-      }
+      // 这里只补 __briefStoryRowIds：下游 mark_selected_for_intel 与 intel_report_r2_key
+      // 落库靠它精确定位主键，不能靠 stories.indexOf。
+      validatedStories.stories = validatedStories.stories.map((st: any, i: number) => ({
+        ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number'),
+      }));
 
       // 多源覆盖度客观锚：聚类后每个 story 天然知道来自几个独立源。distinct_source_count 是最强的
       // 客观显著性信号(GDELT breaking-news 检测同源)——一个事件被多少家独立媒体报道 ≈ 它多重要，
@@ -1621,11 +1334,25 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 选择分 = LLM importance + 覆盖度加权。打分/排序/取 top-N 抽到 lib/core/story-ranking
       // （纯函数，可独立测）；COVERAGE_WEIGHT 是 NDCG eval 上线前的保守默认，做成参数便于校准。
       const COVERAGE_WEIGHT = 1.0;
-      const { ranked, selected: storiesForIntelligence } = rankStoriesForIntelligence(
+      // 同事件配额：分块层按簇独立工作，同一个事件被聚类分到多个簇时会各占多格
+      // （2026-09-04 实测尼泊尔洪灾 7 格），超过验收目标 ①「一件大事不刷屏」的 4 格。
+      // 超额的**跳过**而不是截断，位置让给后面的其他事件。
+      const { ranked, selected: storiesForIntelligence, capped } = rankStoriesForIntelligence(
         validatedStories.stories,
         sourceCoverage,
-        { coverageWeight: COVERAGE_WEIGHT, maxStories: maxStoriesToGenerate }
+        {
+          coverageWeight: COVERAGE_WEIGHT,
+          maxStories: maxStoriesToGenerate,
+          perEventCap: PER_EVENT_BLOCK_CAP,
+          eventKeyOf: (story) => String((story as { eventKey?: string }).eventKey ?? ''),
+        }
       );
+      if (capped.length > 0) {
+        console.log(
+          `[AutoBrief] 同事件配额（每事件 ≤${PER_EVENT_BLOCK_CAP} 格）挤掉 ${capped.length} 块：` +
+            capped.map(x => `${(x.story as { eventKey?: string }).eventKey}/${x.story.title}`).join('，')
+        );
+      }
 
       console.log('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
       ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => console.log(
@@ -1680,7 +1407,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 提到 6 预计 ~3min。撞限流由 AIGateway 配额退避兜底; 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
       const INTEL_CONCURRENCY = 6;
 
-      type IntelOutcome = { r2Key: string } | { failure: { idx: number; title: string; reason: string } };
+      // blockTitle 随 r2Key 一起回传，不靠下标对齐：intelligenceReports 是 filter 出来的紧凑数组，
+      // 一旦有故事分析失败，它的下标就与 storiesForIntelligence 错位。挂在同一个对象上则怎么滤都对得上。
+      type IntelOutcome = { r2Key: string; blockTitle: string } | { failure: { idx: number; title: string; reason: string } };
       const analyzeOneStory = async (story: any, idx: number): Promise<IntelOutcome> => {
         try {
           // 为情报分析动态获取相关文章的内容
@@ -1727,7 +1456,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           } catch (persistErr) {
             console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
           }
-          return { r2Key };
+          return { r2Key, blockTitle: String(story.title ?? '') };
         } catch (error) {
           // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
           const reason = error instanceof Error ? error.message : String(error);
@@ -1752,7 +1481,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       );
 
       // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随后落观测性对账。
-      const intelligenceReports = results.filter((r): r is { r2Key: string } => 'r2Key' in r);
+      const intelligenceReports = results.filter((r): r is { r2Key: string; blockTitle: string } => 'r2Key' in r);
       const intelFailures = results
         .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
         .map((r) => r.failure);
@@ -1795,7 +1524,19 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 前日简报上下文已停用（b′ 也不传）：它把昨天 brief 的 TLDR（一串主题标识符）回灌
       // 进来，brief 会无视 guardrail 把这些标识符展开成编造的整节，再被 TLDR 压回、次日
       // 重灌，形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。
-      const reportKeys = intelligenceReports.map(({ r2Key }: { r2Key: string }) => r2Key);
+      const reportKeys = intelligenceReports.map((r: { r2Key: string }) => r.r2Key);
+
+      // 块标题用**主线名**，不用 b′ 规划步自己起的那个。
+      // 规划步只读 executiveSummary、不知道主线名，实测它重起的块标题 5 块里只有 2 块对得上：
+      //   主线「救援」        → 起成 "devastation from flash flood"
+      //   主线「失踪外国人」  → 起成 "escalating death toll and international rescue effort"
+      // 它没起错事实，是丢了**角度**——摘要里最抢眼的是死亡数字，于是每块都往「死了多少人」上靠，
+      // 块与块的区分度就没了，而区分度正是主线分块要买的东西。
+      // 小写是本简报的 house style（见 briefSkeleton.ts），主线名是 Title Case，故转小写。
+      // 规划步仍会产出 title 字段（连同它的补标题子调用），现在成了废输出——删它要动
+      // BriefSkeleton 的形状与 shapeSkeleton 的覆盖断言，留作下一步。
+      const blockTitleOf = (r: { i: number; title: string }): string =>
+        intelligenceReports[r.i - 1]?.blockTitle?.trim().toLowerCase() || r.title;
 
       // 5a 骨架规划：1 次调用，只读 N 条 executiveSummary（不读全文），量级很小。
       const skeletonStepConfig: WorkflowStepConfig = {
@@ -1834,18 +1575,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         ...skeleton.main.flatMap((s) =>
           s.reports.map((r) => ({
             i: r.i,
-            title: r.title,
+            title: blockTitleOf(r),
             section: {
               heading: s.heading,
               causalLink: s.causalLink,
               // 同节兄弟的**块标题**。此前传的是下标、ai-worker 据此取兄弟的 executiveSummary
               // 全文塞进 prompt —— 实测那份摘要比本块自己的报告还长，模型照抄。
               // 标题只在骨架里有（规划步产出），ai-worker 拿不到，必须从这边传。
-              siblingTitles: s.reports.filter((x) => x.i !== r.i).map((x) => x.title),
+              siblingTitles: s.reports.filter((x) => x.i !== r.i).map((x) => blockTitleOf(x)),
             },
           }))
         ),
-        ...skeleton.isolated.map((r) => ({ i: r.i, title: r.title })),
+        ...skeleton.isolated.map((r) => ({ i: r.i, title: blockTitleOf(r) })),
       ];
 
       type BlockOutcome =

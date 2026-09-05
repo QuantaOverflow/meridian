@@ -23,11 +23,9 @@ export type LLMCallPhase =
   // 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题。单独 phase 的理由与
   // intel_grounding_verify 相同——和 story_validation 共用会让两者的 R2 观测记录互相覆盖。
   | 'story_merge'
-  // 主线分块：命名主线（每簇 1 次）与逐单元归类（每单元 N 票）。两者分开是因为一次分块里
-  // 归类调用有几十次、命名只有 1 次，混在一个 phase 下 callIndex 会撞车，把唯一那份
-  // 命名记录冲掉——而命名恰恰是整层最需要人工复核的一步（主线错了归类再准也是错的）。
-  | 'storyline_plan'
-  | 'storyline_assign'
+  // 簇判定：一簇一次，判「是不是一件事」+ 起名。2026-09-05 起取代 storyline 两段式
+  // （命名主线 + 逐篇归类），后者已随之删除。
+  | 'cluster_judge'
   | 'other'
 
 export interface TraceContext {

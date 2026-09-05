@@ -95,7 +95,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 | 单元/集成测试 | `<package>/test/`（跟包走，**不设顶层 tests/**——monorepo 惯例） | ✅ |
 | eval harness / 金标 / rubric | `scripts/eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
 | eval 中间产物（worklist / packet / dump） | 留 `scripts/eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
-| eval 运行报告 | `eval-reports/`（根 `.gitignore` 已挡） | ❌ |
+| eval 运行报告 | 该 harness 目录下的 `out/`（`.gitignore` 已挡） | ❌ |
 | 原型 / 探索实验 | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | 源码✅ / 产物❌ |
 | 原型输入 fixtures | `prototypes/<name>/fixtures/` | ✅（可复现依赖） |
 | 原型结果产物（result/dump/traces/out） | 原型目录内，由 `.gitignore` 挡 | ❌ |

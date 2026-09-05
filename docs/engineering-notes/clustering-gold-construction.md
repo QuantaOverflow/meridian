@@ -1,5 +1,15 @@
 # 聚类 Gold 数据底座构建工作流
 
+> ⚠️ **本文描述的是已退役的 LLM 共识金标（2026-05/06）。** 那套 gold 于 2026-08-18 归档，
+> 2026-09-04 被**三个标注者独立通读的人读金标**取代（`scripts/eval/clustering/gold/`，
+> 造法见该目录的 `rubric.md` 与 `README.md`）。换掉的理由：要评的下一步是特征工程，
+> 若指标本身由文本特征算出，改特征就会变成自己评自己。
+>
+> 本文提到的 harness（`recluster.ts` / `tune.ts` / `reference.ts` / `recall-audit.ts` /
+> `build-pooled-gold.ts` / `tier2-xday.ts` / `score.ts` / `audit.ts` / `build-gold-by-day.ts`）
+> 已于 2026-09-06 随 `eval-reports/clustering/` 缓存一并删除。留档是为了保住方法论
+> ——共识造 gold 的分层、pooling 补召回、以及 average-linkage 过度合并那个已修的 bug。
+
 > 这把"语义参考划分(gold)"是聚类质量评估(B-cubed)的标准答案。本文记**怎么可靠地造它**。
 > "为什么这样分工"见 [eval-design-principles.md](./eval-design-principles.md) 模式 A；
 > harness 代码在 `scripts/eval/clustering/`。

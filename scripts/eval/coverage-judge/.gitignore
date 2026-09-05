@@ -3,3 +3,6 @@ node_modules/
 *.log
 .*.log
 eval-reports/
+
+# 运行报告与产物（统一约定：一律进 out/）
+out/

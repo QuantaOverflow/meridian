@@ -6,3 +6,6 @@ candidates*.jsonl
 # 保留：worklist/*.pred.jsonl（scorer 分层预测，体积小）作金标溯源。
 # gold/ 紧凑金标入库；eval-reports/ 报告不入库。
 eval-reports/*.json
+
+# 运行报告与产物（统一约定：一律进 out/）
+out/

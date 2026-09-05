@@ -82,7 +82,8 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 跨 service 调用 → `docs/worker-communication.md`
 - 部署前 → `docs/DEPLOYMENT_GUIDE.md`
 - 观测/排错 → `docs/OBSERVABILITY_GUIDE.md`
-- 改算法（聚类/重要性/简报合成）→ `docs/3_智能简报算法合理性与优化分析报告.md`
+- 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
+- 架构决策记录 → `docs/adr/`
 
 ## 新文件放哪（落位规则）
 

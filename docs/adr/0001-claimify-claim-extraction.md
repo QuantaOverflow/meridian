@@ -91,5 +91,5 @@ Decomposition   把澄清后的句子拆成自包含(context-independent)的可�
 
 ## 实施
 
-详见 spec：`docs/superpowers/specs/2026-06-17-claimify-claim-extraction-design.md`。
+（原 spec `docs/superpowers/specs/2026-06-17-claimify-claim-extraction-design.md` 已随该目录删除；实现见 `services/meridian-ai-worker/src/services/`。）
 分阶段：先固化已验的 ②③，再独立实施 ① 的 Claimify 重构（带抽取 meta-eval 护栏）。

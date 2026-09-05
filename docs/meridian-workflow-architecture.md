@@ -162,11 +162,16 @@ interface ArticleDataset {
 **行为描述**: 系统将相似文章聚合成有意义的故事集群
 
 **依赖服务**:
-- ML服务 (UMAP + HDBSCAN算法)
+- ML服务（不降维 + 余弦距离矩阵 + average linkage 阈值聚类；旧的 UMAP + HDBSCAN 保留为回滚路径）
 
 **业务参数**:
-- UMAP参数: n_neighbors, n_components, min_dist, metric
-- HDBSCAN参数: min_cluster_size, min_samples, epsilon
+- `clusteringAlgorithm`: `agglomerative_cosine`（默认）| `umap_hdbscan`（回滚）
+- 凝聚参数: `agglomerativeThreshold` 0.10、`agglomerativeLinkage` average、`agglomerativeMinClusterSize` 3
+- 回滚路径参数: UMAP `n_neighbors/n_components/min_dist/metric`、HDBSCAN `min_cluster_size/min_samples/epsilon`
+
+> 换算法的读数与已证伪清单见 `docs/adr/0003-cluster-as-brief-block.md`。
+> 2026-09-05 起簇的切分层（story-validation → 候选组 → storyline 两段式）已整层删除：
+> 一簇 = 简报里的一条，由 `/meridian/cluster/judge` 逐簇判定 + 起名。
 
 **数据转换**:
 ```

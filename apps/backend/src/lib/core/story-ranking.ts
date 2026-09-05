@@ -19,6 +19,19 @@ export interface RankedStory<S> {
 export interface RankOptions {
   coverageWeight: number;
   maxStories: number;
+  /**
+   * 同一事件最多选几条。不传 = 不限（旧行为）。
+   *
+   * 立此参数的病灶：分块层按簇独立命名切分，聚类把同一个事件分到两个簇时没人协调，
+   * 2026-09-04 实测尼泊尔洪灾在前 25 格里占 7 格（簇 55 五格 + 簇 54 两格），
+   * 超过验收目标 ①「一件大事不刷屏」定的 4 格。
+   */
+  perEventCap?: number;
+  /**
+   * 事件键。同键即同一事件，受 perEventCap 约束。不传 = 每条各自成事件（等价于不限）。
+   * 生产传的是块内文章标题的主导专有名词（见 lib/core/storyline.ts 的 dominantEntity）。
+   */
+  eventKeyOf?: (story: unknown, index: number) => string;
 }
 
 /**
@@ -29,7 +42,7 @@ export function rankStoriesForIntelligence<S extends { importance?: number }>(
   stories: S[],
   sourceCoverage: Record<number, number>,
   opts: RankOptions
-): { ranked: RankedStory<S>[]; selected: S[] } {
+): { ranked: RankedStory<S>[]; selected: S[]; capped: RankedStory<S>[] } {
   const ranked: RankedStory<S>[] = stories
     .map((story, i) => {
       const srcs = sourceCoverage[i] ?? 0;
@@ -37,7 +50,22 @@ export function rankStoriesForIntelligence<S extends { importance?: number }>(
     })
     .sort((a, b) => b.score - a.score);
 
-  // 按选择分降序取 top-N，避免把全部候选送进 LLM 深度分析（成本/时间爆炸）
-  const selected = ranked.slice(0, opts.maxStories).map((x) => x.story);
-  return { ranked, selected };
+  // 按选择分降序取 top-N，避免把全部候选送进 LLM 深度分析（成本/时间爆炸）。
+  // 有事件配额时边走边数：同一事件超额的**跳过**而不是截断，让位给后面的其他事件。
+  const cap = opts.perEventCap;
+  const keyOf = opts.eventKeyOf;
+  const selected: S[] = [];
+  const capped: RankedStory<S>[] = [];
+  const seen = new Map<string, number>();
+  for (const r of ranked) {
+    if (selected.length >= opts.maxStories) break;
+    if (cap != null && keyOf) {
+      const k = keyOf(r.story, stories.indexOf(r.story));
+      const n = seen.get(k) ?? 0;
+      if (k && n >= cap) { capped.push(r); continue; }
+      seen.set(k, n + 1);
+    }
+    selected.push(r.story);
+  }
+  return { ranked, selected, capped };
 }

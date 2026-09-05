@@ -793,7 +793,7 @@ export class BriefGenerationService {
       }
 
       if (!selfCorrect) {
-        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 } } };
       }
 
       // RARR 接地校验-改正，按论文三段做：① 提问 ② 逐问题检索证据 ③ 逐问题填双答案再判。
@@ -833,7 +833,7 @@ export class BriefGenerationService {
         const items = retrieveEvidence(questions, buildEvidenceWindows(picked.map((i) => perReport[i])));
         if (!items.length) {
           console.warn(`[Brief Block ${index}] 提问步未产出可用问题（${questions.length} 条）→ 发未经 RARR 核验的块`);
-          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
+          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 } } };
         }
         // ③ 判断 + 改写
         const verifyRaw = await this.callAI(getBriefAgreementPrompt(prose, items), undefined, {
@@ -845,7 +845,7 @@ export class BriefGenerationService {
         const parsed = parseLooseJSON(verifyRaw);
         if (!parsed || !Array.isArray(parsed.checks)) {
           console.warn(`[Brief Block ${index}] 接地校验响应解析失败或无 checks 字段 → 发未经 RARR 核验的块（非"判定 0 处要改"）`);
-          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
+          return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 } } };
         }
         const edits = checksToEdits(parsed.checks);
         const result = applyGroundedEdits(prose, edits, oracle, { requireQuote: false });
@@ -856,7 +856,7 @@ export class BriefGenerationService {
         console.log(
           `[Brief Block ${index}] 接地校验：问题 ${items.length}，edits ${edits.length}，applied ${result.applied}，skipped ${result.skipped}，` +
             `守卫拦下 G1嫁接 ${blocked.graft} / G2误删 ${blocked.bad_delete} / G3空转 ${blocked.noop} / G4膨胀 ${blocked.bloat}` +
-            ` / G5未举证 ${blocked.unquoted} / 预算 ${blocked.budget}` +
+            ` / G5未举证 ${blocked.unquoted} / G6接缝 ${blocked.seam} / 预算 ${blocked.budget}` +
             `，保留度 ${result.presLev.toFixed(3)}｜oracle ${picked.length}/${reports.length} 份` +
             (result.recased ? `，${result.recased} 条替换压回全小写文风` : '')
         );
@@ -877,7 +877,7 @@ export class BriefGenerationService {
         };
       } catch (verifyError) {
         console.error(`[Brief Block ${index}] 接地校验失败，退回未校验草稿:`, verifyError);
-        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 } } };
+        return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 } } };
       }
     } catch (error) {
       console.error(`[Brief Block ${index}] 写作失败:`, error);

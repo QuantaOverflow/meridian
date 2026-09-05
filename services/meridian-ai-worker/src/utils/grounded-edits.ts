@@ -31,7 +31,7 @@ export interface GroundedEdit {
   source_says?: string;
 }
 
-export type GuardKind = 'noop' | 'bad_delete' | 'graft' | 'bloat' | 'unquoted' | 'budget';
+export type GuardKind = 'noop' | 'bad_delete' | 'graft' | 'bloat' | 'unquoted' | 'budget' | 'seam';
 
 export interface BlockedEdit {
   guard: GuardKind;
@@ -193,6 +193,35 @@ export function toHouseCase(replacement: string): string {
   return out.join('');
 }
 
+/**
+ * G6 接缝：应用之后**还成不成句**。
+ *
+ * 前五道守卫判的都是内容（这条编辑该不该改），**没有一道判形式**。2026-09-04 真实简报
+ * report 83 实证：两块被替换型编辑改出残句，六道守卫一道没响 ——
+ *   `…political information. from a newly formed, unstable lake at the collapse site…`（主干被换掉只剩状语）
+ *   `…for personal financial gain., the announcement likely serves as…`（句号逗号贴在一起）
+ *   `…over 600 deaths and 2,426, while tibet has recorded 5-7 deaths and 2,426.`（名词被换没了）
+ * `isBloat` 只拦「替换变长」，替换把句子改烂一路放行。
+ *
+ * 判据是**新增**损伤而不是绝对损伤：本站文风全小写，句首小写是正常的，且原稿本就可能
+ * 以 while/where 起句。只有编辑**制造出**新的损伤签名才回滚这一条，原稿自带的不算。
+ */
+const SEAM_SIGNATURES: RegExp[] = [
+  /[.!?;:]\s*,/g,          // 「gain., the announcement」
+  /,\s*[.!?;]/g,           // 逗号直接接句末标点
+  /,,|;;|\.\.(?!\.)/g,     // 重标点（三点省略号不算）
+  /\s[,.;:!?]/g,           // 标点前的孤儿空格
+  // 句首以从属连词/介词起 = 主干被删剩下的残句
+  /(?:^|[.!?]\s+)(?:which|where|that|from|with|whereas|although|unless|because|while|since)\b/g,
+];
+
+/** 文本里的接缝损伤计数。纯正则、零 LLM。 */
+export function seamDamage(text: string): number {
+  let n = 0;
+  for (const re of SEAM_SIGNATURES) n += (text.match(re) ?? []).length;
+  return n;
+}
+
 /** G4 膨胀：替换比原文长出一半以上 —— 在补充信息而不是修错 */
 export function isBloat(span: string, replacement: string): boolean {
   return replacement.trim().length > 1.5 * span.trim().length;
@@ -271,7 +300,14 @@ export function applyGroundedEdits(
 
     // 只认精确子串命中：命中才改，没命中宁可不动（防误伤），与既有 verifyAndCorrect 一致
     if (text.includes(span)) {
-      text = text.replace(span, cased);
+      const next = text.replace(span, cased);
+      // G6 接缝：这一条**新造**出接缝损伤就回滚它。放在应用处而不是守卫链里，
+      // 因为它要看的是「改完的结果」，不是「这条 edit 的形状」。
+      if (seamDamage(next) > seamDamage(text)) {
+        blocked.push({ guard: 'seam', span, replacement: cased, reason });
+        continue;
+      }
+      text = next;
       applied++;
       if (cased === '') deleted = true;
     } else {
@@ -284,7 +320,7 @@ export function applyGroundedEdits(
 
 /** 拦截数按守卫分类汇总，供日志/传感器用 */
 export function tallyGuards(blocked: BlockedEdit[]): Record<GuardKind, number> {
-  const t: Record<GuardKind, number> = { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0 };
+  const t: Record<GuardKind, number> = { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 };
   for (const b of blocked) t[b.guard]++;
   return t;
 }

@@ -76,14 +76,20 @@ export function shapeSkeleton(plan: any, n: number): BriefSkeleton {
   const seen = new Set<number>();
   const clean: SkeletonSection[] = [];
   for (const s of (plan?.sections ?? []) as any[]) {
-    const refs: SkeletonRef[] = (s?.reports ?? [])
-      .map((r: any) =>
+    // ⚠️ 必须**边过滤边登记**。此前是「整节过滤完再 forEach 加进 seen」，于是同一个索引在
+    // 同一节内重复出现时，过滤那一刻 seen 里还没有它 —— 跨节去重有效、节内去重完全失效。
+    // 2026-09-04 真实 workflow 实证：8 份报告写出 11 块，读者在「escalating war in ukraine」
+    // 一节里连着读到 4 段逐字相同的「russia-ukraine war」。
+    const refs: SkeletonRef[] = [];
+    for (const r of (s?.reports ?? []) as any[]) {
+      const ref: SkeletonRef =
         typeof r === 'number'
           ? { i: r, title: '' }
-          : { i: Number(r?.i), title: String(r?.title ?? '').trim() }
-      )
-      .filter((r: SkeletonRef) => Number.isInteger(r.i) && r.i >= 1 && r.i <= n && !seen.has(r.i));
-    refs.forEach((r) => seen.add(r.i));
+          : { i: Number(r?.i), title: String(r?.title ?? '').trim() };
+      if (!Number.isInteger(ref.i) || ref.i < 1 || ref.i > n || seen.has(ref.i)) continue;
+      seen.add(ref.i);
+      refs.push(ref);
+    }
     if (refs.length) {
       clean.push({
         heading: String(s?.heading ?? '').trim(),

@@ -1018,6 +1018,13 @@ app.post('/meridian/chat', async (c) => {
       stream: body.options?.stream || false,
       // 离线 eval 的 A/B 需要独立采样：默认 false（生产照常走缓存），显式传 true 才跳过
       skipCache: body.options?.skipCache === true,
+      // 解码参数透传。不传就是原行为（provider 侧不下发），向后兼容。
+      // 这里是显式白名单：不在名单上的 options 会被静默丢弃且照样 200，加参数必须同时改这里
+      // 和 ai-gateway.ts 的 executeWorkersAIViaBinding。
+      frequency_penalty: body.options?.frequency_penalty,
+      presence_penalty: body.options?.presence_penalty,
+      seed: body.options?.seed,
+      response_format: body.options?.response_format,
       metadata: createRequestMetadata(c)
     }
 

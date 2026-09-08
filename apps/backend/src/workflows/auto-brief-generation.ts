@@ -4,6 +4,12 @@ import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_re
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
+  assembleBlocks,
+  planBlocksFromJudgements,
+  type JudgeResult,
+  type PendingBlock,
+} from '../lib/core/cluster-blocks';
+import {
   blockImportance,
   dominantEntity,
   PER_EVENT_BLOCK_CAP,
@@ -918,40 +924,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         let pocketFlagged = 0;
         let unsureClusters = 0;
 
-        // 一块最多 DEFAULT_ARTICLE_CAP(30) 篇，按时间等距取样、两端锚定。
-        // 这个上限不是优化是**必须**：pickSpreadArticles 的文档记着「91 篇（283k 字符）→
-        // 300 秒超时硬失败」。旧去重层用 collapseGroup 施加它，本层取代去重时漏补 ——
-        // 2026-09-03 真实 workflow 实证：67 篇的块把情报分析打成 HTTP 500，另有 60/58 篇两块。
+        // 块的物化（30 篇截断、算分、事件键）与跨簇同名合并都在 lib/core/cluster-blocks.ts，
+        // 抽出去是为了能单测——那两段的失败（判定失败被读成 NO_EVENT、先截后合导致重复采样）
+        // 在生产日志里都不显眼。
         const publishedAt = new Map<number, number>();
         for (const a of dataset.articles) {
           const t = Date.parse(a.publishDate);
           if (Number.isFinite(t)) publishedAt.set(a.id, t);
         }
-        let cappedBlocks = 0;
-        let droppedArticles = 0;
-        // 先收集**未截断**的块，全部簇跑完后再统一「跨簇同名合并 → 截 30 篇 → 算分」。
-        // 顺序不能反：先截后合会对同一个块采样两次，且合并后的篇数不对。
-        type PendingBlock = { clusterId: number; title: string; covers: string; ids: number[] };
-        const pending: PendingBlock[] = [];
-        const mkBlock = (clusterId: number, title: string, covers: string, ids: number[]): void => {
-          pending.push({ clusterId, title, covers, ids });
-        };
-        const materialize = (b: PendingBlock): StoryBlock => {
-          const picked = pickSpreadArticles(b.ids, publishedAt, DEFAULT_ARTICLE_CAP);
-          if (picked.length < b.ids.length) {
-            cappedBlocks++;
-            droppedArticles += b.ids.length - picked.length;
-          }
-          return {
-            title: b.title,
-            importance: blockImportance(distinctSources(picked), picked.length),
-            articleIds: picked,
-            storyType: 'SINGLE_STORY',
-            clusterId: b.clusterId,
-            covers: b.covers,
-            eventKey: dominantEntity(picked.map(id => titleOf.get(id) ?? '')),
-          };
-        };
 
         // ── 逐簇判定：一簇一次调用，同时判「是不是一件事」与起名 ───────────────
         // 2026-09-05 取代 storyline 两段式（命名主线 + 逐篇归类）。前提是聚类换成不降维凝聚
@@ -966,13 +946,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 丢与不丢对读者没有差别，先留着看生产数据。
         type Target = { clusterId: number; ids: number[]; judgeIds: number[] };
         const targets: Target[] = [];
+        // ml-service 已保证 <3 篇的簇记为噪声；真收到小簇不浪费一次调用，直接成块
+        const soloBlocks: PendingBlock[] = [];
         let judgeTitleCapped = 0;
         for (const cluster of clusteringResult.clusters) {
           if (cluster.clusterId < 0) continue; // -1 噪声桶不进简报
           const ids = [...new Set(cluster.articleIds)].filter(id => titleOf.has(id)).sort((x, y) => x - y);
           if (ids.length === 0) continue;
           // ml-service 已保证 <3 篇的簇记为噪声；真收到小簇也不浪费一次调用
-          if (ids.length < 2) { mkBlock(cluster.clusterId, titleOf.get(ids[0])!, '', ids); continue; }
+          if (ids.length < 2) { soloBlocks.push({ clusterId: cluster.clusterId, title: titleOf.get(ids[0])!, covers: '', ids }); continue; }
           // 判定只喂 PLAN_TITLE_CAP 条标题（按时间等距取样），封住输入规模
           const judgeIds = pickSpreadArticles(ids, publishedAt, PLAN_TITLE_CAP);
           if (judgeIds.length < ids.length) judgeTitleCapped++;
@@ -1003,49 +985,29 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         for (const { t, res } of judged) {
           if (!res.ok) {
-            // 判定失败 ≠ NO_EVENT。失败走退化：整簇保留成一块，名字用零 LLM 的主导专名。
-            // 把失败读成「这簇没有故事」会让一次网络抖动毙掉一条真新闻，这个仓库栽过。
-            judgeFailures++;
-            const key = dominantEntity(t.ids.map(id => titleOf.get(id) ?? ''));
-            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判定失败，退化成一块「${key}」 — ${res.error}`);
-            mkBlock(t.clusterId, key, '', t.ids);
-            continue;
+            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判定失败，退化成一块 — ${res.error}`);
+          } else if (res.value.verdict !== 'EVENT') {
+            console.warn(
+              `[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判为 ${res.value.verdict} — ${res.value.reason}`
+            );
           }
-          const { verdict, title, event, reason } = res.value;
-          if (verdict === 'NO_EVENT') pocketFlagged++;
-          if (verdict === 'UNSURE') unsureClusters++;
-          if (verdict !== 'EVENT') {
-            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判为 ${verdict} — ${reason}`);
-          }
-          // 标题兜底：模型没给名字（NO_EVENT 时按 prompt 就该留空）→ 用主导专名，不留空格名
-          const blockTitle = title.trim() || dominantEntity(t.ids.map(id => titleOf.get(id) ?? ''));
-          mkBlock(t.clusterId, blockTitle, event, t.ids);
         }
 
-        // ── 阶段 4：跨簇同名合并 → 物化 ──────────────────────────────────────
-        // 第 1 步是**按簇独立**命名的，一次只看一个簇。聚类把同一个事件分到两个簇时，
-        // 两边会各自起出**逐字相同**的主线名：2026-09-04 实测簇 55 与簇 54 都产出
-        // `Nepal-Tibet flash floods`，读者在一份简报里看到两个同名的格。
-        // 判据只认**逐字相同**（去空白、忽略大小写）——近义合并要判语义，那是另一回事，
-        // 且误合的代价（两件事被塞进一格）正是这轮刚治好的病。
-        const byTitle = new Map<string, PendingBlock[]>();
-        for (const b of pending) {
-          const k = b.title.trim().toLowerCase();
-          byTitle.set(k, [...(byTitle.get(k) ?? []), b]);
-        }
-        let crossClusterMerges = 0;
-        for (const group of byTitle.values()) {
-          if (group.length === 1) { stories.push(materialize(group[0])); continue; }
-          // 取篇数最多的那块的 clusterId 与 covers，文章并集
-          const lead = [...group].sort((a, b) => b.ids.length - a.ids.length)[0];
-          const ids = [...new Set(group.flatMap(g => g.ids))].sort((x, y) => x - y);
-          crossClusterMerges += group.length - 1;
-          console.warn(
-            `[AutoBrief] 主线分块：${group.length} 个块同名「${lead.title}」（簇 ${group.map(g => g.clusterId).join('/')}），` +
-              `合并成 1 块共 ${ids.length} 篇`
-          );
-          stories.push(materialize({ clusterId: lead.clusterId, title: lead.title, covers: lead.covers, ids }));
-        }
+        const { pending: judgedBlocks, stats: planStats } = planBlocksFromJudgements(
+          judged.map(({ t, res }) => ({ clusterId: t.clusterId, ids: t.ids, res: res as JudgeResult })),
+          titleOf
+        );
+        judgeFailures = planStats.judgeFailures;
+        pocketFlagged = planStats.pocketFlagged;
+        unsureClusters = planStats.unsureClusters;
+
+        const { blocks, stats: asmStats } = assembleBlocks([...soloBlocks, ...judgedBlocks], {
+          publishedAt,
+          titleOf,
+          distinctSources,
+        });
+        stories.push(...blocks);
+        const { cappedBlocks, droppedArticles, crossClusterMerges } = asmStats;
 
         console.log(
           `[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +

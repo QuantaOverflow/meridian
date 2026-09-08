@@ -609,6 +609,41 @@ export async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: 
   return { ok: true, reports: values as IntelligenceReport[] }
 }
 
+/**
+ * 写作层要的簇内原文。**可缺省**——不给就完全走此前的写作路径，
+ * 上游没同步部署时不会半路坏掉。
+ *
+ * 走 R2 而不是内联传：CF Workflow 单 step 输出约 1MB 上限，而一个 81 篇的簇正文
+ * 约 30 万字符——此前情报 step 内联返回全部报告就触发过 WorkflowInternalError，
+ * 已用「卸 R2 + 传 key」收口，这里沿用同一模式。
+ *
+ * 与 loadReportsFromR2 的差别：缺失/损坏**不算失败**。原文只是补充材料，
+ * 拿不到就退回「只给报告」的老路径，不该让整个块写不出来。
+ */
+export async function loadArticlesFromR2(
+  env: any,
+  keys: unknown
+): Promise<Array<{ id: number; body: string }>> {
+  if (!Array.isArray(keys) || keys.length === 0) return []
+  const bucket = env?.ARTICLES_BUCKET as R2Bucket | undefined
+  if (!bucket) {
+    console.warn('[BriefBlock] 传了 articleKeys 但 ARTICLES_BUCKET binding 不可用 → 退回只给报告')
+    return []
+  }
+  const { values, missing, broken } = await loadR2Batched(
+    keys.map((k: unknown) => String(k)),
+    bucket as unknown as MinimalBucket,
+    (text: string) => {
+      const o = JSON.parse(text)
+      return { id: Number(o?.id), body: String(o?.body ?? o?.content ?? '') }
+    }
+  )
+  if (missing.length || broken.length) {
+    console.warn(`[BriefBlock] 原文 R2 缺 ${missing.length} 份、坏 ${broken.length} 份（共 ${keys.length}）→ 用剩下的继续`)
+  }
+  return (values as Array<{ id: number; body: string }>).filter(a => Number.isFinite(a.id) && a.body.length > 200)
+}
+
 // ============================================================================
 // 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题
 //
@@ -786,8 +821,15 @@ app.post('/meridian/write-brief-block', async (c) => {
       console.warn('[BriefBlock] 上游只发了 siblingIndices 没发 siblingTitles —— backend 与 ai-worker 版本不一致')
     }
 
+    // 原文可缺省。给了就走证据链（声明判断 → 检索 → 写 → 自检找漏 → 检索 → 重写），
+    // 不给完全是此前行为——上游未同步部署的窗口里块照写，只是没有原文补材料。
+    const articles = await loadArticlesFromR2(c.env, body?.articleKeys)
+    if (Array.isArray(body?.articleKeys) && body.articleKeys.length && !articles.length) {
+      console.warn('[BriefBlock] 上游传了 articleKeys 但一份都没加载成功 → 本块退回只给报告')
+    }
+
     const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect })
+    const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect, articles })
     if (!result.success) {
       return c.json<APIResponse<null>>({ success: false, error: 'Failed to write brief block', metadata: { details: result.error } }, 500)
     }

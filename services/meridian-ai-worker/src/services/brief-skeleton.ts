@@ -28,6 +28,12 @@ export const CALL_INDEX = {
   titleFillBase: 300,
   /** RARR 提问步（校验的第一次调用）。与 blockVerifyBase 分段，免得两次调用互相覆盖归档 */
   blockQuestionsBase: 400,
+  /** 写作前声明判断（证据链第一段）。只在给了原文时才调。 */
+  blockClaimsBase: 500,
+  /** 写完自检找漏（证据链第三段）。 */
+  blockGapBase: 600,
+  /** 按 gap 材料重写（证据链第四段）。 */
+  blockRewriteBase: 700,
 } as const;
 
 export interface SkeletonRef {

@@ -26,6 +26,12 @@ import {
 import { applyGroundedEdits, tallyGuards } from '../utils/grounded-edits';
 import { rankSourcesByRelevance } from './faithfulness-prompts';
 import { buildEvidenceWindows, retrieveEvidence, checksToEdits } from '../utils/evidence-windows';
+import { buildSentences, buildIndex, search, expand, type Index as SentenceIndex } from '../utils/sentence-search';
+import {
+  CLAIM_SCHEMA, GAP_SCHEMA, getClaimProposalPrompt, getGapSelfCheckPrompt, getGapRewritePrompt,
+  renderClaimEvidence, renderGapEvidence, dedupeByText,
+  type ProposedClaim, type ReportedGap,
+} from '../prompts/briefEvidence';
 import { checkBlockConsistency, type ConsistencyFinding } from '../utils/block-consistency';
 import {
   ISOLATED_HEADING,
@@ -362,6 +368,12 @@ export function normalizeAnalysisToReport(analysis: any): IntelligenceReport {
 // ============================================================================
 // 简报生成服务
 // ============================================================================
+
+/** 写作层要的原文。给了才走证据链，不给完全是此前行为。 */
+export interface BriefSourceArticle {
+  id: number;
+  body: string;
+}
 
 export class BriefGenerationService {
   private aiGatewayService: AIGatewayService;
@@ -761,35 +773,179 @@ export class BriefGenerationService {
    *
    * @param index 0 基，这个块对应 reports 里的第几份
    */
+  /**
+   * 一条 query 的「支撑」：只有**逐字短语命中**才算。
+   *
+   * 没有这道门时「找不到支撑就别写」这条指令结构上永远不生效——判断句里有 Texas /
+   * Minnesota 这类词，词面打分总能给出正分，检索永远返回两句「看着相关」的东西，
+   * 实测 `BACKING FOUND: none` 一次都没触发过。
+   */
+  private backingFor(idx: SentenceIndex, refOf: Map<number, number>, query: string, k = 2) {
+    return search(idx, query, k).hits
+      .filter(h => h.matchedPhrases.length > 0)
+      .map(h => ({ ref: refOf.get(h.articleId) ?? 0, text: expand(idx, h, 1) }));
+  }
+
+  /** 证据链第一段：让模型先说出它打算下的判断，并给出记者会用的原话措辞。 */
+  private async proposeClaims(storyMarkdown: string, title: string, index: number): Promise<ProposedClaim[]> {
+    try {
+      const raw = await this.callAI(getClaimProposalPrompt(storyMarkdown, title), undefined, {
+        temperature: 0.3,
+        maxTokens: 1500,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.blockClaimsBase + index,
+        responseFormat: { type: 'json_schema', json_schema: CLAIM_SCHEMA as unknown as Record<string, unknown> },
+      });
+      const parsed = parseLooseJSON(raw);
+      if (!parsed || !Array.isArray(parsed.claims)) {
+        console.warn(`[Brief Block ${index}] 判断声明响应无 claims 字段 → 本块跳过 analysis_evidence（非"模型没有判断可下"）`);
+        return [];
+      }
+      const claims = dedupeByText(
+        (parsed.claims as ProposedClaim[]).filter(c => typeof c?.claim === 'string' && c.claim.trim().length > 0),
+        c => c.claim
+      );
+      if (claims.length < parsed.claims.length) {
+        // 模型会拿同一句话把 maxItems 填满——实测 8 条里 4 条逐字相同。去重要留痕，
+        // 否则「它只提得出 2 条判断」和「它提了 4 条但重复」在读数上分不开。
+        console.warn(`[Brief Block ${index}] 判断去重 ${parsed.claims.length} → ${claims.length}`);
+      }
+      return claims;
+    } catch (e) {
+      console.warn(`[Brief Block ${index}] 判断声明调用失败 → 本块跳过 analysis_evidence：${e instanceof Error ? e.message : String(e)}`);
+      return [];
+    }
+  }
+
+  /**
+   * 证据链第三、四段：拿报告和初稿对照找漏 → 逐条检索 → 重写整篇。
+   * 返回 null 表示这一步没生效（自检失败/无 gap/重写失败），调用方保留初稿。
+   *
+   * **重写不是追加**：Chain of Density 原论文就是重写，而本仓 b′ 分段写踩过段间重复的坑。
+   * 但重写也会把写对的弄坏——RARR 那次 43 条应用删除里 20 条经判官确认是误删——
+   * 所以 prompt 里明写「保留初稿已有的所有事实，这是扩写不是替换」，
+   * 且这里在重写产出明显变短时**保留初稿**（下面那道守卫）。
+   */
+  private async fillGaps(
+    storyMarkdown: string,
+    draft: string,
+    idx: SentenceIndex,
+    refOf: Map<number, number>,
+    index: number
+  ): Promise<string | null> {
+    try {
+      const gapRaw = await this.callAI(getGapSelfCheckPrompt(storyMarkdown, draft), undefined, {
+        temperature: 0.3,
+        maxTokens: 1500,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.blockGapBase + index,
+        responseFormat: { type: 'json_schema', json_schema: GAP_SCHEMA as unknown as Record<string, unknown> },
+      });
+      const parsed = parseLooseJSON(gapRaw);
+      if (!parsed || !Array.isArray(parsed.gaps)) {
+        console.warn(`[Brief Block ${index}] 自检响应无 gaps 字段 → 保留初稿（非"没有漏报"）`);
+        return null;
+      }
+      const gaps = dedupeByText(
+        (parsed.gaps as ReportedGap[]).filter(g => typeof g?.point === 'string' && g.point.trim().length > 0),
+        g => g.point
+      );
+      if (gaps.length < parsed.gaps.length) console.warn(`[Brief Block ${index}] gap 去重 ${parsed.gaps.length} → ${gaps.length}`);
+      if (!gaps.length) return null;
+
+      const sourcesOf = (i: number) => this.backingFor(idx, refOf, [gaps[i].point, ...(gaps[i].keywords ?? [])].join(' '));
+      const withSource = gaps.filter((_, i) => sourcesOf(i).length > 0).length;
+      if (!withSource) {
+        console.warn(`[Brief Block ${index}] 自检报了 ${gaps.length} 条 gap，一条都没检回原文 → 保留初稿`);
+        return null;
+      }
+      const gapBlock = renderGapEvidence(gaps, sourcesOf);
+
+      const rewritten = toProse(await this.callAI(getGapRewritePrompt(draft, gapBlock), undefined, {
+        temperature: 0.7,
+        maxTokens: 3000,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.blockRewriteBase + index,
+      }));
+      if (!rewritten) {
+        console.warn(`[Brief Block ${index}] 重写产出为空 → 保留初稿`);
+        return null;
+      }
+      // 守卫：重写号称是扩写，产出明显变短就是它把内容丢了，不是写得更精炼。
+      // 实测有一次重写 finish=length 复读到 13,881 字符（正常 2,400），反向也要防。
+      if (rewritten.length < draft.length * 0.8) {
+        console.warn(`[Brief Block ${index}] 重写把稿子写短了（${draft.length} → ${rewritten.length} 字符）→ 保留初稿`);
+        return null;
+      }
+      console.log(`[Brief Block ${index}] 自检补漏：gap ${gaps.length} 条、有材料 ${withSource} 条，${draft.length} → ${rewritten.length} 字符`);
+      return rewritten;
+    } catch (e) {
+      console.warn(`[Brief Block ${index}] 自检补漏失败 → 保留初稿：${e instanceof Error ? e.message : String(e)}`);
+      return null;
+    }
+  }
+
   async writeBriefBlock(
     reports: IntelligenceReport[],
     index: number,
     title: string,
     section?: BlockSectionContext,
-    options?: { selfCorrect?: boolean }
+    options?: { selfCorrect?: boolean; articles?: BriefSourceArticle[] }
   ): Promise<{ success: boolean; data?: BriefBlockResult; error?: string }> {
     try {
       const report = reports[index];
       if (!report) return { success: false, error: `index ${index} 超出报告范围（共 ${reports.length} 份）` };
       const selfCorrect = options?.selfCorrect !== false;
+      // 给了原文才走证据链（声明判断 → 检索 → 写 → 自检找漏 → 检索 → 重写）。
+      // 不给就完全是此前的行为，一行不差——上游没同步部署时不会半路坏掉。
+      const articles = (options?.articles ?? []).filter(a => a && typeof a.body === 'string' && a.body.trim().length > 200);
 
       const storyMarkdown = this.convertReportsToMarkdown([report], index, reports.length);
       // 刻意不带 system prompt。getBriefGenerationSystemPrompt() 讲的是整篇尺度的规矩
       // （"创建 3-6 个章节"、"每条 story 必须有去向"、"没内容就整节省略"），喂给只写一个块的
       // 调用会反过来诱发它去写章节标题——正是 b′ 要消灭的那个失败模式。文风与接地规则
       // 都已经在 block prompt 里了。原型实测的 100% 落地率也是不带 system prompt 跑出来的。
-      const raw = await this.callAI(getBriefBlockPrompt(storyMarkdown, title, section), undefined, {
+      // ——— 证据链第一段：写之前声明要下的判断，程序去查有没有支撑 ———
+      let sentIdx: SentenceIndex | null = null;
+      let refOf = new Map<number, number>();
+      let story = storyMarkdown;
+      if (articles.length) {
+        const ids = [...articles].sort((a, b) => a.id - b.id).map(a => a.id);
+        const bodyOf = new Map(articles.map(a => [a.id, a.body]));
+        refOf = new Map(ids.map((id, i) => [id, i + 1]));
+        sentIdx = buildIndex(buildSentences(ids, id => bodyOf.get(id) ?? ''));
+        const claims = await this.proposeClaims(storyMarkdown, title, index);
+        if (claims.length) {
+          const block = renderClaimEvidence(claims, i => this.backingFor(sentIdx!, refOf, [claims[i].claim, ...(claims[i].keywords ?? [])].join(' ')));
+          story = `${storyMarkdown}\n\n<analysis_evidence>\nBefore writing, you proposed the judgements below and a program searched the coverage for backing. Where backing was found, make that judgement and rest it on the quoted words. Where none was found, drop the judgement — do not soften it, do not substitute your own reasoning for it.\n\n${block}\n</analysis_evidence>`;
+        } else {
+          console.warn(`[Brief Block ${index}] 判断声明步未产出可用条目 → 本块无 analysis_evidence，退回只给报告`);
+        }
+      }
+
+      const raw = await this.callAI(getBriefBlockPrompt(story, title, section), undefined, {
         temperature: 0.7,
         maxTokens: 2500,
         phase: 'brief_generation',
         callIndex: CALL_INDEX.blockWriteBase + index,
       });
 
-      const prose = toProse(raw);
+      let prose = toProse(raw);
       if (!prose) {
         // 回了 200 但剥完标记没剩正文 = 这个块作废。硬失败让 step 重试，
         // 静默返回空串会让拼装步少一个块而覆盖率读数照样好看。
         return { success: false, error: `块正文为空（原始 ${raw.length} 字符）` };
+      }
+
+      // ——— 证据链第三、四段：自检找漏 → 定向检索 → 重写整篇 ———
+      // 为什么是独立一次调用而不是写作时加约束：写作时模型在一大堆材料里做隐式取舍，
+      // 实测材料到位 11/14、三份稿全写只有 4/14。而 102 份成稿 finish_reason 全是 stop、
+      // 平均输出 458 token（上限 2500）——篇幅有余量；核心事件采纳率也只有 38–56%，
+      // 不是合理取舍。单独一次「找漏」的注意力分配跟「写一篇好稿」完全不同。
+      // 四簇实测：期望单份覆盖 41.1% → 51.9%，增益 15 格、只丢 1 格。
+      if (sentIdx && prose) {
+        const filled = await this.fillGaps(storyMarkdown, prose, sentIdx, refOf, index);
+        if (filled) prose = filled;
       }
 
       if (!selfCorrect) {
@@ -1020,7 +1176,12 @@ export class BriefGenerationService {
   private async callAI(
     prompt: string,
     systemPrompt?: string,
-    options: { provider?: string; model?: string; temperature?: number; maxTokens?: number; phase?: LLMCallPhase; callIndex?: number } = {}
+    options: {
+      provider?: string; model?: string; temperature?: number; maxTokens?: number;
+      phase?: LLMCallPhase; callIndex?: number;
+      /** 约束式解码。不传即原行为。 */
+      responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
+    } = {}
   ): Promise<string> {
     const messages = systemPrompt
       ? [
@@ -1043,6 +1204,7 @@ export class BriefGenerationService {
           temperature: options.temperature,
           maxTokens: options.maxTokens,
           callIndex: options.callIndex ?? this.traceContext.callIndex,
+          responseFormat: options.responseFormat,
           metadata: {
             requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
             timestamp: Date.now(),

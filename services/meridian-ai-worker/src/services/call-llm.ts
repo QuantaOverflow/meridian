@@ -94,6 +94,14 @@ export interface CallLLMOverrides {
   metadata?: any;
   /** 合并进 trace 的 callIndex（同 phase 多次调用去重 R2 key）。 */
   callIndex?: number;
+  /**
+   * 约束式解码（Workers AI JSON mode）。不传就是原行为，向后兼容。
+   * 加它是因为实测的头号报废形态是**模型压根没开始写 JSON**：28 份抽取响应里 17 份把
+   * 8192 token 全烧在标签外的散文草稿上。约束式解码下这种形态结构上不可能。
+   * ⚠️ 逐模型的支持情况官方没给列表，不支持的模型是静默忽略还是报错未知——
+   * 调用方必须自己核验产出是否真被约束住，不能因为返回 200 就当它生效。
+   */
+  responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
 }
 
 // phase 默认 + caller 覆盖 → 建 chat 请求 → loggedChat（观测+发送）→ 返回 AIResponse。
@@ -116,6 +124,7 @@ export function callLLM(
     temperature: overrides.temperature ?? d.temperature,
     max_tokens: overrides.maxTokens ?? d.maxTokens,
     skipCache: overrides.skipCache ?? d.skipCache,
+    ...(overrides.responseFormat ? { response_format: overrides.responseFormat } : {}),
     metadata: overrides.metadata ?? { requestId: `${phase}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, timestamp: Date.now() },
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;

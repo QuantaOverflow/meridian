@@ -622,26 +622,38 @@ export async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: 
  */
 export async function loadArticlesFromR2(
   env: any,
-  keys: unknown
+  refs: unknown
 ): Promise<Array<{ id: number; body: string }>> {
-  if (!Array.isArray(keys) || keys.length === 0) return []
+  if (!Array.isArray(refs) || refs.length === 0) return []
   const bucket = env?.ARTICLES_BUCKET as R2Bucket | undefined
   if (!bucket) {
     console.warn('[BriefBlock] 传了 articleKeys 但 ARTICLES_BUCKET binding 不可用 → 退回只给报告')
     return []
   }
+  // R2 里存的是**纯正文文本**（backend 的 contentFileKey，`await obj.text()`），不是 JSON，
+  // 所以 id 必须由上游随 key 一起传——正文本身不带 id。
+  const pairs = refs
+    .map((r: any) => ({ id: Number(r?.id), key: String(r?.key ?? '') }))
+    .filter(r => Number.isFinite(r.id) && r.key.length > 0)
+  if (!pairs.length) return []
+  const idOfKey = new Map(pairs.map(p => [p.key, p.id]))
   const { values, missing, broken } = await loadR2Batched(
-    keys.map((k: unknown) => String(k)),
+    pairs.map(p => p.key),
     bucket as unknown as MinimalBucket,
-    (text: string) => {
-      const o = JSON.parse(text)
-      return { id: Number(o?.id), body: String(o?.body ?? o?.content ?? '') }
-    }
+    (text: string) => text
   )
   if (missing.length || broken.length) {
-    console.warn(`[BriefBlock] 原文 R2 缺 ${missing.length} 份、坏 ${broken.length} 份（共 ${keys.length}）→ 用剩下的继续`)
+    console.warn(`[BriefBlock] 原文 R2 缺 ${missing.length} 份、坏 ${broken.length} 份（共 ${pairs.length}）→ 用剩下的继续`)
   }
-  return (values as Array<{ id: number; body: string }>).filter(a => Number.isFinite(a.id) && a.body.length > 200)
+  // loadR2Batched 用 `values[i] = parse(...)` 按入参下标写回，缺失的位置留空洞，
+  // forEach 跳过空洞——所以下标与 pairs 严格对齐，可以据此还原 id。
+  const out: Array<{ id: number; body: string }> = []
+  values.forEach((text, i) => {
+    const key = pairs[i]?.key
+    const id = key != null ? idOfKey.get(key) : undefined
+    if (id != null && typeof text === 'string' && text.trim().length > 200) out.push({ id, body: text })
+  })
+  return out
 }
 
 // ============================================================================

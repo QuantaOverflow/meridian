@@ -1371,7 +1371,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // blockTitle 随 r2Key 一起回传，不靠下标对齐：intelligenceReports 是 filter 出来的紧凑数组，
       // 一旦有故事分析失败，它的下标就与 storiesForIntelligence 错位。挂在同一个对象上则怎么滤都对得上。
-      type IntelOutcome = { r2Key: string; blockTitle: string } | { failure: { idx: number; title: string; reason: string } };
+      // articleKeys 随 r2Key 一起回传，理由同 blockTitle：intelligenceReports 是 filter 出来的
+      // 紧凑数组，挂在同一个对象上才不会因某个故事失败而与下标错位。
+      // 传的是 R2 引用不是正文——81 篇的簇正文约 30 万字符，会撞 step 约 1MB 输出上限。
+      type IntelOutcome =
+        | { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }> }
+        | { failure: { idx: number; title: string; reason: string } };
       const analyzeOneStory = async (story: any, idx: number): Promise<IntelOutcome> => {
         try {
           // 为情报分析动态获取相关文章的内容
@@ -1395,6 +1400,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
           // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
           // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
+          // 该故事的正文引用，供写作步的证据链检索用。正文早就在 R2（抓取时落的
+          // contentFileKey），这里只是把引用带下去，零新增写入。
+          const keyOf = new Map(dataset.articles.map(a => [a.id, a.contentFileKey]));
+          const articleKeys = (story.articleIds as number[])
+            .map(id => ({ id, key: keyOf.get(id) ?? '' }))
+            .filter(x => x.key.length > 0);
+
           const r2Key = `intel-reports/${workflowId}/${idx}.json`;
           await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
 
@@ -1418,7 +1430,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           } catch (persistErr) {
             console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
           }
-          return { r2Key, blockTitle: String(story.title ?? '') };
+          return { r2Key, blockTitle: String(story.title ?? ''), articleKeys };
         } catch (error) {
           // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
           const reason = error instanceof Error ? error.message : String(error);
@@ -1443,7 +1455,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       );
 
       // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随后落观测性对账。
-      const intelligenceReports = results.filter((r): r is { r2Key: string; blockTitle: string } => 'r2Key' in r);
+      const intelligenceReports = results.filter(
+        (r): r is { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }> } => 'r2Key' in r
+      );
       const intelFailures = results
         .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
         .map((r) => r.failure);
@@ -1533,6 +1547,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         title: string;
         section?: { heading: string; causalLink: string; siblingTitles: string[] };
       };
+      // 该块的正文引用。i 是 1 基、与 reportKeys 的下标差 1，跟 intelligenceReports 同源同序。
+      const articleKeysOf = (i: number): Array<{ id: number; key: string }> =>
+        intelligenceReports[i - 1]?.articleKeys ?? [];
       const blockJobs: BlockJob[] = [
         ...skeleton.main.flatMap((s) =>
           s.reports.map((r) => ({
@@ -1562,7 +1579,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           step
             .do(`简报块:${job.i}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
               const aiServices = createAIServices(this.env, workflowId);
-              const res = await aiServices.aiWorker.writeBriefBlock(reportKeys, job.i - 1, job.title, job.section);
+              const res = await aiServices.aiWorker.writeBriefBlock(
+                reportKeys, job.i - 1, job.title, job.section, articleKeysOf(job.i)
+              );
               if (!res.ok) throw new Error(res.error);
               const b = res.value;
               if (!b.verified) {

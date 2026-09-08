@@ -289,12 +289,18 @@ export class AIWorkerService {
     reportKeys: string[],
     index: number,
     title: string,
-    section?: { heading: string; causalLink: string; siblingTitles: string[] }
+    section?: { heading: string; causalLink: string; siblingTitles: string[] },
+    /**
+     * 该块簇内文章的正文引用（`{id, key}`，key 就是 $articles.contentFileKey）。
+     * 传了 ai-worker 才走证据链（声明判断→检索→写→自检找漏→检索→重写）；不传是此前行为。
+     * 传引用不传正文：81 篇的簇正文约 30 万字符，会撞 CF Workflow 单 step 约 1MB 输出上限。
+     */
+    articleKeys?: Array<{ id: number; key: string }>
   ): Promise<ServiceResult<BriefBlockData>> {
     const request = new Request(`${this.baseUrl}/meridian/write-brief-block`, {
       method: 'POST',
       headers: this.buildHeaders({ 'x-call-index': String(index) }),
-      body: JSON.stringify({ reportKeys, index, title, section })
+      body: JSON.stringify({ reportKeys, index, title, section, articleKeys })
     });
 
     return await this.callJson<BriefBlockData>(request);

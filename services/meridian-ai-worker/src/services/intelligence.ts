@@ -372,7 +372,15 @@ export class IntelligenceService {
           targets.push({ get: () => (e.description ?? e.role) as string, set: (nv) => { if (e.description !== undefined) e.description = nv; else e.role = nv; } });
         }
       });
-      if (!targets.length) return analysis;
+      if (!targets.length) {
+        // targets 为空有两种成因，后果完全不同：报告本身没有可核文本（罕见），或 CHECKABLE /
+        // 下面的摊平逻辑用的字段路径与当前 schema 对不上（改 schema 时的静默失效）。后者会让
+        // 整篇报告绕过 RARR、连一次 LLM 都不调、且不留任何痕迹——必须让它可见，否则下次改
+        // schema 又是一次无声失效（同 brief-generation.ts「未解析出 edit」那条的做法）。
+        const keys = analysis && typeof analysis === 'object' ? Object.keys(analysis).join(',') : String(analysis);
+        console.error(`[Intelligence] RARR 摊平出 0 个可核字段 → 本篇报告完全未经接地校验。report keys=[${keys}]（字段名与 CHECKABLE 不符即 schema 迁移导致的静默失效）`);
+        return analysis;
+      }
 
       // 独立 phase：模型/温度/预算见 PHASE_DEFAULTS.intel_grounding_verify。
       // 复用 'intelligence_analysis' 会和分析本体撞同一个 R2 key（见 llm-call-logger 的 phase 注释）。

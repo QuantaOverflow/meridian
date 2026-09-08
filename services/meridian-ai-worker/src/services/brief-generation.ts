@@ -1241,7 +1241,13 @@ export class BriefGenerationService {
       bullets.push(`- ${this.stripReportVoice(sentence)}`);
       patchedIds.add(entry.storyId);
     }
-    if (!bullets.length) return { content, coverage };
+    if (!bullets.length) {
+      // 走到这里说明有 dropped 条目、却一条补录句都没生成：byId 查不到该 storyId，或
+      // executiveSummary 与 storyLabel 双空（改 schema 后 executiveSummary 消失即属此类）。
+      // 补录整体放弃却不留痕，等于把「漏报没补上」伪装成「没有漏报」。
+      console.warn(`[Brief] 覆盖补录：${dropped.length} 条 dropped 一条补录句都没生成 → 本次补录整体放弃（检查报告字段名与 storyId 映射）`);
+      return { content, coverage };
+    }
     const block = bullets.join('\n');
 
     // 有 noteworthy 区 → 追加到该区末尾（下一个 ## 头之前）；没有 → 建区，

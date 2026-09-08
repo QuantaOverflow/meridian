@@ -1375,7 +1375,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 紧凑数组，挂在同一个对象上才不会因某个故事失败而与下标错位。
       // 传的是 R2 引用不是正文——81 篇的簇正文约 30 万字符，会撞 step 约 1MB 输出上限。
       type IntelOutcome =
-        | { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }> }
+        // articlesExpected 是这条 story 原本有多少篇文章，与 articleKeys.length 可能不等
+        // （查不到 contentFileKey 的被过滤掉了）。两个数都要带下去，写作层的 span 才分得清
+        // 「材料本来就少」和「材料在路上丢了」。
+        | { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }>; articlesExpected: number }
         | { failure: { idx: number; title: string; reason: string } };
       const analyzeOneStory = async (story: any, idx: number): Promise<IntelOutcome> => {
         try {
@@ -1406,6 +1409,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           const articleKeys = (story.articleIds as number[])
             .map(id => ({ id, key: keyOf.get(id) ?? '' }))
             .filter(x => x.key.length > 0);
+          // 查不到 key 的文章被上面那个 filter 静默丢掉，而证据链只能在剩下的里检索。
+          // 81 篇的簇少 40 篇仍然出稿、读数照样好看，唯一能看出来的地方就是这行。
+          if (articleKeys.length < story.articleIds.length) {
+            console.warn(
+              `[AutoBrief] 证据链材料不全 (idx=${idx}, "${story.title}"): ` +
+              `${story.articleIds.length} 篇里只有 ${articleKeys.length} 篇有 contentFileKey`
+            );
+          }
 
           const r2Key = `intel-reports/${workflowId}/${idx}.json`;
           await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
@@ -1430,7 +1441,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           } catch (persistErr) {
             console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
           }
-          return { r2Key, blockTitle: String(story.title ?? ''), articleKeys };
+          return { r2Key, blockTitle: String(story.title ?? ''), articleKeys, articlesExpected: (story.articleIds as number[]).length };
         } catch (error) {
           // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
           const reason = error instanceof Error ? error.message : String(error);
@@ -1456,7 +1467,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随后落观测性对账。
       const intelligenceReports = results.filter(
-        (r): r is { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }> } => 'r2Key' in r
+        (r): r is { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }>; articlesExpected: number } => 'r2Key' in r
       );
       const intelFailures = results
         .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
@@ -1550,6 +1561,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 该块的正文引用。i 是 1 基、与 reportKeys 的下标差 1，跟 intelligenceReports 同源同序。
       const articleKeysOf = (i: number): Array<{ id: number; key: string }> =>
         intelligenceReports[i - 1]?.articleKeys ?? [];
+      const articlesExpectedOf = (i: number): number | undefined =>
+        intelligenceReports[i - 1]?.articlesExpected;
       const blockJobs: BlockJob[] = [
         ...skeleton.main.flatMap((s) =>
           s.reports.map((r) => ({
@@ -1580,7 +1593,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             .do(`简报块:${job.i}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
               const aiServices = createAIServices(this.env, workflowId);
               const res = await aiServices.aiWorker.writeBriefBlock(
-                reportKeys, job.i - 1, job.title, job.section, articleKeysOf(job.i)
+                reportKeys, job.i - 1, job.title, job.section, articleKeysOf(job.i), articlesExpectedOf(job.i)
               );
               if (!res.ok) throw new Error(res.error);
               const b = res.value;

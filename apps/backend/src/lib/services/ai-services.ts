@@ -295,12 +295,18 @@ export class AIWorkerService {
      * 传了 ai-worker 才走证据链（声明判断→检索→写→自检找漏→检索→重写）；不传是此前行为。
      * 传引用不传正文：81 篇的簇正文约 30 万字符，会撞 CF Workflow 单 step 约 1MB 输出上限。
      */
-    articleKeys?: Array<{ id: number; key: string }>
+    articleKeys?: Array<{ id: number; key: string }>,
+    /**
+     * 这条 story 原本有多少篇文章。**必须单独传**：articleKeys 是过滤掉没有
+     * contentFileKey 的之后剩下的，ai-worker 拿不到原始篇数，span 里就分不清
+     * 「材料本来就少」和「材料在路上丢了」。
+     */
+    articlesExpected?: number
   ): Promise<ServiceResult<BriefBlockData>> {
     const request = new Request(`${this.baseUrl}/meridian/write-brief-block`, {
       method: 'POST',
       headers: this.buildHeaders({ 'x-call-index': String(index) }),
-      body: JSON.stringify({ reportKeys, index, title, section, articleKeys })
+      body: JSON.stringify({ reportKeys, index, title, section, articleKeys, articlesExpected })
     });
 
     return await this.callJson<BriefBlockData>(request);

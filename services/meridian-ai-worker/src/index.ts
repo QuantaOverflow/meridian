@@ -841,7 +841,15 @@ app.post('/meridian/write-brief-block', async (c) => {
     }
 
     const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect, articles })
+    // 材料的四个口径逐个下传，供 span 对账。expected 只有 backend 知道（story.articleIds
+    // 有多少篇），refsSent 是它过滤后真正发过来的引用数，loaded 是 R2 取回成功的。
+    // 少传任何一个，"材料在哪一环丢的"就只能靠猜。
+    const articleStats = {
+      expected: typeof body?.articlesExpected === 'number' ? body.articlesExpected : undefined,
+      refsSent: Array.isArray(body?.articleKeys) ? body.articleKeys.length : 0,
+      loaded: articles.length,
+    }
+    const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect, articles, articleStats })
     if (!result.success) {
       return c.json<APIResponse<null>>({ success: false, error: 'Failed to write brief block', metadata: { details: result.error } }, 500)
     }

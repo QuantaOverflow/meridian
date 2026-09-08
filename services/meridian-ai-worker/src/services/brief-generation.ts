@@ -61,6 +61,7 @@ export { shapeSkeleton, renderBriefMarkdown, toProse, parseLooseJSON } from './b
 import { getTldrGenerationPrompt, getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { checkBriefHygiene } from '../utils/brief-hygiene';
 import { recordSensor } from './sensor-log';
+import { recordSpan, newSpanId } from './span-log';
 import { CloudflareEnv, ChatResponse } from '../types';
 
 // ============================================================================
@@ -786,8 +787,18 @@ export class BriefGenerationService {
       .map(h => ({ ref: refOf.get(h.articleId) ?? 0, text: expand(idx, h, 1) }));
   }
 
-  /** 证据链第一段：让模型先说出它打算下的判断，并给出记者会用的原话措辞。 */
-  private async proposeClaims(storyMarkdown: string, title: string, index: number): Promise<ProposedClaim[]> {
+  /**
+   * 证据链第一段：让模型先说出它打算下的判断，并给出记者会用的原话措辞。
+   *
+   * 返回带 outcome 而不是只回数组：`[]` 有三种成因（调用失败 / 响应无 claims 字段 /
+   * 模型确实一条都提不出），它们在「证据链为什么没生效」这个问题上是完全不同的答案，
+   * 而调用方只看 length 的话三者不可分。span 落的就是这个 outcome。
+   */
+  private async proposeClaims(
+    storyMarkdown: string,
+    title: string,
+    index: number
+  ): Promise<{ claims: ProposedClaim[]; raw: number; outcome: 'ok' | 'no_claims_field' | 'call_failed' }> {
     try {
       const raw = await this.callAI(getClaimProposalPrompt(storyMarkdown, title), undefined, {
         temperature: 0.3,
@@ -799,7 +810,7 @@ export class BriefGenerationService {
       const parsed = parseLooseJSON(raw);
       if (!parsed || !Array.isArray(parsed.claims)) {
         console.warn(`[Brief Block ${index}] 判断声明响应无 claims 字段 → 本块跳过 analysis_evidence（非"模型没有判断可下"）`);
-        return [];
+        return { claims: [], raw: 0, outcome: 'no_claims_field' };
       }
       const claims = dedupeByText(
         (parsed.claims as ProposedClaim[]).filter(c => typeof c?.claim === 'string' && c.claim.trim().length > 0),
@@ -810,10 +821,10 @@ export class BriefGenerationService {
         // 否则「它只提得出 2 条判断」和「它提了 4 条但重复」在读数上分不开。
         console.warn(`[Brief Block ${index}] 判断去重 ${parsed.claims.length} → ${claims.length}`);
       }
-      return claims;
+      return { claims, raw: parsed.claims.length, outcome: 'ok' };
     } catch (e) {
       console.warn(`[Brief Block ${index}] 判断声明调用失败 → 本块跳过 analysis_evidence：${e instanceof Error ? e.message : String(e)}`);
-      return [];
+      return { claims: [], raw: 0, outcome: 'call_failed' };
     }
   }
 
@@ -831,8 +842,30 @@ export class BriefGenerationService {
     draft: string,
     idx: SentenceIndex,
     refOf: Map<number, number>,
-    index: number
+    index: number,
+    parentSpanId: string
   ): Promise<string | null> {
+    const startedAt = new Date().toISOString();
+    const t0 = Date.now();
+    // 这一段有 6 个 return null 分支，每个的成因完全不同（自检没产出 / 检索一条都没命中 /
+    // 重写为空 / 重写变短 / 调用抛错）。只有一并落盘才回答得了「补漏为什么没生效」——
+    // 此前它们都只写 console，而 Workers Logs 里没法按 run 关联、保留期也有限。
+    const done = async (
+      outcome: string,
+      attrs: Record<string, unknown>,
+      status: 'ok' | 'error' = 'ok'
+    ): Promise<void> => {
+      await recordSpan(this.env, this.traceContext, {
+        name: 'gap_fill',
+        stage: 'evidence',
+        idx: index,
+        parent: parentSpanId,
+        startedAt,
+        durationMs: Date.now() - t0,
+        status,
+        attributes: { block_index: index, outcome, draft_chars: draft.length, ...attrs },
+      });
+    };
     try {
       const gapRaw = await this.callAI(getGapSelfCheckPrompt(storyMarkdown, draft), undefined, {
         temperature: 0.3,
@@ -844,6 +877,7 @@ export class BriefGenerationService {
       const parsed = parseLooseJSON(gapRaw);
       if (!parsed || !Array.isArray(parsed.gaps)) {
         console.warn(`[Brief Block ${index}] 自检响应无 gaps 字段 → 保留初稿（非"没有漏报"）`);
+        await done('no_gaps_field', {});
         return null;
       }
       const gaps = dedupeByText(
@@ -851,15 +885,32 @@ export class BriefGenerationService {
         g => g.point
       );
       if (gaps.length < parsed.gaps.length) console.warn(`[Brief Block ${index}] gap 去重 ${parsed.gaps.length} → ${gaps.length}`);
-      if (!gaps.length) return null;
+      if (!gaps.length) {
+        await done('no_gaps', { gaps_raw: parsed.gaps.length, gaps_deduped: 0 });
+        return null;
+      }
 
-      const sourcesOf = (i: number) => this.backingFor(idx, refOf, [gaps[i].point, ...(gaps[i].keywords ?? [])].join(' '));
-      const withSource = gaps.filter((_, i) => sourcesOf(i).length > 0).length;
+      // 检索结果算一次留着复用：既进 span 也进 prompt，两处必须是同一份
+      // （原型那边的教训③：落盘的 text 必须是真正进了 prompt 的那段）。
+      const sources = gaps.map((g, i) =>
+        this.backingFor(idx, refOf, [g.point, ...(gaps[i].keywords ?? [])].join(' '))
+      );
+      const sourcesOf = (i: number) => sources[i];
+      const withSource = sources.filter(s => s.length > 0).length;
+      // gap 原文与检回的窗口都落盘：这两样重建时要重跑 parseLooseJSON / dedupeByText /
+      // backingFor，而这三个本轮各改过至少一次，重算的结果不等于当时的结果。
+      const gapDetail = gaps.map((g, i) => ({
+        point: g.point,
+        keywords: g.keywords ?? [],
+        sources: sources[i],
+      }));
       if (!withSource) {
         console.warn(`[Brief Block ${index}] 自检报了 ${gaps.length} 条 gap，一条都没检回原文 → 保留初稿`);
+        await done('no_backing', { gaps_raw: parsed.gaps.length, gaps_deduped: gaps.length, gaps_with_source: 0, gaps: gapDetail });
         return null;
       }
       const gapBlock = renderGapEvidence(gaps, sourcesOf);
+      const base = { gaps_raw: parsed.gaps.length, gaps_deduped: gaps.length, gaps_with_source: withSource, gaps: gapDetail };
 
       const rewritten = toProse(await this.callAI(getGapRewritePrompt(draft, gapBlock), undefined, {
         temperature: 0.7,
@@ -869,18 +920,22 @@ export class BriefGenerationService {
       }));
       if (!rewritten) {
         console.warn(`[Brief Block ${index}] 重写产出为空 → 保留初稿`);
+        await done('rewrite_empty', base);
         return null;
       }
       // 守卫：重写号称是扩写，产出明显变短就是它把内容丢了，不是写得更精炼。
       // 实测有一次重写 finish=length 复读到 13,881 字符（正常 2,400），反向也要防。
       if (rewritten.length < draft.length * 0.8) {
         console.warn(`[Brief Block ${index}] 重写把稿子写短了（${draft.length} → ${rewritten.length} 字符）→ 保留初稿`);
+        await done('rewrite_shrank', { ...base, rewritten_chars: rewritten.length });
         return null;
       }
       console.log(`[Brief Block ${index}] 自检补漏：gap ${gaps.length} 条、有材料 ${withSource} 条，${draft.length} → ${rewritten.length} 字符`);
+      await done('applied', { ...base, rewritten_chars: rewritten.length });
       return rewritten;
     } catch (e) {
       console.warn(`[Brief Block ${index}] 自检补漏失败 → 保留初稿：${e instanceof Error ? e.message : String(e)}`);
+      await done('threw', { error: e instanceof Error ? e.message : String(e) }, 'error');
       return null;
     }
   }
@@ -890,15 +945,78 @@ export class BriefGenerationService {
     index: number,
     title: string,
     section?: BlockSectionContext,
-    options?: { selfCorrect?: boolean; articles?: BriefSourceArticle[] }
+    options?: {
+      selfCorrect?: boolean;
+      articles?: BriefSourceArticle[];
+      /**
+       * 材料的四个口径。**不能从 `articles` 反推**：它到这里之前已被过滤两轮
+       * （backend 丢没 contentFileKey 的、loadArticlesFromR2 丢 missing/broken），
+       * 拿它当分母会让"81 篇里只到了 38 篇"看起来像"材料完整"。
+       */
+      articleStats?: { expected?: number; refsSent?: number; loaded?: number };
+    }
   ): Promise<{ success: boolean; data?: BriefBlockResult; error?: string }> {
+    // 在 try 外面：外层 catch 里要用它补落父 span，而 try 内的 const 在 catch 里不可见。
+    // 初值是空操作——`index 越界`那条 return 发生在父 span 生成之前，本来就没有 span 可落。
+    let writeBlockSpanOnThrow: (e: unknown) => Promise<void> = async () => {};
     try {
       const report = reports[index];
       if (!report) return { success: false, error: `index ${index} 超出报告范围（共 ${reports.length} 份）` };
       const selfCorrect = options?.selfCorrect !== false;
       // 给了原文才走证据链（声明判断 → 检索 → 写 → 自检找漏 → 检索 → 重写）。
       // 不给就完全是此前的行为，一行不差——上游没同步部署时不会半路坏掉。
-      const articles = (options?.articles ?? []).filter(a => a && typeof a.body === 'string' && a.body.trim().length > 200);
+      const articlesIn = options?.articles ?? [];
+      const articles = articlesIn.filter(a => a && typeof a.body === 'string' && a.body.trim().length > 200);
+
+      // 材料在到这里之前已经被过滤过两轮（backend 丢掉没 contentFileKey 的、
+      // loadArticlesFromR2 丢掉 missing/broken），所以**不能拿 articlesIn.length 当"请求了多少篇"**
+      // ——它已经是"加载成功了多少篇"。四个口径必须由上游逐个传下来，否则 81 篇的簇少 43 篇时
+      // span 会写成 requested=38 / indexed=38，看起来材料完整。
+      const stats = options?.articleStats;
+      const articleCounts = {
+        articles_expected: stats?.expected ?? null,   // story.articleIds 有多少篇
+        article_refs_sent: stats?.refsSent ?? null,   // backend 过滤后真正发过来的引用数
+        articles_loaded: stats?.loaded ?? articlesIn.length, // R2 取回成功的
+        articles_indexed: articles.length,            // 再过 >200 字符后真正进索引的
+      };
+
+      // 本块的父 span。id 先生成、后落盘：子 span（claims / gap_fill）要在写作过程中
+      // 就带上 parent，而父 span 的 attributes 要等整段跑完才齐。
+      const blockSpanId = newSpanId();
+      const blockStartedAt = new Date().toISOString();
+      const blockT0 = Date.now();
+      // 只要生成了 blockSpanId，所有出口都必须落一条父 span——包括抛异常那条。
+      // 不落的话子 span 会指向一个永远不存在的父，且这次失败不进「块失败率」，
+      // 重试成功后只多一套成功记录，失败被系统性低估（正是原型教训②）。
+      let blockSpanDone = false;
+      // claims 步的结局，父 span 也带一份。`no_articles` 是初值——没原文时证据链整条不启动。
+      let claimStats: Record<string, unknown> = { claims_outcome: 'no_articles' };
+      const writeBlockSpan = async (
+        blockOutcome: string,
+        status: 'ok' | 'error',
+        extra: Record<string, unknown> = {}
+      ): Promise<void> => {
+        if (blockSpanDone) return;
+        blockSpanDone = true;
+        await recordSpan(this.env, this.traceContext, {
+          name: 'block', stage: 'block', idx: index, spanId: blockSpanId,
+          startedAt: blockStartedAt, durationMs: Date.now() - blockT0, status,
+          attributes: {
+            block_index: index,
+            title,
+            // 命名空间分开：父 span 的结局与 claims 步的结局是两件事，
+            // 挤在同一个 `outcome` 上会被 spread 顺序悄悄覆盖掉。
+            block_outcome: blockOutcome,
+            has_section: Boolean(section),
+            self_correct: selfCorrect,
+            ...articleCounts,
+            ...claimStats,
+            ...extra,
+          },
+        });
+      };
+      writeBlockSpanOnThrow = (e: unknown) =>
+        writeBlockSpan('threw', 'error', { error: e instanceof Error ? e.message : String(e) });
 
       const storyMarkdown = this.convertReportsToMarkdown([report], index, reports.length);
       // 刻意不带 system prompt。getBriefGenerationSystemPrompt() 讲的是整篇尺度的规矩
@@ -909,16 +1027,55 @@ export class BriefGenerationService {
       let sentIdx: SentenceIndex | null = null;
       let refOf = new Map<number, number>();
       let story = storyMarkdown;
-      if (articles.length) {
-        const ids = [...articles].sort((a, b) => a.id - b.id).map(a => a.id);
-        const bodyOf = new Map(articles.map(a => [a.id, a.body]));
-        refOf = new Map(ids.map((id, i) => [id, i + 1]));
-        sentIdx = buildIndex(buildSentences(ids, id => bodyOf.get(id) ?? ''));
-        const claims = await this.proposeClaims(storyMarkdown, title, index);
+      {
+        const t0 = Date.now();
+        const startedAt = new Date(t0).toISOString();
+        let claims: ProposedClaim[] = [];
+        let backing: Array<Array<{ ref: number; text: string }>> = [];
+        if (articles.length) {
+          const ids = [...articles].sort((a, b) => a.id - b.id).map(a => a.id);
+          const bodyOf = new Map(articles.map(a => [a.id, a.body]));
+          refOf = new Map(ids.map((id, i) => [id, i + 1]));
+          sentIdx = buildIndex(buildSentences(ids, id => bodyOf.get(id) ?? ''));
+          const proposed = await this.proposeClaims(storyMarkdown, title, index);
+          claims = proposed.claims;
+          // 检索算一次留着复用：既进 span 也进 prompt，两处必须是同一份（原型教训③）。
+          backing = claims.map(c => this.backingFor(sentIdx!, refOf, [c.claim, ...(c.keywords ?? [])].join(' ')));
+          claimStats = {
+            claims_outcome: claims.length
+              ? proposed.outcome
+              : proposed.outcome === 'ok' ? 'no_usable_claims' : proposed.outcome,
+            claims_raw: proposed.raw,
+            claims_deduped: claims.length,
+            claims_backed: backing.filter(b => b.length > 0).length,
+          };
+        }
+        // **没有原文时也落 claims span**（零计数 + outcome=no_articles）。只在有原文时落的话，
+        // 按 name='claims' 算证据链启用率时，最该看见的"缺材料"那些 run 直接不在分母里。
+        await recordSpan(this.env, this.traceContext, {
+          name: 'claims',
+          stage: 'evidence',
+          idx: index,
+          parent: blockSpanId,
+          startedAt,
+          durationMs: Date.now() - t0,
+          // 调用失败必须是 error：留成默认的 ok，按通用 status 汇总时会把它算进成功里。
+          status: claimStats.claims_outcome === 'call_failed' ? 'error' : 'ok',
+          attributes: {
+            block_index: index,
+            title,
+            ...articleCounts,
+            ...claimStats,
+            // 判断原文与检回的窗口：重建要重跑 parseLooseJSON / dedupeByText / backingFor，
+            // 这三个本轮各改过至少一次，重算结果不等于当时结果，所以落。
+            claims: claims.map((c, i) => ({ claim: c.claim, keywords: c.keywords ?? [], backing: backing[i] })),
+          },
+        });
         if (claims.length) {
-          const block = renderClaimEvidence(claims, i => this.backingFor(sentIdx!, refOf, [claims[i].claim, ...(claims[i].keywords ?? [])].join(' ')));
+          const block = renderClaimEvidence(claims, i => backing[i]);
           story = `${storyMarkdown}\n\n<analysis_evidence>\nBefore writing, you proposed the judgements below and a program searched the coverage for backing. Where backing was found, make that judgement and rest it on the quoted words. Where none was found, drop the judgement — do not soften it, do not substitute your own reasoning for it.\n\n${block}\n</analysis_evidence>`;
-        } else {
+        } else if (articles.length) {
+          // 只有"有原文却提不出判断"才是异常。没原文是上游未传，正常路径，不报警。
           console.warn(`[Brief Block ${index}] 判断声明步未产出可用条目 → 本块无 analysis_evidence，退回只给报告`);
         }
       }
@@ -934,8 +1091,12 @@ export class BriefGenerationService {
       if (!prose) {
         // 回了 200 但剥完标记没剩正文 = 这个块作废。硬失败让 step 重试，
         // 静默返回空串会让拼装步少一个块而覆盖率读数照样好看。
+        // 失败也要成 span（原型教训②）：只给成功的结果建 span，查「哪一段最常失败」
+        // 查出来的就永远是「重试成功之后的样子」。
+        await writeBlockSpan('empty_prose', 'error', { raw_chars: raw.length });
         return { success: false, error: `块正文为空（原始 ${raw.length} 字符）` };
       }
+      const draftChars = prose.length;
 
       // ——— 证据链第三、四段：自检找漏 → 定向检索 → 重写整篇 ———
       // 为什么是独立一次调用而不是写作时加约束：写作时模型在一大堆材料里做隐式取舍，
@@ -944,9 +1105,19 @@ export class BriefGenerationService {
       // 不是合理取舍。单独一次「找漏」的注意力分配跟「写一篇好稿」完全不同。
       // 四簇实测：期望单份覆盖 41.1% → 51.9%，增益 15 格、只丢 1 格。
       if (sentIdx && prose) {
-        const filled = await this.fillGaps(storyMarkdown, prose, sentIdx, refOf, index);
+        const filled = await this.fillGaps(storyMarkdown, prose, sentIdx, refOf, index, blockSpanId);
         if (filled) prose = filled;
       }
+
+      // 父 span：一块证据链的全貌。
+      // ⚠️ 口径注意：它在 RARR **之前**结束，所以 `text_chars` 是补漏后、校验前的字符数，
+      // `duration_ms` 也不含 RARR。要「整块最终多少字」得看拼装步，不是这里。
+      await writeBlockSpan('ok', 'ok', {
+        report_chars: storyMarkdown.length,
+        evidence_prompt_injected: story.length > storyMarkdown.length,
+        draft_chars: draftChars,
+        text_chars: prose.length,
+      });
 
       if (!selfCorrect) {
         return { success: true, data: { index, title, text: prose, verified: false, edits: 0, applied: 0, skipped: 0, blocked: { noop: 0, bad_delete: 0, graft: 0, bloat: 0, unquoted: 0, budget: 0, seam: 0 } } };
@@ -1037,6 +1208,10 @@ export class BriefGenerationService {
       }
     } catch (error) {
       console.error(`[Brief Block ${index}] 写作失败:`, error);
+      // 抛异常这条路也要落父 span：claims span 可能已经落了，不补这一条就会留下
+      // 指向不存在父的孤儿子 span，而且这次失败不进「块失败率」——重试成功后
+      // 只多一套成功记录，失败被系统性低估。
+      await writeBlockSpanOnThrow(error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
     }
   }

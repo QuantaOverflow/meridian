@@ -35,7 +35,12 @@
 
 /** 一次写作最多声明几条判断。8 条会逼模型凑数——实测 8 条里 4 条逐字相同。 */
 export const MAX_CLAIMS = 4;
-/** 一次自检最多报几条 gap。 */
+/**
+ * 一次自检最多报几条 gap。**这是上限不是目标**——2026-09-09 实测 23 块里 23 块
+ * 都精确报满 6 条，claims 那边 24/24 都报满 4 条：schema 的 maxItems 在没有别的
+ * 数量锚点时会被模型当成要凑的数。prompt 里已显式写明「空列表是有效答案」并给了
+ * 门槛（读者会被误导 / 会据此行动），改上限治不了这个，改问法才行。
+ */
 export const MAX_GAPS = 6;
 
 export const CLAIM_SCHEMA = {
@@ -86,6 +91,208 @@ export const GAP_SCHEMA = {
   },
 } as const;
 
+/**
+ * 【找漏改成两段】2026-09-09。
+ *
+ * 原来是一次自由生成：给报告 + 初稿，让模型直接吐「初稿漏了哪些点」。实测两个失效：
+ *   · 23 块里 23 块精确报满 maxItems=6，从不返回空列表
+ *   · 44% 的条目其实是对**初稿已写内容**挑修饰细节（"会面持续三小时"、"他是房地产商"）
+ * 两版 prompt 修补都无效，第二版把反面例句写进 schema 的 description 后反而恶化到 95%
+ * ——schema 里的文本会被模型当上下文读（arXiv:2604.14862），等于给了它一个模板去模仿。
+ *
+ * 改成业界在「覆盖/遗漏」任务上一致的结构（arXiv:2510.07926、EMNLP 2025 omission、
+ * Meta CoVe arXiv:2309.11495）：**穷举候选 → 逐条二元判定 → 只留判「没覆盖」的**。
+ * 本仓自己的 coverage-judge（κ0.965，scripts/eval/coverage-judge/）就是这个结构，
+ * 只是一直只用在事后评估。
+ *
+ * 两段各自的设计要点：
+ *   ① 穷举段**不看初稿**——它只从报告里列点，没有「和初稿比」这个任务，
+ *      也就没有「挑细节」这个失败模式的立足点。schema 不设 maxItems（数字会变成目标）。
+ *   ② 判定段只做一件事：这个点初稿讲没讲。covered=true 时**必须引初稿原句**，
+ *      不能空口说覆盖了——这是把「检索失败伪装成事实断言」那类失效堵死的同一招。
+ */
+export const GAP_CANDIDATE_SCHEMA = {
+  type: 'object', required: ['points'], additionalProperties: false,
+  properties: {
+    points: {
+      // 刻意不设 maxItems：数字会被当成要凑够的目标。多报无妨——下一段会逐条筛。
+      type: 'array',
+      items: {
+        type: 'object', required: ['point', 'keywords'], additionalProperties: false,
+        properties: {
+          point: {
+            type: 'string', maxLength: 200,
+            description: 'One thing the report states, named concretely — who did what, with the specifics. Not a topic label.',
+          },
+          keywords: {
+            type: 'array', items: { type: 'string' },
+            description: 'Two or three phrases likely to appear VERBATIM in the original coverage of this point. Use a reporter\'s words, not your paraphrase — a program matches these against the article text literally.',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * 判定改成三档而不是布尔。依据 docs/engineering-notes/prompt-engineering-self-critique.md
+ * 建议 ③：二元「有没有提到」这条边界模型执行不稳（v1 实测 44% 的条目是「提到了但漏细节」
+ * 被当成漏报），而**具体判据比抽象原则稳**。三档把「提没提」和「说没说清」分开，
+ * 只有前两档进重写。
+ *
+ * ⚠️ 这条是从「具体 > 抽象」的宽泛共识做的推论，**没有直接论文支持**（文档里标了弱证据），
+ * 所以这一版要实测，别当成已验证的做法。
+ */
+export const COVERAGE_SCHEMA = {
+  type: 'object', required: ['judgements'], additionalProperties: false,
+  properties: {
+    judgements: {
+      type: 'array',
+      items: {
+        type: 'object', required: ['i', 'verdict', 'evidence'], additionalProperties: false,
+        properties: {
+          i: { type: 'integer', description: 'The number of the point being judged, exactly as given.' },
+          verdict: {
+            type: 'string', enum: ['absent', 'weakened', 'told'],
+            description: 'absent = the draft never brings this matter up. weakened = the draft raises it but leaves the reader with the wrong impression of what happened. told = the draft conveys it, even if in fewer words or without every specific.',
+          },
+          evidence: {
+            type: 'string', maxLength: 300,
+            description: 'For weakened and told, the sentence from the draft that raises the matter, quoted verbatim. For absent, the empty string.',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export interface GapCandidate { point: string; keywords: string[] }
+export interface CoverageJudgement { i: number; verdict: 'absent' | 'weakened' | 'told'; evidence: string }
+
+/** 找漏第一段：只读报告，穷举它陈述的点。**刻意不给初稿**——没有对比就没有挑细节的余地。 */
+export function getGapCandidatePrompt(report: string): string {
+  return `Below is an intelligence report on one news story.
+
+<report>
+${report}
+</report>
+
+List the things this report states — each as a concrete point a reader could be told. Work through the report and list what is there.
+
+Include what happened, who did or said it, and the numbers and dates that carry meaning. Skip the report's own remarks about its sourcing, its gaps and its contradictions: those describe the reporting, not the world.
+
+For each point, give the phrases a reporter would have used when writing about it, so a program can pull the original wording.
+
+Emit one JSON object matching this schema. Follow each field's \`description\` literally.
+
+\`\`\`json
+${JSON.stringify(GAP_CANDIDATE_SCHEMA, null, 2)}
+\`\`\`
+
+**Your entire response is that JSON object. Nothing before the opening brace, nothing after the closing brace.**`;
+}
+
+/** 找漏第二段：逐条判初稿讲没讲。covered=true 必须引初稿原句。 */
+export function getGapCoveragePrompt(draft: string, points: GapCandidate[]): string {
+  const list = points.map((p, i) => `${i + 1}. ${p.point}`).join('\n');
+  return `Below is a draft news brief, then a numbered list of points.
+
+<draft>
+${draft}
+</draft>
+
+<points>
+${list}
+</points>
+
+For each numbered point, place the draft in one of three states.
+
+**told** — the draft conveys this point. A brief says things in fewer words than a report: leaving out a duration, a title, an exact figure or a date still counts as told, so long as the reader ends up with the right picture of what happened.
+
+**weakened** — the draft raises the matter but leaves the reader with the wrong impression of it: it says a thing was considered when it was decided, or reports a claim as a finding, or gives a figure that changes the meaning.
+
+**absent** — the draft never brings this matter up.
+
+For told and weakened, quote the sentence from the draft that raises the matter. A point you cannot quote for is absent.
+
+Judge every point. Emit one JSON object matching this schema. Follow each field's \`description\` literally.
+
+\`\`\`json
+${JSON.stringify(COVERAGE_SCHEMA, null, 2)}
+\`\`\`
+
+**Your entire response is that JSON object. Nothing before the opening brace, nothing after the closing brace.**`;
+}
+
+/**
+ * 【找漏第三版：回到「读者需要什么」】2026-09-09。
+ *
+ * 前两版都走偏了，而且是往同一个方向偏：
+ *   v1（原始）  给报告 + 初稿，问「初稿漏了报告里的什么」——diff 任务
+ *   v2（两段式）穷举报告的点 → 逐条判初稿覆盖没覆盖——**更彻底的 diff**
+ * v2 确实治好了凑数（每块恒定 6 条 → 分布铺开、首次出现「没有漏报」），但它把任务换掉了：
+ * 隐含标准变成「简报应尽量复述报告」，而简报比报告短是**有意的**。读数也印证——
+ * 每块报出的漏报数随报告长度走（块13 报 9 条、块10 报 8 条），而读者的需要不该随材料长度线性增长。
+ *
+ * 本意是**从读者视角往前推理**：只读到这一块的人，在哪里卡住。所以这一版：
+ *   · 只给初稿，**不给报告**。给了报告，模型就会去枚举它——前两版都栽在这里。
+ *     不给，它只能从「读完这段我还不明白什么」出发，那才是要问的问题。
+ *   · 产出的是**读者的疑问**，不是「报告里的第 N 条」。
+ *   · 有没有材料回答，交给程序去原文里检索（backingFor，逐字短语命中才算），
+ *     检不到就丢。这一步顺带绕开了「拿报告当事实源」——材料来自原文，不来自报告。
+ *   · 因此只需要一次 LLM 调用（v2 是两次）。
+ *
+ * schema 不设 maxItems：数字会被当成要凑够的目标（v1 实测 23/23 都报满 6）。
+ */
+export const READER_GAP_SCHEMA = {
+  type: 'object', required: ['needs'], additionalProperties: false,
+  properties: {
+    needs: {
+      type: 'array',
+      items: {
+        type: 'object', required: ['need', 'keywords'], additionalProperties: false,
+        properties: {
+          need: {
+            type: 'string', maxLength: 200,
+            description: 'What the reader is left unable to understand or judge, written as the thing they would need to be told. Name it concretely.',
+          },
+          keywords: {
+            type: 'array', items: { type: 'string' },
+            description: 'Two or three phrases likely to appear VERBATIM in the original news coverage that would answer this. Use a reporter\'s words, not your paraphrase — a program matches these against the article text literally.',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export interface ReaderNeed { need: string; keywords: string[] }
+
+/**
+ * 找漏（读者视角）：**只给初稿**。不给报告是刻意的——见 READER_GAP_SCHEMA 的注释。
+ */
+export function getReaderGapPrompt(title: string, draft: string): string {
+  return `Below is one section of a news brief, titled "${title}". Assume a reader who reads this and nothing else.
+
+<section>
+${draft}
+</section>
+
+Read it as that reader. Where are you left unable to follow what happened, unable to see why it matters, or unable to judge what is likely to come of it?
+
+Name what you would need to be told. Ask about this story — not about background a reader is expected to bring. Something that reads as complete needs nothing; say so with an empty list.
+
+For each one, give the phrases a reporter would have used when covering it, so a program can go look for the answer in the original articles.
+
+Emit one JSON object matching this schema. Follow each field's \`description\` literally.
+
+\`\`\`json
+${JSON.stringify(READER_GAP_SCHEMA, null, 2)}
+\`\`\`
+
+**Your entire response is that JSON object. Nothing before the opening brace, nothing after the closing brace.**`;
+}
+
 export interface ProposedClaim { claim: string; keywords: string[] }
 export interface ReportedGap { point: string; reason: string; keywords: string[] }
 
@@ -124,9 +331,13 @@ ${report}
 ${draft}
 </draft>
 
-The draft is shorter than the report and necessarily leaves things out. Your job is to find what it left out that a reader of this brief would need.
+A brief is meant to be shorter than the report. Most of what it leaves out is detail a reader does not need. Your job is to find the exceptions.
 
 Go through the report and identify points the draft does not convey. A point only mentioned in passing, without saying what actually happened, counts as left out. Do not list things the draft already covers in different words.
+
+Only list a point if a reader of the brief alone would be **misled**, or would be missing something they would **act on**. Detail that merely adds texture does not qualify.
+
+**Return only the points that clear that bar. If the draft already conveys everything that matters, return an empty list — that is a valid and expected answer, not a failure to look hard enough.** The schema's \`maxItems\` is a ceiling, not a target. List what you find in the order a reader would miss it most.
 
 For each gap, give the phrases a reporter would have used when writing about it, so a program can pull the original wording.
 

@@ -34,6 +34,8 @@ export const CALL_INDEX = {
   blockGapBase: 600,
   /** 按 gap 材料重写（证据链第四段）。 */
   blockRewriteBase: 700,
+  /** 找漏第二段：逐条判初稿覆盖没覆盖。与 blockGapBase（穷举候选）分段。 */
+  blockCoverBase: 800,
 } as const;
 
 export interface SkeletonRef {
@@ -133,6 +135,48 @@ export function parseLooseJSON(raw: string): any {
     } catch {
       /* 下一个候选 */
     }
+  }
+  return salvageTruncatedJSON(raw);
+}
+
+/**
+ * 救回**被 max_tokens 截断**的 JSON：丢掉最后那个写了一半的元素，补齐闭合括号。
+ *
+ * 为什么需要：约束式解码只管形状不管长度——数组可以合法地一直长下去，写到预算用尽就断在
+ * 半个字符串里。schema 里的 `maxItems` 曾经兼职当长度保险（6 条撑死装得下 1500 token），
+ * 2026-09-09 为了消除「把上限当目标去凑数」把它去掉之后，截断第一次出现：18 块里 12 块
+ * 的响应是 7000+ 字符的残缺 JSON，全部解析失败、报成「响应无 needs 字段」——**读起来像
+ * 模型不配合，实际是预算不够**。
+ *
+ * 只做一件事：把已经完整写出来的那些元素留下。宁可少几条，不要整块丢。
+ * 救不回来就返回 null，与此前行为一致。
+ */
+function salvageTruncatedJSON(raw: string): any {
+  const start = raw.indexOf('{');
+  if (start < 0) return null;
+  const body = raw.slice(start);
+  // 从后往前找最后一个「元素结束」的位置：`}` 后面跟逗号或空白到结尾。
+  for (let i = body.length - 1; i > 0; i--) {
+    if (body[i] !== '}') continue;
+    const head = body.slice(0, i + 1);
+    // 数组/对象各缺几个闭合，按未配对的开括号补齐（字符串内的括号不计）。
+    const stack: string[] = [];
+    let inStr = false;
+    let esc = false;
+    for (const ch of head) {
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{' || ch === '[') stack.push(ch);
+      else if (ch === '}' || ch === ']') stack.pop();
+    }
+    if (inStr) continue;
+    const close = stack.reverse().map(c => (c === '{' ? '}' : ']')).join('');
+    try {
+      const o = JSON.parse((head + close).replace(/,\s*([}\]])/g, '$1'));
+      if (o && typeof o === 'object') return o;
+    } catch { /* 再往前找一个元素边界 */ }
   }
   return null;
 }

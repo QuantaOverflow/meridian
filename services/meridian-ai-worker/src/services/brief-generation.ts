@@ -28,10 +28,18 @@ import { rankSourcesByRelevance } from './faithfulness-prompts';
 import { buildEvidenceWindows, retrieveEvidence, checksToEdits } from '../utils/evidence-windows';
 import { buildSentences, buildIndex, search, expand, type Index as SentenceIndex } from '../utils/sentence-search';
 import {
-  CLAIM_SCHEMA, GAP_SCHEMA, getClaimProposalPrompt, getGapSelfCheckPrompt, getGapRewritePrompt,
+  CLAIM_SCHEMA, GAP_CANDIDATE_SCHEMA, COVERAGE_SCHEMA,
+  getClaimProposalPrompt, getGapCandidatePrompt, getGapCoveragePrompt, getGapRewritePrompt,
   renderClaimEvidence, renderGapEvidence, dedupeByText,
-  type ProposedClaim, type ReportedGap,
+  type ProposedClaim, type GapCandidate, type CoverageJudgement,
 } from '../prompts/briefEvidence';
+
+/**
+ * 候选穷举的硬上限。**放在代码里而不是 schema 里**：schema 的数字会被模型当成要凑够的
+ * 目标（实测 maxItems=6 时 23/23 都报满 6），代码截断则模型看不见。20 是保险丝不是判据——
+ * 真触发说明穷举步跑飞了，warn 会留痕。
+ */
+const CANDIDATE_HARD_CAP = 20;
 import { checkBlockConsistency, type ConsistencyFinding } from '../utils/block-consistency';
 import {
   ISOLATED_HEADING,
@@ -105,18 +113,19 @@ const ContradictionSchema = z.object({
   conflictingClaims: z.array(ClaimSchema),
 });
 
+/**
+ * 情报报告：**薄 JSON 外壳 + markdown 正文**（2026-09-09 改）。
+ *
+ * 只有 `executiveSummary` 和 `status` 被代码寻址（骨架步、块标题、storyLabel、补录兜底），
+ * `body` 原样透传给渲染层。旧形状（timeline/entities/factualBasis/informationGaps/
+ * contradictions 等 11 个字段）拆掉的理由见 utils/intelligence-report-builder.ts 的头注释：
+ * 给模型的自由输出套固定 JSON 形状，是静默丢内容的源头。
+ */
 const IntelligenceReportSchema = z.object({
   storyId: z.string(),
   status: z.enum(["COMPLETE", "INCOMPLETE"]),
   executiveSummary: z.string(),
-  storyStatus: z.enum(["DEVELOPING", "ESCALATING", "DE_ESCALATING", "CONCLUDING", "STATIC"]),
-  timeline: z.array(TimelineEventSchema),
-  significance: SignificanceAssessmentSchema,
-  entities: z.array(EntitySchema),
-  sources: z.array(SourceAnalysisSchema),
-  factualBasis: z.array(z.string()),
-  informationGaps: z.array(z.string()),
-  contradictions: z.array(ContradictionSchema),
+  body: z.string(),
 });
 
 const ProcessingStatusSchema = z.object({
@@ -308,62 +317,81 @@ function renderListItem(item: unknown): string {
  * IntelligenceReport。
  *
  * 抽成函数是因为 b′ 的三个端点直接从 R2 读报告，必须跟 `/meridian/generate-final-brief`
- * 走**同一套**归一逻辑——它承载了几个真实 bug 的修复：keyEntities→entities 的接线
- * （漏接会让相关方在简报输入里整段丢失，归属类错误由此而来）、significance 的两种形状、
- * legacy 字段名兜底。两份实现迟早会漂，而漂的表现是"简报里的人名开始张冠李戴"。
+ * 走**同一套**逻辑，两份实现迟早会漂。
  *
- * 内容与原先内联在 index.ts 里的那段逐字相同，只是换了位置。
+ * **2026-09-09 起报告是薄外壳 + markdown 正文**，新报告在这里几乎是原样透传。
+ * 下半段的 `renderLegacyBody` 只为读**改形状之前写进 R2 的旧报告**（生产历史数据、
+ * 实验 fixture）——新报告永远不走它。旧报告读进来时把那些字段拼成 markdown，
+ * 而不是把它们再搬回结构化字段：搬运正是丢内容的那一层。
  */
 export function normalizeAnalysisToReport(analysis: any): IntelligenceReport {
+  const executiveSummary = analysis.executiveSummary || analysis.overview || analysis.summary || '发展概述';
   return {
     storyId: analysis.storyId || analysis.id || `story_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
     status: analysis.status || ("COMPLETE" as const),
-    executiveSummary: analysis.executiveSummary || analysis.overview || analysis.summary || '发展概述',
-    storyStatus: analysis.storyStatus || ("DEVELOPING" as const),
-    timeline: Array.isArray(analysis.timeline) ? analysis.timeline : [],
-    significance: (analysis.significance && (analysis.significance.level || analysis.significance.reasoning))
-      ? {
-          level: analysis.significance.level || ("MODERATE" as const),
-          reasoning: analysis.significance.reasoning || analysis.outlook || '需要持续关注的发展',
-        }
-      : {
-          level: "MODERATE" as const,
-          reasoning: analysis.outlook || '需要持续关注的发展',
-        },
-    entities: Array.isArray(analysis.entities) && analysis.entities.length
-      ? analysis.entities.map((e: any) => ({
-          name: e.name || 'Unknown Entity',
-          type: e.type || 'Organization',
-          role: e.role || 'Stakeholder',
-          positions: Array.isArray(e.positions) ? e.positions : [],
-        }))
-      // 上游 intel 报告用 keyEntities（name/type/description），不是 entities。
-      // 之前这里漏接 → 相关方在简报输入里整段丢失，归属类错误（引语/行动安错主体）由此而来。
-      : Array.isArray(analysis.keyEntities) && analysis.keyEntities.length
-      ? analysis.keyEntities.map((e: any) => ({
-          name: e.name || 'Unknown Entity',
-          type: e.type || 'Organization',
-          role: e.description || e.role || 'Stakeholder',
-          positions: [],
-        }))
-      : (analysis.stakeholders || []).map((name: string) => ({
-          name,
-          type: 'Organization',
-          role: 'Stakeholder',
-          positions: [],
-        })),
-    sources: (Array.isArray(analysis.sources) && analysis.sources.length)
-      ? analysis.sources
-      : [{
-          sourceName: 'Multiple Sources',
-          articleIds: [1, 2, 3], // 占位符
-          reliabilityLevel: "HIGH" as const,
-          bias: 'Minimal',
-        }],
-    factualBasis: analysis.factualBasis || analysis.key_developments || [],
-    informationGaps: analysis.informationGaps || analysis.implications || [],
-    contradictions: Array.isArray(analysis.contradictions) ? analysis.contradictions : [],
+    executiveSummary,
+    body: typeof analysis.body === 'string' && analysis.body.trim()
+      ? analysis.body
+      : renderLegacyBody(analysis),
   };
+}
+
+/**
+ * 旧形状报告 → markdown 正文。**只用于兼容 2026-09-09 之前写入 R2 的报告。**
+ *
+ * 刻意保留 keyEntities 的接线：漏接会让相关方在简报输入里整段丢失，归属类错误
+ * （引语/行动安到错误主体）由此而来。`contradictions` 这里按三种已知形状都试一遍
+ * ——旧整形代码只认其中一种，另两种被抹成空壳，历史 R2 报告里存的就是空壳，救不回来了，
+ * 但至少不要在读的时候再丢一次。
+ */
+function renderLegacyBody(analysis: any): string {
+  const out: string[] = [];
+
+  const timeline = Array.isArray(analysis.timeline) ? analysis.timeline : [];
+  if (timeline.length) {
+    out.push('## Timeline');
+    for (const ev of timeline) {
+      const when = ev?.timestamp || ev?.date || '';
+      const src = ev?.date_source || ev?.dateSource;
+      out.push(`* ${when ? `[${when}] ` : ''}${ev?.description ?? ''}${src ? ` — src: "${src}"` : ''}`);
+    }
+    out.push('');
+  }
+
+  const ents = (Array.isArray(analysis.entities) && analysis.entities.length)
+    ? analysis.entities
+    : (Array.isArray(analysis.keyEntities) && analysis.keyEntities.length)
+    ? analysis.keyEntities
+    : (analysis.stakeholders || []).map((name: string) => ({ name }));
+  if (ents.length) {
+    out.push('## Parties');
+    for (const e of ents) {
+      const role = e?.role || e?.description || e?.type || '';
+      out.push(`* ${e?.name ?? 'Unknown Entity'}${role ? ` (${role})` : ''}`);
+    }
+    out.push('');
+  }
+
+  const contras = Array.isArray(analysis.contradictions) ? analysis.contradictions : [];
+  const contraLines = contras
+    .map((c: any) => {
+      if (typeof c === 'string') return c.trim();
+      if (!c || typeof c !== 'object') return '';
+      // 三种已知形状：{field, conflictingInformation} / {issue, conflictingClaims} / 纯字符串
+      const head = c.field || c.issue || '';
+      const detail = c.conflictingInformation
+        || (Array.isArray(c.conflictingClaims) ? c.conflictingClaims.map((x: any) => x?.statement ?? x).filter(Boolean).join(' vs ') : '');
+      return [head, detail].filter(Boolean).join(' — ');
+    })
+    .filter((l: string) => l && l !== 'Contradiction');
+  if (contraLines.length) {
+    out.push('## Disputes', ...contraLines.map((l: string) => `* ${l}`), '');
+  }
+
+  const gaps = (analysis.informationGaps || analysis.implications || []).map(renderListItem).filter(Boolean);
+  if (gaps.length) out.push('## Open', ...gaps.map((g: string) => `* ${g}`), '');
+
+  return out.join('\n').trim();
 }
 
 // ============================================================================
@@ -554,10 +582,10 @@ export class BriefGenerationService {
           format: "MARKDOWN",
         },
         statistics: {
-          totalArticlesProcessed: this.calculateTotalArticles(reports.reports),
-          totalSourcesUsed: this.calculateTotalSources(reports.reports),
-          articlesUsedInBrief: this.calculateUsedArticles(reports.reports),
-          sourcesUsedInBrief: this.calculateUsedSources(reports.reports),
+          totalArticlesProcessed: this.unknownStat(),
+          totalSourcesUsed: this.unknownStat(),
+          articlesUsedInBrief: this.unknownStat(),
+          sourcesUsedInBrief: this.unknownStat(),
           clusteringParameters: {},
         },
       };
@@ -843,7 +871,8 @@ export class BriefGenerationService {
     idx: SentenceIndex,
     refOf: Map<number, number>,
     index: number,
-    parentSpanId: string
+    parentSpanId: string,
+    title: string
   ): Promise<string | null> {
     const startedAt = new Date().toISOString();
     const t0 = Date.now();
@@ -867,50 +896,103 @@ export class BriefGenerationService {
       });
     };
     try {
-      const gapRaw = await this.callAI(getGapSelfCheckPrompt(storyMarkdown, draft), undefined, {
+      // ── 第一段：只读报告，穷举它陈述的点（不给初稿，故没有「挑细节」的立足点）──
+      const candRaw = await this.callAI(getGapCandidatePrompt(storyMarkdown), undefined, {
         temperature: 0.3,
-        maxTokens: 1500,
+        maxTokens: 3000,
         phase: 'brief_generation',
         callIndex: CALL_INDEX.blockGapBase + index,
-        responseFormat: { type: 'json_schema', json_schema: GAP_SCHEMA as unknown as Record<string, unknown> },
+        responseFormat: { type: 'json_schema', json_schema: GAP_CANDIDATE_SCHEMA as unknown as Record<string, unknown> },
       });
-      const parsed = parseLooseJSON(gapRaw);
-      if (!parsed || !Array.isArray(parsed.gaps)) {
-        console.warn(`[Brief Block ${index}] 自检响应无 gaps 字段 → 保留初稿（非"没有漏报"）`);
-        await done('no_gaps_field', {});
+      const candParsed = parseLooseJSON(candRaw);
+      if (!candParsed || !Array.isArray(candParsed.points)) {
+        console.warn(`[Brief Block ${index}] 候选穷举响应无 points 字段 → 保留初稿（非"没有漏报"）`);
+        await done('no_points_field', {});
         return null;
       }
-      const gaps = dedupeByText(
-        (parsed.gaps as ReportedGap[]).filter(g => typeof g?.point === 'string' && g.point.trim().length > 0),
-        g => g.point
-      );
-      if (gaps.length < parsed.gaps.length) console.warn(`[Brief Block ${index}] gap 去重 ${parsed.gaps.length} → ${gaps.length}`);
-      if (!gaps.length) {
-        await done('no_gaps', { gaps_raw: parsed.gaps.length, gaps_deduped: 0 });
+      const candidates = dedupeByText(
+        (candParsed.points as GapCandidate[]).filter(p => typeof p?.point === 'string' && p.point.trim().length > 0),
+        p => p.point
+      ).slice(0, CANDIDATE_HARD_CAP);
+      if (!candidates.length) {
+        await done('no_candidates', { candidates_raw: candParsed.points.length, candidates: 0 });
         return null;
       }
 
-      // 检索结果算一次留着复用：既进 span 也进 prompt，两处必须是同一份
-      // （原型那边的教训③：落盘的 text 必须是真正进了 prompt 的那段）。
-      const sources = gaps.map((g, i) =>
-        this.backingFor(idx, refOf, [g.point, ...(gaps[i].keywords ?? [])].join(' '))
-      );
+      // ── 第二段：逐条判三档（absent / weakened / told）。前两档才是漏报 ──
+      const judgeRaw = await this.callAI(getGapCoveragePrompt(draft, candidates), undefined, {
+        temperature: 0,
+        maxTokens: 3000,
+        phase: 'brief_generation',
+        callIndex: CALL_INDEX.blockCoverBase + index,
+        responseFormat: { type: 'json_schema', json_schema: COVERAGE_SCHEMA as unknown as Record<string, unknown> },
+      });
+      const judgeParsed = parseLooseJSON(judgeRaw);
+      if (!judgeParsed || !Array.isArray(judgeParsed.judgements)) {
+        console.warn(`[Brief Block ${index}] 覆盖判定响应无 judgements 字段 → 保留初稿（非"全部已覆盖"）`);
+        await done('no_judgements_field', { candidates: candidates.length });
+        return null;
+      }
+      // 判定按 1 基序号回指候选。没被判到的条目**当作已讲丢弃**而不是当作漏报：
+      // 漏判的成因是模型没输出，把它读成「漏报」等于让一次输出截断变成往稿子里塞东西。
+      const verdictOf = new Map<number, CoverageJudgement>();
+      for (const j of judgeParsed.judgements as CoverageJudgement[]) {
+        if (typeof j?.i === 'number' && typeof j?.verdict === 'string') verdictOf.set(j.i, j);
+      }
+      const unjudged = candidates.length - verdictOf.size;
+      if (unjudged > 0) console.warn(`[Brief Block ${index}] ${candidates.length} 条候选里 ${unjudged} 条没被判定 → 按已讲处理`);
+      // told/weakened 都要求引出初稿原句。引不出说明它没真看到那句话，判定不算数——
+      // 空口说「讲了」和检索失败伪装成事实断言是同一类失效。
+      let quoteMissing = 0;
+      const tally = { absent: 0, weakened: 0, told: 0 } as Record<string, number>;
+      const gaps = candidates.filter((c, k) => {
+        const v = verdictOf.get(k + 1);
+        if (!v) return false;
+        tally[v.verdict] = (tally[v.verdict] ?? 0) + 1;
+        if (v.verdict === 'absent') return true;
+        const q = (v.evidence ?? '').trim();
+        if (q.length >= 12 && draft.toLowerCase().includes(q.toLowerCase().slice(0, 40))) {
+          return v.verdict === 'weakened';
+        }
+        quoteMissing++;
+        return true;
+      });
+      if (quoteMissing) console.warn(`[Brief Block ${index}] ${quoteMissing} 条判 told/weakened 但引不出初稿原句 → 仍按漏报处理`);
+      const base0 = {
+        candidates_raw: candParsed.points.length,
+        candidates: candidates.length,
+        judged: verdictOf.size,
+        unjudged,
+        quote_missing: quoteMissing,
+        verdicts: tally,
+      };
+      if (!gaps.length) {
+        // 这是**期望中的正常结局**：初稿把报告里该讲的都讲了。
+        await done('all_told', base0);
+        return null;
+      }
+
+      // 检索结果算一次留着复用：既进 span 也进 prompt，两处必须是同一份（原型教训③）。
+      const sources = gaps.map(g => this.backingFor(idx, refOf, [g.point, ...(g.keywords ?? [])].join(' ')));
       const sourcesOf = (i: number) => sources[i];
       const withSource = sources.filter(s => s.length > 0).length;
-      // gap 原文与检回的窗口都落盘：这两样重建时要重跑 parseLooseJSON / dedupeByText /
-      // backingFor，而这三个本轮各改过至少一次，重算的结果不等于当时的结果。
       const gapDetail = gaps.map((g, i) => ({
         point: g.point,
         keywords: g.keywords ?? [],
+        verdict: verdictOf.get(candidates.indexOf(g) + 1)?.verdict ?? null,
+        evidence: verdictOf.get(candidates.indexOf(g) + 1)?.evidence ?? '',
         sources: sources[i],
       }));
       if (!withSource) {
-        console.warn(`[Brief Block ${index}] 自检报了 ${gaps.length} 条 gap，一条都没检回原文 → 保留初稿`);
-        await done('no_backing', { gaps_raw: parsed.gaps.length, gaps_deduped: gaps.length, gaps_with_source: 0, gaps: gapDetail });
+        console.warn(`[Brief Block ${index}] 判出 ${gaps.length} 条漏报，一条都没检回原文 → 保留初稿`);
+        await done('no_backing', { ...base0, gaps_deduped: gaps.length, gaps_with_source: 0, gaps: gapDetail });
         return null;
       }
-      const gapBlock = renderGapEvidence(gaps, sourcesOf);
-      const base = { gaps_raw: parsed.gaps.length, gaps_deduped: gaps.length, gaps_with_source: withSource, gaps: gapDetail };
+      const base = { ...base0, gaps_deduped: gaps.length, gaps_with_source: withSource, gaps: gapDetail };
+
+      // renderGapEvidence 的 `WHY:` 一行来自 reason，两段式下没有这个字段——
+      // 判定段只回「覆盖没覆盖」，不产出理由，也就不会再有理由本身跑偏那类失效。
+      const gapBlock = renderGapEvidence(gaps.map(g => ({ point: g.point, reason: '', keywords: g.keywords ?? [] })), sourcesOf);
 
       const rewritten = toProse(await this.callAI(getGapRewritePrompt(draft, gapBlock), undefined, {
         temperature: 0.7,
@@ -923,14 +1005,19 @@ export class BriefGenerationService {
         await done('rewrite_empty', base);
         return null;
       }
-      // 守卫：重写号称是扩写，产出明显变短就是它把内容丢了，不是写得更精炼。
-      // 实测有一次重写 finish=length 复读到 13,881 字符（正常 2,400），反向也要防。
-      if (rewritten.length < draft.length * 0.8) {
-        console.warn(`[Brief Block ${index}] 重写把稿子写短了（${draft.length} → ${rewritten.length} 字符）→ 保留初稿`);
-        await done('rewrite_shrank', { ...base, rewritten_chars: rewritten.length });
-        return null;
-      }
-      console.log(`[Brief Block ${index}] 自检补漏：gap ${gaps.length} 条、有材料 ${withSource} 条，${draft.length} → ${rewritten.length} 字符`);
+      // 【2026-09-09 移除长度守卫】原来这里有一道 `rewritten < draft*0.8 → 保留初稿`，
+      // 理由是「重写号称扩写，明显变短就是把内容弄丢了」。
+      //
+      // 它假定初稿是好的。而实测（新聚类 25 块，本文件 span 记录）出现了反例：
+      // 写作调用打满 maxTokens 复读，初稿 12,407 字符（同一句 80 遍，还照抄了
+      // "the coverage does not support this judgment." 这句 prompt 措辞）；
+      // 补漏正常工作、重写产出 2,094 字符的干净稿——然后被这道守卫按「写短了」丢弃，
+      // **12,407 字符的复读稿进了成品**。守卫把一个本来会自愈的故障变成了读者可见的故障。
+      //
+      // 只按长度判断在两个方向上都不成立：初稿退化时正确的重写必然更短。
+      // 真正该判的是「哪一版退化了」，那是复读检测，不是长度比较——见下方 TODO。
+      // 在有检测之前，宁可采用重写稿：它至少经过了一次完整的重新生成。
+      console.log(`[Brief Block ${index}] 自检补漏：候选 ${candidates.length}（absent ${tally.absent}/weakened ${tally.weakened}/told ${tally.told}）→ 漏报 ${gaps.length} 条、有材料 ${withSource} 条，${draft.length} → ${rewritten.length} 字符`);
       await done('applied', { ...base, rewritten_chars: rewritten.length });
       return rewritten;
     } catch (e) {
@@ -962,7 +1049,11 @@ export class BriefGenerationService {
     try {
       const report = reports[index];
       if (!report) return { success: false, error: `index ${index} 超出报告范围（共 ${reports.length} 份）` };
-      const selfCorrect = options?.selfCorrect !== false;
+      // RARR 默认关（2026-09-11）：写作链已有证据链 + 自检找漏，RARR 再叠两次调用，
+      // 而新聚类那轮实测 24 块提了 78 条 edit、只落地 10 条（61 条被守卫拦下），
+      // 核对依据还是报告不是原文。
+      // 代码保留，做对照时显式传 selfCorrect: true。
+      const selfCorrect = options?.selfCorrect === true;
       // 给了原文才走证据链（声明判断 → 检索 → 写 → 自检找漏 → 检索 → 重写）。
       // 不给就完全是此前的行为，一行不差——上游没同步部署时不会半路坏掉。
       const articlesIn = options?.articles ?? [];
@@ -1080,11 +1171,16 @@ export class BriefGenerationService {
         }
       }
 
+      // frequency_penalty 治的是这一步的偶发复读：实测 25 块里 1 块打满 maxTokens、
+      // 同一句重复 80 遍（12,407 字符，正常 1,500-3,000）。参数真下发已实测（见
+      // CallLLMOverrides 注释）。取 0.4 而非更高：penalty 一并压正常重复，而新闻文体里
+      // 当事方名字在一段内反复出现是常态，压过头会伤文风——上界没测过，别随手调。
       const raw = await this.callAI(getBriefBlockPrompt(story, title, section), undefined, {
         temperature: 0.7,
         maxTokens: 2500,
         phase: 'brief_generation',
         callIndex: CALL_INDEX.blockWriteBase + index,
+        frequencyPenalty: 0.4,
       });
 
       let prose = toProse(raw);
@@ -1105,7 +1201,7 @@ export class BriefGenerationService {
       // 不是合理取舍。单独一次「找漏」的注意力分配跟「写一篇好稿」完全不同。
       // 四簇实测：期望单份覆盖 41.1% → 51.9%，增益 15 格、只丢 1 格。
       if (sentIdx && prose) {
-        const filled = await this.fillGaps(storyMarkdown, prose, sentIdx, refOf, index, blockSpanId);
+        const filled = await this.fillGaps(storyMarkdown, prose, sentIdx, refOf, index, blockSpanId, title);
         if (filled) prose = filled;
       }
 
@@ -1356,6 +1452,11 @@ export class BriefGenerationService {
       phase?: LLMCallPhase; callIndex?: number;
       /** 约束式解码。不传即原行为。 */
       responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
+      /** 复读抑制。见 CallLLMOverrides 的注释：生效已实测，但会一并压正常重复。 */
+      frequencyPenalty?: number;
+      presencePenalty?: number;
+      /** 内部用：标记这次已经是「截断后加倍预算」的重问，防止无限翻倍。 */
+      __retriedForLength?: boolean;
     } = {}
   ): Promise<string> {
     const messages = systemPrompt
@@ -1380,6 +1481,8 @@ export class BriefGenerationService {
           maxTokens: options.maxTokens,
           callIndex: options.callIndex ?? this.traceContext.callIndex,
           responseFormat: options.responseFormat,
+          frequencyPenalty: options.frequencyPenalty,
+          presencePenalty: options.presencePenalty,
           metadata: {
             requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
             timestamp: Date.now(),
@@ -1397,9 +1500,29 @@ export class BriefGenerationService {
         throw new Error(`Unexpected response type from chat service: ${result.capability || 'undefined'}`);
       }
 
-      const content = (result as ChatResponse).choices?.[0]?.message?.content;
+      const choice = (result as ChatResponse).choices?.[0];
+      const content = choice?.message?.content;
       if (!content) {
         throw new Error('AI Gateway returned empty content');
+      }
+
+      // 截断绝不能静默。约束式解码只管形状不管长度：数组能合法地一直长下去，写到预算用尽
+      // 就断在半个字符串里，下游 parseLooseJSON 拿不到东西，报的却是「响应无 X 字段」——
+      // 读起来像模型不配合，实际是我们给少了。2026-09-09 实测 18 块里 12 块栽在这上面。
+      if (choice?.finish_reason === 'length') {
+        const budget = options.maxTokens ?? 0;
+        console.warn(
+          `[Brief Generation] 输出被 max_tokens 截断（phase=${options.phase ?? 'brief_generation'} ` +
+            `callIndex=${options.callIndex ?? '-'} budget=${budget} chars=${content.length}）`
+        );
+        // 结构化输出的调用截断就是废品（残缺 JSON），加倍预算重问一次。
+        // 只重问一次：连续两次打满说明是 prompt 让它停不下来，那是别的问题，别在这里烧钱。
+        if (options.responseFormat && budget > 0 && !options.__retriedForLength) {
+          console.warn(`[Brief Generation] 结构化输出被截断 → 预算 ${budget} → ${budget * 2} 重问一次`);
+          return await this.callAI(prompt, systemPrompt, {
+            ...options, maxTokens: budget * 2, __retriedForLength: true,
+          });
+        }
       }
 
       return content;
@@ -1679,10 +1802,17 @@ export class BriefGenerationService {
   }
 
   /**
-   * @param startIndex 这批报告在**全量**报告里的起始下标（0 基）。b′ 逐块写作时只传一份
-   *                   报告，但序号必须仍是它在全量里的真实排名，否则块内看到的是 [story 1/1]
-   *                   而校验用的全量 oracle 里同一份是 [story 7/25]，两边对不上。
-   * @param totalCount 全量报告总数。缺省时按本批数量算（整篇合成路径的既有行为）。
+   * 报告 → 喂给写作层的 markdown。
+   *
+   * **2026-09-09 之后这里只做拼接，不再逐字段渲染。** 之前那版把 6 个结构化字段各渲染成
+   * 一节，其中三节是错的：`factualBasis` 是整形代码复制 timeline 的副本（写作层读两遍
+   * 同一份内容）、`informationGaps`（内容是「报道没写什么」）被挂在「## 影响评估」标题下
+   * （标签和内容对不上，模型要写影响、手里那格装的是记者没写什么）、`significance.reasoning`
+   * 是模型现编的通用推理。四簇实测：写作层读到的 4702 字符里 1840 字符（39%）属于这三节。
+   * 而报告里唯一装「争点」的 `contradictions` 压根没有渲染分支，从头到尾没进过写作层视野。
+   *
+   * 现在正文的分节由报告自己的 markdown 决定（见 prompts/intelligenceAnalysis.ts），
+   * 这里不再有"标题和内容对不上"的可能。
    */
   private convertReportsToMarkdown(reports: IntelligenceReport[], startIndex = 0, totalCount?: number): string {
     // [story k/N] 序号标记：k 即重要性排名（backend 已按 importance+覆盖度降序喂入），
@@ -1690,59 +1820,8 @@ export class BriefGenerationService {
     const total = totalCount ?? reports.length;
     return reports.map((report, i) => {
       const index = startIndex + i;
-      let markdown = i > 0 ? '\n---\n\n' : '';
-      markdown += `# [story ${index + 1}/${total}] ${report.executiveSummary}\n\n`;
-
-      // 时间线（带时间戳，事件顺序的唯一权威来源）——必须喂给生成器，否则它只能从散文里猜
-      // 事件先后，常把"X 在 Y 之后/之前/数日内"写反、把早发生的事折进晚发生事件的因果链。
-      const timeline = (report as any).timeline;
-      if (Array.isArray(timeline) && timeline.length) {
-        markdown += '## 时间线（事件按此时间戳顺序发生，叙述时序/因果必须与此一致，不得重排）\n';
-        timeline.forEach((ev: any) => {
-          const ts = ev.timestamp || ev.date || '';
-          // date 为空（LLM 未给绝对日期）时不渲染 [] 空壳，避免生成器把空时间戳当权威；
-          // 事件日期改由 description 文本承载（其中含"周四/9 July"等原文措辞）。
-          markdown += ts ? `* [${ts}] ${ev.description}\n` : `* ${ev.description}\n`;
-        });
-        markdown += '\n';
-      }
-
-      if (report.factualBasis?.length) {
-        markdown += '## 关键发展\n';
-        report.factualBasis.forEach((fact) => {
-          const line = renderListItem(fact);
-          if (line) markdown += `* ${line}\n`;
-        });
-        markdown += '\n';
-      }
-
-      // 相关方（含各自角色/言行描述）——归属"谁说了什么/谁做了什么"的权威来源；
-      // 缺它生成器会把引语或行动安到错误主体上。兼容 entities 与上游原始 keyEntities。
-      const ents = (report.entities && report.entities.length) ? report.entities : (report as any).keyEntities;
-      if (Array.isArray(ents) && ents.length) {
-        markdown += '## 相关方（角色与言行须严格对应，勿张冠李戴）\n';
-        ents.forEach((entity: any) => {
-          const role = entity.role || entity.type || '';
-          const desc = entity.description ? `：${entity.description}` : '';
-          markdown += `* ${entity.name}${role ? ` (${role})` : ''}${desc}\n`;
-        });
-        markdown += '\n';
-      }
-      
-      if (report.informationGaps?.length) {
-        markdown += '## 影响评估\n';
-        report.informationGaps.forEach((gap) => {
-          const line = renderListItem(gap);
-          if (line) markdown += `* ${line}\n`;
-        });
-        markdown += '\n';
-      }
-      
-      if (report.significance) {
-        markdown += `## 前景展望\n${report.significance.reasoning}\n\n`;
-      }
-      
-      return markdown;
+      const sep = i > 0 ? '\n---\n\n' : '';
+      return `${sep}# [story ${index + 1}/${total}] ${report.executiveSummary}\n\n${report.body}\n\n`;
     }).join('');
   }
 
@@ -1765,36 +1844,19 @@ export class BriefGenerationService {
     }];
   }
 
-  private calculateTotalArticles(reports: IntelligenceReport[]): number {
-    return reports.reduce((total, report) => {
-      return total + report.sources.reduce((sourceTotal, source) => sourceTotal + source.articleIds.length, 0);
-    }, 0);
-  }
-
-  private calculateTotalSources(reports: IntelligenceReport[]): number {
-    const uniqueSources = new Set<string>();
-    reports.forEach(report => {
-      report.sources.forEach(source => uniqueSources.add(source.sourceName));
-    });
-    return uniqueSources.size;
-  }
-
-  private calculateUsedArticles(reports: IntelligenceReport[]): number {
-    // 对于完整的报告，假设所有文章都被使用
-    return reports
-      .filter(report => report.status === 'COMPLETE')
-      .reduce((total, report) => {
-        return total + report.sources.reduce((sourceTotal, source) => sourceTotal + source.articleIds.length, 0);
-      }, 0);
-  }
-
-  private calculateUsedSources(reports: IntelligenceReport[]): number {
-    const uniqueSources = new Set<string>();
-    reports
-      .filter(report => report.status === 'COMPLETE')
-      .forEach(report => {
-        report.sources.forEach(source => uniqueSources.add(source.sourceName));
-      });
-    return uniqueSources.size;
+  /**
+   * 这四个统计**过去就是编的**，2026-09-09 改报告形状时一并停掉，不换一个新的编造。
+   *
+   * 旧实现从 `report.sources` 算，而 `sources` 从来没有真数据：builder 给每份报告都写死
+   * `sourceName: "AI Analysis Source"`（于是 totalSourcesUsed 恒等于 1），
+   * normalizeAnalysisToReport 里直接是 `articleIds: [1, 2, 3] // 占位符`（于是
+   * total_articles 恒等于报告数 ×3）。这两个数被上报到 `/meridian/generate-final-brief`
+   * 的 metadata 里，看起来像真的统计。
+   *
+   * 报告层现在不持有文章清单——那份数据在 backend 侧（story.articleIds）。要真统计
+   * 应该由 backend 算并随请求传进来，而不是在这里凭报告结构猜。返回 0 表示"本层不知道"。
+   */
+  private unknownStat(): number {
+    return 0;
   }
 } 

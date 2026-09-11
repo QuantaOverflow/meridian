@@ -84,18 +84,19 @@ export const ContradictionSchema = z.object({
   conflictingClaims: z.array(ClaimSchema),
 });
 
+/**
+ * 情报报告：**薄 JSON 外壳 + markdown 正文**（2026-09-09 改）。
+ *
+ * 只有 `executiveSummary` 和 `status` 被代码寻址（骨架步、块标题、storyLabel、补录兜底），
+ * `body` 原样透传给渲染层。旧形状（timeline/entities/factualBasis/informationGaps/
+ * contradictions 等 11 个字段）拆掉的理由见 utils/intelligence-report-builder.ts 的头注释：
+ * 给模型的自由输出套固定 JSON 形状，是静默丢内容的源头。
+ */
 export const IntelligenceReportSchema = z.object({
   storyId: z.string(),
   status: z.enum(["COMPLETE", "INCOMPLETE"]),
   executiveSummary: z.string(),
-  storyStatus: z.enum(["DEVELOPING", "ESCALATING", "DE_ESCALATING", "CONCLUDING", "STATIC"]),
-  timeline: z.array(TimelineEventSchema),
-  significance: SignificanceAssessmentSchema,
-  entities: z.array(EntitySchema),
-  sources: z.array(SourceAnalysisSchema),
-  factualBasis: z.array(z.string()),
-  informationGaps: z.array(z.string()),
-  contradictions: z.array(ContradictionSchema),
+  body: z.string(),
 });
 
 export const ProcessingStatusSchema = z.object({

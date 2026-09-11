@@ -23,6 +23,8 @@ export interface PhaseDefault {
   temperature: number;
   maxTokens: number;
   skipCache: boolean;
+  /** 复读抑制，按 phase 配。不填就不下发（保持原行为）。 */
+  frequencyPenalty?: number;
 }
 
 // 2026-08-12：简报管线五个 phase 从 DashScope 迁到 Workers AI（CF 原生），摆脱阿里云凭证依赖。
@@ -38,7 +40,15 @@ export interface PhaseDefault {
 // executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
 export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   story_validation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000, skipCache: true },
-  intelligence_analysis: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8192, skipCache: true },
+  // frequency_penalty：复读退化是本仓最常发作的模型失效（已四次：storyValidation maxTokens
+  // 打满、写作层初稿 12,407 字符、RARR 66 条 edit 去重后剩 3 条、2026-09-10 情报报告 Facts
+  // 同一行复读 400 次）。这条路径此前**完全没有防护**——2026-09-10 实测大簇六次"超时"
+  // （每次 ~230 秒才失败）全是复读在烧 token，加上这个参数后同一个簇 54 秒跑完。
+  // 它是缓解不是解药（实测降低概率但没治住），真正挡住要靠解析处的重复检测。
+  // maxTokens 8192 → 16384（2026-09-10）：prompt 现在要求"列出所有被引述的人和机构，
+  // 不只是主角"，16 篇的簇产出比旧 schema 长得多。8192 处截断的后果是**残缺报告直接落 R2**
+  // ——iter0 那次就是在 8192 打满后复读。截断没有报错路径，只有下游"这段怎么少了半句"。
+  intelligence_analysis: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.4 },
   // 去重确认 + 起标题：输出只有一个布尔加一句标题，300 token 绰绰有余。
   // temperature 0 —— 同一组故事每次都该得到同一个判定，这是判定不是创作。
   story_merge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 300, skipCache: true },
@@ -102,6 +112,19 @@ export interface CallLLMOverrides {
    * 调用方必须自己核验产出是否真被约束住，不能因为返回 200 就当它生效。
    */
   responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
+  /**
+   * 复读抑制。glm-4.7-flash 的模型页列了 frequency_penalty / presence_penalty，
+   * 2026-09-09 实测确认真下发：同 prompt、temperature 0、seed 42，带与不带产出不同
+   * （72 → 113 token）。确定性设置下输出还变，说明参数到了模型而不是被静默丢弃。
+   *
+   * 为什么需要：写作调用会偶发打满 maxTokens 复读同一句（实测 25 块里 1 块，
+   * 12,407 字符 / 同句 80 遍）。
+   *
+   * ⚠️ 生效 ≠ 有益：penalty 会一并压制**正常的重复**（专有名词、当事方名字在一段里
+   * 反复出现是新闻文体的常态）。调大到伤文风的临界点没测过，别随手往上调。
+   */
+  frequencyPenalty?: number;
+  presencePenalty?: number;
 }
 
 // phase 默认 + caller 覆盖 → 建 chat 请求 → loggedChat（观测+发送）→ 返回 AIResponse。
@@ -125,6 +148,11 @@ export function callLLM(
     max_tokens: overrides.maxTokens ?? d.maxTokens,
     skipCache: overrides.skipCache ?? d.skipCache,
     ...(overrides.responseFormat ? { response_format: overrides.responseFormat } : {}),
+    // 先 overrides 后 phase 默认——只读 overrides 会让写在 PHASE_DEFAULTS 里的值静默不下发
+    // （2026-09-10 加 intelligence_analysis 的 frequencyPenalty 时就踩了这个）。
+    ...((overrides.frequencyPenalty ?? d.frequencyPenalty) != null
+      ? { frequency_penalty: overrides.frequencyPenalty ?? d.frequencyPenalty } : {}),
+    ...(overrides.presencePenalty != null ? { presence_penalty: overrides.presencePenalty } : {}),
     metadata: overrides.metadata ?? { requestId: `${phase}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, timestamp: Date.now() },
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;

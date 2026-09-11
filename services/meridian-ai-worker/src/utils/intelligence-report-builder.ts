@@ -1,228 +1,50 @@
-import { 
-  IntelligenceReport, 
-  Story, 
-  Article,
-  TimelineEvent,
-  Entity,
-  Contradiction
-} from '../types/intelligence-types';
+import { IntelligenceReport, Story } from '../types/intelligence-types';
 
 /**
- * 情报报告构建器工具类 - 生产环境版本
+ * 情报报告构建器。
+ *
+ * **2026-09-09 拆掉了整形层。** 之前这里有一串 `buildXxx` / `extractXxx` / `mapXxx`，
+ * 职责是把模型的自由 JSON 映射成固定形状。那一层是静默丢内容的源头：
+ *
+ * - `buildContradictions` 只认 `{issue, conflictingClaims}`，而模型簇 0 给
+ *   `{field, conflictingInformation}`、簇 3 给纯字符串——两种都认不出，一律兜底成
+ *   `{issue:"Contradiction", conflictingClaims:[]}`。**内容丢光，不报错不留日志。**
+ * - `extractFactualBasis` 在模型没产该字段时拿 `timeline.description` 顶替，于是写作层
+ *   读到两份逐字相同的内容，第二份还被渲染成「关键发展」。
+ * - `toStringList` 那段注释记着的 `[object Object]` 事故是同一类：模型给对象、模板串插值。
+ *
+ * 现在报告是「薄 JSON 外壳 + markdown 正文」：代码只寻址 `executiveSummary` 和 `status`，
+ * `body` 原样透传给渲染层，形状对不上的可能性归零。
  */
 export class IntelligenceReportBuilder {
-  
-  /**
-   * 基于AI分析结果构建完整报告
-   */
-  static buildFromAnalysis(story: Story, articles: Article[], analysis: any): IntelligenceReport {
-    const storyId = this.generateStoryId(story.title);
-    
-    // 如果AI分析失败或为空，直接抛出错误
+
+  static buildFromAnalysis(story: Story, analysis: any): IntelligenceReport {
+    // 分析失败或为空直接抛，不构造占位报告——占位会把"这篇没分析成"伪装成"分析出来是空的"
     if (!analysis || analysis.status === 'incomplete') {
       throw new Error(`AI analysis failed or incomplete for story: ${story.title}`);
     }
 
+    const executiveSummary = analysis.executiveSummary || analysis.availableInfo || '';
+    const body = typeof analysis.body === 'string' ? analysis.body : '';
+
+    // 两个字段任一为空都说明模型没按新形状产出（换模型/prompt 漂移）。不静默兜底：
+    // 空 body 会让写作层拿到一份只有摘要的报告，读起来像"这件事本来就没什么可写"。
+    if (!executiveSummary.trim()) {
+      throw new Error(`报告缺 executiveSummary（模型未按形状产出）: ${story.title}`);
+    }
+    if (!body.trim()) {
+      throw new Error(`报告缺 body（模型未按形状产出）: ${story.title}`);
+    }
+
     return {
-      storyId,
-      status: analysis.status === 'incomplete' ? "INCOMPLETE" : "COMPLETE",
-      executiveSummary: analysis.executiveSummary || analysis.availableInfo || `Executive summary for ${story.title}`,
-      storyStatus: this.mapStoryStatus(analysis.storyStatus),
-      timeline: this.buildTimeline(analysis),
-      significance: {
-        level: this.mapSignificanceLevel(analysis.significance?.assessment || analysis.significance),
-        reasoning: analysis.significance?.reasoning || analysis.reason || "Moderate impact on regional affairs",
-      },
-      entities: this.buildEntities(analysis),
-      sources: [{
-        sourceName: "AI Analysis Source",
-        articleIds: story.articleIds,
-        reliabilityLevel: this.mapReliabilityLevel(analysis.signalStrength?.assessment),
-        bias: analysis.signalStrength?.reasoning || "Minimal bias detected",
-      }],
-      factualBasis: this.extractFactualBasis(analysis),
-      informationGaps: this.extractInformationGaps(analysis),
-      contradictions: this.buildContradictions(analysis),
+      storyId: this.generateStoryId(story.title),
+      status: "COMPLETE",
+      executiveSummary,
+      body,
     };
   }
-
-  /**
-   * 转换为旧格式 - 向后兼容
-   */
-  static convertToLegacyFormat(report: IntelligenceReport): any {
-    return {
-      title: report.executiveSummary,
-      executiveSummary: report.executiveSummary,
-      storyStatus: report.storyStatus,
-      significance: {
-        assessment: report.significance.level,
-        reasoning: report.significance.reasoning,
-      },
-      key_developments: report.factualBasis,
-      stakeholders: report.entities.map(e => e.name),
-      implications: report.informationGaps,
-      outlook: report.storyStatus,
-    };
-  }
-
-  // ============================================================================
-  // 私有辅助方法
-  // ============================================================================
 
   private static generateStoryId(title: string): string {
     return `story-${title.toLowerCase().replace(/\s+/g, "-")}`;
   }
-
-  private static mapStoryStatus(status: string): "DEVELOPING" | "ESCALATING" | "DE_ESCALATING" | "CONCLUDING" | "STATIC" {
-    const statusMap: Record<string, any> = {
-      'developing': 'DEVELOPING',
-      'escalating': 'ESCALATING',
-      'de-escalating': 'DE_ESCALATING',
-      'concluding': 'CONCLUDING',
-      'static': 'STATIC',
-    };
-    
-    return statusMap[status?.toLowerCase()] || 'DEVELOPING';
-  }
-
-  private static mapSignificanceLevel(level: string): "CRITICAL" | "HIGH" | "MODERATE" | "LOW" {
-    const levelMap: Record<string, any> = {
-      'critical': 'CRITICAL',
-      'high': 'HIGH', 
-      'moderate': 'MODERATE',
-      'medium': 'MODERATE',
-      'low': 'LOW',
-    };
-    
-    return levelMap[level?.toLowerCase()] || 'MODERATE';
-  }
-
-  private static mapReliabilityLevel(level: string): "VERY_HIGH" | "HIGH" | "MODERATE" | "LOW" | "VERY_LOW" {
-    const levelMap: Record<string, any> = {
-      'very high': 'VERY_HIGH',
-      'high': 'HIGH',
-      'moderate': 'MODERATE', 
-      'medium': 'MODERATE',
-      'low': 'LOW',
-      'very low': 'VERY_LOW',
-    };
-    
-    return levelMap[level?.toLowerCase()] || 'MODERATE';
-  }
-
-  private static buildTimeline(analysis: any): TimelineEvent[] {
-    if (Array.isArray(analysis.timeline)) {
-      return analysis.timeline.map((event: any) => ({
-        // 不拿 new Date() 兜底：生成时刻会被下游简报生成器当成事件"权威时间戳"，
-        // 把所有事件盖成同一个当天日期（run 52 环1审计头号缺陷）。LLM 没给就留空，
-        // 下游按"无权威日期"处理，从 description 文本取真实日期，而非编造。
-        date: event.date || "",
-        // Tier1 证据锚定：透传日期所依据的原文引用，供离线自洽核验（date↔quote）。
-        dateSource: event.date_source || event.dateSource || "",
-        description: event.description || "Timeline event",
-        importance: this.mapTimelineImportance(event.importance),
-      }));
-    }
-
-    // LLM 未产出 timeline 数组：返回空(诚实)而非编造一条 date=now 的 "Initial event" 假事件。
-    // 缺失 timeline 是合法的"这条 story 没有时间线"，下游 briefGeneration 对空 timeline 有 .length 守卫；
-    // 兄弟路径 intelligence.ts / index.ts 缺失时同样返回 []。留痕以便 wrangler tail 可见，不把失败兜进数据。
-    console.warn('[IntelligenceReportBuilder] analysis 缺少 timeline 数组 → 返回空时间线（不编造 Initial event）');
-    return [];
-  }
-
-  private static mapTimelineImportance(importance: string): "HIGH" | "MEDIUM" | "LOW" {
-    const importanceMap: Record<string, any> = {
-      'high': 'HIGH',
-      'medium': 'MEDIUM',
-      'moderate': 'MEDIUM',
-      'low': 'LOW',
-    };
-    
-    return importanceMap[importance?.toLowerCase()] || 'MEDIUM';
-  }
-
-  private static buildEntities(analysis: any): Entity[] {
-    // 模型实际把 keyEntities 直接输出成数组（prompt 写的是 keyEntities.list，但输出常扁平化）；兼容三种形态
-    const list = Array.isArray(analysis.keyEntities)
-      ? analysis.keyEntities
-      : Array.isArray(analysis.keyEntities?.list)
-        ? analysis.keyEntities.list
-        : Array.isArray(analysis.entities)
-          ? analysis.entities
-          : null;
-    if (list) {
-      return list.map((entity: any) => ({
-        name: entity.name || "Unknown Entity",
-        type: entity.type || "Unknown",
-        role: entity.role || entity.description || "Unknown Role",
-        positions: Array.isArray(entity.positions) ? entity.positions : [],
-      }));
-    }
-
-    // 真没有就返回空，绝不注入 "Entity 1" 占位符污染下游 brief
-    return [];
-  }
-
-  // factualBasis / informationGaps 的元素形状不受控：prompt 只用散文描述这两个字段、没给
-  // JSON 结构，模型时而给字符串、时而给 {description, importance}。schema 声明的是
-  // z.array(z.string()) 但 analysis 是 any，TS 拦不住；下游 convertReportsToMarkdown 用
-  // 模板串插值 → 对象渲染成 "[object Object]"，整段"影响评估"喂给简报模型的是垃圾
-  // （2026-08-22 生产 run 实证：25 篇报告里 1 篇的 4 条全废）。这里在入库前统一压成字符串。
-  private static toStringList(list: any[]): string[] {
-    return list
-      .map((item: any) => {
-        if (typeof item === 'string') return item;
-        if (item && typeof item === 'object') {
-          // 观察到的对象形状是 {description, importance}；description 才是内容本体
-          const text = item.description ?? item.text ?? item.gap ?? item.fact;
-          if (typeof text === 'string') return text;
-        }
-        return '';
-      })
-      .filter((s: string) => s.trim().length > 0);
-  }
-
-  private static extractFactualBasis(analysis: any): string[] {
-    if (Array.isArray(analysis.factualBasis)) {
-      return this.toStringList(analysis.factualBasis);
-    }
-    // prompt 不产 factualBasis，但 timeline 就是按时序的事实发展——用它作为关键发展
-    if (Array.isArray(analysis.timeline)) {
-      return analysis.timeline
-        .map((e: any) => (typeof e === 'string' ? e : e?.description))
-        .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0);
-    }
-    // 真没有就返回空，绝不注入 "Fact 1/Fact 2" 占位符
-    return [];
-  }
-
-  private static extractInformationGaps(analysis: any): string[] {
-    if (Array.isArray(analysis.informationGaps)) {
-      return this.toStringList(analysis.informationGaps);
-    }
-
-    if (Array.isArray(analysis.gaps)) {
-      return this.toStringList(analysis.gaps);
-    }
-
-    // 与 buildEntities / extractFactualBasis 对齐：真没有就返回空，绝不注入占位符。
-    // 旧值 ["Gap 1"] 会被当作一条真实的"信息缺口"流进简报输入与忠实度检查，
-    // 把"模型没产出这个字段"伪装成"模型说缺口是 Gap 1"。
-    console.warn('[IntelligenceReportBuilder] analysis 缺少 informationGaps 数组 → 返回空（不注入 "Gap 1" 占位符）');
-    return [];
-  }
-
-  private static buildContradictions(analysis: any): Contradiction[] {
-    if (Array.isArray(analysis.contradictions)) {
-      return analysis.contradictions.map((contradiction: any) => ({
-        issue: contradiction.issue || "Contradiction",
-        conflictingClaims: Array.isArray(contradiction.conflictingClaims) 
-          ? contradiction.conflictingClaims 
-          : [],
-      }));
-    }
-    
-    return [];
-  }
-} 
+}

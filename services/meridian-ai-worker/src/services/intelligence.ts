@@ -48,8 +48,17 @@ export type {
 export class IntelligenceService {
   private aiGatewayService: AIGatewayService;
   private traceContext: TraceContext;
-  // RARR 式接地校验-改正开关：默认开（与环2 简报生成的 selfCorrect 同款语义），
-  // eval baseline 臂传 false 关掉做对照。
+  /**
+   * 情报报告这一步的 RARR 接地校验-改正开关。**2026-09-10 起默认关。**
+   *
+   * 理由：报告是中间产物，不面向读者；面向读者的是成稿，而成稿那一步有自己的 RARR
+   * （核成稿对原文），报告里若有事实错误会在那里被拦。在中间产物上再核一遍，代价是
+   * 每簇多一次 LLM 调用、这一步耗时翻倍（实测 45s → 90s），而收益实测很低：
+   * 簇0 提了 11 条 edit 实际改 0 处（全是 noop），簇3 提 4 条实际改 2 处。
+   *
+   * 代码路径保留、没删——要做"关掉之后事实错误率会不会回升"的对照时传 `selfCorrect: true`
+   * 即可，不必把删掉的代码再写回来。
+   */
   private selfCorrect: boolean;
   // 跳过 AI Gateway 缓存：默认 false（生产照常，且每 story 文章不同→缓存键本就不撞）。
   // eval 重问同一 story 必须传 true：否则 n 次采样静默退化成 1 次（见 memory:
@@ -63,7 +72,7 @@ export class IntelligenceService {
   ) {
     this.aiGatewayService = new AIGatewayService(env);
     this.traceContext = traceContext;
-    this.selfCorrect = options.selfCorrect !== false;
+    this.selfCorrect = options.selfCorrect === true;
     this.skipCache = options.skipCache === true;
   }
 
@@ -158,7 +167,7 @@ export class IntelligenceService {
       const analysis = await this.performAIAnalysis(relevantArticles);
       
       // 构造符合契约的情报报告
-      const report = IntelligenceReportBuilder.buildFromAnalysis(story, relevantArticles, analysis);
+      const report = IntelligenceReportBuilder.buildFromAnalysis(story, analysis);
       console.log(`[Intelligence] 故事 "${story.title}" 分析完成，状态: ${report.status}`);
 
       return { success: true, data: report };
@@ -199,7 +208,10 @@ export class IntelligenceService {
       return {
         story_title: title,
         articles_count: articles.length,
-        analysis: IntelligenceReportBuilder.convertToLegacyFormat(result.data),
+        // 旧的 convertToLegacyFormat 随整形层一并删了（报告已是薄外壳 + markdown 正文，
+        // 没有 key_developments/stakeholders/implications 这些字段可映射）。直接回报告本体。
+        // 注：本方法 analyzeStory 在 src/ 内无调用方，是改动前就存在的死代码。
+        analysis: result.data,
         metadata: {
           // 上报实际使用的模型，别写死——写死会在换 provider 后谎报，误导排错
           provider: PHASE_DEFAULTS.intelligence_analysis.provider,
@@ -246,6 +258,28 @@ export class IntelligenceService {
   /**
    * 执行AI分析（内部方法）
    */
+  /**
+   * 纯 markdown 报告 → `{ status, executiveSummary, body }`。
+   *
+   * 模型被要求先写前置分析、再写一行 `---`、然后 `# Summary`。所以取**最后一个**
+   * `# Summary` 之后的内容——前置分析里可能提到这个词，取第一个会把思考过程当成报告。
+   * 文章为空/付费墙时模型只回一行 `INCOMPLETE: <reason>`，那是合法结论不是失败，不重采样。
+   */
+  private static splitMarkdownReport(text: string): any {
+    const t = (text ?? '').trim();
+    if (/^INCOMPLETE\b/i.test(t)) {
+      return { status: 'incomplete', reason: t.replace(/^INCOMPLETE:?\s*/i, '').slice(0, 300) };
+    }
+    const idx = t.toLowerCase().lastIndexOf('# summary');
+    if (idx === -1) return { parseFailed: true, raw: t.slice(0, 500) };
+    const after = t.slice(idx + '# summary'.length);
+    const secAt = after.search(/\n##\s/);
+    const summary = (secAt === -1 ? after : after.slice(0, secAt)).trim();
+    const body = secAt === -1 ? '' : after.slice(secAt).trim();
+    if (!summary || !body) return { parseFailed: true, raw: t.slice(0, 500) };
+    return { status: 'complete', executiveSummary: summary, body };
+  }
+
   private async performAIAnalysis(articles: Article[]): Promise<any> {
     // 构建分析输入
     const storyArticleMd = AIResponseParser.buildArticleMarkdown(articles);
@@ -295,22 +329,26 @@ export class IntelligenceService {
     // ②字符串值里出现未转义引号。两者都是采样噪声（同输入 16/20 成功），故重采样有效。
     // 只对 parseFailed 重采样；模型**自己判定**的 incomplete（文章空/付费墙）是合法结论，
     // 重问四次只会得到同样答案并白烧四份 token。
+    // 切分重采样：报告是纯 markdown（2026-09-10 去掉 JSON 外壳），所以"解析"只是找 `# Summary`
+    // 并按第一个 `##` 切开。**这比 JSON.parse 稳得多**——旧 JSON 形态实测失败率约 20%
+    // （两个故事各 10 次，4 次失败：前置分析退化成枚举循环烧光 token，或字符串值里出现未转义
+    // 引号），原型改纯 markdown 后 4/4 切分成功。重采样机制保留：切不出来仍然重问，
+    // 因为失败模式变稀有不等于消失，而静默接受一份切不开的响应会让整条 story 从简报里消失。
     let analysis: any = null;
     let parseAttempts = 0;
     for (let attempt = 1; attempt <= INTEL_PARSE_MAX_ATTEMPTS; attempt++) {
       parseAttempts = attempt;
       const responseText = await QuotaHandler.retryWithBackoff(aiOperation);
-      analysis = AIResponseParser.parseIntelligenceResponse(responseText);
+      analysis = IntelligenceService.splitMarkdownReport(responseText);
 
       if (!analysis?.parseFailed) {
-        if (attempt > 1) console.log(`[Intelligence] 第 ${attempt} 次重采样解析成功`);
+        if (attempt > 1) console.log(`[Intelligence] 第 ${attempt} 次重采样切分成功`);
         break;
       }
-      console.warn(`[Intelligence] 响应格式解析失败，重采样 (${attempt}/${INTEL_PARSE_MAX_ATTEMPTS})`);
+      console.warn(`[Intelligence] 响应切不出 "# Summary"，重采样 (${attempt}/${INTEL_PARSE_MAX_ATTEMPTS})`);
       if (attempt === INTEL_PARSE_MAX_ATTEMPTS) {
-        // 耗尽仍失败：留一条可 grep 的定长签名，供生产查真实发作率（业界共识：重试耗尽
-        // 意味着 schema/prompt 设计问题，该报出来查，而不是静默兜底）。
-        console.error(`[Intelligence] INTEL_PARSE_EXHAUSTED 连续 ${INTEL_PARSE_MAX_ATTEMPTS} 次解析失败，本条 story 将被丢弃`);
+        // 耗尽仍失败：留一条可 grep 的定长签名，供生产查真实发作率。
+        console.error(`[Intelligence] INTEL_PARSE_EXHAUSTED 连续 ${INTEL_PARSE_MAX_ATTEMPTS} 次切分失败，本条 story 将被丢弃`);
       }
     }
     console.log(`[Intelligence] 解析结果状态: ${analysis?.status || 'unknown'}`);
@@ -325,20 +363,48 @@ export class IntelligenceService {
       }, this.traceContext.callIndex ?? 0);
     }
 
-    // RARR 式接地校验-改正（默认开；eval baseline 臂传 selfCorrect:false 关掉做对照）
-    if (this.selfCorrect !== false && analysis && analysis.status !== 'incomplete') {
+    // RARR（默认关，见 selfCorrect 的注释）。要开就显式传 selfCorrect: true。
+    if (this.selfCorrect === true && analysis && analysis.status !== 'incomplete') {
       return await this.verifyAndCorrect(analysis, storyArticleMd);
     }
     return analysis;
   }
 
-  // 报告里「对事实有断言」的可核字段。纯枚举/分类标签（importance/score 之类）不进校验，
-  // 它们不是对源的事实断言。口径对齐 scripts/eval/intel-grounding/intel-source.ts 的 prose 摊平。
-  private static readonly CHECKABLE: Array<{ path: string; get: (r: any) => string | undefined; set: (r: any, v: string) => void }> = [
-    { path: 'executiveSummary', get: (r) => r.executiveSummary, set: (r, v) => { r.executiveSummary = v; } },
-    { path: 'significance.reasoning', get: (r) => r.significance?.reasoning, set: (r, v) => { if (r.significance) r.significance.reasoning = v; } },
-    { path: 'signalStrength.reasoning', get: (r) => r.signalStrength?.reasoning, set: (r, v) => { if (r.signalStrength) r.signalStrength.reasoning = v; } },
-  ];
+  /**
+   * 摊平报告里「对事实有断言」的文本，供 RARR 逐条核对。
+   *
+   * **2026-09-09 改成按 markdown 行摊平。** 之前是按字段路径枚举（executiveSummary /
+   * significance.reasoning / signalStrength.reasoning + timeline + keyEntities），
+   * 报告改成薄外壳 + markdown 正文后那些路径不存在了。按行摊平的覆盖面反而更大——
+   * 旧口径下 informationGaps 和 contradictions 从来没被核过。
+   *
+   * 跳过标题行（`#` 开头）和空行：它们不是事实断言。apply 机制不变——模型只回 edit-list，
+   * 精确子串命中才改，没命中宁可跳过。
+   */
+  private static flattenCheckable(analysis: any): { lines: string[]; targets: Array<{ get: () => string; set: (v: string) => void }> } {
+    const lines: string[] = [];
+    const targets: Array<{ get: () => string; set: (v: string) => void }> = [];
+
+    if (typeof analysis?.executiveSummary === 'string' && analysis.executiveSummary.trim()) {
+      lines.push(`[executiveSummary] ${analysis.executiveSummary}`);
+      targets.push({ get: () => analysis.executiveSummary, set: (v) => { analysis.executiveSummary = v; } });
+    }
+
+    // body 是一整个字符串，按行切开做 target，改回去时按下标替换那一行再拼回——
+    // 整块当一个 target 会让模型面对一大坨文本、且一处 edit 命中后其余 edit 的 span 位置漂移。
+    const bodyLines: string[] = typeof analysis?.body === 'string' ? analysis.body.split('\n') : [];
+    bodyLines.forEach((line, i) => {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) return;
+      lines.push(`[body[${i}]] ${t}`);
+      targets.push({
+        get: () => bodyLines[i],
+        set: (v) => { bodyLines[i] = v; analysis.body = bodyLines.join('\n'); },
+      });
+    });
+
+    return { lines, targets };
+  }
 
   /**
    * 拿报告回到它唯一允许的源（RSS 原文）前逐条核对，模型只回 edit-list，本地程序化 apply。
@@ -348,30 +414,7 @@ export class IntelligenceService {
   private async verifyAndCorrect(analysis: any, storyArticleMd: string): Promise<any> {
     try {
       // 摊平可核字段（含 timeline/entities 的文本项），每行带路径标记供模型定位
-      const lines: string[] = [];
-      const targets: Array<{ get: () => string; set: (v: string) => void }> = [];
-      for (const f of IntelligenceService.CHECKABLE) {
-        const v = f.get(analysis);
-        if (typeof v === 'string' && v.trim()) {
-          lines.push(`[${f.path}] ${v}`);
-          targets.push({ get: () => f.get(analysis) as string, set: (nv) => f.set(analysis, nv) });
-        }
-      }
-      const tl = Array.isArray(analysis.timeline) ? analysis.timeline : [];
-      tl.forEach((e: any, i: number) => {
-        if (typeof e?.description === 'string' && e.description.trim()) {
-          lines.push(`[timeline[${i}].description] ${e.description}`);
-          targets.push({ get: () => e.description, set: (nv) => { e.description = nv; } });
-        }
-      });
-      const ents = Array.isArray(analysis.keyEntities) ? analysis.keyEntities : (analysis.keyEntities?.list ?? []);
-      ents.forEach((e: any, i: number) => {
-        const d = e?.description ?? e?.role;
-        if (typeof d === 'string' && d.trim()) {
-          lines.push(`[keyEntities[${i}].description] ${d}`);
-          targets.push({ get: () => (e.description ?? e.role) as string, set: (nv) => { if (e.description !== undefined) e.description = nv; else e.role = nv; } });
-        }
-      });
+      const { lines, targets } = IntelligenceService.flattenCheckable(analysis);
       if (!targets.length) {
         // targets 为空有两种成因，后果完全不同：报告本身没有可核文本（罕见），或 CHECKABLE /
         // 下面的摊平逻辑用的字段路径与当前 schema 对不上（改 schema 时的静默失效）。后者会让

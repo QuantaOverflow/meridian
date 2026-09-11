@@ -44,7 +44,7 @@ import type { TraceContext } from './llm-call-logger';
 export const SPAN_SCHEMA_VERSION = 1;
 
 /** 粗粒度阶段，查询时按它分组。加新段先在这里加名字，别塞进 name 里 */
-export type SpanStage = 'block' | 'evidence';
+export type SpanStage = 'block' | 'evidence' | 'step';
 
 export interface Span {
   span_id: string;

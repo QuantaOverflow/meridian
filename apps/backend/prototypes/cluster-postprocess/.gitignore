@@ -1,8 +1,0 @@
-node_modules/
-.cache/
-traces/
-out/
-results/
-*-result.json
-*-result*.json
-*.dump

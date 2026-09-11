@@ -75,7 +75,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点
 - 调试三件套：`wrangler tail` / `wrangler workflows instances describe` / R2 `observability/*.json`
-- **更多 LLM pipeline 踩坑** → 读 `docs/engineering-notes/llm-pipeline-pitfalls.md`
+- **更多 LLM pipeline 踩坑** → 读 `docs/engineering-notes/llm-pipeline-pitfalls.md`（仅本地）
 
 ## 何时读哪份 docs
 - 改工作流编排 → `docs/meridian-workflow-architecture.md`
@@ -83,7 +83,16 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 部署前 → `docs/DEPLOYMENT_GUIDE.md`
 - 观测/排错 → `docs/OBSERVABILITY_GUIDE.md`
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
+- 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
+- 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
 - 架构决策记录 → `docs/adr/`
+
+## 知识蒸馏（每个 spike / goal 结束时做）
+调研笔记和原型只留本地、不入 git（2026-09-12 定），所以**结论必须蒸馏进入库的文档**，否则等于没有：
+- 新决定、证伪路线、实测上限 → 对应的 `docs/adr/`（没有就新开一份）
+- 新形成的术语 → `CONTEXT.md`
+- 进度与下一步 → `docs/ROADMAP.md`
+- 新调研笔记在本地 `docs/engineering-notes/README.md` 补一行索引；原型结论写进它自己的 README（本地）
 
 ## 新文件放哪（落位规则）
 
@@ -97,11 +106,12 @@ wrangler workflows instances list <WORKFLOW_NAME>
 | eval harness / 金标 / rubric | `scripts/eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
 | eval 中间产物（worklist / packet / dump） | 留 `scripts/eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
 | eval 运行报告 | 该 harness 目录下的 `out/`（`.gitignore` 已挡） | ❌ |
-| 原型 / 探索实验 | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | 源码✅ / 产物❌ |
-| 原型输入 fixtures | `prototypes/<name>/fixtures/` | ✅（可复现依赖） |
-| 原型结果产物（result/dump/traces/out） | 原型目录内，由 `.gitignore` 挡 | ❌ |
+| 原型 / 探索实验（含 fixtures 与产物） | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | ❌ 只留本地（根 `.gitignore` 整目录挡） |
 | 一次性探测脚本 / 临时输出 | scratchpad，不进 repo | ❌ |
-| 工程/架构文档、ADR、engineering-notes | `docs/` `docs/adr/` `docs/engineering-notes/` | ✅ |
+| 调研笔记（业界/学界调研、原始实测记录） | `docs/engineering-notes/`，按问题索引在其 `README.md` | ❌ 只留本地（根 `.gitignore` 挡） |
+| 决定与证伪清单 | `docs/adr/` | ✅ |
+| 术语表 | `CONTEXT.md` | ✅ |
+| 工程/架构/运维文档、路线图 | `docs/`（架构、部署、观测、ROADMAP） | ✅ |
 | 设计交付稿（design handoff） | `docs/design/<name>/` | ✅ |
 | session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
 | 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |

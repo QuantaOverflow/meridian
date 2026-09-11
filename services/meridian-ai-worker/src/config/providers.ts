@@ -302,6 +302,40 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
           enable_cost_tracking: true,
           custom_tags: ['paid', 'workers-ai', 'glm', 'flash', 'long-context']
         }
+      },
+      // 2026-09-11 加：brief-writer-v3 模型 spike（body.model 覆盖），只为让 mapResponse 的
+      // model 查表通过，不改任何解析逻辑。价格抄自 Cloudflare Workers AI pricing 页当时快照。
+      {
+        name: '@cf/zai-org/glm-5.3-flash',
+        capabilities: ['chat'],
+        endpoint: '/ai/run/@cf/zai-org/glm-5.3-flash',
+        max_tokens: 1048576, // Context window: 1,048,576 tokens
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.00000015,  // $0.15 per 1M input tokens
+          output: 0.0000005   // $0.50 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['paid', 'workers-ai', 'glm', 'flash', 'spike']
+        }
+      },
+      {
+        name: '@cf/openai/gpt-oss-120b',
+        capabilities: ['chat'],
+        endpoint: '/ai/run/@cf/openai/gpt-oss-120b',
+        max_tokens: 128000, // Context window: 128,000 tokens
+        supports_streaming: true,
+        cost_per_token: {
+          input: 0.00000035,  // $0.35 per 1M input tokens
+          output: 0.00000075  // $0.75 per 1M output tokens
+        },
+        ai_gateway_config: {
+          cache_ttl: 1800,
+          enable_cost_tracking: true,
+          custom_tags: ['paid', 'workers-ai', 'gpt-oss', '120b', 'spike']
+        }
       }
     ]
   },

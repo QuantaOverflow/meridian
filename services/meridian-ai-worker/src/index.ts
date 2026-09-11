@@ -12,11 +12,14 @@ import {
   type IntelligenceReport
 } from './services/brief-generation'
 import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
+import { BriefWriterV3Service } from './services/brief-writer-v3'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
 import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
+import { recordSpan } from './services/span-log'
+import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem, BriefContent } from './types/api'
@@ -35,7 +38,7 @@ const app = new Hono<HonoEnv>()
 app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Trace-ID', 'x-trace-id'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Trace-ID', 'x-trace-id', 'x-observe'],
 }))
 
 // 跨服务追踪：把上游传过来的 x-trace-id 在请求入口打一行结构化日志，便于 wrangler tail 关联
@@ -46,6 +49,9 @@ app.use('*', async (c, next) => {
   }
   await next()
 })
+
+// 观测上下文：请求内用 traced() 包的步骤、以及其中的 LLM 调用自动成树（services/observe.ts）
+app.use('*', observeMiddleware)
 
 // ============================================================================
 // 通用工具函数
@@ -452,7 +458,8 @@ app.post('/meridian/intelligence/analyze-single-story', async (c) => {
 
     console.log(`[Intelligence] 分析单个故事: ${storyParse.data.title}`)
 
-    // selfCorrect = RARR 接地校验-改正（默认开）；eval baseline 臂传 false 关掉做对照。
+    // selfCorrect = 报告层 RARR 接地校验。**默认关**（报告是中间产物，成稿那步有自己的 RARR）——
+    // 见 services/intelligence.ts 的注释。要做对照实验就显式传 selfCorrect: true。
     // skipCache 默认 false（生产照常走缓存）；eval 重问同一 story 须传 true 保证独立采样。
     const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw), {
       selfCorrect: body.selfCorrect,
@@ -866,7 +873,50 @@ app.post('/meridian/write-brief-block', async (c) => {
     })
   } catch (error: any) {
     console.error('Brief block writing error:', error)
+    // 端点层的失败也要成 span。writeBriefBlock 内部的 catch 会补落 block_outcome=threw，
+    // 但**在它之前**就抛的（loadReportsFromR2 读 R2 失败、body 解析失败）连 span id 都还没生成
+    // ——2026-09-09 实测就丢过一次：R2 读失败 8.6s 返回 500，`name='block'` 一条记录都没有，
+    // 于是这次失败不在「块失败率」的分母里，重试成功后只剩一套成功记录。
+    try {
+      const idx = Number((await c.req.json().catch(() => ({} as any)))?.index)
+      await recordSpan(c.env, readTraceContext(c.req.raw), {
+        name: 'block', stage: 'block', idx: Number.isInteger(idx) ? idx : 0, status: 'error',
+        attributes: {
+          block_index: Number.isInteger(idx) ? idx : null,
+          block_outcome: 'endpoint_threw',
+          error: String(error?.message ?? error),
+        },
+      })
+    } catch { /* 观测失败不改变响应 */ }
     return c.json<APIResponse<null>>({ success: false, error: 'Failed to write brief block', metadata: { details: error.message } }, 500)
+  }
+})
+
+// 写作层 v3：一个簇的 report-v3 → 简报里的一块正文（apps/backend/prototypes/brief-writer-v3/GOAL.md）。
+// 与上面的 write-brief-block 并存，互不影响；backend workflow 暂不接线（生产报告层还是旧格式）。
+app.post('/meridian/write-block-v3', async (c) => {
+  try {
+    const body = await c.req.json()
+    const report = body?.report
+    if (!report || !Array.isArray(report.facts) || !Array.isArray(report.parties) || !report.sentences || typeof report.summary !== 'string') {
+      return c.json<APIResponse<null>>({ success: false, error: 'report must be a report-v3 object (summary, facts, parties, sentences)' }, 400)
+    }
+    const tier = body?.tier
+    if (tier !== 'lead' && tier !== 'more' && tier !== 'brief') {
+      return c.json<APIResponse<null>>({ success: false, error: "tier must be 'lead' | 'more' | 'brief'" }, 400)
+    }
+    // body.model：dev-only 覆盖，供模型 spike 用（不传 = 原行为，恒用 brief-writer-v3.ts 里的 MODEL 常量）
+    const service = new BriefWriterV3Service(c.env, readTraceContext(c.req.raw), typeof body?.model === 'string' ? body.model : undefined)
+    // body.variant: 'one-source'：opt-in spike，限每句正文最多用 1–2 个要点（GOAL「限融合」）；不传 = 默认行为不变
+    const variant = body?.variant === 'one-source' ? 'one-source' : undefined
+    const data = await service.write(report, tier, body?.skipCache === true, variant)
+    if (!data.text.trim()) {
+      return c.json<APIResponse<null>>({ success: false, error: 'empty block text' }, 500)
+    }
+    return c.json<APIResponse<typeof data>>({ success: true, data })
+  } catch (error: any) {
+    console.error('Write block v3 error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: `Failed to write block v3: ${error?.message ?? String(error)}` }, 500)
   }
 })
 

@@ -1,0 +1,4111 @@
+{
+  "schema_version": 2,
+  "entities": [
+    {
+      "id": "attempt-auto-risk-question",
+      "type": "attempt",
+      "title": "自由生成风险问题规划",
+      "date": "2026-09-17",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "模型从候选文本自动生成独立且完整的窄问题",
+      "changes": "将手工风险问题替换为自由生成问题",
+      "reason": "手工接口有信号但不适用于自动生产",
+      "next_unknown": "受约束风险槽能否保留时间方向与归因作用域",
+      "verification": "development",
+      "file": "attempt-auto-risk-question.md",
+      "content": "模型从候选文本自动生成独立且完整的窄问题"
+    },
+    {
+      "id": "attempt-constrained-risk-slots",
+      "type": "attempt",
+      "title": "受约束风险槽与代码模板问题",
+      "date": "2026-09-17",
+      "status": "proposed",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "模型定位风险槽，代码生成问题，避免自由问题漂移",
+      "changes": "限制为主体身份、命名对象、动作强度、归因命题、时间对与方向等槽",
+      "reason": "自由问题会重复风险或引入新前提",
+      "next_unknown": "缺失维度、复合句、归因命题下能否保持必要风险且不制造误杀",
+      "verification": "proposed",
+      "file": "attempt-constrained-risk-slots.md",
+      "content": "模型定位风险槽，代码生成问题，避免自由问题漂移"
+    },
+    {
+      "id": "attempt-direct-raw",
+      "type": "attempt",
+      "title": "direct-raw 原型",
+      "date": "2026-09-16",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/README.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "全量原文窗口产生高召回候选，再按 ID 选材与确定性组装",
+      "changes": "第一轮异质架构；不伪造三臂之间的派生关系",
+      "reason": "测试不同职责与表示对覆盖/安全的影响",
+      "next_unknown": "整体未达标后哪些机制可单独复用",
+      "verification": "development",
+      "file": "attempt-direct-raw.md",
+      "content": "全量原文窗口产生高召回候选，再按 ID 选材与确定性组装"
+    },
+    {
+      "id": "attempt-evidence-graph",
+      "type": "attempt",
+      "title": "evidence-graph 原型",
+      "date": "2026-09-16",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/evidence-graph/README.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "先提取原子观察，再以跨文章和跨发布者共识准入",
+      "changes": "第一轮异质架构；不伪造三臂之间的派生关系",
+      "reason": "测试不同职责与表示对覆盖/安全的影响",
+      "next_unknown": "整体未达标后哪些机制可单独复用",
+      "verification": "development",
+      "file": "attempt-evidence-graph.md",
+      "content": "先提取原子观察，再以跨文章和跨发布者共识准入\n\n提炼后的分诊/支持排序职责见组合草案；不能将其当成此旧原型已经实现或验证的功能。"
+    },
+    {
+      "id": "attempt-evidence-isolation",
+      "type": "attempt",
+      "title": "按完全相同证据包隔离原子核验",
+      "date": "2026-09-17",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "限制每个核验调用只能接触所有当前原子共同声明的证据",
+      "changes": "从整批/父句分批改为相同证据坐标分组",
+      "reason": "减少跨项借证据",
+      "next_unknown": "扩展样本后是否仍减少误杀与漏判",
+      "verification": "development",
+      "file": "attempt-evidence-isolation.md",
+      "content": "限制每个核验调用只能接触所有当前原子共同声明的证据"
+    },
+    {
+      "id": "attempt-history-falsified-bigger-extraction-batch",
+      "type": "attempt",
+      "title": "历史尝试：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）",
+      "date": "2026-09-14",
+      "status": "historical",
+      "tasks": [
+        "降低报告层成本",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "下游（去重、写作层）被确认能容忍更高遗漏率，且有独立的召回护栏",
+      "verification": "development",
+      "file": "attempt-history-falsified-bigger-extraction-batch.md",
+      "content": "历史干预与结果：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）"
+    },
+    {
+      "id": "attempt-history-falsified-bigger-writer-model",
+      "type": "attempt",
+      "title": "历史尝试：换更大的写作模型治不了关系错：只换错法，成本 5–11 倍",
+      "date": "2026-09-12",
+      "status": "historical",
+      "tasks": [
+        "治事实关系错",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：换更大的写作模型治不了关系错：只换错法，成本 5–11 倍",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "出现价格接近 glm-flash 的强模型，或关系错的判据本身被重新定义",
+      "verification": "development",
+      "file": "attempt-history-falsified-bigger-writer-model.md",
+      "content": "历史干预与结果：换更大的写作模型治不了关系错：只换错法，成本 5–11 倍"
+    },
+    {
+      "id": "attempt-history-falsified-dedup-candidate-tightening",
+      "type": "attempt",
+      "title": "历史尝试：收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%",
+      "date": "2026-09-13",
+      "status": "historical",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "骨架的定义不再依赖跨文章合并，或有了不靠余弦的候选生成方式",
+      "verification": "development",
+      "file": "attempt-history-falsified-dedup-candidate-tightening.md",
+      "content": "历史干预与结果：收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%"
+    },
+    {
+      "id": "attempt-history-falsified-five-slot-srl",
+      "type": "attempt",
+      "title": "历史尝试：强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽",
+      "date": "2026-09-11",
+      "status": "historical",
+      "tasks": [
+        "改报告层结构",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "换到能稳定做结构化论元抽取的模型档次（且成本账仍划算）",
+      "verification": "development",
+      "file": "attempt-history-falsified-five-slot-srl.md",
+      "content": "历史干预与结果：强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽"
+    },
+    {
+      "id": "attempt-history-falsified-input-position-truncation",
+      "type": "attempt",
+      "title": "历史尝试：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13",
+      "date": "2026-09-14",
+      "status": "historical",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/input-selection-spike.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "核心文章数改成随簇大小自适应（而非固定 4 篇），或支持数不再依赖跨文章计数",
+      "verification": "development",
+      "file": "attempt-history-falsified-input-position-truncation.md",
+      "content": "历史干预与结果：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13"
+    },
+    {
+      "id": "attempt-history-falsified-length-rewrite",
+      "type": "attempt",
+      "title": "历史尝试：让模型「压到 X 字符」重写：实测多次原样返回",
+      "date": "2026-09-12",
+      "status": "historical",
+      "tasks": [
+        "控制成稿长度"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：让模型「压到 X 字符」重写：实测多次原样返回",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "换到能稳定遵守长度指令的模型档次",
+      "verification": "development",
+      "file": "attempt-history-falsified-length-rewrite.md",
+      "content": "历史干预与结果：让模型「压到 X 字符」重写：实测多次原样返回"
+    },
+    {
+      "id": "attempt-history-falsified-minimal-unit-compression",
+      "type": "attempt",
+      "title": "历史尝试：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好",
+      "date": "2026-09-14",
+      "status": "historical",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/srl-compress/out/",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "目标从「省 token」换成「提质量/可核对性」——那时这条结论不适用",
+      "verification": "development",
+      "file": "attempt-history-falsified-minimal-unit-compression.md",
+      "content": "历史干预与结果：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好"
+    },
+    {
+      "id": "attempt-history-falsified-one-source-per-sentence",
+      "type": "attempt",
+      "title": "历史尝试：限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门",
+      "date": "2026-09-12",
+      "status": "historical",
+      "tasks": [
+        "治事实关系错"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "长度与覆盖的门放宽，或找到「限融合但不缩水」的写法（方向本身未被证伪）",
+      "verification": "development",
+      "file": "attempt-history-falsified-one-source-per-sentence.md",
+      "content": "历史干预与结果：限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门"
+    },
+    {
+      "id": "attempt-history-falsified-rarr-default-on",
+      "type": "attempt",
+      "title": "历史尝试：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文",
+      "date": "2026-09-12",
+      "status": "historical",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "核对改成直接对原句、且有独立于生成模型的判官（现在是同一档模型自审）",
+      "verification": "development",
+      "file": "attempt-history-falsified-rarr-default-on.md",
+      "content": "历史干预与结果：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文"
+    },
+    {
+      "id": "attempt-history-falsified-retrieval-gapfill-loop",
+      "type": "attempt",
+      "title": "历史尝试：写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高",
+      "date": "2026-09-12",
+      "status": "historical",
+      "tasks": [
+        "提高写作层覆盖",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "检索通道换成能定位「该说而没说」的东西（现在是按与成稿相似度检索，天然捞回已写过的）",
+      "verification": "development",
+      "file": "attempt-history-falsified-retrieval-gapfill-loop.md",
+      "content": "历史干预与结果：写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高"
+    },
+    {
+      "id": "attempt-history-falsified-sentence-semantic-folding",
+      "type": "attempt",
+      "title": "历史尝试：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向",
+      "date": "2026-09-14",
+      "status": "historical",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/redundancy-probe.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "历史干预与结果：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向",
+      "changes": "从原节点复原的历史方案；相对基线的确切差异以正文/source 为准",
+      "reason": "历史记录，不推断当时未记载的动机",
+      "next_unknown": "语料变成以通稿转载为主，或有了能可靠判「同一事实」的廉价判据（非余弦）",
+      "verification": "development",
+      "file": "attempt-history-falsified-sentence-semantic-folding.md",
+      "content": "历史干预与结果：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向"
+    },
+    {
+      "id": "attempt-plan-verify-backfill",
+      "type": "attempt",
+      "title": "组合草案：先规划、按需核验、同槽补位",
+      "date": "2026-09-17",
+      "status": "proposed",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "保留候选覆盖，只核验拟入选候选，失败后从同事件槽替补",
+      "changes": "把核验所有候选改为按需核验；融合职责而不是三个成稿",
+      "reason": "八句核验已耗时约 100 秒，全量 156 候选核验代价高；各 gate 的泛化仍未达标",
+      "next_unknown": "规划覆盖与替补是否可用；核验及完整组合是否达标",
+      "verification": "proposed",
+      "file": "attempt-plan-verify-backfill.md",
+      "content": "保留候选覆盖，只核验拟入选候选，失败后从同事件槽替补"
+    },
+    {
+      "id": "attempt-practice-risk-slots",
+      "type": "attempt",
+      "title": "扩展练习上比较完整支持核验、模型槽与显式词代码槽",
+      "date": "2026-09-17",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "五个 dev 簇的 60 道人工练习；模型槽仅第一批四题有下游调用；未使用 heldout",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-GOAL.md",
+      "conditions": [
+        "固定原句证据；仅练习、非盲单 Codex 标签"
+      ],
+      "evidence_origin": "local_record",
+      "hypothesis": "固定类型与代码问题模板可减少自由规划漂移，代码显式词进一步避免模型类别漂移",
+      "changes": "模型枚举槽与代码显式词选槽分别实现；整句支持作为通用对照",
+      "reason": "自由问题规划出现重复与 after→cause；需扩大材料比较实际得失",
+      "next_unknown": "绑定角色与作用域的关系表示能否改善，而不制造误杀；该表示未实现",
+      "verification": "development_only_failed_signal",
+      "file": "attempt-practice-risk-slots.md",
+      "content": "代码槽没有净收益，暂缓集成。完整结果与代码路径见 source 及 PRACTICE-RESULT.md；不证明所有风险槽设计无效。"
+    },
+    {
+      "id": "attempt-specialist-risk",
+      "type": "attempt",
+      "title": "人工窄风险问题核验",
+      "date": "2026-09-17",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "用明确单风险问题代替自由全维度展开，减少假维度误杀",
+      "changes": "问题由人工提供，仅判定声明的风险点",
+      "reason": "全维度检查会给正常事实添加不适用的判定标准",
+      "next_unknown": "自动问题规划是否能生成完整且无新前提的窄问题",
+      "verification": "development",
+      "file": "attempt-specialist-risk.md",
+      "content": "用明确单风险问题代替自由全维度展开，减少假维度误杀"
+    },
+    {
+      "id": "attempt-structure-router",
+      "type": "attempt",
+      "title": "structure-router 原型",
+      "date": "2026-09-16",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/structure-router/README.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "hypothesis": "先识别事件结构，再从主线分层取原文写作",
+      "changes": "第一轮异质架构；不伪造三臂之间的派生关系",
+      "reason": "测试不同职责与表示对覆盖/安全的影响",
+      "next_unknown": "整体未达标后哪些机制可单独复用",
+      "verification": "development",
+      "file": "attempt-structure-router.md",
+      "content": "先识别事件结构，再从主线分层取原文写作\n\n提炼后的分诊/支持排序职责见组合草案；不能将其当成此旧原型已经实现或验证的功能。"
+    },
+    {
+      "id": "attempt-structured-verifier-interface",
+      "type": "attempt",
+      "title": "独立业务结构转换作为确定性核验接口",
+      "date": "2026-09-17",
+      "status": "tested",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "structured-v0.2部分真实glm烟测，1题完整/1题转换部分；另有本地人工结构测试，不读heldout，无整体效果结论",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+      "conditions": [
+        "候选/证据独立转换；代码仅在可审计对齐前提下比较；扩展上下文另版本重审标签",
+        "用户要求跑真实LLM，审批通过；人工参考图不进入模型，judge为本地Codex"
+      ],
+      "evidence_origin": "local_record",
+      "hypothesis": "充足上下文及忠实独立结构转换能使代码比较减少已有关系漏判，同时保留正常内容",
+      "changes": "按speech和scoped quantity拆窄转换器，证据看不到候选，LLM不输出支持判决；代码取文、校验、比较和聚合，残留/歧义返回pending",
+      "reason": "避免把复杂任务集成到同一prompt，并避免候选诱导证据转换和独立字段错拼",
+      "next_unknown": "拆小角色/命题/状态转换及由代码分配图ID是否改善；真实输出遗漏报告关系并错对齐，尚无正常/数量成绩",
+      "verification": "failed_partial_development_signal",
+      "file": "attempt-structured-verifier-interface.md",
+      "content": "阶段：代码参考图测试→14题本地适用性盘点→6题两族烟测，最多21个逻辑调用/42 HTTP尝试和30000已知tokens，达到方向条件才考虑扩大。原整句对照单题调用，不含兄弟变体。参考结构不能进入被测模型；语义对应仍由模型转换提出并需独立审查，不能伪装成字符串匹配的确定性保证。上下文扩展另建协议、参考判断与对照，不能照搬旧成绩。未支持细节预注册out_of_scope，正常关系保留与正常整句pending分别报告。\n\n设计阶段spawn一个只读审查subagent；随后用户明确要求实现，该subagent落初稿后因用量限制中断，主agent接手完成。29新测试通过、dry-run和6题人工结构oracle实际运行；未运行真实模型，没有独立验证或生产变更。unit/state窄枚举由代码比较，不让对齐模型判断字段等价；尚未支持类型及语义覆盖遗漏边界见结果文档。\n\n后续真实运行：用户明确要求跑LLM后执行8次HTTP。p12-u整句baseline误放行，结构路线因证据遗漏报告关系及错误对齐返回未知，不是正确诊断；p11-u图指针/引文/覆盖契约失败。一次Network connection lost审计重启并预留未知用量，达到预算后停止；没有正常题或数量族模型成绩，本版不扩大、不融合。新增审计测试后30新测试通过。\n\n后续split-heal-v0.3转换组件：不建全图，按TARGET句抽角色再逐报告抽状态，代码分配ID；原文/上次输出/实际校验错误最多回传一次。7TARGET真实执行、23HTTP/17071tokens，5自然反馈2接口修复3失败，另1注入引用修复。p11角色差异改善，但状态/否定错分、伪报告、上下文污染和裸substring误通过仍在；没有自动对齐及整句核验结果。详见SPLIT-HEAL-RESULT.md，不融合扩大。\n\n后续minimal-fields-v0.4人类固定verb/命题诊断：18真实请求/10055tokens；单字段did not仍误判positive，would undermine单字段正确而组合误判negative。预注册参考单/组合均10/12，其中would时间分类有边界，不证明单字段总体优势。warn/future和confirm/completed在固定输入正确，旧失败仍含上游抽取负担；最小分类错误与混合干扰并存。窄代码对照仅在4固定输入成立，不能当一般核验器。\n\nmechanical-v0.5接管受限报告动词/否定/辅助时态，roles仍模型；unknown不自动回退LLM。0远程调用离线回放固定12字段11确定正确/1would时间未知；新增词边界及完整错误列表，拦伪报告和坏锚点，但重复said引用定位会失败。新角色prompt/反馈未真实复测，上游抽取及整句能力仍未解决，不扩大融合。详见MECHANICAL-RESULT.md。\n\n随后机械模式真实重跑：3HTTP，仅p11正常候选完成并正确连通角色→代码字段；源句两次连接丢失（审计重启一次后再次失败）立即停，552已知tokens+2未知usage。旧错误题未运行，没有self-heal或端到端效果结论；基础设施失败不是方案语义失败。见MECHANICAL-REAL-RESULT.md。\n\n2026-09-18最终来源heldout验收更新：用户授权后首次打开c28/c51，核验组件与v0.19.1回归逐hash相同、先冻结再揭示。30文章60自编控制真Workers AI运行，漏放3/30=10%、忠实诊断未识别4/30=13.3%、正常误拦1/30；无规则增量，严格<10%目标失败。主Codex自编非盲、底层事件可能相关，不宣称完全独立验收。c28/c51已消耗，不得继续称未读/未接触heldout；后续调优需要另预留新验收材料。旧节点中的未读状态只描述当时历史，详见experiment-heldout-binding-verifier及其报告。\n\n随后REST机械前置方案测试7TARGET全部执行，10HTTP/9265tokens无连接失败，4接口通过3失败。三次反馈未完整修复；p11-u合法两said因schema缺occurrence且要求唯一导致不可表示，是明确设计缺陷。source3不支持declined拖垮整体，p12源句上下文污染未修好。代码5报告12确定值正确/3时间未知，但两旧错误无完整自动检错结果，自动对应/整句聚合未实现，方案验收未通过；不扩大融合。详见REST-SCHEME-RESULT.md。"
+    },
+    {
+      "id": "claim-anchor-not-rewrite",
+      "title": "报告层应只给「锚点」（哪几句重要 + 票数 + 出处），不改写；写作层按出处直取原句来写",
+      "date": "2026-09-15",
+      "status": "proposed",
+      "source": "2026-09-15 会话推演，未实测",
+      "invalidates_when": "实测显示原句直喂让关系错或覆盖变差，或写作层抄袭记者措辞的比例不可接受",
+      "type": "attempt",
+      "tasks": [
+        "改报告层结构",
+        "治事实关系错"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "proposal",
+      "legacy_type": "claim",
+      "legacy_relations": {
+        "measured_by": [
+          "measure-writer-input-anatomy",
+          "falsified-minimal-unit-compression"
+        ],
+        "depends_on": [
+          "invariant-citation-resolvable",
+          "invariant-support-count"
+        ]
+      },
+      "verification": "proposed",
+      "hypothesis": "以重要性锚点与原句出处替代二手事实改写，提高覆盖与可核对性",
+      "changes": "写作层按锚点坐标读取原句，标签不进写作 prompt",
+      "reason": "减少模型转述层数；此前降本失败不等于质量方向失败",
+      "next_unknown": "端到端覆盖、关系错、记者措辞复用与输入成本是否改善",
+      "file": "claim-anchor-not-rewrite.md",
+      "content": "**主张**：抽取这一步从「读 20 句、改写成自足事实句」改成「读 20 句、指出哪几句承载重要事实，\n各给一个短标签」。标签只用于去重判同一性，**不进写作 prompt**。去重照旧计票。报告产出变成锚点列表——\n每条是票数 + 一组出处，写作层按出处**直取原句**（不是相似度检索）。同一件事被三篇报道，\n写作层就看到三条原句互相补充。\n\n这样 LLM 转述从两次降到一次，写作层看到的是记者原话而非二手改写。接地校验也变平凡——用的就是原句。\n\n**为什么现在能提这条（之前不能）**：`falsified-minimal-unit-compression` 判「不改写」路线证伪，\n理由是产出比自由句还长（52–56% vs 40–50%），**但同一条节点写着「召回更好」（c18 24/30 vs 生产 20–22），\n且失效条件明写「目标从省 token 换成提质量/可核对性——那时这条结论不适用」**。\n本主张正是这个转向，所以那条证伪不适用。\n\n**与另外两条证伪不冲突**：`falsified-retrieval-gapfill-loop` 否掉的是「按与成稿相似度检索」，\n天然捞回已写过的；锚点方案是按出处直取，不是检索。`falsified-five-slot-srl` 否掉的是强迫逐字摘抄\n五槽论元，锚点不需要结构化论元，只要句号 + 短标签。\n\n**已知风险，需在实验里量**：\n1. 原句里的记者措辞被抄进正文（本仓栽过：流水线措辞漏进正文、复读 80 遍漏进正文）——保留现有代码级检查器\n2. 写作层输入变长（原句是改写句的 1.33–1.87 倍），省下的输出成本会有一部分变成输入成本\n3. 约一成原句以代词/连接词开头，不自足\n4. `falsified-minimal-unit-compression` 那轮遗留的真问题：8–17 条 fact 混着 said/told，归属没分干净\n   （锚点方案不需要分离归属——原句里谁说的本来就写着，此项风险降低但要复核）\n\n**验证方式**：四簇 fixture 上做对照，一边现行改写版、一边锚点版，都走到成稿，\n用现成判据比——清单召回、骨架事实数、关系错每十句、越界引用。`accept.ts` 冻结可直接用，\n只需新写锚点版的抽取 prompt 与报告渲染。"
+    },
+    {
+      "id": "claim-inference-scaling-gap",
+      "title": "「小模型 + 更多推理步骤 ≈ 大模型单次」在无 verifier 的开放式生成上是文献空白，抄不到结论",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献调研 —— arXiv:2408.03314 (Snell et al. 2024) + arXiv:2305.05176 (FrugalGPT)",
+      "invalidates_when": "出现在开放式长文本生成（无可验证正确性信号）上的 test-time compute scaling 实测",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构",
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "claim",
+      "legacy_relations": {},
+      "kind": "hypothesis_or_research_finding",
+      "file": "claim-inference-scaling-gap.md",
+      "content": "**本项目的核心假设**：用工程 harness（多次调用、任务分解、中间校验）让便宜模型逼近强模型的效果。\n\n**文献状态：这条既没被证伪，也没被证实——它是空白。**\n\ntest-time compute scaling 的正面结果（Snell et al. 2024, arXiv:2408.03314：计算最优的测试时策略\n可让小模型在匹配算力下超过 14 倍大的模型、效率提升 4 倍以上）**全部建立在数学/代码这类\n有可验证 reward / verifier 的任务上**，且论文自己强调效果强烈依赖按题目难度自适应分配。\n\n**摘要与叙事写作没有那样的 verifier。** 「多推理步骤能否把小模型顶上去」在无 verifier 的\n开放式生成上没有对等实测。这意味着两件事：\n1. **抄不到结论**，只能自己测；\n2. 测出来是真增量——本项目相对文献的增量贡献可能就在这里。\n\n**一个方向不同的已验证形态**：FrugalGPT(arXiv:2305.05176) 的 cascade 路由实测最高省 98% 成本\n且维持/超过 GPT-4 准确率（某数据集只有 16.6% 查询升级到 GPT-4）；RouteLLM(arXiv:2406.18665)\n在 MT-Bench 上省 85%+ 并保持 95% GPT-4 质量，路由自身开销 <0.4%。\n**但这是答案级级联（整题重做），不是子任务级分解。** 它提示了一条与「拆成三级代理」\n完全不同的资源分配轴：整簇直接问小模型 → 用便宜的自检信号判断是否需要升级到稍贵模型**重做整段**。\n这条轴本仓从未试过。\n\n**学术定位（供检索用）**：本问题是「推理期、预算受限的新闻多文档摘要」\n(inference-time budget-constrained news MDS)。三个子判断的学名分别是\ncross-document event coreference resolution（同一性）、content selection / salience（重要性）、\ntimeline summarization / narrative event ordering（叙事组织）。\n\n**没有基准可用**：Multi-News 平均不到 3 篇/簇；WCEP 可达 100 篇但目标摘要只有 ~28–40 词\n（更像标题生成）；DUC/TAC 是 10–30 篇、100–250 词但年代早、主用 ROUGE、**几乎不评关系正确性**。\n**不存在同时满足「6–14 篇全文 + 数百至数千字符叙事 + 关系正确性标注 + 低成本」的基准。**\n同理，现有事实一致性工具（SummaC、AggreFact）针对单文档幻觉，\n**没有专门检测「跨事件关系错接」的检测器或基准**——这一侧要自建。"
+    },
+    {
+      "id": "claim-inverted-pyramid",
+      "title": "新闻是倒金字塔，主干事实集中在前几句，长尾多是背景",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "docs/engineering-notes/fact-compression-representations.md",
+      "invalidates_when": "语料从通讯社硬新闻换成深度报道/专栏为主",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "claim",
+      "legacy_relations": {},
+      "kind": "hypothesis_or_research_finding",
+      "file": "claim-inverted-pyramid.md",
+      "content": "推论是：少数核心文章读全文、其余只读导语，事实几乎不丢，于是能少喂很多 token。\n\n**部分成立但不够用**：实测三个大簇里 80%+ 的丢失事实确实来自第 6 句之后（中位句号 15–17）。\n但「主干在前面」说的是**共有事实**；**独家事实散在长尾**（某部长的单独表态、8 月失业 4.1 万、\n关税生效时间），而独家事实恰恰没有第二篇能兜底。见 falsified-input-position-truncation。"
+    },
+    {
+      "id": "claim-minimal-unit-representation",
+      "title": "最小单元是「谓词+类型化论元」，去修饰留主谓宾骨架，「谁说的」单独建模",
+      "date": "2026-09-12",
+      "status": "candidate",
+      "source": "docs/engineering-notes/fact-compression-representations.md",
+      "invalidates_when": "无（这是调研给的形状，能不能用取决于模型档次与目标）",
+      "type": "mechanism",
+      "tasks": [
+        "改报告层结构",
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "claim",
+      "legacy_relations": {},
+      "kind": "representation",
+      "input": "新闻原句",
+      "output": "最小单元是「谓词+类型化论元」，去修饰留主谓宾骨架，「谁说的」单独建模",
+      "limits": "无（这是调研给的形状，能不能用取决于模型档次与目标）",
+      "verification": "proposed",
+      "file": "claim-minimal-unit-representation.md",
+      "content": "六条证据链拼出来的形状，**组合本身没人端到端测过**（证据强度中等）。配套的红线清单可直接用：\n否定词、基数词、限定词、时间/地点论元**永不删**；可删的是插入语、形容词子树、评价性副词。\n\n两条要分开看的推论：它是**为了检索与核对**设计的，不是为了省 token——Dense X 的实测写得很直白，\n「命题化不降 token，是索引重构」。把它当降本手段用，见 falsified-minimal-unit-compression。"
+    },
+    {
+      "id": "claim-output-bound-cost",
+      "title": "成本可能是被「模型写出来的字」撑起来的，而不是喂进去的原文（输出贵 6.7 倍）",
+      "date": "2026-09-14",
+      "status": "superseded",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "invalidates_when": "已于 2026-09-14 实测，见 measure-cost-input-output-split",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "claim",
+      "legacy_relations": {},
+      "kind": "hypothesis_or_research_finding",
+      "file": "claim-output-bound-cost.md",
+      "content": "**已被实测取代**：抽取步骤输出占 62.2%（主张成立），但去重、各方、写作层是输入占 66–74%（主张不成立）。\n所以正确的说法不是「成本由输出撑」，而是**「抽取由输出撑、其余由输入撑」**——而抽取恰好是报告层\n最大的一块。保留本节点是为了记住这条主张当初为什么值得验：五次降本实验都默认了它的反面。"
+    },
+    {
+      "id": "decision-brief-v3-production-state",
+      "title": "简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "invalidates_when": "成本上限被重定、或任一降本方案落地、或链路被部署（那时本节点改成已上线）",
+      "type": "decision",
+      "tasks": [
+        "降低报告层成本",
+        "上线简报v3"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "decision",
+      "legacy_relations": {
+        "measured_by": [
+          "measure-report-cost-structure"
+        ],
+        "depends_on": [
+          "invariant-support-count",
+          "invariant-citation-resolvable"
+        ]
+      },
+      "action": "历史决定或进度记录；实际状态以正文及 source 为准，不能由 live 推断已部署",
+      "file": "decision-brief-v3-production-state.md",
+      "content": "**已完成**：ai-worker 新增 `/meridian/report-v3`；`write-block-v3` 接上代码检查器（`marks` 只进内部\n观测，读者看不到）；backend workflow 改成 报告 → 分层 4/10/其余 → 写作 v3 → 三节拼装 → 起标题 →\n每期一份 v3 记录落 R2。`pnpm typecheck` 通过，本地 e2e 跑出过完整一期（25 块、4/10/11、23 条标记）。\n**未部署、未 commit。**\n\n**2026-09-15 更新**：曾被当作唯一降本杠杆的 L2（抽取产出约束）已固化进代码并过了 M1 复验，\n质量不伤，但**省不了钱**——同日两次跑 −6.3% / +0.7%，跨过基线，落在跑间波动里\n（见 decision-tighter-output-constraint）。**$10.20 的缺口没被补上**，下面第 ① 条仍要人拍板。\n\n同日的分步归因找到一个大一个量级的入口：去重 95.3% 的输入是重复贴的同一段判定说明书，\n打包判定的算术上限是省总成本 18.3%，且各簇都吃得到（中位也会真降）——见 measure-dedup-fixed-overhead。\n**未实测**，风险是跨组乱并。\n\n**三件悬着的**（需要人拍板）：① 月成本 $10.20 vs 上限 $10——抬上限还是封顶每份报告 16 篇（→$8.87）；\n② 提供方一抖触发重试，`observed` / `usage-recorded` 两道门必挂（span 数按「尝试」计、trace 按「调用」计，\n失败那次拿不到 usage）——门的口径要不要改成「逻辑调用 + 提供方尝试 + 未知成本尝试」三个字段；\n③ 标题大小写的修复只在函数级验过，整链复验要再花一轮 e2e。\n\n验收脚本 `apps/backend/prototypes/brief-v3-prod/accept.ts`（冻结，sha 前 16 位 `ad73a86083b8b1df`），\n三档 M1/M2/M3 的门与读数口径都在里面。"
+    },
+    {
+      "id": "decision-exact-premerge",
+      "title": "逐字相同的事实先合并（preMergeIdentical）——这是修 bug，不是降本",
+      "date": "2026-09-13",
+      "status": "live",
+      "source": "services/meridian-ai-worker/src/utils/report-v3.ts",
+      "invalidates_when": "抽取改成每条事实只产出一次（不再跨批重复），这一步就没用了",
+      "type": "decision",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_analysis",
+      "legacy_type": "decision",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "action": "历史决定或进度记录；实际状态以正文及 source 为准，不能由 live 推断已部署",
+      "file": "decision-exact-premerge.md",
+      "content": "c3 实测到两条逐字相同、分属两篇文章的事实各自成单元，于是本该「被 ≥2 篇报道」的骨架事实被算漏。\n预合并后四簇 identical-facts 全为 0。\n\n**成本没省**（2,398 vs 2,340 neurons，在跑间波动内）。跑间波动本身很大：同一批输入三次跑，\n原始事实 118/118/123、177/166/180——**小于 5% 的成本差别在这个噪声水平下没有意义**。"
+    },
+    {
+      "id": "decision-hold-auto-risk-integration",
+      "type": "decision",
+      "title": "暂缓自由问题 planner 与 specialist 融合",
+      "date": "2026-09-17",
+      "status": "accepted",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "action": "暂缓自由 planner 融合；下一轮验证受约束风险槽",
+      "invalidates_when": "新规划表示通过必要风险、独立性与含义保持对照后重评",
+      "file": "decision-hold-auto-risk-integration.md",
+      "content": "人工窄问题八例信号保留；自动规划语义接口失败，组合不能因此升级为通过。"
+    },
+    {
+      "id": "decision-tighter-output-constraint",
+      "title": "抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "invalidates_when": "换抽取模型，或产出约束的措辞被改动（约束是靠措辞生效的，改了要重测）",
+      "type": "decision",
+      "tasks": [
+        "降低报告层成本",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "decision",
+      "legacy_relations": {
+        "measured_by": [
+          "measure-cost-input-output-split"
+        ]
+      },
+      "action": "历史决定或进度记录；实际状态以正文及 source 为准，不能由 live 推断已部署",
+      "file": "decision-tighter-output-constraint.md",
+      "content": "批大小不变（20 句），只在抽取 prompt 末尾追加一条更严的产出约束。满覆盖对照实测：\n\n| 簇 | neurons/句 | completion_tok/句 | 召回 |\n|---|---:|---:|---:|\n| c18 | −19% | −40% | 20/30 → **22/30** |\n| c0 | −8% | −19% | 12/13 → **13/13（满分）** |\n\n越界引用 0 条。输入 token/句因为多了约束文字涨 8–11%，但输入占比小，不影响总账。\n\n**这是目前唯一「省钱且不伤质量」的杠杆**，但落到整份报告的口径上，省的没有 spike 说的多。\n\n## 2026-09-15 M1 复验（措辞已固化进 `prompts/reportV3.ts` 的 `OUTPUT_CONSTRAINT`，拼在 prompt 最末尾）\n\n四簇串行生成（`brief-v3-prod/scratch/gen-reports.mjs`）+ `accept.ts --stage=M1 --replay`（sha `ad73a86083b8b1df`），\n**ALL PASS**。基线取 `out/runs/M1-1789308830116`，用同一套门重放得到：\n\n| 簇 | 篇数/句数 | neurons 基线 → L2 | facts | skeleton | 清单召回 |\n|---|---|---:|---|---|---|\n| c0  | 14 / 336 | 585.3 → 586.3（**+0.2%**） | 78 → 57 | 22 → 22 | 13/13 → 13/13 |\n| c3  | 16 / 329 | 721.9 → 696.9（−3.5%） | 77 → 81 | 20 → **24** | — |\n| c13 | 16 / 436 | 930.9 → 812.4（**−12.7%**） | 141 → 122 | 17 → 17 | — |\n| c18 | 6 / 86   | 159.7 → 150.8（−5.5%） | 27 → 24 | 3 → **2** | 20/30 → **21/30** |\n| 合计 | | 2397.8 → 2246.4（**−6.3%**） | | 62 → 65 | |\n\n质量侧全部守住：越界引用四簇均 0，cited-numbers ≥97.5%，无复读、无 CJK、句子逐字可回溯。\n唯一下降是 c18 骨架 3→2（该簇 fixture 本来就只有 3 条）。\n\n## 同日第二次跑（带 inline 观测做分步归因）：**省的钱是噪声**\n\n| 跑次 | 四簇合计 neurons |\n|---|---:|\n| 基线（无 L2） | 2397.8 |\n| L2 第一次 | 2246.4（−6.3%） |\n| L2 第二次 | 2415.1（**+0.7%**） |\n\n两次一降一升，跨过基线——**L2 在整份报告口径下省不了钱**，第一次的 −6.3% 落在已知的 ±5% 跑间波动里。\n（两次跑唯一差别是第二次带 `x-observe: inline`，观测只记录不改 prompt，不影响成本。）\n\n分步归因（基线 → L2 第二次）：\n\n| 步 | neurons | 输入 tok | 输出 tok | 调用 |\n|---|---|---|---|---|\n| extract | 1177.8 → 1184.0（**+0.5%**） | 82,135 → 89,163（**+8.6%**） | 19,948 → 19,054（**−4.5%**） | 75 → 74 |\n| dedup | 817.7 → 799.2（−2.3%） | 100,423 → 98,026 | 7,290 → 7,145 | 125 → 121 |\n| voices | 402.2 → 431.9（+7.4%） | 52,648 → 52,648（一字不差） | 3,095 → 3,909 | 6 → 5 |\n\n**机制已闭合**：约束确实让模型少写字（输出 −4.5%），但约束文字本身让输入涨 8.6%，两者相抵净 +0.5%。\n代进换算公式 `7,028×0.00545 − 894×0.0364 = +5.8`，实测 +6.2，对得上。\nspike 报的 completion/句 −19~40% 在整报告口径下只剩 −4.5%——**spike 的 per-sentence 口径高估了真实收益**。\n\n**留不留**：留。质量侧两次一致地不伤（M1 ALL PASS、越界 0、c0 召回 13/13、c18 20/30→21/30、\n骨架合计 62→65），且不花钱也不省钱。要撤只需删掉 `OUTPUT_CONSTRAINT` 的拼接。\n**但它不能用来补 $10.20 的成本缺口**——真正的入口见 measure-dedup-fixed-overhead。"
+    },
+    {
+      "id": "experiment-argument-router-replay",
+      "type": "experiment",
+      "title": "窄语法论元接管真实动作回放：正常配对恢复，旧关系错误保留",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "v0.13同四开发候选，真实v0.12动作加确定性论元路由，非新远程全链/独立验证/正常整句通过",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+      "conditions": [
+        "不修改或人工填入模型输出，复用v0.12真实动作与v0.11 p11配对/He解析，无远程judge/heldout/生产融合",
+        "只支持accelerate/deploy辅助词简单结构及完全匹配in NP that原speaker原verb关系结构，名词头仅提出指代建议；限定语未比较且保留receipt",
+        "主Codex本地非盲核对新命题/参数对应，hash语义门继续保留；未支持/否定/协调/嵌套/重复引用待定"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "同p11/p12四候选，四p12事件论元由代码原文提取；正常三报告配对与旧错误比较",
+      "evaluation": "主Codex原文复核论元、事件及身份，绑定结果/配对/解析hash；79回归含正常/未知/嵌套/重复负例，typecheck4缓存任务通过，不作独立可靠性分数",
+      "result": "p12正常与错误均唯一对应源announcement加速arms race事件，不再混入Analysts报告者或US部署事件。正常三报告配对恢复且适用关系无误拒；p11错误两Reporters/Meink差异与p12 confirm/warn、completed/future差异保留。正常整句仍pending，would/限定语及完整覆盖未验，不宣称核验方案通过",
+      "cost": "离线回放新增远程调用0；继承v0.12真实8逻辑/9HTTP/1787tokens，其他复用成本见v0.11历史，不重复计费；金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-argument-router-replay.md",
+      "content": "已知窄语法中明确论元可以交给代码；语法复制和名词头相同不能证明一般指代一致、限定范围相同或完整覆盖。小开发回放成功不覆盖真实参与者转换失败事实，也不支持扩大融合。"
+    },
+    {
+      "id": "experiment-auto-risk-four",
+      "type": "experiment",
+      "title": "自动风险问题规划：四句开发探针",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "failed",
+      "inputs": "四个 c36 候选；规划器不见证据、标签与人工问题",
+      "evaluation": "代码校验结构；Codex 检查完整性、独立性与含义保持",
+      "result": "重复整句与同义时序问题，after 被改成 cause；语义接口失败，未运行下游 specialist",
+      "cost": "首次有效调用 15.70 秒，336 input / 526 output tokens",
+      "record_completeness": "complete",
+      "file": "experiment-auto-risk-four.md",
+      "content": "重复整句与同义时序问题，after 被改成 cause；语义接口失败，未运行下游 specialist"
+    },
+    {
+      "id": "experiment-binding-repair-regression",
+      "type": "experiment",
+      "title": "v0.19.1机械归属补齐40真LLM修补回归：漏放0%，忠实诊断失败5%",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "重复v0.18的40条开发修补回归，NOT新材料/独立验证；仅窄显式语法原型，非生产核验层",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "conditions": [
+        "额外窄schema：地点绑定同damage事件的homes/vehicles数量；明确Iran judiciary同seizure people/accounts两槽；相同完整25年协议patient+purpose的terminated actor；不存在完整绑定不猜测",
+        "沿用v0.18全文/整数span选择和整句模型fallback，不把代码覆盖误当完整语义覆盖；新冻结版本skip-cache重新调用真Workers AI，无远程judge，heldout仍未读",
+        "最多25逻辑50HTTP90000tokens/60秒每请求，batch2最多5单条修复；v0.19未执行仅测试发现前缀边界缺陷，保留未运行plan，修复后另冻v0.19.1，不覆盖历史"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "passed",
+      "inputs": "v0.18重复40条：20正常20注入错误；不能算40新样本或独立泛化证据",
+      "evaluation": "主Codex本地原文/raw/独立机械factor receipts逐条审计、结果与raw hash绑定；111机械测试通过，不代表语义验收",
+      "result": "开发修补回归忠实诊断失败1/20=5%严格低于10%，实际漏放0/20，正常误拦/复核0/20，总复核0/40，20正常全放行20错误全拦。40最终合同有效2修复成功。模型再次错误接受Cambodia施事，代码精确定位拦住；Iran理由仍数量反向但两typed slots独立正确定位；homes/vehicles本次模型正确拒绝且代码也检测。Gulf仍有错误否认金额的理由，正确拦截不当全语义通过。此前新材料漏放两批均10%，因此新材料稳定低于10%尚未证明",
+      "cost": "22逻辑22HTTP，30821已知tokens，58.218累计请求秒；本轮三实验总64逻辑64HTTP92884tokens254.669秒，美元价未知；无生产修改/部署/提交，全部远程调用结束",
+      "record_completeness": "complete",
+      "file": "experiment-binding-repair-regression.md",
+      "content": "results hash 90108a75742981d87c196eb5ecb66ecf6153198b38e16a455042f5d037aea861。产物在scripts/eval/cluster-to-brief/out/atomic-evidence/binding-retest-v0.19.1。新事件、别名、作用域、跨句、自然错误及整句LLM未覆盖因素未验证；不能推广事件特定窄grammar到生产，也不能用这次修补零漏放取代之前扩大失败事实。下一步冻结当前机制，换不参与修补的跨事件材料检验，而不是继续补已知文章刷零。"
+    },
+    {
+      "id": "experiment-direct-raw-c36",
+      "type": "experiment",
+      "title": "direct-raw：c36 冻结慢档",
+      "date": "2026-09-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/out/slow-direct-raw-dev.json",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "c36 houthi，82 篇，dev；仅此簇",
+      "evaluation": "冻结慢档核心清单与逐句事实判定；不能用快档 exit 0 替代",
+      "result": "核心覆盖 6/7；hard=4；fatal=0；整体未达标",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "complete",
+      "file": "experiment-direct-raw-c36.md",
+      "content": "核心覆盖 6/7；hard=4；fatal=0；整体未达标"
+    },
+    {
+      "id": "experiment-event-kernel-split",
+      "type": "experiment",
+      "title": "真实动作与参与者拆分：动作忠实，事件参与者仍混入报告层",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "v0.12四p12候选/源事件的真实拆分转换，既有开发样本，非独立验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+      "conditions": [
+        "固定Workers AI REST/glm，动作仅命题、参与者命题及原同句，无邻句/兄弟候选/远程judge/heldout",
+        "8逻辑/16HTTP/12000tokens上限，单请求60秒，1次实际引用错误反馈；p11配对/解析复用旧输出",
+        "代码要求动作词形和两参与者唯一对应，精确引用不计语义验收"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "p12正常/错误候选、源句部署/加速报告，共四事件八转换任务",
+      "evaluation": "主Codex本地非盲原文与原始输出复核，语义错/接口错/未知分开；未执行独立准确率估计",
+      "result": "四动作均忠实；四参与者仅部署正确，正常候选Analysts/announcement角色错，源加速The US主语错且对象过宽；错误候选额外字面引号反馈后仍接口失败。两个p12均不能配对；拆成动作与参与者未自动解决报告层/事件层混淆",
+      "cost": "8逻辑/9HTTP/1787已知tokens/累计请求24.781秒，零连接失败；金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-event-kernel-split.md",
+      "content": "自然语言引用合法仍可把报告者当事件主体；不能将拆小或模型自报作为改进证据。只证明本条件下参与者路径未成功，不直接归因模型一般能力或上下文工程的单一原因。"
+    },
+    {
+      "id": "experiment-evidence-graph-c36",
+      "type": "experiment",
+      "title": "evidence-graph：c36 冻结慢档",
+      "date": "2026-09-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "c36 houthi，82 篇，dev；仅此簇",
+      "evaluation": "冻结慢档核心清单与逐句事实判定；不能用快档 exit 0 替代",
+      "result": "核心覆盖 0/7；hard=0；fatal=0；整体未达标",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "complete",
+      "file": "experiment-evidence-graph-c36.md",
+      "content": "核心覆盖 0/7；hard=0；fatal=0；整体未达标"
+    },
+    {
+      "id": "experiment-expanded-dev-quote-gate",
+      "type": "experiment",
+      "title": "引用harness修复后40新开发对照真实运行：漏放5/20，语义未识别6/20，复核7/40",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "新20事件/文章40正常错误对照，整句模型语义门+机械引用接口+不变数量窄规则；非完整分解核验链路、非独立可靠性或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EXPANDED-DEV-RESULT.md",
+      "conditions": [
+        "模型只输出slot/status/errorSpan/quote字符串/reason，代码分配ID/claim/来源编号/偏移，exact quote唯一来源文档，不猜未知歧义；逐条隔离故障，具体字段错误单条有限self-heal",
+        "引用150字符硬限制；sourceIndex不再由模型生成。先保存v0.15真实raw离线绑定回归8/8，旧合同未强制150字符事实保留，无新增调用及语义修正",
+        "开发20新文章均未在旧60或v0.15八题使用，每事件保留正常/一错误短语成组；主Codex自编非盲，半径2未截断上下文本地读原文确认足够，标签不进入请求或影响路由，运行中不修改冻结组件材料",
+        "glm-4.7-flash Workers AI REST及Gateway，thinking关闭，max_tokens5000，温度0/修复0.1；10初始batch/最多10单条修复，20逻辑/40HTTP/60000已知token停止阈值/每请求60秒；远程只被测模型无judge，最终heldout c28/c51未读"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "40题/20事件，各20正常及20错误短语，范围含时序、数量及界限、施事归因、身份、否定、排他、计划完成态、无依据因果；含固定开发池离题文章，不是自然错误分布或独立试验",
+      "evaluation": "主Codex本地逐条原文/最终保留raw非盲审计，对完整results及逐条raw hash绑定，参考整句状态与注入错误理由分开；95机械回归通过、项目typecheck exit0且4任务缓存命中，无远程judge",
+      "result": "40完整分母保留接口失败：实际错误漏放5/20=25%，注入错误未识别6/20=30%（含一错误因引用失败转复核，不能算语义检出），错误未明确拦截7/20=35%；正常误拦0/20但5正常复核；总7/40=17.5%复核，20allow=15正常+5错误/13block/7review。五漏点为白俄罗斯报告将提交已提交、约旦至少恰好11、圭亚那不想想、印尼总统议会施事、Saab计划已出现；Jenius offshoot standalone语义漏点因接口失败未放行。Myanmar only理由忠实但坏引用复核，Singapore完成态错误锚点不精确，Holocaust施事理由忠实但引用缺关键细节。10单条修复3成功7失败，失败不再拖垮batch；原数量规则40全部not_covered，未扩大语法修补题词",
+      "cost": "20逻辑/28HTTP，31180已知tokens，183.134累计请求秒；全部HTTP200及usage已知，无基础设施故障/远程judge；美元费未查询；全部调用结束，无heldout/生产修改/部署/提交",
+      "record_completeness": "complete",
+      "file": "experiment-expanded-dev-quote-gate.md",
+      "content": "旧0/4原始父句状态及旧60缓存零漏放不能代表新材料可靠性；新接口与材料同时变化，不做纯材料/纯提示因果归因。冻结plan hash d30f135f7fa33b1bdd71592b5f0aa5b2000838c9725f4d6f14a050f115db6d9a；results hash 710987358b3e52f4a803a2aeba09953c392d988a9df6eebdbfa586e25e6c418d，完整产物在out/atomic-evidence/expanded-dev-v0.16.1。\n\n来源绑定/故障扩散已修，但原文引用忠实转换7最终失败和整句语义错放并存。只精确引用并不证明蕴含：同一个错误句可以引用正确的not/to be/at least/president内容却被模型标supported。下一步应对语义维度做忠实独立字段转换、代码比较及覆盖门，再另验组合，而非补漏点词规则刷到零。尚不采用该工作点，也不扩实验直到预算耗完。"
+    },
+    {
+      "id": "experiment-factor-choice-dev",
+      "type": "experiment",
+      "title": "v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "20新开发文章正常错误40对照，主Codex编写非盲，窄语法字段比较+整句模型语义门；非完整分解或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "conditions": [
+        "源/候选窄因子独立抽取，哈希原文位置；完整事件键匹配后代码比较，coverageVerified始终false，未知不通过",
+        "LLM输出代码原文chunk整数选择，不再复制quote或生成offset/sourceIndex；batch2并保留完整半径2上下文，每实验最多25逻辑50HTTP90000tokens，每请求60秒",
+        "冻结前后本地审原文，无远程judge；glm-4.7-flash Workers AI REST+Gateway skip-cache且thinking关闭，max_tokens5000，temperature0，最终heldout未读；新文章但关联底层事件可能重叠"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "40条，20正常20单注入错误短语，来源未用于先前60/v0.15/v0.16.1；非自然错误或独立试验",
+      "evaluation": "主Codex本地阅读原文和保留输出，results/逐条raw hash绑定；正确拦截与忠实诊断分开，理由包含错误事实保守算失败",
+      "result": "漏放2/20=10%，忠实诊断失败3/20=15%，正常误拦/复核0/20，总复核0/40；40最终合同有效，无修复/基础设施失败。ASEAN偏好双分支与maritime面积单位漏放；UK all-goods被正确拦但错误宣称Ed Miliband不在引用。4新规则命中均是模型已正确拒绝，规则增量拦截0，整体改善不能归因单因素",
+      "cost": "20逻辑20HTTP，31193已知tokens，133.754请求秒；美元价未知，无远程judge/生产修改/部署/提交",
+      "record_completeness": "complete",
+      "file": "experiment-factor-choice-dev.md",
+      "content": "plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在scripts/eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。"
+    },
+    {
+      "id": "experiment-fresh-dev-frozen-probe",
+      "type": "experiment",
+      "title": "四新开发事件真实冻结探针：父句状态一致，引用接口拖垮整批且窄规则未覆盖",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "四未使用开发文章/事件八正常错误对照的新整句基线与不变数量规则，三独立报告抽取诊断；非完整分解原型端到端、非独立可靠性验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FRESH-DEV-RESULT.md",
+      "conditions": [
+        "相对旧60题缓存回放冻结组件代码/请求hash，改材料；开发文章1000985/1003362/1004976/1001409未在原练习使用，主Codex自编非盲，heldout c28/c51未读",
+        "ContextStore半径2未截断，主Codex本地检查上下文足够，参考不进入请求；Workers AI仅被测模型，无远程judge",
+        "glm-4.7-flash REST及Gateway，thinking关闭，max_tokens5000，温度0/修复0.1，每失败至多一次修复；最大5逻辑/10HTTP/18000token停止阈值/每请求60秒",
+        "实际路由继承整批失败转复核；事后逐句6/8接口通过不追认放行，不修改冻结输出或用本地答案替代模型"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "日本政党合并、印度季风预测、巴拿马日通行数量时期、苏丹援助崩溃风险四新事件，四正常/四错误短语变体；八上下文窗口；苏丹源句/两候选独立抽取",
+      "evaluation": "主Codex本地非盲回读每最终输出及来源窗口；现有引用合同与事后逐句诊断分开；88机械回归通过，项目typecheck exit0且四任务缓存命中",
+      "result": "模型原始父句状态8/8与参考一致，原始4错误未标supported、4正常未误判；但两错误句来源编号不匹配，各引用在包内唯一匹配其他来源，笼统validator自愈重复错误，两个四题batch均接口失败，实际0放行/0明确拦截/8复核，不能宣称漏报0%。事后逐句6/8接口通过，印度拒绝理由仍不完整；部分引用超过提示150字符而旧validator未强制。三报告抽取忠实且warn/confirm可机械区分，但eventState全unknown且新事件配对未接通；数量窄规则八题全部not_covered，包括新数量时期错配",
+      "cost": "5逻辑调用/7HTTP，9025已知tokens，66.852累计请求秒；全HTTP200及usage已知，无基础设施故障，无远程judge；美元费未查询；所有调用已结束",
+      "record_completeness": "complete",
+      "file": "experiment-fresh-dev-frozen-probe.md",
+      "content": "这轮只改变材料/上下文窗口，不把旧补丁题号当新材料规则。冻结方案hash为588cf2e6b09cc5ce1fb0480626cdf144ad275a9e5e18313153d48e4b1d778dd7，完整plan/references/calls/results/local-review/run-state均在out/atomic-evidence/fresh-dev-v0.15。\n\n新信号是harness来源绑定、笼统错误信息及batch故障扩散仍可复现；语义解释忠实性和通用覆盖也未解决。下一步优先代码唯一exact quote来源绑定、逐句隔离、具体字段反馈，先对保存真实raw做无新增调用回归，再另选新事件有限真调用。纠正来源编号不能自动证明印度理由成立，不扩大或揭示最终heldout来掩盖这些边界。"
+    },
+    {
+      "id": "experiment-full-practice-leak-replay",
+      "type": "experiment",
+      "title": "漏错优先完整缓存回放：三旧漏点已补，收益依赖旧基线与局部复核",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "60开发练习/32错误点的旧真实基线与少量已复核关系补丁缓存回放，非分解原型全量真实运行或独立验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FULL-PRACTICE-RESULT.md",
+      "conditions": [
+        "完整保留60题及双错误父句，接口失败单列，不把未知算检出；无新远程调用/judge/heldout/生产融合",
+        "连续数量+状态+单位有限语法，只支持areas/elements的受损毁坏状态，无固定数字/人名/题号，源群体及状态未建立必须本地复核",
+        "路由不读参考标签，旧基线文本/证据hash一致；复用v0.13语义hash门，本地Codex非盲数量审核绑定完整routing/hash及quantity/hash",
+        "宽工作点继承旧基线放行的未覆盖风险；严格工作点无完整覆盖证书便转复核，两者只是反事实回放"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "全部60题，30正常/30错误变体，32显式原错误；历史baseline58有效，其余2接口失败；p11/p12关系和新p20数量状态补丁",
+      "evaluation": "主Codex本地非盲读UNESCO原文核对562 damaged areas绑定，回归87通过；评分按每原错误保留/移除/复核，不把整句拦截说成逐项诊断",
+      "result": "三已知漏放由3变0，其中新增p20连续绑定而非destroyed词命中。完整32错误点中旧基线28整句阻断+新三窄诊断阻断+一接口失败复核。宽回放29放行/29拦截/2复核，正常误拦0但1正常接口失败；严格0放行/29拦截/31复核。未证明新分解模块诊断31/32或总体漏错0%，正常完整核验及独立可靠性未验",
+      "cost": "新增远程调用0/美元支出0；继承已保存真实模型成本见历史，不重复计费；本地回归/回放成本未计",
+      "record_completeness": "complete",
+      "file": "experiment-full-practice-leak-replay.md",
+      "content": "旧3/29指标来自共同有效子集，本次完整错误点32含一个接口失败，不能跨分母宣称准确率提升。宽策略29放行依赖旧模型，严格策略无人放行故零漏放不代表能力增强。三原漏点均已参与开发，下一步冻结规则再对未用于修补的新开发事件做有限真实实验，未采用或部署该工作点。"
+    },
+    {
+      "id": "experiment-heldout-binding-verifier",
+      "type": "experiment",
+      "title": "预留c28/c51冻结验收60条：漏放10%，忠实诊断失败13.3%，未达标",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "用户授权打开预留c28/c51来源；30正常/30人工注入错误短语60控制；来源heldout但非独立盲写标签或自然错误金标，非生产验收",
+      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md",
+      "conditions": [
+        "核验组件逐项与v0.19.1回归冻结hash相同，先precommit再读来源再编写冻结60条；不按结果改prompt/schema/factor/routing，不删失败题，不重试语义错误",
+        "每簇hash固定取15文章，原文半径2未截断，5风险类型目标均衡，997234无早期数量时调用前记录改归因，最终quantity5/actor7/polarity6/state6/scope6；未按规则coverage筛选",
+        "glm-4.7-flash真Workers AI REST+Gateway skip-cache、thinking关闭、max_tokens5000、temperature0/合同修复0.1，batch2，35逻辑70HTTP110000tokens/单请求60秒，最多5单条修复，无远程judge",
+        "主Codex本地先读所有源窗口再读全部60保留raw审计，结果与逐raw hash绑定；标签不进入请求。底层Pentagon战争等事件与开发文章可能相关，30文章不等于30独立事件；c28/c51现在已消费不得再称未接触heldout"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "60控制=30正常30错误短语/关系，30文章、两预留簇各15组；非既存自然错误金标，无旧版本同材料对照，不能作总体概率或纯架构因果结论",
+      "evaluation": "主Codex非盲审计原文和完整输出；正确block但解释否认原文已有事实也保守算诊断失败，未知/合同失败不检出；113机械测试通过，项目typecheck exit0且4任务缓存命中，不当语义质量证明",
+      "result": "错误漏放3/30=10%，忠实诊断未识别4/30=13.3%，正常误拦1/30=3.3%、正常放行29/30、总复核0/60，60最终合同有效。漏点为获救改死于获救前、33.4总/22.3弹药金额互换、Sacks条件性halt加入not；另零武器错误虽拦理由否认已有sustain a conflict。正常AI演员忠实描述误拦。规则本批无diagnosis/路由变化，无增量拦截；开发回归5%未稳定迁移，预注册严格<10%目标失败",
+      "cost": "31逻辑31HTTP，45029已知tokens，150.232请求秒；1正常errorChoice合同错误反馈成功，无语义重试/连接失败/未知usage/远程judge；美元价未知，无生产修改/部署/提交，所有调用结束",
+      "record_completeness": "complete",
+      "file": "experiment-heldout-binding-verifier.md",
+      "content": "precommit hash b290278a1b1ed31747942c4b11eb72a1a518e57a525d981693752c9821daeb42；plan hash 0b0651ee54bca5ce682103d8fc4bbad6ab708eee5d561013cff275e6acef90ab；results hash e21884abe6bbd3543f7a65673bfc26f95619ff4109d9e1bc1116df20362175ad。完整产物为source同目录。\n\n来源首次打开不等于独立盲验：主Codex冻结后自编正常/错误控制，簇含离题与相关报道；材料中Pentagon费用事件与开发池相关，需收窄为来源文章隔离。将30错误假定iid时，双侧95%精确二项上端漏放26.5%、忠实诊断失败30.7%，但项目实际相关数据不能用此置信结论；无论如何没有证明总体稳定<10%。\n\n三个实际漏放都在模型理由或exact receipt中有正确源信息，仍标相反候选supported。基础设施和最终schema在本批没有失败，残留是语义关系比较与窄规则完整性边界。引用选择有个别弱receipt，合法定位也不能自动证明引用充分性。后续迭代可以使用本批作为已知失败开发材料，但必须另预留未接触、跨事件验收集；不通过重跑或修题后回放将其重新命名heldout成功。"
+    },
+    {
+      "id": "experiment-history-falsified-bigger-extraction-batch",
+      "type": "experiment",
+      "title": "历史证据摘要：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-bigger-extraction-batch.md",
+      "content": "抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-bigger-extraction-batch；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-bigger-writer-model",
+      "type": "experiment",
+      "title": "历史证据摘要：换更大的写作模型治不了关系错：只换错法，成本 5–11 倍",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "换更大的写作模型治不了关系错：只换错法，成本 5–11 倍",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-bigger-writer-model.md",
+      "content": "换更大的写作模型治不了关系错：只换错法，成本 5–11 倍\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-bigger-writer-model；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-dedup-candidate-tightening",
+      "type": "experiment",
+      "title": "历史证据摘要：收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%",
+      "date": "2026-09-13",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-dedup-candidate-tightening.md",
+      "content": "收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-dedup-candidate-tightening；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-endtoend-longcontext-mds",
+      "type": "experiment",
+      "title": "历史证据摘要：「强模型整簇直读直写」不是效果上界：新闻多文档合成上 Joint Score < 20%，GPT-4 只覆盖不到 40%",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "改报告层结构",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "外部文献，本仓未复现 —— arXiv:2407.01370 (SummHay, EMNLP 2024) + arXiv:2309.09369 (DiverseSumm, NAACL 2024)",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "「强模型整簇直读直写」不是效果上界：新闻多文档合成上 Joint Score < 20%，GPT-4 只覆盖不到 40%",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-endtoend-longcontext-mds.md",
+      "content": "「强模型整簇直读直写」不是效果上界：新闻多文档合成上 Joint Score < 20%，GPT-4 只覆盖不到 40%\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-endtoend-longcontext-mds；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-five-slot-srl",
+      "type": "experiment",
+      "title": "历史证据摘要：强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽",
+      "date": "2026-09-11",
+      "status": "recorded",
+      "tasks": [
+        "改报告层结构",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-five-slot-srl.md",
+      "content": "强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-five-slot-srl；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-input-position-truncation",
+      "type": "experiment",
+      "title": "历史证据摘要：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/input-selection-spike.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-input-position-truncation.md",
+      "content": "位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-input-position-truncation；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-intrinsic-self-correction",
+      "type": "experiment",
+      "title": "历史证据摘要：无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "外部文献，本仓未复现 —— arXiv:2310.01798（Huang et al. 2023）",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-intrinsic-self-correction.md",
+      "content": "无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-intrinsic-self-correction；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-length-rewrite",
+      "type": "experiment",
+      "title": "历史证据摘要：让模型「压到 X 字符」重写：实测多次原样返回",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "控制成稿长度"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "让模型「压到 X 字符」重写：实测多次原样返回",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-length-rewrite.md",
+      "content": "让模型「压到 X 字符」重写：实测多次原样返回\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-length-rewrite；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-minimal-unit-compression",
+      "type": "experiment",
+      "title": "历史证据摘要：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/srl-compress/out/",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-minimal-unit-compression.md",
+      "content": "把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-minimal-unit-compression；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-multi-agent-debate",
+      "type": "experiment",
+      "title": "历史证据摘要：多智能体辩论（多个 agent 互相质疑）不是让小模型逼近大模型的手段：等算力下弱于简单多数投票",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "外部文献，本仓未复现 —— arXiv:2311.17371（ICML 2024）+ arXiv:2604.02460",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "多智能体辩论（多个 agent 互相质疑）不是让小模型逼近大模型的手段：等算力下弱于简单多数投票",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-multi-agent-debate.md",
+      "content": "多智能体辩论（多个 agent 互相质疑）不是让小模型逼近大模型的手段：等算力下弱于简单多数投票\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-multi-agent-debate；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-one-source-per-sentence",
+      "type": "experiment",
+      "title": "历史证据摘要：限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-one-source-per-sentence.md",
+      "content": "限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-one-source-per-sentence；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-rarr-default-on",
+      "type": "experiment",
+      "title": "历史证据摘要：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-rarr-default-on.md",
+      "content": "RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-rarr-default-on；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-retrieval-gapfill-loop",
+      "type": "experiment",
+      "title": "历史证据摘要：写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "提高写作层覆盖",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-retrieval-gapfill-loop.md",
+      "content": "写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-retrieval-gapfill-loop；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-falsified-sentence-semantic-folding",
+      "type": "experiment",
+      "title": "历史证据摘要：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/redundancy-probe.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-falsified-sentence-semantic-folding.md",
+      "content": "句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 falsified-sentence-semantic-folding；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-analysis-fields-vs-report",
+      "type": "experiment",
+      "title": "历史证据摘要：同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "生产库 articles.event_summary_points + M1-1789308830116 落盘报告",
+      "conditions": [],
+      "evidence_origin": "local_analysis",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-analysis-fields-vs-report.md",
+      "content": "同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-analysis-fields-vs-report；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-attribution-not-faithfulness",
+      "type": "experiment",
+      "title": "历史证据摘要：引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "外部文献，本仓未复现 —— arXiv:2412.18004",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-attribution-not-faithfulness.md",
+      "content": "引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-attribution-not-faithfulness；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-cost-input-output-split",
+      "type": "experiment",
+      "title": "历史证据摘要：抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-cost-input-output-split.md",
+      "content": "抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-cost-input-output-split；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-cross-article-redundancy",
+      "type": "experiment",
+      "title": "历史证据摘要：跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/redundancy-probe.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-cross-article-redundancy.md",
+      "content": "跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-cross-article-redundancy；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-dedup-fixed-overhead",
+      "type": "experiment",
+      "title": "历史证据摘要：去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/runs/M1-1789308830116/（四簇 observation spans，离线统计）",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-dedup-fixed-overhead.md",
+      "content": "去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-dedup-fixed-overhead；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-detection-ceiling",
+      "type": "experiment",
+      "title": "历史证据摘要：便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%",
+      "date": "2026-09-12",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-detection-ceiling.md",
+      "content": "便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-detection-ceiling；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-importance-signal-comparison",
+      "type": "experiment",
+      "title": "历史证据摘要：拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "改报告层结构",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/report-3step/fixtures/fact-checklists.json + M1-1789308830116 落盘报告",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-importance-signal-comparison.md",
+      "content": "拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-importance-signal-comparison；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-pipeline-cascade-loss",
+      "type": "experiment",
+      "title": "历史证据摘要：逐级有损压缩的流水线会系统性丢信息，这是独立文献观测到的现象，不是本仓孤例",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "外部文献，本仓未复现 —— arXiv:2502.06617 + arXiv:2505.24575 (NexusSum, ACL 2025)",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "逐级有损压缩的流水线会系统性丢信息，这是独立文献观测到的现象，不是本仓孤例",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-pipeline-cascade-loss.md",
+      "content": "逐级有损压缩的流水线会系统性丢信息，这是独立文献观测到的现象，不是本仓孤例\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-pipeline-cascade-loss；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-report-cost-structure",
+      "type": "experiment",
+      "title": "历史证据摘要：成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数",
+      "date": "2026-09-13",
+      "status": "recorded",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-report-cost-structure.md",
+      "content": "成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-report-cost-structure；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-retry-signature-gap",
+      "type": "experiment",
+      "title": "历史证据摘要：重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住",
+      "date": "2026-09-14",
+      "status": "recorded",
+      "tasks": [
+        "提高链路健壮性",
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-retry-signature-gap.md",
+      "content": "重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-retry-signature-gap；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-vote-signal-undercount",
+      "type": "experiment",
+      "title": "历史证据摘要：票数（被几篇报道）有两个独立的少算机制：漏挑与漏合，c13 实测 17 条骨架本该 26 条",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "改去重",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/runs/M1-1789308830116/（c13 observation 离线统计）",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "票数（被几篇报道）有两个独立的少算机制：漏挑与漏合，c13 实测 17 条骨架本该 26 条",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-vote-signal-undercount.md",
+      "content": "票数（被几篇报道）有两个独立的少算机制：漏挑与漏合，c13 实测 17 条骨架本该 26 条\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-vote-signal-undercount；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-history-measure-writer-input-anatomy",
+      "type": "experiment",
+      "title": "历史证据摘要：写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍",
+      "date": "2026-09-15",
+      "status": "recorded",
+      "tasks": [
+        "改报告层结构",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "source": "services/meridian-ai-worker/src/utils/brief-writer-v3.ts + M1-1789308830116 落盘报告",
+      "conditions": [],
+      "evidence_origin": "local_analysis",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "输入范围见原经验正文；准确运行清单未从历史节点恢复",
+      "evaluation": "沿用原文中的读数与判据；不宣称独立复评",
+      "result": "写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "summary_only",
+      "file": "experiment-history-measure-writer-input-anatomy.md",
+      "content": "写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-writer-input-anatomy；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
+    },
+    {
+      "id": "experiment-isolated-role-repair",
+      "type": "experiment",
+      "title": "角色接口修复：机械定位重复词、隔离坏行为并保留漏项义务",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "v0.6七开发目标真实调用与v0.6.1离线原输出回放，非端到端或独立验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/ISOLATED-RESULT.md",
+      "conditions": [
+        "固定Workers AI REST/glm，角色模型转换与代码字段处理，无heldout或远程judge",
+        "v0.6一次全部错误反馈；v0.6.1不改原始真实输出，新增直接相邻精确命题定位与declined/refused窄词面守卫",
+        "每行为隔离错误/未支持义务，保留原输出和失败历史，完整语义覆盖未知"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "p11/p12四候选三源句，原radius2上下文，真实调用与未修改原输出回放",
+      "evaluation": "主Codex本地查看原文/输出，59单元回归含正常对照和严格引用负例；人工schema迁移回归与无需人工修改的真实新输出回放分开",
+      "result": "重复引用不可表示与坏/未支持act拖垮合法兄弟的已知设计失败消失；真实v0.6仍错序号和漏declined，v0.6.1机械回放定位两said且保留declined漏项义务。p12源保留1合法act和2上下文污染错误义务；污染未根治，完整覆盖/对应/整句判决未验收",
+      "cost": "v0.6七逻辑十HTTP/11740tokens全部usage已知/累计请求75.31秒，零连接失败；v0.6.1回放新增远程调用0；金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-isolated-role-repair.md",
+      "content": "可机械定位的引用不应依赖模型正确数序号。隔离失败不等于完整成功；未支持和遗漏义务必须可见，不能通过删除难项自报修复。"
+    },
+    {
+      "id": "experiment-isolation-eight",
+      "type": "experiment",
+      "title": "证据隔离：八句探针",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "c36 冻结的四个硬错、四个正常句及九个最小对照",
+      "evaluation": "预声明坏句拦截与正常对照误杀；评测不能由被测 gate 自证",
+      "result": "4 个坏句均拦到坏原子，4 个正常对照零误杀；另有九个最小对照通过",
+      "cost": "八句探针：12 次证据包调用，9290 input / 2197 output tokens，100.7 秒",
+      "record_completeness": "complete",
+      "file": "experiment-isolation-eight.md",
+      "content": "4 个坏句均拦到坏原子，4 个正常对照零误杀；另有九个最小对照通过"
+    },
+    {
+      "id": "experiment-isolation-expanded",
+      "type": "experiment",
+      "title": "证据隔离：30 句扩展",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "failed",
+      "inputs": "30 句 c36 开发样本，含 26 个正常对照",
+      "evaluation": "预声明坏句拦截与正常对照误杀；评测不能由被测 gate 自证",
+      "result": "26 个正常对照中 4 句被拒；不能推广八句结果",
+      "cost": "本条摘要未确定完整调用成本",
+      "record_completeness": "complete",
+      "file": "experiment-isolation-expanded.md",
+      "content": "26 个正常对照中 4 句被拒；不能推广八句结果"
+    },
+    {
+      "id": "experiment-isolation-v5",
+      "type": "experiment",
+      "title": "证据隔离：聚焦 v5",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "failed",
+      "inputs": "c36 聚焦开发对照",
+      "evaluation": "预声明坏句拦截与正常对照误杀；评测不能由被测 gate 自证",
+      "result": "正常对照 2/4 被拒，且漏判错误归因和时序",
+      "cost": "本条摘要未确定完整调用成本",
+      "record_completeness": "complete",
+      "file": "experiment-isolation-v5.md",
+      "content": "正常对照 2/4 被拒，且漏判错误归因和时序"
+    },
+    {
+      "id": "experiment-mechanical-fields-replay",
+      "type": "experiment",
+      "title": "机械字段接管回放：明确词法错误修复，would和复杂scope保留未知",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "mechanical-v0.5，既有v0.4四固定命题和v0.3七角色目标离线回放；非独立或端到端验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-RESULT.md",
+      "conditions": [
+        "reportMode/eventState/polarity由有限词典和受限英语单谓语模板代码生成，roles仍LLM，unknown不回退模型",
+        "旧raw/原文保留；新增机械runner仅dry-run和模拟网络测试，未真实重跑角色prompt/错误反馈",
+        "主Codex本地复核开发回放；would时间、嵌套、外部否定/未知语法保留unknown"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "minimal-fields-v0.4真实results四固定命题（其中1合成）及split-heal-v0.3真实results/plan七目标；代码mechanical-v0.5",
+      "evaluation": "代码回放与主Codex对照冻结原文逐字段复核；新增接口失败、语义错误修复与未知分别计；新增45总本地测试通过不算语义覆盖证书",
+      "result": "固定12字段11确定正确/1would时间未知，修复旧3条明确polarity错误记录。七角色目标3通过新接口/3新增接口失败/1历史失败未恢复；拦he词内假锚点、长报告verb和伪报告动作；重复said无法唯一定位引入2引用错误，不计语义成功。新模式不发LLM状态请求；role覆盖/命题/整句核验仍未解决，未融合",
+      "cost": "本轮0远程调用/0远程token；既有raw回放和本地测试，无新增账单",
+      "record_completeness": "complete",
+      "file": "experiment-mechanical-fields-replay.md",
+      "content": "代码严格限定词法范围，并提供规则和原文线索；没有否定词不普遍等于肯定。机械字段能力不能证明上游语义抽取或端到端核验正确。新角色错误反馈全列表的真实效果仍待验。"
+    },
+    {
+      "id": "experiment-mechanical-real-partial",
+      "type": "experiment",
+      "title": "机械接管真实部分运行：正常句字段路径连通，两次连接失败后停止",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "mechanical-v0.5真实glm；计划7开发TARGET，仅p11正常候选完成，源句两次基础设施失败，5未运行",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-REAL-RESULT.md",
+      "conditions": [
+        "用户明确要求真实重跑，角色由LLM抽取，受限字段由代码生成，不调用远程judge/heldout",
+        "首个Network connection lost审计预留并重启一次，剩余第二尝试仍失败即停，不再恢复；服务关闭"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "not_evaluated",
+      "inputs": "冻结p11/p12七TARGET角色请求与radius2源上下文；真实glm-4.7-flash，temperature0/恢复0.1，max_tokens5000",
+      "evaluation": "主Codex对唯一正常候选结果逐字段复核；无源句对应/整句接受模块或错误题结果，基础设施失败不计模型质量失败",
+      "result": "p11正常候选两个报告角色忠实，reporters为听众，机械told/said均say、两命题positive、would时间unknown、was worded completed。source sentence3两次HTTP500 Workers AI binding Network connection lost，旧错误题及其余源文未运行，不能估核验收益或self-heal效果；不扩大融合",
+      "cost": "3HTTP/2逻辑，唯一成功478input+74output=552已知tokens；2失败usage未知，第一次预算预留11292非实测/可靠上界，第二次未知未恢复，账11844非总usage；累计请求14.399秒非墙钟，金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-mechanical-real-partial.md",
+      "content": "本轮只验证真实角色请求与机械字段路径实际连通，未验证旧错误检测。一次连接故障恢复后再次失败停止，保留环境故障事实，不将其写成方案语义淘汰依据。"
+    },
+    {
+      "id": "experiment-mechanical-rest-scheme",
+      "type": "experiment",
+      "title": "REST机械方案诊断：七目标执行，重复引用不可表示及源抽取阻断旧核验",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构",
+        "提高链路健壮性"
+      ],
+      "scope": "mechanical-rest-v0.5，4既有候选+3源句TARGET，完整执行前置转换链，非端到端核验或独立验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REST-SCHEME-RESULT.md",
+      "conditions": [
+        "真实Workers AI REST/现有Wrangler会话，固定glm/thinking off，角色模型转换、受限字段机械生成，无远程judge/heldout",
+        "每次最多一次全部错误反馈；规则冻结，无中途修订或后续扩采样",
+        "引用要求唯一但schema缺occurrence，不支持报告词整句失败，自动对应/整句聚合尚未实现"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "p11/p12四候选与三源句，原radius2上下文；7逻辑/10HTTP，temperature0/修复0.1，max_tokens5000",
+      "evaluation": "主Codex本地非盲对照原文/raw逐字段复核，contract_error与语义检错、正常抽取与正常整句保留分开；不将未知/接口失败计正确拒绝",
+      "result": "无连接失败，4TARGET接口通过/3失败，3次反馈均未完整修复。通过5报告12确定字段正确/3would时间未知。p11-u抽取忠实但两said无法唯一引用，是接口不可表示缺陷；source3不支持declined拖垮said；p12源句上下文污染/改写引用未修好。两个旧错误均无完整自动检错结果，正常整句保留未验；自动对应/聚合未实现，方案验收未通过，不扩大融合",
+      "cost": "10HTTP，8353input+912output=9265tokens，全部usage已知；累计请求34.098秒非墙钟/金额，美元未知；无后台worker",
+      "record_completeness": "complete",
+      "file": "experiment-mechanical-rest-scheme.md",
+      "content": "有限字段接管在条件成立时有效，但引用接口必须能够表达重复原文，不能让self-heal修复不可表示的合法内容。未支持行为要保留义务，不能将删除断言当修复。REST小样本连通不等于长期SLA或语义达标。"
+    },
+    {
+      "id": "experiment-minimal-fields",
+      "type": "experiment",
+      "title": "固定命题单字段诊断：显式否定仍漏检，混合任务也有局部干扰",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "minimal-fields-v0.4；3真实开发命题与1明确合成否定对照，人类固定报告verb/命题，字段分类而非端到端",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MINIMAL-FIELDS-RESULT.md",
+      "conditions": [
+        "同一冻结输入单字段3请求与三字段组合1请求，另2polarity新请求重复，原文/radius2上下文保留",
+        "先验参考本地测试冻结，提示含通用字段定义，无参考标签入模型；无self-heal、远程judge、heldout或融合",
+        "would conditional/future有类别边界，不能与显式did not漏检混为同强度语义错"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "真实glm-4.7-flash，18逻辑首次HTTP全部接口通过，temperature0，max_tokens5000；m1 warn/will，m2 confirmed/had already，m3 told/would undermine，m4合成said/did not",
+      "evaluation": "主Codex本地对照原文和raw逐字段复核，预注册参考与边界争议分别记录，未提供自动整句成绩",
+      "result": "单字段与组合均参考10/12；明确polarity错分别1/4与2/4。did not独立和组合均被判positive，最小任务错误存在；would undermine独立及一次重复positive正确，组合negative错误，局部支持任务混合干扰但无整体净胜证据。warn/future与confirm/completed固定输入均正确；窄代码对照12/12但不证明一般scope或端到端",
+      "cost": "18HTTP/18逻辑，9887input+168output=10055tokens，全部usage已知，累计请求22.431秒非墙钟/金额，金额未知；服务关闭",
+      "record_completeness": "complete",
+      "file": "experiment-minimal-fields.md",
+      "content": "当前模型/提示/schema条件下不能仅靠继续拆分保证可靠，不能外推所有LLM能力上限。代码能明确处理的词法字段优先机械化，开放语义与上游角色/命题抽取仍未解决。本轮不扩大融合，保留旧不同条件实验。"
+    },
+    {
+      "id": "experiment-practice-sixty",
+      "type": "experiment",
+      "title": "60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "glm-4.7-flash，五个 dev 簇，60 道人工练习；共同有效 54 题；非盲单标注，非独立验证",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+      "conditions": [
+        "Workers AI 是被测模块；参考标签与语义判断来自当前 Codex，无远程 judge"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "30 正常表述、30 人工错误变体、32 原错误片段、18 事件组；temperature 0/0.1 契约重试",
+      "evaluation": "冻结原句参考标签，Codex 本地核对漏判与变化；程序按原整句放行记录逐错误保留，不冒充逐错误机制诊断",
+      "result": "共同有效 54 题：整句漏错 3/29、代码槽 7/29；正常拒绝均 0/26；最终契约失败分别 2/60 与 5/60。模型槽第一批缺维度/假归因，第二批规划契约失败，停止扩大。无独立验证、组合或生产达标结论",
+      "cost": "已记录 51 HTTP 响应，54649 input / 31877 output tokens、累计 876.61 秒；不含一条未返回 usage 的中断请求，实际美元计费未知",
+      "record_completeness": "summary_only",
+      "file": "experiment-practice-sixty.md",
+      "content": "没有共同有效题由整句漏错变为代码槽正确拦截，新增四个漏判。零语义拒绝不等于正常题零损失，引用契约失败还会挡掉正常候选。详见原结果与 out/atomic-evidence/practice-v1/local-review.json。"
+    },
+    {
+      "id": "experiment-relation-chain-dev",
+      "type": "experiment",
+      "title": "真实代词与配对接入代码比较：旧归因/警告完成态错误已定位，正常配对仍未知",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "v0.10/v0.11复用真实抽取的四已知开发候选，主Codex非盲语义复核后代码比较，不是独立可靠性或整句通过",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/RELATION-CHAIN-RESULT.md",
+      "conditions": [
+        "复用v0.9原始真实抽取与v0.9.1确定性规范化，不重新抽取；固定Workers AI REST/glm，无heldout或远程judge",
+        "每轮最多7逻辑/14HTTP/15000tokens，1次实际错误反馈；身份消歧与单命题配对独立，配对不见报告模式/说话人",
+        "v0.11改编号选择/不透明候选ID及开发事件区分提示，非纯消融；本地审核hash门必须覆盖命题与身份，未知不计成功检错"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "p11/p12两旧错误及两正常；1个He解析、6个候选报告配对，每轮固定同任务",
+      "evaluation": "主Codex本地非盲复核5个命题对应与He→Meink，绑定结果/配对/解析hash；71运行测试，结构/语义与正常关系/整句分开",
+      "result": "v0.10He编造ID且正常披露命题错配公告措辞；v0.11He解析正确，5/6命题忠实提案，正常p12配对未知。复核后代码定位p11-u两个Reporters/Meink说话人差异，以及p12-u confirm/warn与completed/future差异。正常p11两报告关系保留但would时间未知，正常p12未误拒但未保留成功；正常整句均pending，不宣称方案通过或独立2/2可靠性",
+      "cost": "两轮17HTTP/7651已知tokens，无连接失败；v0.10 4143tokens/35.469累计请求秒，v0.11 3508tokens/34.238秒；本地复核重放0远程调用，金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-relation-chain-dev.md",
+      "content": "结构/锚点合法仍可配错事件；旧错误的机械差异必须以已复核语义对应和身份为前提。正常p12从v0.10可配到v0.11未知，提示/接口改变不保证正常关系稳定保留。停止本轮有限迭代，下一步对事件/参与者拆分做最小正常对照，不能将未知计正确拒绝或用本地judge答案填回模型结果。"
+    },
+    {
+      "id": "experiment-relation-confirm-dev",
+      "type": "experiment",
+      "title": "v0.18补单位偏好后40另批真LLM：漏放仍10%，忠实诊断失败20%",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "20另批新开发文章正常错误40对照，固定开发池非盲，自然错误与跨事件泛化未知",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "conditions": [
+        "v0.17全部接口沿用，新增完整population+unit数量比较、显式配对偏好分支、actor+import-ban范围、同完整proposition报告者；不存在的表示不当检出，coverageVerified仍false",
+        "v0.18代码材料运行前冻结，文章未用于此前测试；事件相关性可能存在，heldout未读，不宣称20独立事件",
+        "glm-4.7-flash真Workers AI REST+Gateway skip-cache，完整半径2原文，batch2，25逻辑/50HTTP/90000tokens/60秒单请求上限，最多5单条合同修复；无远程judge"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "40条20正常20单注入错误短语，与v0.17不同文章，非独立自然错误可靠性样本",
+      "evaluation": "主Codex本地读完整原文/raw，按错误本身忠实解释保守审计，结果及每条raw哈希绑定；正确路由不等于正确诊断",
+      "result": "漏放2/20=10%，忠实诊断失败4/20=20%，正常误拦/复核0/20，总复核0/40；40最终合同有效，2单条修复成功。错接受Cambodia而非Thailand终止协议、two homes/seven vehicles数量反向；Iran人/账户虽拦理由数量反向，Gulf虽拒绝已交付理由错误否认4trillion。新增规则本批只有报告者可比较且模型已正确拦，增量0。先前单位偏好漏点离线修复不代表这批达标",
+      "cost": "22逻辑22HTTP，30870已知tokens，62.697累计请求秒；无基础设施/未知usage/远程judge，美元价未知，无生产修改/部署/提交",
+      "record_completeness": "complete",
+      "file": "experiment-relation-confirm-dev.md",
+      "content": "plan hash ea1cf39e862404cad7a7c8205d9034cb0493025040f2d3b08c2875c757706604；results hash 047e9a4fd3575a4cac16cd8a3b8d56ed6862f614bc0fb55ec9eaffe063c69307。产物在scripts/eval/cluster-to-brief/out/atomic-evidence/confirm-dev-v0.18。与旧失败机制相同：模型可以引用正确主体/数量同时判断错误候选supported；引用接地不保证关系一致。"
+    },
+    {
+      "id": "experiment-relation-factor-review",
+      "type": "experiment",
+      "title": "回读核验输出：断言遗漏、关系不等价、数值状态错拼与拒绝理由越界",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "practice-v1 七个已知错误题的现有 baseline/rules 输出；非盲回顾，未新增模型调用",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+      "conditions": [
+        "候选、原句和原模型输出均来自已完成练习；不能识别隐藏推理阶段"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "p08/p11/p12/p14/p20/p21/p29 的错误句、冻结证据及两路线检查输出",
+      "evaluation": "当前 Codex 直接回读原文和检查理由；没有新模型、远程 judge、独立样本或盲审",
+      "result": "p14 未核验第二断言；p21/p12 关系不等价仍 supported；p20 分开支持数值与状态后错拼；p08 正确拒绝但理由加入无证据 Lloyd Austin。候选/证据关系抽取未单独记录，架构/提示词/能力归因未解。14题三臂新探针已写但被安全审批拦截，未运行",
+      "cost": "新增被测模型请求0、token0；本地实现与阅读耗时未计，金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-relation-factor-review.md",
+      "content": "详见 source。探针接口三项测试和 fixture 检查通过，typecheck 四项缓存命中；这些不证明关系接口有效。未改生产、未提交部署、未读 heldout。"
+    },
+    {
+      "id": "experiment-specialist-eight",
+      "type": "experiment",
+      "title": "人工窄问题与全维度检查：八例对照",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "四个已知风险负例与四个正常对照；问题手工编写",
+      "evaluation": "Codex 会话读取冻结原文判定；非盲评、非多人标注",
+      "result": "specialist 漏判 0/4、误杀 0/4；alignment 漏判 0/4、误杀 2/4",
+      "cost": "两路线共五次成功 HTTP 调用，3282 input / 4542 output tokens，91.02 秒；包含格式失败与记录在案的省略号恢复",
+      "record_completeness": "complete",
+      "file": "experiment-specialist-eight.md",
+      "content": "specialist 漏判 0/4、误杀 0/4；alignment 漏判 0/4、误杀 2/4"
+    },
+    {
+      "id": "experiment-structure-router-c36",
+      "type": "experiment",
+      "title": "structure-router：c36 冻结慢档",
+      "date": "2026-09-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/out/slow-structure-router-dev.json",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "c36 houthi，82 篇，dev；仅此簇",
+      "evaluation": "冻结慢档核心清单与逐句事实判定；不能用快档 exit 0 替代",
+      "result": "核心覆盖 1/7；hard=0；fatal=0；整体未达标",
+      "cost": "未从证据中确定，不补写估算",
+      "record_completeness": "complete",
+      "file": "experiment-structure-router-c36.md",
+      "content": "核心覆盖 1/7；hard=0；fatal=0；整体未达标"
+    },
+    {
+      "id": "experiment-structured-split-heal",
+      "type": "experiment",
+      "title": "拆分角色与状态加错误反馈：五次自然修复两次接口通过，语义错误仍漏检",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "split-heal-v0.3，p11/p12四候选与三源句；转换组件，不含自动对齐/整句接受，不读heldout",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/SPLIT-HEAL-RESULT.md",
+      "conditions": [
+        "TARGET逐句角色转换，独立逐报告状态转换，源句附原radius2上下文；代码分配来源命名空间ID",
+        "实际代码校验错误加上次输出回传最多一次，无标准答案注入；主Codex本地非盲复核，无远程judge",
+        "与v0.2接口/职责不同，且无无反馈消融，不能归因净收益"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "7TARGET，真实glm-4.7-flash，temperature0/修复0.1，max_tokens5000；另1明确注入非原文引用测试",
+      "evaluation": "主Codex逐字段对照raw/原文；接口与语义分别报告；没有整句成绩，注入故障与自然失败分开",
+      "result": "自然5次初次契约失败，2次修复接口通过、3次失败；注入引用1次修复通过。p11说话人与听众差异可见，但would/完成主张误判negative、told误判warn、非报告命题误抽报告等仍接口通过。p12源句混入上下文且错误大小写/插入词，首错反馈后重复坏输出，无法完成旧警告核验。裸substring与fail-fast反馈边界暴露，不扩大融合",
+      "cost": "18逻辑/23HTTP，15706input+1365output=17071tokens，全部usage已知；累计请求172.844秒非墙钟/金额，美元未知；服务关闭",
+      "record_completeness": "complete",
+      "file": "experiment-structured-split-heal.md",
+      "content": "真实结果仅支持部分接口错误可修；语义引用校验仍非忠实认证。有限动词/否定cue代码处理、词边界和全部错误反馈属于后续候选，尚未真实验证。34本地测试及typecheck成功不算语义成绩。"
+    },
+    {
+      "id": "experiment-structured-verifier-local",
+      "type": "experiment",
+      "title": "结构核验组件本地测试：代码可诊断三类参考错误，但真实转换未验且两正常整句pending",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "structured-v0.2，6题人工参考结构与29本地测试；非模型准确率、非独立验证，不读heldout",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/LOCAL-RESULT.md",
+      "conditions": [
+        "参考结构与对齐人工指定，不进入模型；真实Workers AI调用因缺明确数据发送授权尚未运行",
+        "候选/证据context-v2参考判断由主Codex非盲本地复核"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "observed",
+      "inputs": "p11/p12/p20正常/错误对，人工相关结构切片；14题适用性盘点；synthetic接口/边界控制与mocked fetch",
+      "evaluation": "实际node --test 29项通过，runner dry-run和oracle实际运行；主agent逐项核对，人工图测试与真实NL转换分账",
+      "result": "人工结构下说话人换位输出speaker冲突，状态强化和数量状态错接输出字段not_established。三正常已表示义务保留，仅p12整体pass，p11/p20因scope残留pending。负控制显示转换器遗漏第二断言却假报整句覆盖可导致code pass；semanticCoverageVerified始终false。未知状态/空单位误放行和十进制误差已复现修复；模型结构忠实性、独立验证与完整组合未测",
+      "cost": "新远程被测请求0/token0；mock21逻辑调用仅测传输编排，不是模型用量；人工与本地耗时未计，金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-structured-verifier-local.md",
+      "content": "不能称旧核验问题已解决：本轮只证明在人工参考结构条件下的窄业务代码能力。正常scope pending和未声明的语义遗漏仍是边界。下一步须获数据发送授权，冻结版本后跑真实转换与同上下文对照；pending不计为语义检错成功。"
+    },
+    {
+      "id": "experiment-structured-verifier-real-partial",
+      "type": "experiment",
+      "title": "真实结构核验部分烟测：证据漏报告关系、图错对齐，未知不算正确检错",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "glm-4.7-flash，structured-v0.2/context-v2，p12-u完整与p11-u部分；计划6题未跑满，非盲开发诊断",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+      "conditions": [
+        "用户要求真实LLM后审批通过，候选/证据独立转换；无参考图/标签入模型，无远程judge",
+        "一次AI binding连接丢失后审计重启并最多恢复一次，未知usage留预算reserve；预算停止后服务关闭"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "failed",
+      "inputs": "冻结6题opaque计划，实际8HTTP/6逻辑请求，1完整题/1部分题，4题未运行；temperature0及第二尝试0.1，max_tokens5000",
+      "evaluation": "主Codex本地对照冻结原文与raw逐字段审查；契约通过不计语义通过；pending不计精确检错，无正常或数量模型结果",
+      "result": "p12-u候选保留错误，但证据漏analysts warn报告fact、错recipient且重复；alignment错把Analysts与Troy Meink等同，fact配到部署报告。代码proposition_identity_required返回未知，baseline仍误放行。p11-u两候选尝试图指针/引文失败，证据覆盖失败。未证明解决旧核验问题，不扩大融合；拆小转换及ID命名空间化仅待验证候选",
+      "cost": "8HTTP，其中7有usage共11537input/5623output=17160已知tokens；1失败usage未知。保守reserve15576，预算账32736达到30000停止线；累计请求123.187秒非墙钟/账单，美元金额未知",
+      "record_completeness": "complete",
+      "file": "experiment-structured-verifier-real-partial.md",
+      "content": "本地oracle通过与真实转换失败分别保存，不能将局部正确代码能力当成NL核验链路效果。主要新信号是字段转换和结构对应本身仍有不忠实问题；独立转换及窄枚举不足以自动建立可靠比较前提。未知仅避免了这一题被放行，不能证明错误诊断或正常保留。本轮服务关闭，无生产/heldout变化。"
+    },
+    {
+      "id": "experiment-target-only-role-repair",
+      "type": "experiment",
+      "title": "目标句隔离、四引用接口与机械规范化消除既有转换阻断",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "提高链路健壮性"
+      ],
+      "scope": "v0.7/v0.8/v0.9同七开发目标真实迭代与v0.9.1真实原输出离线回放，非独立验证或整句验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/TARGET-ONLY-RESULT.md",
+      "conditions": [
+        "抽取阶段仅TARGET，身份消歧独立暂缓；固定Workers AI REST/glm，无远程judge/heldout",
+        "v0.8移除LLM复制与序号任务，四引用接口；v0.9代码报告词清单与遗漏/重叠真实错误反馈一次",
+        "v0.9.1只对唯一长度保持大小写匹配还原原文及共享原主语明确and later兄弟报告截界，保留变换收据；底层精确校验不放宽"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "p11/p12四既有候选三源句，同目标有限迭代，不扩大样本；各版原始失败保存",
+      "evaluation": "主Codex本地原文/输出核对关键报告关系与64回归；未执行独立盲审或wholeClaimVerdict，词面守卫不证明语义完整",
+      "result": "隔离后无邻句混入；v0.7仍复制字段错，v0.8仍漏独立报告/角色跨入报告词，v0.9恢复两said但源句大小写错及正常句命题跨界残留。v0.9.1不改原始模型输出回放七目标无锚点/重叠/词面漏项错误，十合法act、declined一未支持义务；身份消歧/完整覆盖/自动对应/整句验收未完成，非方案通过",
+      "cost": "三真实轮共25HTTP/13051已知tokens，无连接失败；v0.9八HTTP/3842tokens/累计请求38.567秒；v0.9.1回放新增远程调用0，美元未知",
+      "record_completeness": "complete",
+      "file": "experiment-target-only-role-repair.md",
+      "content": "先分离目标抽取与上下文消歧，避免供给更多上下文同时扩大抽取任务。机械复制、编号、窄原文规范化由代码接管；已知词面遗漏进入实际错误反馈，但不能据此证明全部语义覆盖。"
+    },
+    {
+      "id": "experiment-workers-ai-rest-connectivity",
+      "type": "experiment",
+      "title": "开发binding替代REST：短6/6、长4/5成功，认证异常仍未消除",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "提高链路健壮性",
+        "治事实关系错"
+      ],
+      "scope": "本地开发Workers AI连接诊断，现有Wrangler OAuth+官方REST；非长期SLA或语义验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/CONNECTION-RESULT.md",
+      "conditions": [
+        "固定真实glm-4.7-flash/thinking off，官方REST指定Gateway/skip-cache，绕过wrangler remote binding",
+        "现有凭证只进程内使用，不输出保存、不新登录修改权限；首失败停，有界组测试，保留401",
+        "组间时间/认证会话存在变化，不能因果证明binding是唯一根因；Gateway观测日志未另查"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "项目token1请求；OAuth短5请求、代表长1、短长配对2、长确认3，共12HTTP；长输入同source-1007986-3冻结角色prompt/schema",
+      "evaluation": "HTTP200且OK或可解析acts计连接成功，非语义成绩；固定预算/请求上限、首失败或usage未知停；原型adapter模拟测试另记",
+      "result": "项目token401/10000；OAuth短6/6成功、长4/5成功（一次401），最后长3连续成功。提供REST可选transport并缓存route版本，避免依赖不稳开发binding；未重跑整个REST机械核验计划、未保证长期稳定，语义角色错误仍存在",
+      "cost": "12HTTP，10成功4898input+495output=5393已知tokens；2次401无usage，未按0用量计；金额未知；无后台worker或部署",
+      "record_completeness": "complete",
+      "file": "experiment-workers-ai-rest-connectivity.md",
+      "content": "HTTP连接层、认证层、模型输出语义分开记。专用有效Workers AI权限token或用户控制有效OAuth会话是后续条件；重试不能替代正确凭证。新替代路径不消除历史binding故障，也不将成功JSON当核验正确。"
+    },
+    {
+      "id": "falsified-bigger-extraction-batch",
+      "title": "抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "invalidates_when": "下游（去重、写作层）被确认能容忍更高遗漏率，且有独立的召回护栏",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "清单召回不能掉",
+        "骨架 = 被 ≥2 篇报道"
+      ],
+      "evidence_origin": "local_record",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ],
+        "measured_by": [
+          "measure-cost-input-output-split"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-bigger-extraction-batch.md",
+      "content": "c18 20/30→15/30（−25%）、c0 12/13→10/13（−17%），**两簇都是满覆盖下测的**，不是批次失败造成的假象。\n\n降本的机制不是「摊薄固定指令开销」（那条理论上限只有 ≈8.7 个百分点），而是**模型在大批量下\n输出变少了**（completion_tok/句 降近一半）——它不是更精炼，是真的漏事实。拿覆盖率换成本，不是免费午餐。\n\n**方法论**：静态的 token 占比推算只能当下限参考。涉及模型行为的杠杆必须实跑——这次实际效果\n（41–47%）比理论上限（8.7pp）大了五倍，方向还正好是坏的那一面。"
+    },
+    {
+      "id": "falsified-bigger-writer-model",
+      "title": "换更大的写作模型治不了关系错：只换错法，成本 5–11 倍",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "出现价格接近 glm-flash 的强模型，或关系错的判据本身被重新定义",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "写作材料 = report-v3",
+        "一块一次调用"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {},
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-bigger-writer-model.md",
+      "content": "盲审读数（每 10 句的关系错）：glm-4.7-flash **1.37**、llama-3.3-70b **1.29**（成本 5×）、\ngpt-oss-120b **2.85**（成本 11×）。\n\n结论：关系错是小模型融合多条事实时产生的，**便宜模型的写作与检测都已接近上限**；\n要放心发布得靠发布前的强判官（离线）或人工把关，不是换写作模型。"
+    },
+    {
+      "id": "falsified-dedup-candidate-tightening",
+      "title": "收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%",
+      "date": "2026-09-13",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "invalidates_when": "骨架的定义不再依赖跨文章合并，或有了不靠余弦的候选生成方式",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "骨架 = 被 ≥2 篇报道",
+        "清单召回不能掉"
+      ],
+      "evidence_origin": "local_record",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ],
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-dedup-candidate-tightening.md",
+      "content": "四簇 neurons 2,340→2,202（−6%），但骨架事实 66→57（−14%，c13 从 22 掉到 15），\n且 c3 出现两条逐字相同、分属两篇文章却没并起来的事实（本该合成一条 ≥2 篇的骨架）。已回退。\n\n**关键教训**：已知事实召回**一条没掉**（c0 12/13、c18 22/30），完全看不出这个伤——\n召回只问「事实在不在」，不问「跨文章有没有并起来」。能看见的是骨架数。"
+    },
+    {
+      "id": "falsified-endtoend-longcontext-mds",
+      "title": "「强模型整簇直读直写」不是效果上界：新闻多文档合成上 Joint Score < 20%，GPT-4 只覆盖不到 40%",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献，本仓未复现 —— arXiv:2407.01370 (SummHay, EMNLP 2024) + arXiv:2309.09369 (DiverseSumm, NAACL 2024)",
+      "invalidates_when": "出现在 6–14 篇全文输入、数百至数千字符叙事产出这个设定下，端到端优于流水线的实测",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-endtoend-longcontext-mds.md",
+      "content": "**结论**：不要把「把整簇原文直接喂给一个强模型、一次写出正文」当作效果上界或目标形态。\n它在本任务族上是**已知的弱解**，不是天花板。\n\n**SummHay**(EMNLP 2024, arXiv:2407.01370)：新闻 + 对话两个 domain，单个 haystack 约 93K tokens、\n9.2 个子主题、6.75 insight/子主题。**不带检索器、直接长上下文喂 GPT-4o / Claude 3 Opus，\nJoint Score（覆盖 + 引用质量）低于 20%**；即使给 oracle 检索信号，最好的系统仍比人类表现（56%）\n低 10+ 分。\n\n**DiverseSumm**(NAACL 2024, arXiv:2309.09369)：245 个新闻故事、每个 10 篇文章（与本项目 6–14 篇同量级）。\n**GPT-4 平均只覆盖不到 40% 的 diverse information**，且有**位置偏差——偏爱读首尾文章**，\n「如何/什么」类问题的覆盖差于「谁/何时」。\n\n**对本项目的两条直接影响**：\n1. **撤回「强模型整簇直写 = 上界」这个前提**。2026-09-15 会话里曾以它为基准设计三臂对照实验，\n   该设计的 A 臂前提不成立。\n2. **位置偏差与 `pickSpreadArticles` 相互作用**：本仓的取样是「按时间等距 + 两端锚定」\n   （story-dedup.ts，实测事实覆盖 9/10 优于最新优先的 7/10），而 DiverseSumm 说模型偏爱首尾。\n   两端锚定在**喂**这个偏差——取样策略本身是对的（有实测），但下游模型会放大首尾，\n   中段文章的事实更容易被漏。这条尚未在本仓实测，**是个待验的交互作用**。\n\n**与本仓其他读数的张力**：本条说端到端不行，而 [[measure-pipeline-cascade-loss]] 说逐级压缩\n流水线会系统性丢信息。两条方向相反，正是 [[method-two-fighting-readings]] 要的那种对照——\n**结论不是「二选一」，而是「压缩程度与全局上下文之间有取舍」**。"
+    },
+    {
+      "id": "falsified-five-slot-srl",
+      "title": "强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽",
+      "date": "2026-09-11",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "换到能稳定做结构化论元抽取的模型档次（且成本账仍划算）",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构",
+        "改抽取prompt"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "模型档次 = Workers AI 上的便宜档"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "refutes": [
+          "claim-minimal-unit-representation"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-five-slot-srl.md",
+      "content": "簇 0：`glm-4.7-flash` 95 个框架里 **55 个把整句塞进谓词槽**，等于没结构化；换 `glm-5.3`、\n`deepseek-v4-pro` 各有新崩法；**开思考链三个模型全不可用**（3046 超时 / 思考链复读 / 正文为空）。\n\n**边界要划准**：元凶不是约束解码（同样的 JSON schema，改成「一句自由文本 + 出处」就正常），\n而是**逼模型逐字摘抄论元**。2026-09-14 的 codex 原型又验了一次：同样结构化输出，但让模型\n写短句 + 挂出处，glm-flash 一次没崩、出处 100% 有效（见 falsified-minimal-unit-compression）。"
+    },
+    {
+      "id": "falsified-input-position-truncation",
+      "title": "位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/input-selection-spike.md",
+      "invalidates_when": "核心文章数改成随簇大小自适应（而非固定 4 篇），或支持数不再依赖跨文章计数",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "每篇都要读到才能数支持数",
+        "引用要可解析",
+        "清单召回不能掉"
+      ],
+      "evidence_origin": "local_record",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "refutes": [
+          "claim-inverted-pyramid"
+        ],
+        "supports": [
+          "method-two-fighting-readings"
+        ],
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-input-position-truncation.md",
+      "content": "四簇 127 次调用、零失败批次。调用数 71→30（−57.7%），neurons −58.3%；但 c0 清单召回\n11/13→6/13（红线是掉 2 条），支持数 ≥2 的清单事实 13→8。\n\n**失败模式是结构性的**：核心文章数固定为 4，簇越大核心占比越低（c0/c3/c13 只有 25–29%，\nc18 却有 67%）。所以**召回崩盘恰好发生在最需要省钱的大簇上**，而 c18 看起来安全只是因为\n选材规则对它几乎没生效。一句话：省钱只在不贵的地方安全。"
+    },
+    {
+      "id": "falsified-intrinsic-self-correction",
+      "title": "无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献，本仓未复现 —— arXiv:2310.01798（Huang et al. 2023）",
+      "invalidates_when": "自检环节被改成对着原文/检索证据判，且判官独立于生成模型——那时它不再是 intrinsic self-correction",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "supports": [
+          "falsified-rarr-default-on"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-intrinsic-self-correction.md",
+      "content": "**结论**：让模型在**没有外部 ground truth / 检索证据**的情况下审查并修改自己的输出，\n准确率**反而下降**。《Large Language Models Cannot Self-Correct Reasoning Yet》\n(arXiv:2310.01798) 实测 GSM8K 从 **95.5% 降到 91.5%**。\n\n机制：LLM 缺乏**自主发现错误**的能力。错误被明确指出后它改得动，但让它自己找错就会开始改对的东西。\n\n**为什么对本项目重要**：这解释了本仓在 RARR 上观测到的现象（43 条删除里 20 条是误删，\n且加 prompt 约束反而更差；见 [[falsified-rarr-default-on]]）——那**不是本项目的个例，是一个\n有名字的一般现象**在不同任务上的复现。同样地，写作层「自检找漏两段式」若做成纯自我审视，\n文献预期它会伤质量；它必须对着原文判。\n\n**可操作的推论**：任何「让模型回头检查自己写的东西」的步骤，都要先回答一个问题——\n它手里有没有生成时没有的新信息（原文、检索结果、独立判官）。没有新信息就不要加这一步。\n\n**边界**：实测任务是推理题（GSM8K 等），不是摘要。但本仓已在摘要侧独立观测到同向结果\n（[[rarr-verification-overdeletion]]、[[falsified-rarr-default-on]]），两边互相印证。"
+    },
+    {
+      "id": "falsified-length-rewrite",
+      "title": "让模型「压到 X 字符」重写：实测多次原样返回",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "换到能稳定遵守长度指令的模型档次",
+      "type": "lesson",
+      "tasks": [
+        "控制成稿长度"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "写作模型 = glm-4.7-flash 档"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {},
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-length-rewrite.md",
+      "content": "Goal 1 用「把这段压到 X 字符」做长度控制，实测**多次原样返回**（模型确认了指令但不改），\n白烧一次调用。\n\n现行做法：长度目标写进 prompt（头条 1,200–2,000、要闻 500–900、简讯一句），\n**只在超硬上限时由代码删尾句**（2,400 / 1,100 / 200）。代码删句不会引入新内容，也不花调用。"
+    },
+    {
+      "id": "falsified-minimal-unit-compression",
+      "title": "把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/srl-compress/out/",
+      "invalidates_when": "目标从「省 token」换成「提质量/可核对性」——那时这条结论不适用",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "引用要可解析",
+        "清单召回不能掉"
+      ],
+      "evidence_origin": "local_record",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "refutes": [
+          "claim-minimal-unit-representation"
+        ],
+        "supports": [
+          "method-two-fighting-readings"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-minimal-unit-compression.md",
+      "content": "codex 原型，glm-4.7-flash，23 次调用约 $0.01。四条判据：**压缩不过**（c0 56.3%、c18 52.1%\n占原文，比现行自由句方案 40–50% 还长）；**可回溯过**（257 条出处全部解析得到）；\n**召回 c18 24/30 反而好于生产现行的 20–22**；归属分离结构上做到了但仍有 8–17 条 fact 混着 said/told。\n\n**归因不是模型能力**——这次没崩（对比 falsified-five-slot-srl）。是目标不匹配：拆成最小单元后\n一句原文变两三条，每条都要重写主语、各自挂出处，**总字数不降反升**。\n\n**一个测量坑**：原型自报 `contentRatio 5.2%` 是假的——分母用了整簇字符数、分子是单篇产出，\n按本篇算是 32%、全簇并集算是 52%。自动算出来的比率一定要核对分子分母的口径。\n\n> **2026-09-15：失效条件已被触发。** 目标改成「提质量 / 减少转述层数」后，本条不再适用——\n> 这里的 c18 召回 24/30（优于生产现行 20–22）反过来成了正面证据。\n> 见 claim-anchor-not-rewrite；别拿本节点去否那条主张。"
+    },
+    {
+      "id": "falsified-multi-agent-debate",
+      "title": "多智能体辩论（多个 agent 互相质疑）不是让小模型逼近大模型的手段：等算力下弱于简单多数投票",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献，本仓未复现 —— arXiv:2311.17371（ICML 2024）+ arXiv:2604.02460",
+      "invalidates_when": "出现在开放式长文本生成（非推理题）上、等 token 预算下测出 MAD 优于单 agent 的实测",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "falsified",
+      "legacy_relations": {},
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-multi-agent-debate.md",
+      "content": "**结论**：不要加「多个 agent 互相质疑 / 辩论」这一层来提升便宜模型的效果。\n\n《Should we be going MAD? A Look at Multi-Agent Debate Strategies for LLMs》(ICML 2024,\narXiv:2311.17371)：在**等推理算力**下，multi-agent debate **可靠地弱于**简单的\nself-consistency 多数投票。后续《Single-Agent LLMs Outperform Multi-Agent Systems on\nMulti-Hop Reasoning Under Equal Thinking Token Budgets》(arXiv:2604.02460) 进一步确认：\n等 token 预算下单 agent 的强 prompting 常常打平甚至超过多 agent 讨论，且**异质 agent 辩论\n有时反而拉低群体表现**。\n\n**为什么对本项目重要**：「用工程 harness 让便宜模型逼近强模型」最容易想到的形态就是多开几个\nagent 互评。这条路等于把预算花在错的地方——同样的 token 花在单次更好的 prompt 或更长的\n单遍推理上，期望收益更高。\n\n**边界**：两篇的任务都是推理题（多跳问答、数学），**不是开放式长文本生成**。所以严格说它否掉的是\n「MAD 是通用的等预算增益手段」这个更强的说法。但在没有反例之前，不该拿本项目的预算去赌它在\n摘要写作上反而成立。\n\n**与本仓已有结论的关系**：同族的失效模式是 [[falsified-intrinsic-self-correction]]——\n两者都指向「让模型互相看/自己看，而不引入外部证据，买不到质量」。"
+    },
+    {
+      "id": "falsified-one-source-per-sentence",
+      "title": "限制「每句正文只依据 1–2 条要点」来防关系错：头条缩到 530 字符、覆盖跌破门",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "长度与覆盖的门放宽，或找到「限融合但不缩水」的写法（方向本身未被证伪）",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "头条目标 1,200–2,000 字符",
+        "骨架覆盖有下限"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {},
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-one-source-per-sentence.md",
+      "content": "关系错的根因是模型融合多条事实时接错，所以试过强制每句最多用 1–2 条要点。\n结果头条**缩到 530 字符**、骨架覆盖跌破验收门——按这个做法不可用。\n\n**注意边界**：被证伪的是这个实现，不是「限融合能降关系错」这个方向——长度与覆盖的问题没解决而已。\n代码以 `variant: 'one-source'` 保留，默认不走。"
+    },
+    {
+      "id": "falsified-rarr-default-on",
+      "title": "RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "核对改成直接对原句、且有独立于生成模型的判官（现在是同一档模型自审）",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "核对材料 = 报告层产出"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {},
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-rarr-default-on.md",
+      "content": "分段写那一轮：24 块提了 **78 条 edit，只落地 10 条**。两个结构性问题：核对依据是**报告**而不是原文，\n所以报告里已有的错传不下去也纠不出来；prompt 式纠错精度天生低（调研：GPT-4 上 28.5%）。\n\n另有实测：RARR 在**删有据内容**（43 次删除里 20 次误删），加 prompt 约束反而更差。\n代码保留、默认关。现行做法是**只标记不改稿**（代码检查器），见 measure-detection-ceiling。"
+    },
+    {
+      "id": "falsified-retrieval-gapfill-loop",
+      "title": "写作层的「找漏 → 检索 → 重写」补漏 loop：覆盖只 +4–6 点，去掉后反而更高",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "检索通道换成能定位「该说而没说」的东西（现在是按与成稿相似度检索，天然捞回已写过的）",
+      "type": "lesson",
+      "tasks": [
+        "提高写作层覆盖",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "材料 = report-v3 的要点与原话",
+        "一块一次主调用"
+      ],
+      "evidence_origin": "historical_document",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-citation-resolvable"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-retrieval-gapfill-loop.md",
+      "content": "Goal 1 的做法：写完自检找漏 → 检索补材料 → 重写。实测每块多 **4–6 次调用**，覆盖只涨 4–6 点，\n而且模型把新材料**贴在文末**、补的是边角事实。Goal 2 去掉整个 loop 后，覆盖 87%→89%（头条）**反而更高**。\n\n根因：按「与成稿相似」检索，捞回来的都是已经写过的那些；真正漏掉的东西不相似，检索不到。"
+    },
+    {
+      "id": "falsified-sentence-semantic-folding",
+      "title": "句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/redundancy-probe.md",
+      "invalidates_when": "语料变成以通稿转载为主，或有了能可靠判「同一事实」的廉价判据（非余弦）",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [
+        "每篇都要读到才能数支持数",
+        "数字冲突要能被看见"
+      ],
+      "evidence_origin": "local_record",
+      "legacy_type": "falsified",
+      "legacy_relations": {
+        "measured_by": [
+          "measure-cross-article-redundancy"
+        ],
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "failure_or_literature_warning",
+      "file": "falsified-sentence-semantic-folding.md",
+      "content": "设想是把「折叠冗余」从 LLM 之后挪到之前：先归堆、每堆只抽一次，支持数由堆的文章成员直接得到。\n\n三条否决理由：冗余率只有 23.5% 且看新闻类型；即便覆盖率过关，抽取调用也只少 17–24%\n（大多是 2 篇合 1 堆）；降阈值就并错方向。**还有一个新结构独有的风险**：原始报道之间的数字冲突\n（10 vs 11 名患者）会被折叠抹平，而且只送一条代表句去抽取，另一个数字连被模型看到的机会都没有。"
+    },
+    {
+      "id": "goal-cluster-to-brief",
+      "type": "goal",
+      "title": "聚类后到简报：覆盖、安全与成本共同达标",
+      "date": "2026-09-17",
+      "status": "active",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "固定 dev 与 heldout 分割；heldout 仅最终验收",
+      "source": "scripts/eval/cluster-to-brief/README.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "criteria": "核心覆盖达到冻结通过线、hard <= 1、fatal = 0；出处与结构契约通过；记录成本，局部指标不能代替端到端判定",
+      "file": "goal-cluster-to-brief.md",
+      "content": "沿用 harness 的固定输入输出与快慢档，不为新原型事后改变验收尺。局部探针与端到端验收分开。"
+    },
+    {
+      "id": "invariant-citation-resolvable",
+      "title": "每条事实必须能指回「哪篇文章第几句」，报告要留全部原句",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "写作层不再做接地、检查器也不再逐句对齐（那时出处只剩审计用途）",
+      "type": "goal",
+      "tasks": [
+        "改报告层结构",
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "legacy_type": "invariant",
+      "legacy_relations": {},
+      "kind": "constraint",
+      "criteria": "每条事实必须能指回「哪篇文章第几句」，报告要留全部原句",
+      "file": "invariant-citation-resolvable.md",
+      "content": "下游有三处直接吃这个字段：写作层的**接地守卫**（名字/数字不在材料里就删句）、**代码检查器**\n（逐句对齐到事实、只在其出处窗口里找证据）、以及**引语逐字校验**。\n\n后果：任何「压缩表示」的方案都不能把原句丢掉——报告里 `sentences` 全量留存是零成本的（不过 LLM），\n真正受约束的是**事实必须携带可解析的 `sources`**。实测这条不难守：codex 原型 257 条出处 0 条失效。"
+    },
+    {
+      "id": "invariant-support-count",
+      "title": "「被几篇报道」是骨架与分层的骨干信号，所以每篇都得读到",
+      "date": "2026-09-11",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "改用别的重要性信号（如单篇内的显著性、编辑打分），不再靠跨文章支持数",
+      "type": "goal",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "legacy_type": "invariant",
+      "legacy_relations": {},
+      "kind": "constraint",
+      "criteria": "「被几篇报道」是骨架与分层的骨干信号，所以每篇都得读到",
+      "file": "invariant-support-count.md",
+      "content": "报告里每条事实带 `articles`（被几篇不同文章报道）。它决定两件事：**≥2 篇才算骨架事实**\n（写作层唯一的「要点」来源），以及简报的**分层排序**（源数 × 篇数）。\n\n后果：要数出这个数，就必须看过每一篇——这条不变量是后面一连串降本方案失败的共同原因。\n任何「少读一些文章」的设计都会先撞到它。"
+    },
+    {
+      "id": "lesson-practice-typed-anchors",
+      "type": "lesson",
+      "title": "枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "practice-risk-v1 人工材料上的当前 glm 核验接口，不能推论所有结构化核验无效",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+      "conditions": [
+        "代码槽首个显式词作为锚点；问题要求读完整候选，仍发生关系漏判"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failed_development_signal",
+      "invalidates_when": "关系绑定表示或其他接口在冻结后的新材料上证明能够减少漏判且保住正常事实；不能以本练习反复调好作为替代",
+      "file": "lesson-practice-typed-anchors.md",
+      "content": "模型填槽仍缺少时序/数量并添加假归因；代码选槽去掉了分类调用，却没有修好语义支持。原文明写 after，检查 before 仍判 supported；warn will 被用于支持 confirmed had already；told reporters 被用于支持记者说话；damaged 总数被搬成 completely destroyed 总数。\n\n因此不融合当前失败槽路线。下一缺口是绑定 speaker/recipient、事件对/方向、数量/对象状态与模态/命题作用域，而非增加类型数量；该替代表示尚未实现、测试或证明有效。练习扩展提高了发现问题的覆盖，尚未提供统计显著性或泛化证明。"
+    },
+    {
+      "id": "lesson-relation-factor-observability",
+      "type": "lesson",
+      "title": "核验因素诊断需区分断言覆盖、关系配对与解释忠实性",
+      "date": "2026-09-17",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "practice-v1 已知错误输出的回顾；不是对模型内部过程或通用能力的结论",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+      "conditions": [
+        "旧输出只保存锚点、引用、状态和理由，不单独保存两侧关系抽取"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "diagnostic_observation",
+      "invalidates_when": "新接口在冻结对照和独立材料上记录完整忠实关系并证明改善；当前显式配对接口尚未运行",
+      "file": "lesson-relation-factor-observability.md",
+      "content": "词命中失败可细分为输出中缺少断言、方向/状态不等价仍被接受、单独成立属性被错接，另外存在正确拒绝但解释增添无证据身份的情况。现有可见输出不足以定位抽取、比较、最终决策的隐藏因果；显式配对用于增加可观察性仍是假设，不应先行融合。\n\n2026-09-17补充：structured-v0.2的本地人工结构负控制显示，转换器漏第二断言却以整句span假报覆盖时，接口/代码比较仍可能pass；字节覆盖不能证明语义完整。真实NL转换尚未运行。人工参考图下代码可指出说话人、报告/事件状态与数量状态绑定差异，但p11/p20正常整句因未支持类型pending，不能把适用关系保留说成正常整体无损。新增证据见experiment-structured-verifier-local与其source。\n\n随后真实部分烟测补充（experiment-structured-verifier-real-partial）：证据schema/精确引用通过仍可漏analysts warn报告fact、错听取者和重复报告；对齐合法仍可把不同实体/报告对应成equivalent。代码因此返回未知而非正确诊断原错误，baseline误放行仍在。独立转换与窄业务枚举未自动解决忠实性；本版1题完整无正常成绩，不作泛化断言。本地/真实结果分开，不删除前面条件下的事实。\n\n2026-09-18补充：引用复制改整数span选择，两批共80新开发对照最终合同全部有效且正常无误拦，但各漏放2/20=10%。正确施事/数量出现在模型引用和理由中，仍能接受关系反向的候选。v0.19.1增加完整窄绑定键的机械归属比较，重复40条真LLM修补回归漏放0/20、忠实诊断失败1/20=5%；模型错误raw保留，独立代码诊断可修路由但不洗掉模型错误。引用harness问题与字段关系/解释忠实性问题已可分别观测；整句fallback、窄grammar事件限定和同事件材料相关性仍限制泛化。这不是完整独立结构化事实管线的成功证明。三实验及成本见experiment-factor-choice-dev、experiment-relation-confirm-dev、experiment-binding-repair-regression。\n\n随后一次冻结heldout来源验证（experiment-heldout-binding-verifier）反例：60条最终合同全有效，仍漏放3/30=10%、忠实诊断失败4/30=13.3%。三实际漏点的正确源信息均已在模型理由/引用内，却没有与候选的生死否定、数量归属、条件halt否定比较；当前规则无增量拦截，开发回归5%不能证明迁移。不是连接不稳或缺少关键源上下文；窄语法表示未覆盖与整句fallback语义比较共同留下边界。c28/c51已经第一次揭示并消耗，不再是未接触heldout；主Codex冻结后自编控制、簇内及开发事件相关性意味着仅来源文章隔离，不是独立自然错误可靠性验收。"
+    },
+    {
+      "id": "lesson-three-arm-tradeoff",
+      "type": "lesson",
+      "title": "三臂在 c36 都未达标：覆盖与证据约束的职责需要分离",
+      "date": "2026-09-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/out/slow-direct-raw-dev.json; scripts/eval/cluster-to-brief/out/slow-structure-router-dev.json; scripts/eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "kind": "tradeoff",
+      "invalidates_when": "新机制或样本改变后，需重新比较覆盖与事实错",
+      "file": "lesson-three-arm-tradeoff.md",
+      "content": "direct-raw 6/7 核心、hard=4；structure-router 1/7、hard=0；evidence-graph 0/7、hard=0。局部优势只构成机制提炼假设，不能由整体对照直接归因到单一组件。"
+    },
+    {
+      "id": "measure-analysis-fields-vs-report",
+      "title": "同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "生产库 articles.event_summary_points + M1-1789308830116 落盘报告",
+      "invalidates_when": "文章分析的 prompt 改成产出事实级内容（带句级出处），或筛选顺序改成先聚类后分析",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_analysis",
+      "legacy_type": "measurement",
+      "legacy_relations": {},
+      "kind": "observation",
+      "file": "measure-analysis-fields-vs-report.md",
+      "content": "**同一批文章，LLM 读了三遍**，三条流水线互不复用：\n\n| 遍 | 谁 | 产出 | 谁消费 |\n|---|---|---|---|\n| 1 | 文章分析（全量 500–770 篇/天） | `event_summary_points` 等结构化字段 | 拼成文本喂 embedding，供聚类 |\n| 2 | 报告层 extract（入选 ~150 篇/天） | 带出处的事实 | 写作层要点 |\n| 3 | 报告层 voices（入选 25 簇/天） | 当事方、分歧 | 写作层立场材料 |\n\n第一遍的产出除了拼成一个字符串喂 embedding，**再没人用过**。\n\n**能不能直接拿摘要点替代抽取——测了，不行**（金标同口径）：\n\n| | c0（金标 13） | c18（金标 30） |\n|---|---|---|\n| 摘要点（107 条 / 36 条） | 9/13 | 16/30 |\n| 报告层全部事实（78 / 27 条） | **13/13** | **20/30** |\n\n摘要点**条数比报告层事实还多**却覆盖更低。漏的全是专名、机构、金额：`Greer`、`Davos`、\n`European Parliament`、`Mosseri`、`Dutch court`、`$18bn settlement`、`Greens`、`New Zealand`。\n根因是两个 prompt 的目标不同——分析写的是给 embedding 用的**概括性主题句**，报告层写的是\n给写作层用的**事实台账**，概括天然丢专名。\n\n**把抽取搬进分析层也不划算，原因是基数**：分析对全量 500–770 篇跑，报告层只对入选 ~150 篇跑，\n比例 3.7:1。每篇多输出约 280 token 的详细事实要对 550 篇付（≈5,700 neurons/天），\n而省下的 extract + voices 只在 150 篇/25 簇上（≈5,900 neurons/天）——**大致打平，且对每天篇数敏感**\n（按 770 篇算就变净亏）。现行架构「把贵的抽取放在筛选之后」是对的。\n\n**想倒过来（先聚类后分析）走不通**：embedding 的输入是 `generateSearchText`，而它拼的正是分析产出的字段，\n所以分析必须全量先跑。用户口径的理由更根本——**不能预先假设标题和摘要能筛出该要的文章，\n分析本身就是召回机制**。\n\n顺带记一条盲区：`generateSearchText` 只有一句「从文章分析数据中提取关键信息」的注释，没有任何理由记录，\ngit 历史里只经历过目录重构；`scripts/eval/clustering/` 有金标、打分器、rubric，\n但**从没测过 embedding 的输入文本**，测的全是聚类器与阈值。"
+    },
+    {
+      "id": "measure-attribution-not-faithfulness",
+      "title": "引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献，本仓未复现 —— arXiv:2412.18004",
+      "invalidates_when": "出现能验证「模型确实依据这条证据生成」的机制（而非只验证证据是否支持结论）",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-citation-resolvable"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-attribution-not-faithfulness.md",
+      "content": "**读数**：《Correctness is not Faithfulness in Retrieval Augmented Generation Attributions》\n(arXiv:2412.18004) 实测发现，**高达 57% 的引用是事后合理化（post-rationalized）**——\n引用指向的文档确实支持该断言（引用「正确」），但模型并不是靠这条证据生成的那句话（不「忠实」）。\n\n**这条解释了本仓一个长期现象**：报告层的 `cite` 编号 100% 可解析、越界引用 0\n（见 [[invariant-citation-resolvable]] 与 falsified-minimal-unit-compression 那轮的 257 条出处全解析），\n**而关系错（时序、因果、名字数字接错事件）照旧发生**。两件事不矛盾：\n可解析的引用只证明「这句原文存在且相关」，不证明「这句正文是从它来的」。\n\n**可操作的推论**：\n1. **「引用可解析」不能当忠实度证据用**，也不能当验收门里的质量信号——它只排除「编造出处」这一类错。\n2. 开源同构项目 `elanthus/news-briefing` 的作者写下了同一件事的另一半：\n   「验证器只查引用是否指回语料库真实存在的条目，**不检查摘要语义是否忠实于原文**」。\n   本仓的 checkFact 是同一层级的检查器。\n3. 要治关系错，检测器必须逐句比对**所引原句的内容**，而不是比对引用编号的合法性。\n\n**风险的另一面**：也不要因此过度信任归因步骤本身去做删改——那会落进\n[[falsified-intrinsic-self-correction]] 与 [[falsified-rarr-default-on]] 那一类误删\n（RARR 43 条删除里 20 条是误删）。"
+    },
+    {
+      "id": "measure-auto-risk-question-drift",
+      "title": "自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验",
+      "date": "2026-09-17",
+      "status": "live",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "invalidates_when": "规划表示改变后能生成独立且完整的风险问题，并在正常时序与归因对照上不引入新前提",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门",
+        "演化组合架构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "measure-specialist-risk-gate",
+          "method-goal-guided-evolution"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-auto-risk-question-drift.md",
+      "content": "glm 只看候选自动生成 1–3 个问题；四句都生成三个，复合归因未形成独立身份检查，时序问题出现同义重复。\n正确 after 候选被额外改问 cause，引入候选未断言的因果；精确 claimSpan 和结构校验不能防止问题语义漂移。\nCodex 本地检查规划质量后停止，未运行下游 specialist，因此没有新的 gate 准确率结论。\n一次有效调用仅 336 input / 526 output tokens；小成本已看到信号，不重跑扩大样本。\n下一假设是受约束风险槽加确定性问题模板，仍需测试缺省维度与归因作用域，不能默认已解决。"
+    },
+    {
+      "id": "measure-cost-input-output-split",
+      "title": "抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "invalidates_when": "换模型或换计价（公式里的两个 rate 常数就得重测）",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "降低写作层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "supersedes": [
+          "claim-output-bound-cost"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-cost-input-output-split.md",
+      "content": "| 步骤 | 调用数 | 输入占比 | 输出占比 |\n|---|---:|---:|---:|\n| **extract** | 319 | **37.8%** | **62.2%** |\n| dedup | 527 | 67.8% | 32.2% |\n| voices | 18 | 72.5% | 27.5% |\n| relations / write | 48 | 66–74% | 26–34% |\n\n**这解释了为什么五次降本实验全部落空**：它们砍的都是输入，而抽取——报告层成本的一半——大头在输出。\n旁证：另一套完全不同的抽取表示（srl-compress）输出占比 87.2%，说明这是**抽取任务本身的性质**\n（模型要把选中的事实完整写出来），不是某套 prompt 措辞的偶然。\n\n**换算公式可信**：`neurons ≈ prompt_tok × 0.00545 + completion_tok × 0.0364`，933 次调用逐条对账，\n均值误差 −0.53%、标准差 0.16pp、最大 −0.85%。以后估成本直接用它，不必再跑实测。\n固定指令开销占每次抽取 prompt 字符的 46.3%（≈486 token/次）。"
+    },
+    {
+      "id": "measure-cross-article-redundancy",
+      "title": "跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/redundancy-probe.md",
+      "invalidates_when": "语料构成变化（通稿转载占比上升），或换更强的句子编码器",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {},
+      "kind": "observation",
+      "file": "measure-cross-article-redundancy.md",
+      "content": "bge-m3、余弦 ≥0.90 下的跨文章重复堆覆盖率：c0 39.0%、c3 34.3%、c13 8.0%、**c18 0.0%**，\n句数加权 23.5%。逐字重复率 14.9%/11.2%/5.0%/0%。\n\n两条附带读数：**覆盖率 ≠ 省钱率**（c0 覆盖 39% 但抽取调用只少 17.6%，因为大多是「2 篇合 1 堆」）；\n阈值降到 0.85 就会把「加拿大报复关税」和「美国加征关税」并进同一堆（方向对调）。\n通稿型硬新闻冗余高、深度报道与政策解读几乎没有——而我们每天 25 条什么类型都有。"
+    },
+    {
+      "id": "measure-dedup-fixed-overhead",
+      "title": "去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/runs/M1-1789308830116/（四簇 observation spans，离线统计）",
+      "invalidates_when": "partition prompt 的规则/示例被改写（766 tok 这个常数要重量），或去重换成非「逐组问一次」的结构",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本",
+        "改去重"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {},
+      "kind": "observation",
+      "file": "measure-dedup-fixed-overhead.md",
+      "content": "四簇基线的分步归因（llm span 按 parent step 归并 `usage.neurons`）：\n\n| 步 | neurons | 占比 | 调用 | 输入 tok | 输出 tok |\n|---|---:|---:|---:|---:|---:|\n| extract | 1177.8 | 49.1% | 75 | 82,135 | 19,948 |\n| dedup | 817.7 | 34.1% | 125 | 100,423 | 7,290 |\n| voices | 402.2 | 16.8% | 6 | 52,648 | 3,095 |\n\n**去重的钱花在重复贴说明书上，不是花在判断上**：\n\n- `getPartitionPrompt` 的固定部分（判定标准 + 三类反例 + 示例 + 收尾）= **766 tok**，每次调用付一遍\n- 125 次调用 × 766 = 95,750 tok = dedup 全部输入的 **95.3%**；折 ≈522 neurons = **四簇总成本的 21.8%**\n- 真正被判的事实只有 **453 条**，平均 **3.62 条/次**。组大小分布：\n  2 条 54 次、3 条 25 次、4 条 14 次、5 条 11 次、6 条 4 次、7 条 3 次、8 条 12 次、9 条 2 次\n  ——**63% 的调用只判 2–3 条**，固定部分在 2 条组里占到 94.6%\n\n**打包判定的算术上限**：453 条按每次 ~24 条打包（组边界在 prompt 里标死），调用 125 → ~20，\n固定开销 95,750 → 15,320 tok，省 ≈438 neurons = **总成本 18.3%**。输出侧不变（仍要输出同样的分组）。\n各簇都吃得到（中位簇 c0 的 32 次也能压到 ~6 次），所以**月成本门用的中位也会真降**——\n不像 decision-tighter-output-constraint 只在个别大簇上有效。\n\n**与已证伪五条的区别（别归成同一类）**：那五条（收紧去重候选、句子语义折叠、位置截断、\n最小单元压缩、抽取批放大）砍的都是**可变输入或输出**——少读文章、少写事实，必然碰召回。\n这一条不减少任何被判断的内容，只是不重复贴规则。**风险换了一种**：一次判多组可能跨组乱并，\n判据用现成的骨架事实数与清单召回（见 method-two-fighting-readings）。\n注意第二轮 r2 本来就是跨组找合并，打包必须保住 r1 的组边界语义。\n\n**第二入口 voices**：模板只有 753 tok，成本全在每篇正文按 6000 字符全喂（单次输入 11,800–13,494 tok，\n四簇 52,648 tok）。extract 上的位置截断已被证伪（falsified-input-position-truncation，召回掉），\n但 voices 是找当事方与分歧、不是穷举事实，**对截断的敏感度没验过**，是独立于那条结论的空白区。"
+    },
+    {
+      "id": "measure-detection-ceiling",
+      "title": "便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%",
+      "date": "2026-09-12",
+      "status": "live",
+      "source": "docs/adr/0004-brief-writer-v3.md",
+      "invalidates_when": "换判官模型档次，或证据包构造方式改变（当前瓶颈就在证据包）",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "historical_document",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "supports": [
+          "falsified-rarr-default-on"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-detection-ceiling.md",
+      "content": "| 检测器 | 召回 | 精度 | 成本 |\n|---|---|---|---|\n| 代码逐句对齐到要点、在其出处里查数字/专名/说话人 | 45–49% | 36–47% | 0 |\n| gpt-oss-120b 逐句判官（带检索证据 + 同类错误示例） | 82% | 42% | ~$8–16/月 |\n| gpt-oss-120b 整簇长上下文判官 | 26% | 68% | 同量级 |\n\n误报与漏报的**共同根因是证据包里缺关键原句**；按「与成稿相似」检索会捞回支持错误说法的材料。\nClaude 盲审准是因为强模型把整簇原文一次读进上下文，Workers AI 这档复制不了。\n生产现取零成本的代码检查器、**只标记不改稿**，标记只进内部观测。"
+    },
+    {
+      "id": "measure-evidence-bundle-isolation",
+      "title": "相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界",
+      "date": "2026-09-17",
+      "status": "live",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "invalidates_when": "换模型或证据门表示后，整批判定在同一组关系错对照上达到相同召回且没有跨项借证据",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ],
+        "depends_on": [
+          "measure-attribution-not-faithfulness"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-evidence-bundle-isolation.md",
+      "content": "`c36` 的 direct-raw 成稿有 4 个已知硬错。用 4 个正确句作对照，把候选先做纯句法原子化、\n再让 `glm-4.7-flash` 对原句证据判完整支持：\n\n- 21 个原子整批判：会漏掉已知的 3500 万桶、管道关闭/伊拉克来源、错误归属；\n- 两个父句一批：仍把另一个原子的 source index 借来支持当前原子；\n- 一个父句一批：同一父句内仍会跨原子借证据；\n- **按完全相同的证据坐标分组**：4 个坏句全部拦到至少一个坏原子，4 个正确对照零误杀；\n  9 个最小对照（错误归属、缺失实体、动作夸大、虚构来源地及其正例）全过。\n\n通过的 8 句探针用了 12 次证据包调用，合计 9,290 input tokens、2,197 output tokens、\n100.7 秒。因此不能先把 156 个候选全核一遍；架构顺序应改成**粗覆盖规划 → 只核入选候选 →\n失败时在同事件槽内补位**。\n\n这条不是「小 batch 总是更好」。不变量是：判官看到的证据集合必须与当前所有被判原子完全一致，\n不能让某原子接触到它没有声明的旁证，否则便宜模型会把相关证据误当成该断言的完整证据。\n\n后续 30 句扩展失败：26 个正常对照中 4 句被拒；聚焦 v5 仍拒绝 2/4 个正常对照，且漏判错误归因和时序。\n早期结论仅限八句探针。原子引用不应由看不到证据的模型猜测，而应由代码继承父候选完整证据包。\n证据隔离不足以保证语义可靠性，仍需验证逐维对齐与风险专门核验；输出结构有效不等于事实正确。"
+    },
+    {
+      "id": "measure-importance-signal-comparison",
+      "title": "拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "apps/backend/prototypes/report-3step/fixtures/fact-checklists.json + M1-1789308830116 落盘报告",
+      "invalidates_when": "换重要性的定义（不再是「进简报该写的事实」），或金标换成全覆盖标注",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ],
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-importance-signal-comparison.md",
+      "content": "问题：有没有比「被几篇报道」更好的重要性信号。方法：拿人工金标（c0 13 条、c18 30 条，\n`keys` 任一命中即算，与 accept.ts 同口径）当靶子，**同样挑 K 条**，看谁捞回的金标多。\n\nc0，取前 22 条（= skeleton 条数）：\n\n| 信号 | 捞回金标 |\n|---|---:|\n| 票数（现行） | **10** |\n| 票数×标题 | 10 |\n| 票数+位置 | 10 |\n| 标题重叠 | 8 |\n| 专名个数 | 8 |\n| 位置（越早越高） | 7 |\n| 数字个数 | 5 |\n\n预算收紧到 10 条时差距拉大：票数 8、位置 3、标题 4；组合信号（票数×标题）9，是唯一有改进迹象的地方，\n但一个簇一条之差，在噪声内。\n\n**c18 是反例，值得单独记**：该簇只有 6 篇文章，票数天然稀疏（skeleton 仅 3 条）。取前 10 条时\n**数字个数 11 反而好过票数 6**。所以票数信号在小簇上失效——没有足够的「投票人」。\n\n**一个方法坑（这轮自己先踩了）**：位置信号初看分离很强（要点首次出现句号中位 7 vs 单票 24），\n但那是取「所有出处里最靠前的那句」——要点天生有 ≥2 个出处，**取 min 本身就偏向出处多的**。\n改成每个出处各算一次再平均后：c0 12 vs 24（还在）、c3 15 vs 17（几乎没了）、\n**c13 14 vs 12（反转，要点反而出现得更晚）**。机制：一条被多篇报道的事实，在某篇是导语、在另一篇是末尾回顾。\n\n**结论**：别换信号，要改就改权重。生产库近 14 天的读数显示各源文章落进简报的比例从 46.4% 到 0.0%\n（source_id=1 的 381 篇一篇没进过），而现在所有源的票等价——**按来源权威度加权是唯一有数据支撑的改进方向**，\n但收益量级未测。"
+    },
+    {
+      "id": "measure-pipeline-cascade-loss",
+      "title": "逐级有损压缩的流水线会系统性丢信息，这是独立文献观测到的现象，不是本仓孤例",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "外部文献，本仓未复现 —— arXiv:2502.06617 + arXiv:2505.24575 (NexusSum, ACL 2025)",
+      "invalidates_when": "级间传递改成无损形态（原文切片或叙事散文）后，仍然测出同等的级联损失",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "external_literature_not_reproduced",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "supports": [
+          "method-two-fighting-readings"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-pipeline-cascade-loss.md",
+      "content": "**读数**：《Scaling Multi-Document Event Summarization: Evaluating Compression vs. Full-Text\nApproaches》(arXiv:2502.06617, 2025) 在「每个摘要约 100 篇源文档」的规模上对照两类系统——\n全文/长上下文 vs 压缩流水线（检索增强、层级式、增量式三种）。结论：**压缩方法因多阶段流水线\n加缺乏全局上下文而系统性损失信息**，论文明确把该现象归因为**级联误差**，并建议混合方法。\n\n这是独立实测（非厂商自证），簇规模（~100 篇）比本项目（6–14 篇）更极端。\n\n**理论背景**：「下游无法恢复上游丢弃的信息」在信息论里有形式化名字——\n**data processing inequality**。所以本仓那条「收益守恒」的观察（在一处减少损失、它在另一处出现）\n不是工程直觉，有形式化支撑。\n\n**可抄的反面设计**：NexusSum(ACL 2025, arXiv:2505.24575) 的三段式流水线在长叙事摘要上相对基线\nBERTScore F1 提升最高 30%，而它的关键取向是**各级之间始终传递叙事散文**，不把中间产物压成\n事实条目或一个整数。本仓现行实现正相反：原文 → 无序事实句 → 一个整数票数 → 写作层只看压缩表示。\n\n**可操作的推论**：**该改的是级间传什么，不是要不要分级。** 分级形态被\n[[falsified-endtoend-longcontext-mds]] 支持（端到端更差），而级间的有损压缩被本条否定。\n两条合起来指向：保留分级，把级间传递从「压缩代理」换成「原文切片或叙事散文」。\n\n**边界**：2502.06617 是「压缩流水线整体 vs 全文整体」的类别对比，**不是逐级消融**——\n没有「去掉某一级压缩、保留其余」的控制变量实验。所以它支持方向判断，但不能告诉我们\n本仓哪一级损失最大。逐级归因（如 error-analysis-path2-attribution 那类）在文献里没有先例可抄。"
+    },
+    {
+      "id": "measure-report-cost-structure",
+      "title": "成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数",
+      "date": "2026-09-13",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
+      "invalidates_when": "换模型、换分批大小，或抽取/去重的调用结构改变",
+      "type": "lesson",
+      "tasks": [
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-report-cost-structure.md",
+      "content": "一期简报 20,302 neurons：报告层 ≈17,257（85%），写作层 ≈3,045（15%，含零调用的检查器）。\n报告层内部：抽取 ≈50%、去重 ≈37%、各方与分歧 ≈13%。\n\n跨 25 个簇线性拟合：**每簇 report neurons ≈ 56 × 该簇文章数**（截距 −39）。\n所以成本几乎完全由「这条新闻读了几篇、多长」决定——这也是所有降本方案都盯着输入的原因，\n而「成本是否真由输入撑」直到 2026-09-14 才被单独验（见 claim-output-bound-cost）。"
+    },
+    {
+      "id": "measure-retry-signature-gap",
+      "title": "重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住",
+      "date": "2026-09-14",
+      "status": "live",
+      "source": "apps/backend/prototypes/cost-split/out/REPORT.md",
+      "invalidates_when": "重试判据改成按「是否拿到有效响应」而不是按错误串匹配",
+      "type": "lesson",
+      "tasks": [
+        "提高链路健壮性",
+        "降低报告层成本"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {},
+      "kind": "observation",
+      "file": "measure-retry-signature-gap.md",
+      "content": "实测到第三种故障签名：本地 `wrangler dev` 出现持续 10+ 分钟的\n`Workers AI binding failed: Network connection lost` / `This operation was aborted`，\n与 Workers AI 侧的 `3040 Capacity` / `3046 Timeout` **是不同的错误**。\n\n两个后果：① 只按 3040/3046 匹配的重试逻辑对它完全不生效；② 这类连接层故障**加大重试次数也没用**\n（补跑 5 次全部耗尽），需要的是等窗口过去。生产的报告层重试若沿用同一套专项匹配，会一样吃不住——\n建议改成「没拿到有效响应就退避重试」，而不是匹配特定错误串。"
+    },
+    {
+      "id": "measure-specialist-risk-gate",
+      "title": "八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证",
+      "date": "2026-09-17",
+      "status": "live",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "invalidates_when": "自动问题规划遗漏必要风险或引入错误前提，或未见样本上专门核验再次漏判和误杀",
+      "type": "lesson",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门",
+        "演化组合架构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "method-goal-guided-evolution",
+          "method-two-fighting-readings"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-specialist-risk-gate.md",
+      "content": "同样八个 c36 风险样本，glm 自由全维度证据对齐误杀 2/4 个正常事实，因生成不存在的归因和因果检查。\n人工预先给单一风险问题的 specialist 与 Codex 逐条原文判定八例一致：漏判 0/4、误杀 0/4。\n信号支持窄任务与原文证据锚点，不证明自动核验完整可靠；人工问题已经给了风险位置，自动规划尚未实现。\n五次 HTTP 模型调用共 3,282 input / 4,542 output tokens；两次引用省略号格式失败经严格子串清洗恢复，原始返回保留。\n下一轮先检验自动问题规划，再融合；纯时序对照应去掉 shutdown 这个动作增强混杂，不直接扩到全候选池。\n\n后续四句自动规划已出现重复问题与 after→cause 漂移，见 `measure-auto-risk-question-drift`；本节点的人工单问题信号不代表自动链路成功。"
+    },
+    {
+      "id": "measure-vote-signal-undercount",
+      "title": "票数（被几篇报道）有两个独立的少算机制：漏挑与漏合，c13 实测 17 条骨架本该 26 条",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/runs/M1-1789308830116/（c13 observation 离线统计）",
+      "invalidates_when": "去重改成不靠「向量候选 + 分组判定」的结构，或重要性不再由跨文章计数得出",
+      "type": "lesson",
+      "tasks": [
+        "改去重",
+        "改报告层结构"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-support-count"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-vote-signal-undercount.md",
+      "content": "票数是写作层唯一的重要性信号（`skeleton = articles >= 2`），而它被系统性地少算。\n两个机制互相独立，修法不同：\n\n**一、漏挑**（2026-09-11 已记录，见 report-extraction-dedup 那轮）：一件事多篇报道，但抽取只从\n1–2 篇里挑出来。例证「Greer 那句 3 篇都写了，只有 1 篇被挑中」。**修过**：检索原文 + LLM 确认，\n骨架从 15 涨到 42，但主线只多救回 1 条——回报很差，没采用。\n\n**二、漏合**（2026-09-15 实测）：两篇都抽出来了，去重没并上。c13（新德里楼塌，16 篇，簇本身干净，\n不是多条新闻线混装）的 124 条单票事实里，跨文章、词面 Jaccard ≥0.3 的有 13 对，连通成 9 组，\n**全部合并后骨架会从 17 涨到 26（+53%）**。\n\n漏合又分两种，证据是分开的：\n\n- **候选生成漏配**：一对几乎逐字相同的跨文章事实（\"Gupta stated that no public activity will be\n  permitted…\" / \"Rekha Gupta said no public activity will be permitted…\"）**从没进过任何一次判定**。\n  top-8 余弦 ≥0.7 加贪心非重叠分组（≤8）没把它俩配上。\n  （保留：探针是字面子串匹配，只能证明那个措辞没出现过；但两条最终都是单票，没被合是确定的。）\n- **模型违反明文规则**：调用 #2 把七条死亡人数的事实放在一起判，输出 `[[0,1,2,4,6],[3],[5]]`——\n  五条「七人」合对了，却把「六人」「五人」拎出来单独成组。而 partition prompt 白纸黑字写着\n  「同一个量的不同数值（数字、金额、日期、百分比）仍然算同一事实」，`figuresDiffer` 字段就是为此存在的。\n  **这组是现成的回归用例**：正确行为是 5/6/7 合成一条并标 `figuresDiffer`。\n\n**顺带的成本读数**：c13 的 48 次去重调用里，22 次（46%）结论是「全都不一样」，什么都没合成却照付\n766 token 的规则说明书（见 measure-dedup-fixed-overhead）。送判条目 147、产出子组 100、实际合掉 47 条。\n\n**别把这条读成「修了漏合就会变好」**：漏挑那次的经验是骨架变大 2–3 倍而主线只多 1 条。\n骨架数是中间指标，成稿质量要另外量。"
+    },
+    {
+      "id": "measure-writer-input-anatomy",
+      "title": "写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍",
+      "date": "2026-09-15",
+      "status": "live",
+      "source": "services/meridian-ai-worker/src/utils/brief-writer-v3.ts + M1-1789308830116 落盘报告",
+      "invalidates_when": "写作层的材料渲染改动（`renderNumberedPoints` / `renderReportForWriter`），或抽取不再改写",
+      "type": "lesson",
+      "tasks": [
+        "改报告层结构",
+        "提高写作层覆盖"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_analysis",
+      "legacy_type": "measurement",
+      "legacy_relations": {
+        "depends_on": [
+          "invariant-citation-resolvable"
+        ]
+      },
+      "kind": "observation",
+      "file": "measure-writer-input-anatomy.md",
+      "content": "**代码事实**：`renderNumberedPoints` 喂进写作 prompt 的只有 `p.text`——抽取改写后的自足事实句。\n原句（`report.sentences`，全量保留）只出现在 `pointSourceText` 里，而那个函数**只被接地校验用**\n（查名字/数字/引语在不在材料里），从不进 prompt。\n\n所以一条事实从原句到成稿要过两次 LLM 转述：抽取改写一次、写作再写一次（外加偶尔一次接地修正）。\n模型是在转述一份转述。\n\n**当初改写成自足句的理由，实测只覆盖一成的情况**：\n\n| 簇 | 原句条数 | 以代词/连接词开头 | 原句均长 | 改写句均长 | 长度比 |\n|---|---:|---:|---:|---:|---:|\n| c0 | 151 | 8（5.3%） | 180ch | 97ch | 1.87x |\n| c3 | 167 | 17（10.2%） | 179ch | 116ch | 1.54x |\n| c13 | 233 | 17（7.3%） | 159ch | 119ch | 1.33x |\n| c18 | 36 | 7（19.4%） | 179ch | 117ch | 1.52x |\n\n九成左右的原句单独拎出来就带主体，读得懂。长度比 1.33–1.87 倍，不是数量级差距。\n`CITE_INSTRUCTIONS` 要求「self-contained sentence, name the actor (no he/it/they)」，\n防的是一个约一成的问题，代价是全部事实过一遍 LLM 转述——而抽取 62.2% 的成本正是输出侧。\n\n相关成本结构：抽取 49% / 去重 34% / voices 17%（四簇基线 extract 1177.8、dedup 817.7、voices 402.2 neurons）。"
+    },
+    {
+      "id": "mechanism-evidence-isolation",
+      "type": "mechanism",
+      "title": "相同证据包隔离接口",
+      "date": "2026-09-17",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "input": "原子及继承的原始证据坐标",
+      "output": "只共享同一证据包的核验任务",
+      "limits": "八句局部有效、扩展失败；隔离不是充分语义安全保证",
+      "invalidates_when": "八句局部有效、扩展失败；隔离不是充分语义安全保证",
+      "verification": "development_signal_only",
+      "file": "mechanism-evidence-isolation.md",
+      "content": "八句局部有效、扩展失败；隔离不是充分语义安全保证"
+    },
+    {
+      "id": "mechanism-raw-candidate-discovery",
+      "type": "mechanism",
+      "title": "原文高召回候选发现",
+      "date": "2026-09-17",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/README.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "input": "全部文章及句级出处",
+      "output": "候选文本与原始出处",
+      "limits": "来自 direct-raw 整体覆盖信号；单独组件与组合中的覆盖能力尚未验证",
+      "invalidates_when": "来自 direct-raw 整体覆盖信号；单独组件与组合中的覆盖能力尚未验证",
+      "verification": "development_signal_only",
+      "file": "mechanism-raw-candidate-discovery.md",
+      "content": "来自 direct-raw 整体覆盖信号；单独组件与组合中的覆盖能力尚未验证"
+    },
+    {
+      "id": "mechanism-shape-triage",
+      "type": "mechanism",
+      "title": "结构分诊，不直接控制最终选材",
+      "date": "2026-09-17",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "input": "簇内文章",
+      "output": "单事件、多事件或不可写的结构判定",
+      "limits": "从 router 提炼的新职责边界；不是旧取样控制器的已验证效果",
+      "invalidates_when": "从 router 提炼的新职责边界；不是旧取样控制器的已验证效果",
+      "verification": "development_signal_only",
+      "file": "mechanism-shape-triage.md",
+      "content": "从 router 提炼的新职责边界；不是旧取样控制器的已验证效果"
+    },
+    {
+      "id": "mechanism-specialist-question-gate",
+      "type": "mechanism",
+      "title": "单风险问题核验接口",
+      "date": "2026-09-17",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "input": "一个明确风险问题、候选断言与原文",
+      "output": "逐字证据锚点及对该风险的判断",
+      "limits": "仅人工问题八例信号；自动风险识别、完备性与多风险聚合未验证",
+      "invalidates_when": "仅人工问题八例信号；自动风险识别、完备性与多风险聚合未验证",
+      "verification": "development_signal_only",
+      "file": "mechanism-specialist-question-gate.md",
+      "content": "仅人工问题八例信号；自动风险识别、完备性与多风险聚合未验证"
+    },
+    {
+      "id": "mechanism-support-ranking",
+      "type": "mechanism",
+      "title": "多源支持用于重要性排序，不作真假准入门",
+      "date": "2026-09-17",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "演化组合架构"
+      ],
+      "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
+      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "input": "候选的文章与发布者支持信息",
+      "output": "事件槽与候选排序",
+      "limits": "支持度不是事实真伪；单源受证据完整支持的事实不应被直接淘汰",
+      "invalidates_when": "支持度不是事实真伪；单源受证据完整支持的事实不应被直接淘汰",
+      "verification": "development_signal_only",
+      "file": "mechanism-support-ranking.md",
+      "content": "支持度不是事实真伪；单源受证据完整支持的事实不应被直接淘汰"
+    },
+    {
+      "id": "method-goal-guided-evolution",
+      "title": "固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化",
+      "date": "2026-09-17",
+      "status": "active",
+      "source": "docs/engineering-notes/goal-guided-evolutionary-architecture.md",
+      "invalidates_when": "无法建立可信反馈、关键决策不可逆或试验风险超出预算时，应先做更充分的事先设计与风险分析",
+      "type": "mechanism",
+      "tasks": [
+        "演化组合架构",
+        "设计验收门",
+        "降低报告层成本",
+        "治事实关系错"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "method",
+      "legacy_relations": {
+        "depends_on": [
+          "method-two-fighting-readings"
+        ]
+      },
+      "kind": "method",
+      "input": "任务目标、约束与历史证据",
+      "output": "固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化",
+      "limits": "无法建立可信反馈、关键决策不可逆或试验风险超出预算时，应先做更充分的事先设计与风险分析",
+      "verification": "method",
+      "file": "method-goal-guided-evolution.md",
+      "content": "先固定目标、约束和验收尺；具体架构在实现反馈中演化，不是无设计的反复打补丁。\n每轮循环：查前置知识 → 选一个缺口 → 写可检验假设 → 最小原型 → 看信号 → 蒸馏节点 → 按职责融合 → 回归。\nWorkers AI 只用于低成本开发迭代，看到方向性信号就停；语义 judge 由当前 Codex 会话读原文完成，不另调远程 judge。\n每轮同时看覆盖、事实错、误杀与成本；被测 gate 的输出和机械 verifier 通过都不是独立事实验收。\n知识图谱保存证据、失败机制与边界，不是自动融合算法；原型通过、组合通过和端到端达标必须分开。\n依据来自 XP 演化设计、演化架构、集合式设计与 Twin Peaks；这些是方法支持，不是本项目成功证明。"
+    },
+    {
+      "id": "method-two-fighting-readings",
+      "title": "验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去",
+      "date": "2026-09-14",
+      "status": "active",
+      "source": "apps/backend/prototypes/brief-v3-prod/out/input-selection-spike.md",
+      "invalidates_when": "永不失效（这是方法，不是结论）",
+      "type": "mechanism",
+      "tasks": [
+        "降低报告层成本",
+        "设计验收门"
+      ],
+      "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
+      "conditions": [],
+      "evidence_origin": "local_record",
+      "legacy_type": "method",
+      "legacy_relations": {},
+      "kind": "method",
+      "input": "任务目标、约束与历史证据",
+      "output": "验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去",
+      "limits": "永不失效（这是方法，不是结论）",
+      "verification": "method",
+      "file": "method-two-fighting-readings.md",
+      "content": "今年被同一个坑咬了两次，方向相反：\n\n1. **已知事实召回看不出漏合并**。收紧去重候选那轮，召回一条没掉（c0 12/13、c18 22/30），\n   但骨架事实掉了 14%——召回只问「这条事实在不在」，不问「跨文章有没有并起来」。\n   打架的那条读数是**骨架数**。\n2. **词面匹配判「同一件事」假阴性极高**。位置截断那轮，文本匹配说 c18 丢了 14 条，\n   用「这句话到底有没有被喂给模型」这种不依赖匹配的结构性检查复核，只有 2 条是真丢，**差 7 倍**。\n   打架的那条读数是**结构性丢失**。\n\n规矩：任何新的降本/选材实验，主读数之外必须配一条**不依赖同一套判定逻辑**的对照读数。"
+    }
+  ],
+  "relations": [
+    {
+      "from": "attempt-auto-risk-question",
+      "type": "varies_from",
+      "to": "attempt-specialist-risk",
+      "attributes": {
+        "changed": "问题来源从人工变为只看候选文本的模型",
+        "reason": "检验手工开发信号能否成为自动架构"
+      }
+    },
+    {
+      "from": "attempt-auto-risk-question",
+      "type": "evaluated_by",
+      "to": "experiment-auto-risk-four"
+    },
+    {
+      "from": "attempt-auto-risk-question",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-constrained-risk-slots",
+      "type": "varies_from",
+      "to": "attempt-auto-risk-question",
+      "attributes": {
+        "changed": "从自由写问题改为填槽与代码模板",
+        "reason": "自动规划重复整句并把时序变因果"
+      }
+    },
+    {
+      "from": "attempt-constrained-risk-slots",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-direct-raw",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-direct-raw",
+      "type": "evaluated_by",
+      "to": "experiment-direct-raw-c36"
+    },
+    {
+      "from": "attempt-direct-raw",
+      "type": "contains",
+      "to": "mechanism-raw-candidate-discovery"
+    },
+    {
+      "from": "attempt-evidence-graph",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-evidence-graph",
+      "type": "evaluated_by",
+      "to": "experiment-evidence-graph-c36"
+    },
+    {
+      "from": "attempt-evidence-isolation",
+      "type": "evaluated_by",
+      "to": "experiment-isolation-eight"
+    },
+    {
+      "from": "attempt-evidence-isolation",
+      "type": "evaluated_by",
+      "to": "experiment-isolation-expanded"
+    },
+    {
+      "from": "attempt-evidence-isolation",
+      "type": "evaluated_by",
+      "to": "experiment-isolation-v5"
+    },
+    {
+      "from": "attempt-evidence-isolation",
+      "type": "contains",
+      "to": "mechanism-evidence-isolation"
+    },
+    {
+      "from": "attempt-evidence-isolation",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-history-falsified-bigger-extraction-batch",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-bigger-extraction-batch"
+    },
+    {
+      "from": "attempt-history-falsified-bigger-writer-model",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-bigger-writer-model"
+    },
+    {
+      "from": "attempt-history-falsified-dedup-candidate-tightening",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-dedup-candidate-tightening"
+    },
+    {
+      "from": "attempt-history-falsified-five-slot-srl",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-five-slot-srl"
+    },
+    {
+      "from": "attempt-history-falsified-input-position-truncation",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-input-position-truncation"
+    },
+    {
+      "from": "attempt-history-falsified-length-rewrite",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-length-rewrite"
+    },
+    {
+      "from": "attempt-history-falsified-minimal-unit-compression",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-minimal-unit-compression"
+    },
+    {
+      "from": "attempt-history-falsified-one-source-per-sentence",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-one-source-per-sentence"
+    },
+    {
+      "from": "attempt-history-falsified-rarr-default-on",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-rarr-default-on"
+    },
+    {
+      "from": "attempt-history-falsified-retrieval-gapfill-loop",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-retrieval-gapfill-loop"
+    },
+    {
+      "from": "attempt-history-falsified-sentence-semantic-folding",
+      "type": "evaluated_by",
+      "to": "experiment-history-falsified-sentence-semantic-folding"
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "incorporates",
+      "to": "mechanism-raw-candidate-discovery",
+      "attributes": {
+        "adaptation": "从成稿器提炼为高召回素材池"
+      }
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "incorporates",
+      "to": "mechanism-shape-triage",
+      "attributes": {
+        "adaptation": "从选材控制器调整为结构分诊"
+      }
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "incorporates",
+      "to": "mechanism-support-ranking",
+      "attributes": {
+        "adaptation": "从多源硬准入改为重要性排序"
+      }
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "incorporates",
+      "to": "mechanism-evidence-isolation",
+      "attributes": {
+        "adaptation": "只隔离入选候选；不能把隔离当作事实正确保证"
+      }
+    },
+    {
+      "from": "attempt-plan-verify-backfill",
+      "type": "incorporates",
+      "to": "mechanism-specialist-question-gate",
+      "attributes": {
+        "adaptation": "仅保留接口；自动问题规划未通过，暂不执行融合"
+      }
+    },
+    {
+      "from": "attempt-practice-risk-slots",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-practice-risk-slots",
+      "type": "varies_from",
+      "to": "attempt-constrained-risk-slots",
+      "attributes": {
+        "changed": "扩大材料到五个 dev 簇；另测显式词代码选槽与整句兜底",
+        "reason": "小样本反复调优不能证明风险规划和核验泛化"
+      }
+    },
+    {
+      "from": "attempt-practice-risk-slots",
+      "type": "evaluated_by",
+      "to": "experiment-practice-sixty"
+    },
+    {
+      "from": "attempt-specialist-risk",
+      "type": "varies_from",
+      "to": "attempt-evidence-isolation",
+      "attributes": {
+        "changed": "核验接口从通用完整支持检查变成手工给定的单风险问题",
+        "reason": "隔离后仍误杀和漏判，需要更明确的任务边界"
+      }
+    },
+    {
+      "from": "attempt-specialist-risk",
+      "type": "evaluated_by",
+      "to": "experiment-specialist-eight"
+    },
+    {
+      "from": "attempt-specialist-risk",
+      "type": "contains",
+      "to": "mechanism-specialist-question-gate"
+    },
+    {
+      "from": "attempt-specialist-risk",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-structure-router",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-structure-router",
+      "type": "evaluated_by",
+      "to": "experiment-structure-router-c36"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "addresses",
+      "to": "goal-cluster-to-brief"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "varies_from",
+      "to": "attempt-practice-risk-slots",
+      "attributes": {
+        "changed": "从词锚点问题与LLM支持判断改成独立业务图转换、显式对齐接口及代码比较",
+        "reason": "词命中未保证断言覆盖和数量/状态/归因绑定；需分开转换与判断以定位错误"
+      }
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "based_on",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "based_on",
+      "to": "lesson-practice-typed-anchors"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "requires",
+      "to": "method-two-fighting-readings"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-structured-verifier-local"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-structured-verifier-real-partial"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-structured-split-heal"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-minimal-fields"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-mechanical-fields-replay"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-mechanical-real-partial"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-mechanical-rest-scheme"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-isolated-role-repair"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-target-only-role-repair"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-relation-chain-dev"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-event-kernel-split"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-argument-router-replay"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-full-practice-leak-replay"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-fresh-dev-frozen-probe"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-expanded-dev-quote-gate"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-factor-choice-dev"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-relation-confirm-dev"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-binding-repair-regression"
+    },
+    {
+      "from": "attempt-structured-verifier-interface",
+      "type": "evaluated_by",
+      "to": "experiment-heldout-binding-verifier"
+    },
+    {
+      "from": "claim-anchor-not-rewrite",
+      "type": "based_on",
+      "to": "measure-writer-input-anatomy",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "claim-anchor-not-rewrite",
+      "type": "based_on",
+      "to": "falsified-minimal-unit-compression",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "claim-anchor-not-rewrite",
+      "type": "constrained_by",
+      "to": "invariant-citation-resolvable"
+    },
+    {
+      "from": "claim-anchor-not-rewrite",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "decision-brief-v3-production-state",
+      "type": "based_on",
+      "to": "measure-report-cost-structure",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "decision-brief-v3-production-state",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "decision-brief-v3-production-state",
+      "type": "constrained_by",
+      "to": "invariant-citation-resolvable"
+    },
+    {
+      "from": "decision-exact-premerge",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "decision-hold-auto-risk-integration",
+      "type": "based_on",
+      "to": "experiment-auto-risk-four"
+    },
+    {
+      "from": "decision-hold-auto-risk-integration",
+      "type": "based_on",
+      "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "decision-hold-auto-risk-integration",
+      "type": "selects",
+      "to": "attempt-auto-risk-question",
+      "attributes": {
+        "action": "hold"
+      }
+    },
+    {
+      "from": "decision-hold-auto-risk-integration",
+      "type": "selects",
+      "to": "attempt-constrained-risk-slots",
+      "attributes": {
+        "action": "next_experiment_only"
+      }
+    },
+    {
+      "from": "decision-tighter-output-constraint",
+      "type": "based_on",
+      "to": "measure-cost-input-output-split",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "experiment-argument-router-replay",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-auto-risk-four",
+      "type": "yields",
+      "to": "measure-auto-risk-question-drift"
+    },
+    {
+      "from": "experiment-binding-repair-regression",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-direct-raw-c36",
+      "type": "yields",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "experiment-event-kernel-split",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-evidence-graph-c36",
+      "type": "yields",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "experiment-expanded-dev-quote-gate",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-factor-choice-dev",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-fresh-dev-frozen-probe",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-full-practice-leak-replay",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-heldout-binding-verifier",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-history-falsified-bigger-extraction-batch",
+      "type": "yields",
+      "to": "falsified-bigger-extraction-batch"
+    },
+    {
+      "from": "experiment-history-falsified-bigger-writer-model",
+      "type": "yields",
+      "to": "falsified-bigger-writer-model"
+    },
+    {
+      "from": "experiment-history-falsified-dedup-candidate-tightening",
+      "type": "yields",
+      "to": "falsified-dedup-candidate-tightening"
+    },
+    {
+      "from": "experiment-history-falsified-endtoend-longcontext-mds",
+      "type": "yields",
+      "to": "falsified-endtoend-longcontext-mds"
+    },
+    {
+      "from": "experiment-history-falsified-five-slot-srl",
+      "type": "yields",
+      "to": "falsified-five-slot-srl"
+    },
+    {
+      "from": "experiment-history-falsified-input-position-truncation",
+      "type": "yields",
+      "to": "falsified-input-position-truncation"
+    },
+    {
+      "from": "experiment-history-falsified-intrinsic-self-correction",
+      "type": "yields",
+      "to": "falsified-intrinsic-self-correction"
+    },
+    {
+      "from": "experiment-history-falsified-length-rewrite",
+      "type": "yields",
+      "to": "falsified-length-rewrite"
+    },
+    {
+      "from": "experiment-history-falsified-minimal-unit-compression",
+      "type": "yields",
+      "to": "falsified-minimal-unit-compression"
+    },
+    {
+      "from": "experiment-history-falsified-multi-agent-debate",
+      "type": "yields",
+      "to": "falsified-multi-agent-debate"
+    },
+    {
+      "from": "experiment-history-falsified-one-source-per-sentence",
+      "type": "yields",
+      "to": "falsified-one-source-per-sentence"
+    },
+    {
+      "from": "experiment-history-falsified-rarr-default-on",
+      "type": "yields",
+      "to": "falsified-rarr-default-on"
+    },
+    {
+      "from": "experiment-history-falsified-retrieval-gapfill-loop",
+      "type": "yields",
+      "to": "falsified-retrieval-gapfill-loop"
+    },
+    {
+      "from": "experiment-history-falsified-sentence-semantic-folding",
+      "type": "yields",
+      "to": "falsified-sentence-semantic-folding"
+    },
+    {
+      "from": "experiment-history-measure-analysis-fields-vs-report",
+      "type": "yields",
+      "to": "measure-analysis-fields-vs-report"
+    },
+    {
+      "from": "experiment-history-measure-attribution-not-faithfulness",
+      "type": "yields",
+      "to": "measure-attribution-not-faithfulness"
+    },
+    {
+      "from": "experiment-history-measure-cost-input-output-split",
+      "type": "yields",
+      "to": "measure-cost-input-output-split"
+    },
+    {
+      "from": "experiment-history-measure-cross-article-redundancy",
+      "type": "yields",
+      "to": "measure-cross-article-redundancy"
+    },
+    {
+      "from": "experiment-history-measure-dedup-fixed-overhead",
+      "type": "yields",
+      "to": "measure-dedup-fixed-overhead"
+    },
+    {
+      "from": "experiment-history-measure-detection-ceiling",
+      "type": "yields",
+      "to": "measure-detection-ceiling"
+    },
+    {
+      "from": "experiment-history-measure-importance-signal-comparison",
+      "type": "yields",
+      "to": "measure-importance-signal-comparison"
+    },
+    {
+      "from": "experiment-history-measure-pipeline-cascade-loss",
+      "type": "yields",
+      "to": "measure-pipeline-cascade-loss"
+    },
+    {
+      "from": "experiment-history-measure-report-cost-structure",
+      "type": "yields",
+      "to": "measure-report-cost-structure"
+    },
+    {
+      "from": "experiment-history-measure-retry-signature-gap",
+      "type": "yields",
+      "to": "measure-retry-signature-gap"
+    },
+    {
+      "from": "experiment-history-measure-vote-signal-undercount",
+      "type": "yields",
+      "to": "measure-vote-signal-undercount"
+    },
+    {
+      "from": "experiment-history-measure-writer-input-anatomy",
+      "type": "yields",
+      "to": "measure-writer-input-anatomy"
+    },
+    {
+      "from": "experiment-isolated-role-repair",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-isolation-eight",
+      "type": "yields",
+      "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "experiment-isolation-expanded",
+      "type": "yields",
+      "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "experiment-isolation-v5",
+      "type": "yields",
+      "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "experiment-mechanical-fields-replay",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-mechanical-real-partial",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-mechanical-rest-scheme",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-minimal-fields",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-practice-sixty",
+      "type": "yields",
+      "to": "lesson-practice-typed-anchors"
+    },
+    {
+      "from": "experiment-relation-chain-dev",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-relation-confirm-dev",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-relation-factor-review",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-specialist-eight",
+      "type": "yields",
+      "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "experiment-structure-router-c36",
+      "type": "yields",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "experiment-structured-split-heal",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-structured-verifier-local",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-structured-verifier-real-partial",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-target-only-role-repair",
+      "type": "yields",
+      "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-workers-ai-rest-connectivity",
+      "type": "yields",
+      "to": "measure-retry-signature-gap"
+    },
+    {
+      "from": "falsified-bigger-extraction-batch",
+      "type": "based_on",
+      "to": "measure-cost-input-output-split",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "falsified-dedup-candidate-tightening",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "falsified-five-slot-srl",
+      "type": "cautions",
+      "to": "claim-minimal-unit-representation",
+      "attributes": {
+        "scope": "强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽；成立条件见正文，失效条件：换到能稳定做结构化论元抽取的模型档次（且成本账仍划算）"
+      }
+    },
+    {
+      "from": "falsified-input-position-truncation",
+      "type": "cautions",
+      "to": "claim-inverted-pyramid",
+      "attributes": {
+        "scope": "位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13；成立条件见正文，失效条件：核心文章数改成随簇大小自适应（而非固定 4 篇），或支持数不再依赖跨文章计数"
+      }
+    },
+    {
+      "from": "falsified-input-position-truncation",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "falsified-intrinsic-self-correction",
+      "type": "supports",
+      "to": "falsified-rarr-default-on",
+      "attributes": {
+        "scope": "无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文；自检环节被改成对着原文/检索证据判，且判官独立于生成模型——那时它不再是 intrinsic self-correction"
+      }
+    },
+    {
+      "from": "falsified-minimal-unit-compression",
+      "type": "cautions",
+      "to": "claim-minimal-unit-representation",
+      "attributes": {
+        "scope": "把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好；成立条件见正文，失效条件：目标从「省 token」换成「提质量/可核对性」——那时这条结论不适用"
+      }
+    },
+    {
+      "from": "falsified-retrieval-gapfill-loop",
+      "type": "constrained_by",
+      "to": "invariant-citation-resolvable"
+    },
+    {
+      "from": "falsified-sentence-semantic-folding",
+      "type": "based_on",
+      "to": "measure-cross-article-redundancy",
+      "attributes": {
+        "scope": "提出或解释结论的已有依据；不表示该方案已经直接测试"
+      }
+    },
+    {
+      "from": "falsified-sentence-semantic-folding",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "lesson-practice-typed-anchors",
+      "type": "cautions",
+      "to": "attempt-constrained-risk-slots",
+      "attributes": {
+        "scope": "practice-risk-v1 人工材料上的当前 glm 填槽与精确词锚点核验接口仍漏判角色、方向和状态关系；不能推论所有结构化核验无效"
+      }
+    },
+    {
+      "from": "lesson-relation-factor-observability",
+      "type": "cautions",
+      "to": "attempt-practice-risk-slots",
+      "attributes": {
+        "scope": "增加检查项不保证覆盖第二断言或保证跨字段关系一致；正确拒绝不保证理由接地"
+      }
+    },
+    {
+      "from": "lesson-three-arm-tradeoff",
+      "type": "motivates",
+      "to": "attempt-evidence-isolation"
+    },
+    {
+      "from": "measure-attribution-not-faithfulness",
+      "type": "constrained_by",
+      "to": "invariant-citation-resolvable"
+    },
+    {
+      "from": "measure-auto-risk-question-drift",
+      "type": "based_on",
+      "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "measure-auto-risk-question-drift",
+      "type": "requires",
+      "to": "method-goal-guided-evolution"
+    },
+    {
+      "from": "measure-auto-risk-question-drift",
+      "type": "motivates",
+      "to": "attempt-constrained-risk-slots"
+    },
+    {
+      "from": "measure-cost-input-output-split",
+      "type": "supersedes",
+      "to": "claim-output-bound-cost"
+    },
+    {
+      "from": "measure-detection-ceiling",
+      "type": "supports",
+      "to": "falsified-rarr-default-on",
+      "attributes": {
+        "scope": "便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%；换判官模型档次，或证据包构造方式改变（当前瓶颈就在证据包）"
+      }
+    },
+    {
+      "from": "measure-evidence-bundle-isolation",
+      "type": "based_on",
+      "to": "measure-attribution-not-faithfulness"
+    },
+    {
+      "from": "measure-evidence-bundle-isolation",
+      "type": "motivates",
+      "to": "attempt-specialist-risk"
+    },
+    {
+      "from": "measure-evidence-bundle-isolation",
+      "type": "motivates",
+      "to": "attempt-plan-verify-backfill"
+    },
+    {
+      "from": "measure-importance-signal-comparison",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "measure-report-cost-structure",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "measure-specialist-risk-gate",
+      "type": "requires",
+      "to": "method-goal-guided-evolution"
+    },
+    {
+      "from": "measure-specialist-risk-gate",
+      "type": "requires",
+      "to": "method-two-fighting-readings"
+    },
+    {
+      "from": "measure-specialist-risk-gate",
+      "type": "motivates",
+      "to": "attempt-auto-risk-question"
+    },
+    {
+      "from": "measure-vote-signal-undercount",
+      "type": "constrained_by",
+      "to": "invariant-support-count"
+    },
+    {
+      "from": "measure-writer-input-anatomy",
+      "type": "constrained_by",
+      "to": "invariant-citation-resolvable"
+    },
+    {
+      "from": "mechanism-evidence-isolation",
+      "type": "justified_by",
+      "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "mechanism-raw-candidate-discovery",
+      "type": "justified_by",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "mechanism-shape-triage",
+      "type": "justified_by",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "mechanism-specialist-question-gate",
+      "type": "justified_by",
+      "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "mechanism-support-ranking",
+      "type": "justified_by",
+      "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "method-goal-guided-evolution",
+      "type": "requires",
+      "to": "method-two-fighting-readings"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "falsified-bigger-extraction-batch"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "falsified-dedup-candidate-tightening"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "falsified-endtoend-longcontext-mds"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "falsified-input-position-truncation"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "falsified-minimal-unit-compression"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "measure-importance-signal-comparison"
+    },
+    {
+      "from": "method-two-fighting-readings",
+      "type": "justified_by",
+      "to": "measure-pipeline-cascade-loss"
+    }
+  ]
+}

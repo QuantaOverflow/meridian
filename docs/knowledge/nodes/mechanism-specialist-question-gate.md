@@ -17,6 +17,11 @@
     {
       "type": "justified_by",
       "to": "measure-specialist-risk-gate"
+    },
+    {
+      "type": "based_on",
+      "to": "experiment-reframe-task-definition",
+      "attributes": {"scope": "只支持已知失败探针中判定步可改善，不支持该gate整体达标；非独立泛化证据"}
     }
   ],
   "input": "一个明确风险问题、候选断言与原文",

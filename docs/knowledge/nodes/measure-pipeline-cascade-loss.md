@@ -13,7 +13,13 @@
   "scope": "仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知",
   "conditions": [],
   "evidence_origin": "external_literature_not_reproduced",
-  "relations": [],
+  "relations": [
+    {
+      "type": "based_on",
+      "to": "experiment-natural-error-rate-v3",
+      "attributes": {"scope": "补充四簇M2回顾中的relations伪造与写作融合局部观察；不是外部文献复现或逐级压缩因果消融，不改变文献来源边界"}
+    }
+  ],
   "legacy_type": "measurement",
   "legacy_relations": {
     "supports": [

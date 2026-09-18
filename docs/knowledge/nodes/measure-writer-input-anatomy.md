@@ -18,6 +18,11 @@
     {
       "type": "constrained_by",
       "to": "invariant-citation-resolvable"
+    },
+    {
+      "type": "based_on",
+      "to": "experiment-natural-error-rate-v3",
+      "attributes": {"scope": "补充四簇M2回顾分析中写作材料的来源坐标渲染与事实融合观察；不改变原实验条件或宣称独立泛化验收"}
     }
   ],
   "legacy_type": "measurement",

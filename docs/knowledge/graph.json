@@ -586,6 +586,28 @@
       "content": "**已被实测取代**：抽取步骤输出占 62.2%（主张成立），但去重、各方、写作层是输入占 66–74%（主张不成立）。\n所以正确的说法不是「成本由输出撑」，而是**「抽取由输出撑、其余由输入撑」**——而抽取恰好是报告层\n最大的一块。保留本节点是为了记住这条主张当初为什么值得验：五次降本实验都默认了它的反面。"
     },
     {
+      "id": "decision-brief-v3-deployed",
+      "type": "decision",
+      "title": "简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码",
+      "date": "2026-09-18",
+      "status": "live",
+      "invalidates_when": "链路被回滚或替换、或三项缺陷修复后重新部署（那时另立节点记录新状态）",
+      "tasks": [
+        "上线简报v3"
+      ],
+      "scope": "依据为 CF deployments API 与 Neon reports 表实查；本节点只记录部署与产出事实，不表示质量达标",
+      "source": "Neon reports 表 id 94/95/96 与 CF accounts/*/workers/scripts/*/deployments",
+      "conditions": [
+        "meridian-ai-worker version 509eff62 部署于 2026-09-15T12:35Z，meridian-backend version 5dbd8364 部署于 2026-09-15T12:37Z",
+        "reports 94（2026-09-15 13:53）/95/96 均含 v3 三节结构 top stories / more news / in brief；93 及更早为旧结构。正文长度从 3.3–5.7 万降到 1.6–1.8 万",
+        "当时 HEAD 的 auto-brief-generation.ts 不含任何 v3 接线，线上版本无法从 git 复现；已于 2026-09-18 补提交（commit 320d9fe）"
+      ],
+      "evidence_origin": "production_record",
+      "action": "已部署并持续产出；三项已知缺陷待修，止血优先级高于新一轮演化实验",
+      "file": "decision-brief-v3-deployed.md",
+      "content": "**纠正**：`decision-brief-v3-production-state` 正文的「未部署、未 commit」写于 2026-09-15 部署之前，\n此后一直未更新。凡判断是否上线，查 CF Current Version 与 DB 产出，不要引用知识库节点或 commit\nmessage（947ff49 标的「未接 backend」同样已过期）。\n\n**读者已受影响的三项缺陷**（实测见 [[experiment-natural-error-rate-v3]]，同一份产品代码路径）：\n\n1. relations 步伪造关系，且在 `prompts/briefWriterV3.ts` 里被置于\n   `Notes on how events relate, taken from the original reporting:` 之下送进写作层。实测伪造 4 条、\n   3 条写进正文；真实 update 与跨源冲突召回为 0。\n2. `utils/brief-writer-v3.ts` 的 `renderReportForWriter` 没把 `fact.sources` 渲染进 `<key_points>`，\n   写作时可回溯率 0/83。数据就在对象上，同文件 `numberedPoints` 已经带 sources，改动成本低。\n3. `marks` check 精确率 33%、召回 20%、`groundingFixes` 全空——只标不改，标了照发，不构成核验层。\n\n自然事实错误率实测 18.3%（簇级 95% CI [7.8%, 29.0%]），8 个多句 block 全部含错。该读数来自另一批\n日期快照的输入，但跑的是同一份产品代码，大概率可迁移到线上这三期。"
+    },
+    {
       "id": "decision-brief-v3-production-state",
       "title": "简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10",
       "date": "2026-09-14",
@@ -612,7 +634,7 @@
       },
       "action": "历史决定或进度记录；实际状态以正文及 source 为准，不能由 live 推断已部署",
       "file": "decision-brief-v3-production-state.md",
-      "content": "**已完成**：ai-worker 新增 `/meridian/report-v3`；`write-block-v3` 接上代码检查器（`marks` 只进内部\n观测，读者看不到）；backend workflow 改成 报告 → 分层 4/10/其余 → 写作 v3 → 三节拼装 → 起标题 →\n每期一份 v3 记录落 R2。`pnpm typecheck` 通过，本地 e2e 跑出过完整一期（25 块、4/10/11、23 条标记）。\n**未部署、未 commit。**\n\n**2026-09-15 更新**：曾被当作唯一降本杠杆的 L2（抽取产出约束）已固化进代码并过了 M1 复验，\n质量不伤，但**省不了钱**——同日两次跑 −6.3% / +0.7%，跨过基线，落在跑间波动里\n（见 decision-tighter-output-constraint）。**$10.20 的缺口没被补上**，下面第 ① 条仍要人拍板。\n\n同日的分步归因找到一个大一个量级的入口：去重 95.3% 的输入是重复贴的同一段判定说明书，\n打包判定的算术上限是省总成本 18.3%，且各簇都吃得到（中位也会真降）——见 measure-dedup-fixed-overhead。\n**未实测**，风险是跨组乱并。\n\n**三件悬着的**（需要人拍板）：① 月成本 $10.20 vs 上限 $10——抬上限还是封顶每份报告 16 篇（→$8.87）；\n② 提供方一抖触发重试，`observed` / `usage-recorded` 两道门必挂（span 数按「尝试」计、trace 按「调用」计，\n失败那次拿不到 usage）——门的口径要不要改成「逻辑调用 + 提供方尝试 + 未知成本尝试」三个字段；\n③ 标题大小写的修复只在函数级验过，整链复验要再花一轮 e2e。\n\n验收脚本 `apps/backend/prototypes/brief-v3-prod/accept.ts`（冻结，sha 前 16 位 `ad73a86083b8b1df`），\n三档 M1/M2/M3 的门与读数口径都在里面。"
+      "content": "**已完成**：ai-worker 新增 `/meridian/report-v3`；`write-block-v3` 接上代码检查器（`marks` 只进内部\n观测，读者看不到）；backend workflow 改成 报告 → 分层 4/10/其余 → 写作 v3 → 三节拼装 → 起标题 →\n每期一份 v3 记录落 R2。`pnpm typecheck` 通过，本地 e2e 跑出过完整一期（25 块、4/10/11、23 条标记）。\n**（写于部署前；已过期）未部署、未 commit。**\n\n**2026-09-18 纠正**：本链路已于 2026-09-15T12:37Z 部署，reports 94/95/96 三期均为 v3 产出；\n代码已于 2026-09-18 补提交（commit 320d9fe）。当前状态见 decision-brief-v3-deployed。\n本节点余下内容保留为部署前的历史记录。\n\n**2026-09-15 更新**：曾被当作唯一降本杠杆的 L2（抽取产出约束）已固化进代码并过了 M1 复验，\n质量不伤，但**省不了钱**——同日两次跑 −6.3% / +0.7%，跨过基线，落在跑间波动里\n（见 decision-tighter-output-constraint）。**$10.20 的缺口没被补上**，下面第 ① 条仍要人拍板。\n\n同日的分步归因找到一个大一个量级的入口：去重 95.3% 的输入是重复贴的同一段判定说明书，\n打包判定的算术上限是省总成本 18.3%，且各簇都吃得到（中位也会真降）——见 measure-dedup-fixed-overhead。\n**未实测**，风险是跨组乱并。\n\n**三件悬着的**（需要人拍板）：① 月成本 $10.20 vs 上限 $10——抬上限还是封顶每份报告 16 篇（→$8.87）；\n② 提供方一抖触发重试，`observed` / `usage-recorded` 两道门必挂（span 数按「尝试」计、trace 按「调用」计，\n失败那次拿不到 usage）——门的口径要不要改成「逻辑调用 + 提供方尝试 + 未知成本尝试」三个字段；\n③ 标题大小写的修复只在函数级验过，整链复验要再花一轮 e2e。\n\n验收脚本 `apps/backend/prototypes/brief-v3-prod/accept.ts`（冻结，sha 前 16 位 `ad73a86083b8b1df`），\n三档 M1/M2/M3 的门与读数口径都在里面。"
     },
     {
       "id": "decision-exact-premerge",
@@ -1815,6 +1837,35 @@
       "content": "当前模型/提示/schema条件下不能仅靠继续拆分保证可靠，不能外推所有LLM能力上限。代码能明确处理的词法字段优先机械化，开放语义与上游角色/命题抽取仍未解决。本轮不扩大融合，保留旧不同条件实验。"
     },
     {
+      "id": "experiment-natural-error-rate-v3",
+      "type": "experiment",
+      "title": "自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "四个簇、83 句，来自 brief-v3-prod 的 M2 run（跑的是产品代码路径）；非盲单人判定，不是独立金标",
+      "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+      "conditions": [
+        "候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致",
+        "原文来自同 run 的 out/raw/<c>/A/batch*.json；scripts/eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照",
+        "判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号",
+        "有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "retrospective_analysis",
+      "outcome": "observed",
+      "inputs": "83 句自然候选，剔除 1 句非命题填充后分母 82；12 个 block（8 个多句 lead/more + 4 个单句 brief）",
+      "evaluation": "非盲单人语义判定，逐条留依据；临界档（去消息源、丢情态、范围窄化）不计入分子，单列供上界估计",
+      "result": "自然事实错误率 18.3%（15/82），簇级 95% CI [7.8%, 29.0%]；临界 10 条全算则上界 30.5%。8 个多句 block 全部含错（8/8），每个 lead 平均 2.5 个错，4 个单句 brief 干净。形状：actor 60%、time 20%、quantity 6.7%、state 6.7%、epistemic 6.7%、polarity 0%、scope 0%。层归因 15/15 全在写作层，抽取层零贡献；其中 3 条源自 relations 步伪造的关系。可回溯率：判官能定位 82/83，系统在写作时 0/83。现行 marks check 精确率 33%、召回 20%、groundingFixes 全空",
+      "cost": "零远程调用",
+      "record_completeness": "complete",
+      "file": "experiment-natural-error-rate-v3.md",
+      "content": "**自然错的主导机制是句内融合，不是单点替换。** actor 错 6/9 是两条各自正确的 fact 被揉成一句、\n谓语挂错主语。一例：material 的 `<quotes>` 正确标着 Daniel Béland（McGill 政治学者），`<people>`\n两人都在，写作层仍把那句挂到 Robert Bothwell 名下。这与 `utils/brief-writer-v3.ts` 里 one-source\n变体注释引的 Lebanoff 2019（两句融合成一句 38% 含事实错）独立收敛。\n\n**relations 步伪造关系，且伪造结果被贴上原始报道的标签。** 实测伪造 4 条（「84 人阵亡被 7 人取代」、\n「拆除令在倒塌前下达」、「my feed my way 取代了 digital duty of care」等），其中 3 条写进了正文；\n`prompts/briefWriterV3.ts` 把它们放在 `Notes on how events relate, taken from the original reporting:`\n之下送进写作层。c13 的伪时序在两次独立 relations 调用里都出现，可复现。反方向也塌：真实 update\n（监狱死亡 7→11）与全部跨源冲突一条都没识别。\n\n**可回溯 0/83 是可逆的。** 坐标不是中途丢的——报告 fact 带 `sources: [{articleId, sentence}]`，\nrelations 的 prompt 还在用 `[aid:sent]`，只有 `renderReportForWriter` 的行渲染没把它写进\n`<key_points>`；同文件的 `numberedPoints` 已经带 sources。真正不可逆的是 40% 的错来自句内融合，\n两半各有出处。\n\n60% 的自然错（3 条 relations 伪造 + 6 条融合）对报告而言是忠实的，锚报告的核验层在结构上看不见\n它们——同 [[rarr-verification-overdeletion]] 那条死路的病根一致。\n\n### 关联维护状态\n\n原声明的 `yields → lesson-acceptance-unit-block-not-sentence` 目标尚未落盘，保留该名称为待补关联，不在图谱中声明不存在的经验实体。本次结构修复没有生成新经验或改变实验读数。\n\n对 `measure-writer-input-anatomy` 与 `measure-pipeline-cascade-loss` 的补充证据关联，按 schema 改为相应经验节点的 `based_on → experiment-natural-error-rate-v3`，范围仅限此四簇回顾分析，不能把局部观察扩成通用因果验收。"
+    },
+    {
       "id": "experiment-practice-sixty",
       "type": "experiment",
       "title": "60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29",
@@ -1839,6 +1890,35 @@
       "record_completeness": "summary_only",
       "file": "experiment-practice-sixty.md",
       "content": "没有共同有效题由整句漏错变为代码槽正确拦截，新增四个漏判。零语义拒绝不等于正常题零损失，引用契约失败还会挡掉正常候选。详见原结果与 out/atomic-evidence/practice-v1/local-review.json。"
+    },
+    {
+      "id": "experiment-reframe-task-definition",
+      "type": "experiment",
+      "title": "只换任务定义不加约束：已知失败题检出 3/8 → 7/8，误拦仅 +1",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错"
+      ],
+      "scope": "17 条题全部取自已消耗的 heldout c28/c51 与已调优的开发批，且按已知失败挑选；定性死活判断，非通过率、非泛化证据",
+      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+      "conditions": [
+        "三臂同题、同 batch 大小（2）、同一次运行内交错跑完；对照臂 A′ 真跑而非引用历史 results，以消除题集与 batching 混淆",
+        "@cf/zai-org/glm-4.7-flash，真 Workers AI REST+Gateway，skip-cache、thinking 关闭、temperature 0；无远程 judge",
+        "判据跑前冻进 plan.json：主读数=8 条已知失败题中 status 翻成 unsupported 且 errorChoice 指对片段的条数；打架读数=9 条正常题误拦数；误拦比 A′ 多 2 条以上即判该臂以误拦换漏放",
+        "题目正常与错误成对共用同一句窗口，17 条不是 17 个独立事件",
+        "新增文件仅 reframe-seeds.mjs / reframe-probe.mjs，未改任何冻结组件；事后复跑 heldout-eval.mjs 不报 drift"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "17 条 = 8 条已知失败题（heldout 三条漏放 + 一条拦对但解释错，v0.17 两条、v0.18 两条漏放）+ 9 条正常对照（含 heldout 那条已知误拦）",
+      "evaluation": "代码按预注册判据计分；首轮计分脚本用 errorChunk 判 span 命中，而冻结的 processChoices 只回 errorSpan，导致 A′ 每次正确拦截被静默记为未命中（首轮误报 A′=0/8）。改为按 span 文本反查区间，只离线重算不重跑，results.json 原样保留，纠正值另存 scores-corrected.json",
+      "result": "A′ 检出 3/8、误拦 0/9；B（先述后判，schema 增 sourceSays/claimSays 且排在 status 之前）检出 7/8、误拦 1/9；C（反向举证 find-the-difference）把 17 条全判 unsupported，误拦 9/9，按预注册规则作废。B 唯一漏放为 27,000 km² 题：sourceSays 已正确复述 `27,000 sq km (10,400 square miles)`、claimSays 为 `27,000 square miles`，两侧并排摆着仍判 supported",
+      "cost": "27 逻辑调用 / 27 HTTP / 45251 已知 tokens / 118.4 累计请求秒；0 合同重试、0 unknown usage、51 行全完成、未删题；美元价未查询",
+      "record_completeness": "complete",
+      "file": "experiment-reframe-task-definition.md",
+      "content": "历史上这 8 条在各自批次里全是失败题，但同一 prompt 重跑的 A′ 拦住了 3 条——这批题对 batching\n与跑间波动敏感，基线不是 0。若拿历史记录当对照会报成 0→7，虚高一倍多。跑 A′ 的价值就在这里。\n\n窄语法规则路线的对照：v0.16→v0.19 四个版本一路加约束，检出增量跨全部批次为 0，heldout 还有\nfactorGuard 消融坐实（去掉后结果逐项相同）。改任务定义是首次动任务定义本身，方向与\n[[opinion-based-prompting-validated]] 记录的旁证一致。\n\nC 的高检出不是检出：它一条 supported 都没给。任务定义可以翻，但不能翻成「假定有错去找」。\n\n下一步不是往 B 上叠约束（那是退回加约束的老路），而是：拆开「加两个前置字段」与「改任务定义」\n各自的贡献；在未接触、跨事件的新材料上验 B。两者都需要新材料，而材料口径取决于\n[[lesson-acceptance-unit-block-not-sentence]]。\n\n### 关联维护状态\n\n原声明的 `yields → lesson-restate-before-judge` 目标尚未落盘，保留该名称为待补关联，不在图谱中声明不存在的经验实体。本次结构修复没有生成新经验或改变实验读数。\n\n对单风险判定机制的局部证据关联，按 schema 改为 `mechanism-specialist-question-gate` 的 `based_on → experiment-reframe-task-definition`；仅记录已知失败探针中判定步可改善的证据，不支持机制整体达标或泛化。"
     },
     {
       "id": "experiment-relation-chain-dev",
@@ -2547,6 +2627,27 @@
       "content": "报告里每条事实带 `articles`（被几篇不同文章报道）。它决定两件事：**≥2 篇才算骨架事实**\n（写作层唯一的「要点」来源），以及简报的**分层排序**（源数 × 篇数）。\n\n后果：要数出这个数，就必须看过每一篇——这条不变量是后面一连串降本方案失败的共同原因。\n任何「少读一些文章」的设计都会先撞到它。"
     },
     {
+      "id": "lesson-acceptance-unit-block-not-sentence",
+      "type": "lesson",
+      "title": "验收单位该是 block 不是句；注入题的形状与自然错误分布对不上",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门",
+        "治事实关系错"
+      ],
+      "scope": "依据为四个簇 83 句的非盲单人判定；自然错误率区间宽，结论是判据层级而非具体阈值",
+      "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+      "conditions": [
+        "有效样本 4 个簇；形状分布来自单一日期快照，季节性未知"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "diagnostic_observation",
+      "invalidates_when": "在多期、跨日期的自然简报上重测错误形状，且分布与本次不同",
+      "file": "lesson-acceptance-unit-block-not-sentence.md",
+      "content": "**三条互相独立的理由说明「错误放行率 < 10%」问错了层级。**\n\n一、量的是句子，读者读的是 block。实测 8 个多句 block 全部含错。就算逐句放行率做到 10%，lead\n整块干净的概率也只有 77%；要 80% 干净得把逐句率压到 1.6% 以下，即吃掉现有错误的 91%。\n\n二、验收材料形状与自然分布不符。自然 actor 60%、time 20%、polarity 0%、scope 0%；注入材料按\nquantity/actor/polarity/state/scope 各 20% 配平。40% 的验收预算花在从未出现过的形状上，占自然\n20% 的时序错连类别都没有。而且自然的 actor 错多为句内融合致主语挂错，不是注入的单点替换。\n\n三、60% 的自然错对报告是忠实的，锚报告的核验层结构上看不见。\n\n另有两条量化陷阱：n=30 且只有满分能过——1/30 的 95% 上端已约 17%，所以那实际是零漏放门不是\n10% 门；`measure-detection-ceiling` 实测便宜模型逐句判官那档 82%，目标 >90% 检出本就高于已测上限。\n\n建议判据形态：主判据换成 block 级「lead/more 中含 ≥1 错的比例」（基线 8/8=100%），句级只留误杀率\n这一个反方向的门，relations 步单独立判据（伪造关系数 = 0 + 真实 update/conflict 召回率）。\nblock 级比例同时满足演化所需的两个性质：有梯度、可跨代比较。"
+    },
+    {
       "id": "lesson-practice-typed-anchors",
       "type": "lesson",
       "title": "枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系",
@@ -2587,6 +2688,26 @@
       "invalidates_when": "新接口在冻结对照和独立材料上记录完整忠实关系并证明改善；当前显式配对接口尚未运行",
       "file": "lesson-relation-factor-observability.md",
       "content": "词命中失败可细分为输出中缺少断言、方向/状态不等价仍被接受、单独成立属性被错接，另外存在正确拒绝但解释增添无证据身份的情况。现有可见输出不足以定位抽取、比较、最终决策的隐藏因果；显式配对用于增加可观察性仍是假设，不应先行融合。\n\n2026-09-17补充：structured-v0.2的本地人工结构负控制显示，转换器漏第二断言却以整句span假报覆盖时，接口/代码比较仍可能pass；字节覆盖不能证明语义完整。真实NL转换尚未运行。人工参考图下代码可指出说话人、报告/事件状态与数量状态绑定差异，但p11/p20正常整句因未支持类型pending，不能把适用关系保留说成正常整体无损。新增证据见experiment-structured-verifier-local与其source。\n\n随后真实部分烟测补充（experiment-structured-verifier-real-partial）：证据schema/精确引用通过仍可漏analysts warn报告fact、错听取者和重复报告；对齐合法仍可把不同实体/报告对应成equivalent。代码因此返回未知而非正确诊断原错误，baseline误放行仍在。独立转换与窄业务枚举未自动解决忠实性；本版1题完整无正常成绩，不作泛化断言。本地/真实结果分开，不删除前面条件下的事实。\n\n2026-09-18补充：引用复制改整数span选择，两批共80新开发对照最终合同全部有效且正常无误拦，但各漏放2/20=10%。正确施事/数量出现在模型引用和理由中，仍能接受关系反向的候选。v0.19.1增加完整窄绑定键的机械归属比较，重复40条真LLM修补回归漏放0/20、忠实诊断失败1/20=5%；模型错误raw保留，独立代码诊断可修路由但不洗掉模型错误。引用harness问题与字段关系/解释忠实性问题已可分别观测；整句fallback、窄grammar事件限定和同事件材料相关性仍限制泛化。这不是完整独立结构化事实管线的成功证明。三实验及成本见experiment-factor-choice-dev、experiment-relation-confirm-dev、experiment-binding-repair-regression。\n\n随后一次冻结heldout来源验证（experiment-heldout-binding-verifier）反例：60条最终合同全有效，仍漏放3/30=10%、忠实诊断失败4/30=13.3%。三实际漏点的正确源信息均已在模型理由/引用内，却没有与候选的生死否定、数量归属、条件halt否定比较；当前规则无增量拦截，开发回归5%不能证明迁移。不是连接不稳或缺少关键源上下文；窄语法表示未覆盖与整句fallback语义比较共同留下边界。c28/c51已经第一次揭示并消耗，不再是未接触heldout；主Codex冻结后自编控制、簇内及开发事件相关性意味着仅来源文章隔离，不是独立自然错误可靠性验收。"
+    },
+    {
+      "id": "lesson-restate-before-judge",
+      "type": "lesson",
+      "title": "核验失败在判定步不在检索步；改任务定义能削弱它，但没消灭「两侧都复述对仍判 supported」",
+      "date": "2026-09-18",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系错"
+      ],
+      "scope": "glm-4.7-flash 上的句级核验；材料为已消耗 heldout 与已调优开发题，未在未接触材料上复验",
+      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+      "conditions": [
+        "结论限定在单候选句对单证据句（+半径 2 窗口）的题型；跨文章取舍与漏报未测"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "diagnostic_observation",
+      "invalidates_when": "在未接触、跨事件材料上复验 B 臂，或把判定真正交给代码比较后重新定位失败",
+      "file": "lesson-restate-before-judge.md",
+      "content": "跨四个批次稳定复现的形状：模型在 reason 与所选证据片段里已经复述了正确的原文信息，却把关系相反\n的候选判成 supported。窄语法规则的检出增量跨全部批次为 0（heldout 有 factorGuard 消融坐实），所以\n失败不在检索、上下文或接口，在**判定**这一步。\n\n`measure-attribution-not-faithfulness` 记的 57% 引用是事后合理化，与这个形状同源：引用和判定本就\n解耦，引用是判完之后补的。\n\n把任务定义从「审计候选是否被完整支持」改成「先分别陈述两侧对同一事实的说法，再判是否一致」，\n同模型同上下文下检出 3/8 → 7/8、误拦仅 +1。但**它是削弱不是消灭**：27,000 km² 那题两侧复述都正确\n且并排摆着，仍判 supported。判定还是模型在做，只是脚手架变好了。\n\n两条边界：\n- 翻任务定义不能翻成「假定有错去找」。反向举证臂把 17 条全判 unsupported，误拦 9/9。\n- 结构化字段里确实含有代码够得着的信息（五行数量-单位比对正好命中那条漏放），但同一次比对也在\n  一条正常题上误报，n=1 不足以说「判定归代码」这条路赢了。"
     },
     {
       "id": "lesson-three-arm-tradeoff",
@@ -3529,6 +3650,16 @@
       "to": "invariant-support-count"
     },
     {
+      "from": "decision-brief-v3-deployed",
+      "type": "supersedes",
+      "to": "decision-brief-v3-production-state"
+    },
+    {
+      "from": "decision-brief-v3-deployed",
+      "type": "based_on",
+      "to": "experiment-natural-error-rate-v3"
+    },
+    {
       "from": "decision-brief-v3-production-state",
       "type": "based_on",
       "to": "measure-report-cost-structure",
@@ -3934,6 +4065,14 @@
       "to": "invariant-support-count"
     },
     {
+      "from": "lesson-acceptance-unit-block-not-sentence",
+      "type": "cautions",
+      "to": "attempt-structured-verifier-interface",
+      "attributes": {
+        "scope": "其 60 条注入验收材料的形状与自然分布不符，测出的召回不可直接迁移"
+      }
+    },
+    {
       "from": "lesson-practice-typed-anchors",
       "type": "cautions",
       "to": "attempt-constrained-risk-slots",
@@ -3947,6 +4086,22 @@
       "to": "attempt-practice-risk-slots",
       "attributes": {
         "scope": "增加检查项不保证覆盖第二断言或保证跨字段关系一致；正确拒绝不保证理由接地"
+      }
+    },
+    {
+      "from": "lesson-restate-before-judge",
+      "type": "supersedes",
+      "to": "lesson-relation-factor-observability",
+      "attributes": {
+        "scope": "只更新失败定位与可改善性，不推翻其观测记录"
+      }
+    },
+    {
+      "from": "lesson-restate-before-judge",
+      "type": "cautions",
+      "to": "attempt-plan-verify-backfill",
+      "attributes": {
+        "scope": "该组合含 specialist-question-gate，其判定步尚未立住"
       }
     },
     {
@@ -4008,6 +4163,14 @@
       "to": "invariant-support-count"
     },
     {
+      "from": "measure-pipeline-cascade-loss",
+      "type": "based_on",
+      "to": "experiment-natural-error-rate-v3",
+      "attributes": {
+        "scope": "补充四簇M2回顾中的relations伪造与写作融合局部观察；不是外部文献复现或逐级压缩因果消融，不改变文献来源边界"
+      }
+    },
+    {
       "from": "measure-report-cost-structure",
       "type": "constrained_by",
       "to": "invariant-support-count"
@@ -4038,6 +4201,14 @@
       "to": "invariant-citation-resolvable"
     },
     {
+      "from": "measure-writer-input-anatomy",
+      "type": "based_on",
+      "to": "experiment-natural-error-rate-v3",
+      "attributes": {
+        "scope": "补充四簇M2回顾分析中写作材料的来源坐标渲染与事实融合观察；不改变原实验条件或宣称独立泛化验收"
+      }
+    },
+    {
       "from": "mechanism-evidence-isolation",
       "type": "justified_by",
       "to": "measure-evidence-bundle-isolation"
@@ -4056,6 +4227,14 @@
       "from": "mechanism-specialist-question-gate",
       "type": "justified_by",
       "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "mechanism-specialist-question-gate",
+      "type": "based_on",
+      "to": "experiment-reframe-task-definition",
+      "attributes": {
+        "scope": "只支持已知失败探针中判定步可改善，不支持该gate整体达标；非独立泛化证据"
+      }
     },
     {
       "from": "mechanism-support-ranking",

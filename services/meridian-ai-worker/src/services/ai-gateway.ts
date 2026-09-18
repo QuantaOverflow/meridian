@@ -696,13 +696,24 @@ export class AIGatewayService {
       throw new Error('Provider workers-ai not registered')
     }
 
-    if (request.capability !== 'chat') {
-      throw new Error(`Workers AI binding 目前只接 chat capability，收到: ${request.capability}`)
+    if (request.capability !== 'chat' && request.capability !== 'embedding') {
+      throw new Error(`Workers AI binding 目前只接 chat / embedding capability，收到: ${request.capability}`)
     }
 
     const modelName = request.model || provider.getDefaultModel(request.capability)
     if (!modelName) {
       throw new Error(`No workers-ai model available for capability: ${request.capability}`)
+    }
+
+    // embedding 与 chat 走同一个 binding，入参形状不同（{text}），也没有 thinking / 采样参数。
+    // 2026-09-12 加：报告层 v3 的去重要 bge-m3 向量，此前这条路径只接 chat，embedding 一律抛错
+    // （/meridian/embeddings/generate 同样打不通，生产 embedding 走的是 ml-service，不经这里）。
+    if (request.capability === 'embedding') {
+      const input = (request as unknown as { input?: string | string[] }).input
+      const texts = Array.isArray(input) ? input : input != null ? [input] : []
+      if (!texts.length) throw new Error('embedding 请求没有 input')
+      const body = await ai.run(modelName, { text: texts })
+      return provider.mapResponse(body, { ...request, model: modelName })
     }
 
     const chatRequest = request as ChatRequest

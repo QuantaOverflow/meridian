@@ -46,6 +46,7 @@ import {
   type ReportV3,
   type Tier,
 } from '../utils/brief-writer-v3';
+import { markBlock, type MarkStats, type SentenceMark } from '../utils/fact-marks';
 import { getGroundingFixPrompt, getOneSourceWritePrompt, getRelationsPrompt, getWritePrompt } from '../prompts/briefWriterV3';
 import { parseLooseJSON } from './brief-skeleton';
 import { annotate, traced } from './observe';
@@ -66,6 +67,10 @@ export interface WriterV3Trace {
   lengthFixes: Array<{ from: number; to: number; how: 'trim' | 'first_sentence' | 'failed' }>;
   repetitionRetries: number;
   llmCalls: number;
+  /** 本块全部 LLM 调用的 neurons 合计（成本验收读它；workflow 里没有 inline 观测，只能靠这个字段）。 */
+  neurons: number;
+  /** 代码检查器读数：查了几句、弃权几句、标了几句（标记本身在返回值的 marks 里，不进正文）。 */
+  marks: MarkStats;
   /** variant: 'one-source' 时才有：产出的句-要点分组条数、局部接地检查删掉的句子（每句只许用它分到的 1–2 个要点） */
   sentenceGroups?: number;
   localFixes?: Array<{ points: number[]; terms: string[]; how: 'drop_sentence' }>;
@@ -96,6 +101,7 @@ const CALL_INDEX_BASE = 700;
 export class BriefWriterV3Service {
   private ai: AIGatewayService;
   private llmCalls = 0;
+  private neurons = 0;
   private repetitionRetries = 0;
   /** dev-only：/meridian/write-block-v3 的 `model` 请求体字段透传到这里，供模型 spike 用；不传就是原行为。 */
   private readonly model: string;
@@ -118,6 +124,8 @@ export class BriefWriterV3Service {
       callIndex,
     });
     if (res.capability !== 'chat') throw new Error(`unexpected response capability ${res.capability}`);
+    // usage.neurons 是 Workers AI 的计费单位，类型里没有（各 provider 的 usage 字段不同），运行时有
+    this.neurons += Number((res.usage as { neurons?: number } | undefined)?.neurons ?? 0);
     const choice = (res as ChatResponse).choices?.[0];
     return { content: String(choice?.message?.content ?? ''), truncated: choice?.finish_reason === 'length' };
   }
@@ -285,7 +293,7 @@ export class BriefWriterV3Service {
    * @param variant  'one-source'：spike，限每句正文最多用 1–2 个编号要点（GOAL「限融合」）。
    *                 不传 = 默认行为不变（apps/backend/prototypes/brief-writer-v3/verify.ts 走的仍是这条）。
    */
-  async write(report: ReportV3, tier: Tier, skipCache: boolean, variant?: 'one-source'): Promise<{ text: string; trace: WriterV3Trace }> {
+  async write(report: ReportV3, tier: Tier, skipCache: boolean, variant?: 'one-source'): Promise<{ text: string; marks: SentenceMark[]; trace: WriterV3Trace }> {
     // 每一步用 traced() 包一行：请求带 x-observe: inline 时，步骤树 + 其中的 LLM 调用随响应带回（observe.ts）
     // 1–3：要点、原话、渲染（纯代码）。条数进 trace，渲染内部用同一套函数
     const points = await traced('plan_points', async () => {
@@ -346,11 +354,21 @@ export class BriefWriterV3Service {
       return t;
     });
 
+    // 7：代码检查器（零调用）。逐句对齐到事实，只在它的出处窗口里查数字/专名/说话人/因果线索。
+    // **只标记**：精度约 47%，自动改稿那条路（RARR）已证伪；标记进内部观测与管理页，不给读者看。
+    const checked = await traced('check', async () => {
+      const r = markBlock(report.facts, report.sentences, proseSentences(text));
+      annotate({ ...r.stats, marks: r.marks });
+      return r;
+    });
+
     return {
       text,
+      marks: checked.marks,
       trace: {
         points, quotes, relations: rel.list.length, ...(rel.error && !rel.list.length ? { relationsError: rel.error } : {}),
         groundingFixes, lengthFixes, repetitionRetries: this.repetitionRetries, llmCalls: this.llmCalls,
+        neurons: this.neurons, marks: checked.stats,
         ...(variant === 'one-source' ? { sentenceGroups, localFixes } : {}),
       },
     };

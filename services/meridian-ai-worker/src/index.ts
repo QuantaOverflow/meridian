@@ -13,6 +13,7 @@ import {
 } from './services/brief-generation'
 import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
 import { BriefWriterV3Service } from './services/brief-writer-v3'
+import { ReportV3Service } from './services/report-v3'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
@@ -21,6 +22,7 @@ import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { recordSpan } from './services/span-log'
 import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
+import { getBriefTitlePrompt } from './prompts/briefGeneration'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem, BriefContent } from './types/api'
 import { ValidatedStories } from './types/story-validation'
@@ -892,6 +894,33 @@ app.post('/meridian/write-brief-block', async (c) => {
   }
 })
 
+// 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧（services/report-v3.ts）。
+// 写作层 v3 直接吃这份产出；旧的 intelligence 报告端点不动。
+app.post('/meridian/report-v3', async (c) => {
+  try {
+    const body = await c.req.json()
+    const articles = Array.isArray(body?.articles) ? body.articles : null
+    if (!articles || !articles.length) {
+      return c.json<APIResponse<null>>({ success: false, error: 'articles must be a non-empty array' }, 400)
+    }
+    const bad = articles.findIndex(
+      (a: any) => !Number.isInteger(a?.id) || typeof a?.title !== 'string' || typeof a?.content !== 'string' || !a.content.trim()
+    )
+    if (bad >= 0) {
+      return c.json<APIResponse<null>>({ success: false, error: `articles[${bad}] needs {id:int, title:string, content:non-empty string}` }, 400)
+    }
+    const service = new ReportV3Service(c.env, readTraceContext(c.req.raw))
+    const data = await service.generate(
+      { title: typeof body?.title === 'string' ? body.title : '', articles },
+      body?.skipCache === true
+    )
+    return c.json<APIResponse<typeof data>>({ success: true, data })
+  } catch (error: any) {
+    console.error('Report v3 error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: `Failed to build report v3: ${error?.message ?? String(error)}` }, 500)
+  }
+})
+
 // 写作层 v3：一个簇的 report-v3 → 简报里的一块正文（apps/backend/prototypes/brief-writer-v3/GOAL.md）。
 // 与上面的 write-brief-block 并存，互不影响；backend workflow 暂不接线（生产报告层还是旧格式）。
 app.post('/meridian/write-block-v3', async (c) => {
@@ -917,6 +946,33 @@ app.post('/meridian/write-block-v3', async (c) => {
   } catch (error: any) {
     console.error('Write block v3 error:', error)
     return c.json<APIResponse<null>>({ success: false, error: `Failed to write block v3: ${error?.message ?? String(error)}` }, 500)
+  }
+})
+
+// 简报整篇标题。v3 链路的拼装在 backend 用代码做（三节、<u> 条目全是确定性的），
+// 只剩「给整篇起个名」这一次调用，沿用旧链路同一个 prompt，标题风格不变。
+app.post('/meridian/brief-title', async (c) => {
+  try {
+    const body = await c.req.json()
+    const content = typeof body?.content === 'string' ? body.content : ''
+    if (!content.trim()) {
+      return c.json<APIResponse<null>>({ success: false, error: 'content is required' }, 400)
+    }
+    const res = await callLLM(new AIGatewayService(c.env), c.env, readTraceContext(c.req.raw), 'brief_generation',
+      [{ role: 'user', content: getBriefTitlePrompt(content) }],
+      { temperature: 0.3, maxTokens: 300, skipCache: true, callIndex: 690 })
+    const raw = res.capability === 'chat' ? String((res as ChatResponse).choices?.[0]?.message?.content ?? '') : ''
+    const parsed = parseJSONFromResponse(raw)
+    // 解析失败不静默套通用名：留痕，让「模型没给标题」与「本来就叫这个」分得开
+    if (!parsed?.title) console.warn(`[BriefTitle] 标题解析失败或缺 title 字段 → 用通用标题。原始输出: ${raw.slice(0, 200)}`)
+    const usage = (res.usage as { neurons?: number } | undefined)?.neurons ?? 0
+    return c.json<APIResponse<{ title: string; neurons: number }>>({
+      success: true,
+      data: { title: String(parsed?.title || 'Daily Intelligence Brief'), neurons: Number(usage) },
+    })
+  } catch (error: any) {
+    console.error('Brief title error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: `Failed to generate brief title: ${error?.message ?? String(error)}` }, 500)
   }
 })
 

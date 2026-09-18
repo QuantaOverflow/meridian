@@ -22,6 +22,7 @@ import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
 import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
+import { assignTiers, renderBriefV3 } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -1354,83 +1355,74 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      // 【每故事一个 step】原先 25 个故事全挤在一个 15-25 分钟的单 step 里，是"全有或全无"：
-      // 平台侧一次 canceled（本账号基线约 2%：过去 6 天 5090 ok / 110 canceled）就整步作废，
-      // 重试还得把 25 个故事从头再跑一遍。2026-08-26 第 73 期就是这么丢的——两次尝试都被 cancel，
-      // 而那时 25 份情报报告其实早已全部落进 R2（CPU 仅 240ms、墙钟 972s，纯粹是等 I/O 时被掐）。
-      // 拆开之后：一次 cancel 只损失那一个故事，由 Workflows 单独重试它；已完成的故事在实例
-      // 重放时从 state 恢复、不会重跑，所以也不必再加"先查 R2 是否已存在"的补丁。
-      // 并发仍由 batchProcessParallel 卡在 6，不让 25 路同时打 provider。
-      console.log(`[AutoBrief] 开始情报分析，从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
+      // 【报告层 v3 · 每故事一个 step】簇原文 → 带出处的事实 / 当事方 / 分歧（ai-worker /meridian/report-v3）。
+      // fan-out 必须留在 backend：CF 侧约 2% 的 invocation 会被平台 canceled，N 次调用挤进一个 step
+      // 就是"一次抖动丢整期"。报告全文卸 R2、step 只回 key（避开单 step ~1MB 输出上限）。
+      console.log(`[AutoBrief] 开始生成簇报告（report-v3）：从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
-      const intelAiServices = createAIServices(this.env, workflowId);
-      // 各 story 完全独立(各读各的 R2、各落各自 intel-reports/{wf}/{idx}.json key)。原串行 for 是
-      // 端到端 wall-clock 第一大头(N× LLM，每次 30-90s)。实测并发=3 把 15 故事从 ~18min 压到 ~6min;
-      // 提到 6 预计 ~3min。撞限流由 AIGateway 配额退避兜底; 不破坏 R2 卸载对 ~1MB step 输出上限的规避。
-      const INTEL_CONCURRENCY = 6;
+      // 4 而不是 6：报告层每簇内部还有 3 路并发，6×3=18 路时 Workers AI 开始回
+      // `3046: Request timeout`（2026-09-12 整链实测）。
+      const REPORT_CONCURRENCY = 4;
+      const perStoryReportStepConfig: WorkflowStepConfig = {
+        retries: { limit: 2, delay: '15 seconds', backoff: 'exponential' },
+        timeout: '15 minutes',
+      };
+      // 独立源数按 story 对象取：sourceCoverage 的键是 validatedStories.stories 的下标，
+      // 而 storiesForIntelligence 是排序 + 配额之后的子集，下标对不上。
+      const sourcesOf = new Map<any, number>(
+        validatedStories.stories.map((s: any, i: number) => [s, sourceCoverage[i] ?? 0])
+      );
 
-      // blockTitle 随 r2Key 一起回传，不靠下标对齐：intelligenceReports 是 filter 出来的紧凑数组，
-      // 一旦有故事分析失败，它的下标就与 storiesForIntelligence 错位。挂在同一个对象上则怎么滤都对得上。
-      // articleKeys 随 r2Key 一起回传，理由同 blockTitle：intelligenceReports 是 filter 出来的
-      // 紧凑数组，挂在同一个对象上才不会因某个故事失败而与下标错位。
-      // 传的是 R2 引用不是正文——81 篇的簇正文约 30 万字符，会撞 step 约 1MB 输出上限。
-      type IntelOutcome =
-        // articlesExpected 是这条 story 原本有多少篇文章，与 articleKeys.length 可能不等
-        // （查不到 contentFileKey 的被过滤掉了）。两个数都要带下去，写作层的 span 才分得清
-        // 「材料本来就少」和「材料在路上丢了」。
-        | { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }>; articlesExpected: number }
-        | { failure: { idx: number; title: string; reason: string } };
-      const analyzeOneStory = async (story: any, idx: number): Promise<IntelOutcome> => {
-        try {
-          // 为情报分析动态获取相关文章的内容
-          const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
-
-          // story 已是合规 Story({title,importance,articleIds,storyType})，直接传。
-          // 曾误包成 {storyId,analysis} 丢掉 articleIds，致 intel service 在 story.articleIds.length 抛 TypeError，全故事失败。
-          const result = await intelAiServices.aiWorker.analyzeStoryIntelligence(
-            story,
-            clusterArticles,
-            { analysis_depth: 'detailed' },
-            idx
-          );
-
-          if (!result.ok) {
-            // 非成功别静默丢弃：曾因此让 0 报告以 brief_generation "HTTP 500" 的假象冒出，极难诊断。
-            // result.error 保留原措辞（非200="HTTP <s>: <body>"、success:false="success:false: <e>"）。
-            console.error(`[AutoBrief] 情报分析失败 (idx=${idx}, "${story.title}"): ${result.error}`);
-            return { failure: { idx, title: story.title, reason: result.error } };
+      type ReportOutcome =
+        | {
+            r2Key: string;
+            idx: number;
+            clusterId: number | null;
+            blockTitle: string;
+            articles: number;
+            sources: number;
+            facts: number;
+            skeleton: number;
+            llmCalls: number;
+            neurons: number;
           }
+        | { failure: { idx: number; title: string; reason: string } };
 
-          // intel report 全文落 R2;step 只返回 R2 key,避免 N 份报告内联超 ~1MB step 输出上限
-          // (旧实现 return reports[全文] → maxStoriesToGenerate 大时触发 WorkflowInternalError)。
-          // 该故事的正文引用，供写作步的证据链检索用。正文早就在 R2（抓取时落的
-          // contentFileKey），这里只是把引用带下去，零新增写入。
-          const keyOf = new Map(dataset.articles.map(a => [a.id, a.contentFileKey]));
-          const articleKeys = (story.articleIds as number[])
-            .map(id => ({ id, key: keyOf.get(id) ?? '' }))
-            .filter(x => x.key.length > 0);
-          // 查不到 key 的文章被上面那个 filter 静默丢掉，而证据链只能在剩下的里检索。
-          // 81 篇的簇少 40 篇仍然出稿、读数照样好看，唯一能看出来的地方就是这行。
-          if (articleKeys.length < story.articleIds.length) {
+      const buildOneReport = async (story: any, idx: number): Promise<ReportOutcome> => {
+        try {
+          const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
+          const withBody = clusterArticles.filter((a) => String(a.content ?? '').trim().length > 0);
+          if (withBody.length === 0) {
+            return { failure: { idx, title: story.title, reason: '簇内没有一篇文章取到正文' } };
+          }
+          if (withBody.length < clusterArticles.length) {
+            // 取不到正文的被丢掉，而报告只能从剩下的里抽。不留痕就只剩"这块怎么少了半件事"。
             console.warn(
-              `[AutoBrief] 证据链材料不全 (idx=${idx}, "${story.title}"): ` +
-              `${story.articleIds.length} 篇里只有 ${articleKeys.length} 篇有 contentFileKey`
+              `[AutoBrief] 报告材料不全 (idx=${idx}, "${story.title}"): ` +
+              `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文`
             );
           }
+          const aiw = createAIServices(this.env, workflowId).aiWorker;
+          const res = await aiw.buildReportV3(
+            String(story.title ?? ''),
+            withBody.map((a) => ({ id: a.id, title: a.title, url: a.url, publishDate: a.publishDate, content: a.content })),
+            idx
+          );
+          if (!res.ok) {
+            console.error(`[AutoBrief] 报告生成失败 (idx=${idx}, "${story.title}"): ${res.error}`);
+            return { failure: { idx, title: story.title, reason: res.error } };
+          }
+          const r2Key = `reports-v3/${workflowId}/${idx}.json`;
+          await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(res.value.report));
 
-          const r2Key = `intel-reports/${workflowId}/${idx}.json`;
-          await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(result.value, null, 2));
-
-          // R2 key 记到 brief_stories(观测;落库失败不致命)
+          // R2 key 记到 brief_stories（观测；落库失败不致命）。**不能按 cluster_id**：
+          // 一个簇会产出多条 story、共享同一个 cluster_id，按它更新会把整簇的行写上同一个 key。
           try {
-            // **不能按 cluster_id**：一个簇会产出多个故事、共享同一个 cluster_id，按它更新会把
-            // 整簇的行都写上同一个 r2 key（同 60 行前 mark_selected_for_intel 处的坑，那里已修）。
-            // 用 story 自带的 __briefStoryRowIds，与 selected_for_intel 走同一套主键。
             const rowIds: number[] = Array.isArray(story.__briefStoryRowIds)
               ? story.__briefStoryRowIds.filter((id: any) => typeof id === 'number')
               : [];
             if (rowIds.length === 0) {
-              console.warn(`[AutoBrief] intel_report_r2_key 跳过落库：story 无 brief_stories 主键 (idx=${idx})`);
+              console.warn(`[AutoBrief] report_r2_key 跳过落库：story 无 brief_stories 主键 (idx=${idx})`);
             } else {
               const db = getDb(this.env.HYPERDRIVE);
               await db
@@ -1439,270 +1431,238 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 .where(and(eq($brief_stories.workflow_id, workflowId), inArray($brief_stories.id, rowIds)));
             }
           } catch (persistErr) {
-            console.warn(`[AutoBrief] intel_report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+            console.warn(`[AutoBrief] report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
           }
-          return { r2Key, blockTitle: String(story.title ?? ''), articleKeys, articlesExpected: (story.articleIds as number[]).length };
+
+          const t = res.value.trace;
+          return {
+            r2Key,
+            idx,
+            clusterId: typeof story.clusterId === 'number' ? story.clusterId : null,
+            blockTitle: String(story.title ?? ''),
+            articles: withBody.length,
+            // 源数不能超过篇数（取不到正文的文章不进报告，也不该继续算它的源）
+            sources: Math.max(1, Math.min(sourcesOf.get(story) ?? 1, withBody.length)),
+            facts: t.facts,
+            skeleton: t.skeleton,
+            llmCalls: t.llmCalls,
+            neurons: t.neurons,
+          };
         } catch (error) {
-          // R2 put 失败/异常 → 该 story 跳过(可接受的罕见丢失)，不连坐其他 story
           const reason = error instanceof Error ? error.message : String(error);
-          console.warn(`[AutoBrief] 故事情报分析失败 (idx=${idx}): ${reason}`);
+          console.warn(`[AutoBrief] 报告生成异常 (idx=${idx}): ${reason}`);
           return { failure: { idx, title: story.title, reason } };
         }
       };
 
-      const results = await this.batchProcessParallel(
+      const reportResults = await this.batchProcessParallel(
         storiesForIntelligence,
-        INTEL_CONCURRENCY,
-        (story: any, idx: number): Promise<IntelOutcome> =>
+        REPORT_CONCURRENCY,
+        (story: any, idx: number): Promise<ReportOutcome> =>
           step
-            .do(`情报分析:故事${idx}`, perStoryIntelStepConfig, () => analyzeOneStory(story, idx))
-            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn——
-            // 不接住的话这个故事会静默消失。转成一条明确的 failure，走既有的失败对账。
-            .catch((e: unknown): IntelOutcome => {
+            .do(`报告:故事${idx}`, perStoryReportStepConfig, () => buildOneReport(story, idx))
+            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
+            // ——不接住的话这个故事会静默消失。
+            .catch((e: unknown): ReportOutcome => {
               const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[AutoBrief] 情报分析 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
+              console.error(`[AutoBrief] 报告 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
               return { failure: { idx, title: story.title, reason } };
             })
       );
 
-      // 失败对账：把成功(r2Key)与失败(failure)分开，失败原因随后落观测性对账。
-      const intelligenceReports = results.filter(
-        (r): r is { r2Key: string; blockTitle: string; articleKeys: Array<{ id: number; key: string }>; articlesExpected: number } => 'r2Key' in r
-      );
-      const intelFailures = results
+      type ReportOk = Extract<ReportOutcome, { r2Key: string }>;
+      const intelligenceReports = reportResults.filter((r): r is ReportOk => 'r2Key' in r);
+      const intelFailures = reportResults
         .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
         .map((r) => r.failure);
 
-      console.log(`[AutoBrief] 情报分析完成: ${intelligenceReports.length} 份情报报告${intelFailures.length ? `，${intelFailures.length} 个故事失败` : ''}`);
-      // 全部失败必须显式失败：空报告下传只会以 brief_generation "HTTP 500" 假象冒出，难以诊断。
-      // 拆 step 后每个故事已各自重试过，这里不再整批重来，直接终止。
-      if (storiesForIntelligence.length > 0 && intelligenceReports.length === 0) {
-        throw new Error(`情报分析对全部 ${storiesForIntelligence.length} 个故事均失败，无可用报告（详见上方各故事错误日志）`);
+      if (intelligenceReports.length === 0) {
+        throw new Error(`全部 ${storiesForIntelligence.length} 个故事的报告生成都失败（详见上方各故事错误日志）`);
       }
-
-      // 失败对账：选中 N 个 story、实际产出 M 份报告；M<N 记 'degraded' + 落每条失败原因，
-      // 供 /observability/runs/:wf 直接查（防"选了 14 只做出 13、头条静默消失"这类无人对账）。
+      console.log(
+        `[AutoBrief] 簇报告完成: ${intelligenceReports.length}/${storiesForIntelligence.length}` +
+          (intelFailures.length ? `，${intelFailures.length} 个失败` : '') +
+          `，事实合计 ${intelligenceReports.reduce((n, r) => n + r.facts, 0)}`
+      );
       await observability.logStep(
         'intelligence_analysis',
         intelFailures.length > 0 ? 'degraded' : 'completed',
         {
-          expected: storiesForIntelligence.length,
+          path: 'report-v3',
+          storiesSelected: storiesForIntelligence.length,
           reportsGenerated: intelligenceReports.length,
           failedCount: intelFailures.length,
           failures: intelFailures,
+          llmCalls: intelligenceReports.reduce((n, r) => n + r.llmCalls, 0),
+          neurons: Math.round(intelligenceReports.reduce((n, r) => n + r.neurons, 0)),
         }
       );
 
       // =====================================================================
-      // 步骤 5: 简报生成 (AI Worker)
+      // 步骤 5: 分层 → 逐块写作 → 拼装（v3）
       // =====================================================================
       await observability.logStep('brief_generation', 'started');
 
-      // ── b′ 分段写 ────────────────────────────────────────────────────────
-      // 原先是「一次调用把 N 份报告写成一篇简报」。实测（第 75 期 25 份报告）那条路
-      // 落地率只有 12%-56%（3-14 块，天天跳），且 1/4 期的 RARR 校验会整期复读失效、
-      // 静默发布未校对稿。b′ 把结构从模型手里拿走：
-      //   规划 1 次   →  逐块 N 次（每块只看自己那份报告，防串源）  →  拼装 0 次 LLM
-      // 落地率 25/25、两轮零失败；块数与覆盖由代码保证，不靠模型自觉。
-      //
-      // ⚠️ fan-out 必须在 backend、不能塞进 ai-worker 内部并发：CF 侧约 2% 的 invocation
-      // 会被平台 canceled，N 次调用挤一个 step 就是 16efc42 刚修完那个 bug 的翻版。
-      //
-      // 前日简报上下文已停用（b′ 也不传）：它把昨天 brief 的 TLDR（一串主题标识符）回灌
-      // 进来，brief 会无视 guardrail 把这些标识符展开成编造的整节，再被 TLDR 压回、次日
-      // 重灌，形成自我强化的编造反馈环（详见 .claude/pain-log.md 2026-05-28）。
-      const reportKeys = intelligenceReports.map((r: { r2Key: string }) => r.r2Key);
+      // 分层（纯函数，见 lib/core/brief-v3.ts）：按「独立源数 × 篇数」降序，
+      // 前 4 头条 / 接着 10 要闻 / 其余简讯。不用 LLM 的 importance——那是一行定义的主观分，
+      // 源数 × 篇数是聚类后天然已知的客观量。
+      const tiered = assignTiers(intelligenceReports);
+      const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
+      console.log(
+        `[AutoBrief] 分层：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}` +
+          `（分 = 源数 × 篇数：${tiered.slice(0, 5).map((x) => `${x.score}`).join(',')}…）`
+      );
 
-      // 块标题用**主线名**，不用 b′ 规划步自己起的那个。
-      // 规划步只读 executiveSummary、不知道主线名，实测它重起的块标题 5 块里只有 2 块对得上：
-      //   主线「救援」        → 起成 "devastation from flash flood"
-      //   主线「失踪外国人」  → 起成 "escalating death toll and international rescue effort"
-      // 它没起错事实，是丢了**角度**——摘要里最抢眼的是死亡数字，于是每块都往「死了多少人」上靠，
-      // 块与块的区分度就没了，而区分度正是主线分块要买的东西。
-      // 小写是本简报的 house style（见 briefSkeleton.ts），主线名是 Title Case，故转小写。
-      // 规划步仍会产出 title 字段（连同它的补标题子调用），现在成了废输出——删它要动
-      // BriefSkeleton 的形状与 shapeSkeleton 的覆盖断言，留作下一步。
-      const blockTitleOf = (r: { i: number; title: string }): string =>
-        intelligenceReports[r.i - 1]?.blockTitle?.trim().toLowerCase() || r.title;
-
-      // 5a 骨架规划：1 次调用，只读 N 条 executiveSummary（不读全文），量级很小。
-      const skeletonStepConfig: WorkflowStepConfig = {
-        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
-        timeout: '5 minutes',
-      };
-      const skeleton = await step.do('简报骨架规划', skeletonStepConfig, async () => {
-        const aiServices = createAIServices(this.env, workflowId);
-        const plan = await aiServices.aiWorker.planBriefSkeleton(reportKeys);
-        // 规划失败硬失败：静默兜底成"全部进独立事态"会产出一份没有任何因果主线的简报，
-        // 而它在覆盖率/块数上看起来完全正常——正是本项目反复栽的"失败静默降级"。
-        if (!plan.ok) throw new Error(`简报骨架规划失败: ${plan.error}`);
-        const s = plan.value;
-        console.log(
-          `[AutoBrief] 简报骨架：主线 ${s.main.length} 节 / 独立事态 ${s.isolated.length} 条` +
-            (s.repaired?.length ? `（规划漏掉 ${s.repaired.join(',')}，已由代码补进独立事态）` : '')
-        );
-        return s;
-      });
-
-      // 5b 逐块写作：一份报告一个 step。每个块 = 1 次写作调用 + 1 次 RARR 校验调用。
       const briefBlockStepConfig: WorkflowStepConfig = {
         retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
         timeout: '10 minutes',
       };
-      // 与情报分析同档：不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
+      // 与报告同档：不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
       const BRIEF_BLOCK_CONCURRENCY = 6;
 
-      type BlockJob = {
-        /** 1 基的 story 序号（骨架里的 i）；端点要的是 0 基下标，差 1 */
-        i: number;
-        title: string;
-        section?: { heading: string; causalLink: string; siblingTitles: string[] };
+      type WrittenBlock = ReportOk & {
+        tier: 'lead' | 'more' | 'brief';
+        score: number;
+        pos: number;
+        text: string;
+        marks: Array<{ sentence: string; reasons: Array<Record<string, any>> }>;
+        markStats: { sentences: number; checked: number; abstained: number; marked: number };
+        blockLlmCalls: number;
+        blockNeurons: number;
       };
-      // 该块的正文引用。i 是 1 基、与 reportKeys 的下标差 1，跟 intelligenceReports 同源同序。
-      const articleKeysOf = (i: number): Array<{ id: number; key: string }> =>
-        intelligenceReports[i - 1]?.articleKeys ?? [];
-      const articlesExpectedOf = (i: number): number | undefined =>
-        intelligenceReports[i - 1]?.articlesExpected;
-      const blockJobs: BlockJob[] = [
-        ...skeleton.main.flatMap((s) =>
-          s.reports.map((r) => ({
-            i: r.i,
-            title: blockTitleOf(r),
-            section: {
-              heading: s.heading,
-              causalLink: s.causalLink,
-              // 同节兄弟的**块标题**。此前传的是下标、ai-worker 据此取兄弟的 executiveSummary
-              // 全文塞进 prompt —— 实测那份摘要比本块自己的报告还长，模型照抄。
-              // 标题只在骨架里有（规划步产出），ai-worker 拿不到，必须从这边传。
-              siblingTitles: s.reports.filter((x) => x.i !== r.i).map((x) => blockTitleOf(x)),
-            },
-          }))
-        ),
-        ...skeleton.isolated.map((r) => ({ i: r.i, title: blockTitleOf(r) })),
-      ];
-
-      type BlockOutcome =
-        | { block: { index: number; title: string; text: string; verified: boolean } }
-        | { failure: { i: number; title: string; reason: string } };
+      type BlockOutcome = { block: WrittenBlock } | { failure: { idx: number; title: string; reason: string } };
 
       const blockOutcomes = await this.batchProcessParallel(
-        blockJobs,
+        tiered,
         BRIEF_BLOCK_CONCURRENCY,
-        (job: BlockJob): Promise<BlockOutcome> =>
+        (job: (typeof tiered)[number], pos: number): Promise<BlockOutcome> =>
           step
-            .do(`简报块:${job.i}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
-              const aiServices = createAIServices(this.env, workflowId);
-              const res = await aiServices.aiWorker.writeBriefBlock(
-                reportKeys, job.i - 1, job.title, job.section, articleKeysOf(job.i), articlesExpectedOf(job.i)
-              );
+            .do(`简报块:${job.idx}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
+              // 报告从 R2 读回再内联转发：它是上一步的产物，不让 ai-worker 再读一次 R2
+              const obj = await this.env.ARTICLES_BUCKET.get(job.r2Key);
+              if (!obj) throw new Error(`报告不在 R2: ${job.r2Key}`);
+              const report = JSON.parse(await obj.text());
+              const aiw = createAIServices(this.env, workflowId).aiWorker;
+              const res = await aiw.writeBlockV3(report, job.tier, job.idx);
               if (!res.ok) throw new Error(res.error);
-              const b = res.value;
-              if (!b.verified) {
-                // 没经过 RARR 核验 ≠ 核过且干净。不阻断（校验是末端兜底），但要可见。
-                console.warn(`[AutoBrief] 简报块 ${job.i}「${job.title}」未经 RARR 核验（校验调用失败或响应坏）`);
-              }
-              return { block: { index: b.index, title: b.title, text: b.text, verified: b.verified } };
+              const v = res.value;
+              return {
+                block: {
+                  ...job,
+                  pos,
+                  text: v.text,
+                  // 代码检查器的标记：只进内部观测与管理页，**不进正文**
+                  marks: v.marks ?? [],
+                  markStats: v.trace.marks,
+                  blockLlmCalls: v.trace.llmCalls,
+                  blockNeurons: v.trace.neurons,
+                },
+              };
             })
-            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
-            // ——不接住的话这个块会静默消失，而拼装步照样产出一份"看起来正常"的简报。
             .catch((e: unknown): BlockOutcome => {
               const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[AutoBrief] 简报块 step 最终失败 (story=${job.i}, "${job.title}"): ${reason}`);
-              return { failure: { i: job.i, title: job.title, reason } };
+              console.error(`[AutoBrief] 简报块 step 最终失败 (idx=${job.idx}, "${job.blockTitle}"): ${reason}`);
+              return { failure: { idx: job.idx, title: job.blockTitle, reason } };
             })
       );
 
       const writtenBlocks = blockOutcomes
-        .filter((r): r is { block: { index: number; title: string; text: string; verified: boolean } } => 'block' in r)
-        .map((r) => r.block);
+        .filter((r): r is { block: WrittenBlock } => 'block' in r)
+        .map((r) => r.block)
+        .sort((a, b) => a.pos - b.pos);
       const blockFailures = blockOutcomes
-        .filter((r): r is { failure: { i: number; title: string; reason: string } } => 'failure' in r)
+        .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
         .map((r) => r.failure);
-      const unverifiedCount = writtenBlocks.filter((b) => !b.verified).length;
 
-      console.log(
-        `[AutoBrief] 简报块写作完成: ${writtenBlocks.length}/${blockJobs.length}` +
-          (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
-          (unverifiedCount ? `，${unverifiedCount} 个块未经 RARR 核验` : '')
-      );
       if (writtenBlocks.length === 0) {
-        throw new Error(`简报块写作对全部 ${blockJobs.length} 个块均失败，无可拼装内容（详见上方各块错误日志）`);
+        throw new Error(`简报块写作对全部 ${tiered.length} 个块均失败，无可拼装内容（详见上方各块错误日志）`);
       }
-      await observability.logStep(
-        'brief_blocks',
-        blockFailures.length > 0 ? 'degraded' : 'completed',
-        {
-          expected: blockJobs.length,
-          written: writtenBlocks.length,
-          failedCount: blockFailures.length,
-          unverified: unverifiedCount,
-          failures: blockFailures,
-          mainSections: skeleton.main.length,
-          isolated: skeleton.isolated.length,
-          repaired: skeleton.repaired ?? [],
-        }
+      const markTotal = writtenBlocks.reduce((n, b) => n + b.marks.length, 0);
+      console.log(
+        `[AutoBrief] 简报块写作完成: ${writtenBlocks.length}/${tiered.length}` +
+          (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
+          `，检查器标记 ${markTotal} 条（只进观测，不进正文）`
       );
+      await observability.logStep('brief_blocks', blockFailures.length > 0 ? 'degraded' : 'completed', {
+        path: 'writer-v3',
+        expected: tiered.length,
+        written: writtenBlocks.length,
+        failedCount: blockFailures.length,
+        failures: blockFailures,
+        tiers: { lead: tierCount('lead'), more: tierCount('more'), brief: tierCount('brief') },
+        marks: markTotal,
+      });
 
-      // 5c 拼装：结构部分零 LLM（<u> 包装、章节归属、覆盖对账全由代码做），
-      // 唯一的调用是给整篇起标题。
+      // 拼装：三节 markdown 全由代码渲染（见 lib/core/brief-v3.ts），唯一的调用是给整篇起标题。
       const briefAssembleStepConfig: WorkflowStepConfig = {
         retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
         timeout: '10 minutes',
       };
-      const assembled = await step.do('简报拼装', briefAssembleStepConfig, async () => {
-        const aiServices = createAIServices(this.env, workflowId);
-        const res = await aiServices.aiWorker.assembleBrief(reportKeys, skeleton, writtenBlocks);
-        if (!res.ok) throw new Error(`简报拼装失败: ${res.error}`);
-
-        // 观测性：覆盖对账落 R2。b′ 下这份账是**确定已知**的调用结果（每份报告恰好一个块，
-        // 成功=headline、块 step 失败=dropped），不再是判官事后猜去向——也因此不再需要
-        // 两遍法补录（补录治的是"整篇合成静默丢 story"，b′ 从结构上没有这个自由度）。
-        const coverage = Array.isArray((res.metadata as any)?.coverage) ? (res.metadata as any).coverage : [];
-        if (coverage.length) {
-          try {
-            const tally = (d: string) => coverage.filter((c: any) => c?.disposition === d).length;
-            await this.env.ARTICLES_BUCKET.put(
-              `observability/coverage/${workflowId}.json`,
-              JSON.stringify(
-                {
-                  workflowId,
-                  createdAt: new Date().toISOString(),
-                  path: 'bprime',
-                  summary: {
-                    total: coverage.length,
-                    headline: tally('headline'),
-                    noteworthy: tally('noteworthy'),
-                    dropped: tally('dropped'),
-                  },
-                  // b′ 没有补录环节，故与 summary 同值。字段保留是为了让跨期查询不用分叉。
-                  summaryBeforeRepair: null,
-                  coverage,
-                  // 两个确定性传感器的读数（只报不改）
-                  hygiene: (res.metadata as any)?.hygiene_findings ?? [],
-                  consistency: (res.metadata as any)?.consistency_findings ?? [],
-                },
-                null,
-                2
-              )
-            );
-            console.log(`[AutoBrief] 覆盖对账落盘: ${coverage.length} story (dropped ${tally('dropped')})`);
-          } catch (persistErr) {
-            console.warn(`[AutoBrief] 覆盖对账落盘失败 (workflow=${workflowId}):`, persistErr);
-          }
-        }
-
-        return {
-          title: res.value.title,
-          content: res.value.content,
-          model_used: (res.metadata as any)?.model_used || 'unknown',
-          hygieneCount: ((res.metadata as any)?.hygiene_findings ?? []).length,
-          consistencyCount: ((res.metadata as any)?.consistency_findings ?? []).length,
-        };
+      // 条目标题小写是本简报的 house style（renderBriefV3 里做）。记录里存的必须是**读者看到的那个**，
+      // 否则管理页/验收拿记录去对正文会对不上（2026-09-12 M3 就挂在这里）。
+      const displayTitle = (t: string) => t.trim().toLowerCase();
+      const rendered = renderBriefV3(
+        writtenBlocks.map((b) => ({ title: displayTitle(b.blockTitle), text: b.text, tier: b.tier }))
+      );
+      const titled = await step.do('简报标题', briefAssembleStepConfig, async () => {
+        const aiw = createAIServices(this.env, workflowId).aiWorker;
+        const r = await aiw.briefTitle(rendered.content);
+        if (!r.ok) throw new Error(`简报标题生成失败: ${r.error}`);
+        return r.value;
       });
+      const assembled = {
+        title: titled.title,
+        content: rendered.content,
+        model_used: 'glm-4.7-flash (report-v3 + writer-v3)',
+      };
+
+      // 每期一份 v3 记录：分层、每块的标记与成本。管理页读它，验收（accept.ts M3）也读它。
+      // 失败的块以 ok:false 留在记录里——不写进正文，但绝不静默消失。
+      try {
+        const byIdx = new Map(writtenBlocks.map((b) => [b.idx, b]));
+        const failedIdxSet = new Map(blockFailures.map((f) => [f.idx, f]));
+        await this.env.ARTICLES_BUCKET.put(
+          `observability/brief-v3/${workflowId}.json`,
+          JSON.stringify(
+            {
+              workflowId,
+              createdAt: new Date().toISOString(),
+              title: assembled.title,
+              sections: rendered.sections,
+              blocks: tiered.map((job) => {
+                const b = byIdx.get(job.idx);
+                const f = failedIdxSet.get(job.idx);
+                return {
+                  clusterId: job.clusterId,
+                  storyIdx: job.idx,
+                  title: displayTitle(job.blockTitle),
+                  tier: job.tier,
+                  articles: job.articles,
+                  sources: job.sources,
+                  score: job.score,
+                  ok: !!b,
+                  ...(f ? { error: f.reason } : {}),
+                  text: b?.text ?? '',
+                  marks: b?.marks ?? [],
+                  markStats: b?.markStats ?? null,
+                  llmCalls: b?.blockLlmCalls ?? 0,
+                  neurons: b?.blockNeurons ?? 0,
+                  reportLlmCalls: job.llmCalls,
+                  reportNeurons: job.neurons,
+                  reportKey: job.r2Key,
+                };
+              }),
+            },
+            null,
+            1
+          )
+        );
+      } catch (persistErr) {
+        console.warn(`[AutoBrief] v3 记录落盘失败 (workflow=${workflowId}):`, persistErr);
+      }
 
       console.log(
-        `[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符）` +
-          `，卫生 ${assembled.hygieneCount} 条 / 跨块数值冲突 ${assembled.consistencyCount} 处`
+        `[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符，${rendered.sections} 节）`
       );
 
       // 5d 摘要：次日模型用的 TLDR + 读者端展示的散文导语。与拼装分开成 step，
@@ -1767,9 +1727,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       // 测试迭代可按 run 跳过门(省本次 code_only 检查耗时);
       // 生产 cron 不传此参=默认跑门攒观测数据。见 memory: faithfulness-runtime-gate。
-      if (skipFaithfulnessGate) {
-        console.log('[AutoBrief] 忠实度门：本次按 skipFaithfulnessGate 跳过(测试迭代)');
-        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'skip_param' });
+      // v3 链路不跑忠实度门：检测改用零成本的代码检查器（标记已随块写进 observability/brief-v3/）。
+      // 这个门要把整份旧格式情报报告喂给模型，而线上强判官的召回/成本账不划算（ADR 0004「检测上限」）。
+      // 门的代码与端点都留着，旧链路仍可用。
+      const RUN_FAITHFULNESS_GATE = false;
+      if (skipFaithfulnessGate || !RUN_FAITHFULNESS_GATE) {
+        const why = skipFaithfulnessGate ? 'skip_param' : 'v3_path';
+        console.log(`[AutoBrief] 忠实度门：跳过（${why}）`);
+        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: why });
       } else {
         await observability.logStep('faithfulness_gate', 'started');
         // code_only 传感器耗时远低于 defaultStepConfig 的 2min，但仍留足余量防偶发慢调用；

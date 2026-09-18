@@ -73,7 +73,10 @@
     {
       "binding": "ARTICLES_BUCKET",
       "bucket_name": "meridian-articles-prod",
-      "preview_bucket_name": "meridian-articles-dev",
+      // 本地 wrangler dev 直连线上桶（remote binding，需 wrangler >= 4.37）。
+      // preview_bucket_name 一并去掉：它优先于 bucket_name 生效，会把 dev 指向空的
+      // meridian-articles-dev；文章正文只在 prod 桶里。
+      "remote": true,
       // "jurisdiction": "eu",
     },
   ],

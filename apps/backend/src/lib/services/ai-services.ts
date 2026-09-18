@@ -57,6 +57,40 @@ export interface BriefBlockData {
   blocked: Record<'noop' | 'bad_delete' | 'graft' | 'bloat', number>;
 }
 
+/** 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧。report 形状见 ai-worker utils/report-v3.ts。 */
+export interface ReportV3Data {
+  report: Record<string, any>;
+  trace: {
+    facts: number;
+    skeleton: number;
+    parties: number;
+    conflicts: number;
+    llmCalls: number;
+    /** 这一簇全部 LLM 调用的 neurons 合计，成本对账读它 */
+    neurons: number;
+    [k: string]: any;
+  };
+}
+
+/** 写作层 v3 的一块。marks 是代码检查器的标记：**只进内部观测与管理页，不给读者看**。 */
+export interface BlockV3Data {
+  text: string;
+  marks: Array<{ sentence: string; reasons: Array<Record<string, any>> }>;
+  trace: {
+    points: number;
+    relations: number;
+    llmCalls: number;
+    neurons: number;
+    marks: { sentences: number; checked: number; abstained: number; marked: number };
+    [k: string]: any;
+  };
+}
+
+export interface BriefTitleData {
+  title: string;
+  neurons: number;
+}
+
 // 情报报告 / 忠实度 verdict 载荷形态大且松，保持宽松类型（D 的收益在接缝仪式收敛，
 // 非逐字段深类型化——那是另一件事）。
 export type IntelligenceReportData = Record<string, any>;
@@ -310,6 +344,55 @@ export class AIWorkerService {
     });
 
     return await this.callJson<BriefBlockData>(request);
+  }
+
+  /**
+   * v3 步骤 1：一个簇的原文 → report-v3。正文必须内联传（ai-worker 侧要逐句切、逐批抽取），
+   * 由 workflow 侧 fan-out 成 N 个 step。产出由调用方卸 R2，step 只回 key。
+   *
+   * @param callIndex 故事序号，进 x-call-index 让同一 trace 下的 R2 观测记录不互相覆盖
+   */
+  async buildReportV3(
+    title: string,
+    articles: Array<{ id: number; title: string; url?: string; publishDate?: string; content: string }>,
+    callIndex?: number
+  ): Promise<ServiceResult<ReportV3Data>> {
+    const request = new Request(`${this.baseUrl}/meridian/report-v3`, {
+      method: 'POST',
+      headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
+      body: JSON.stringify({ title, articles, skipCache: true }),
+    });
+
+    return await this.callJson<ReportV3Data>(request);
+  }
+
+  /**
+   * v3 步骤 2：一份 report-v3 → 一块正文（写 + 接地 + 代码检查器标记）。
+   * 报告内联传：它是上一步的产物，backend 从 R2 读回后直接转发，ai-worker 不再读一次 R2。
+   */
+  async writeBlockV3(
+    report: unknown,
+    tier: 'lead' | 'more' | 'brief',
+    callIndex?: number
+  ): Promise<ServiceResult<BlockV3Data>> {
+    const request = new Request(`${this.baseUrl}/meridian/write-block-v3`, {
+      method: 'POST',
+      headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
+      body: JSON.stringify({ report, tier, skipCache: true }),
+    });
+
+    return await this.callJson<BlockV3Data>(request);
+  }
+
+  /** v3 步骤 3：给整篇简报起标题（v3 的拼装在 backend 用代码做，只剩这一次调用）。 */
+  async briefTitle(content: string): Promise<ServiceResult<BriefTitleData>> {
+    const request = new Request(`${this.baseUrl}/meridian/brief-title`, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+      body: JSON.stringify({ content }),
+    });
+
+    return await this.callJson<BriefTitleData>(request);
   }
 
   /**

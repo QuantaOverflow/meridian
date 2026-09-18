@@ -65,6 +65,9 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_revise: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200, skipCache: true },
+  // 报告层 v3：抽取（每批 ≤20 句）、去重分组、各方与分歧三种调用。maxTokens 与 frequency_penalty
+  // 沿用原型实测值（各方那次要读整簇原文、产出最长，故按最大的给，单次调用再按需覆盖）。
+  report_v3: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.2 },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0, maxTokens: 6000, skipCache: false },
   other: { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 4000, skipCache: false },

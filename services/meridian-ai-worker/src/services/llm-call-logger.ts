@@ -27,6 +27,9 @@ export type LLMCallPhase =
   // 簇判定：一簇一次，判「是不是一件事」+ 起名。2026-09-05 起取代 storyline 两段式
   // （命名主线 + 逐篇归类），后者已随之删除。
   | 'cluster_judge'
+  // 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧。抽取、去重、各方三种调用共用这个
+  // phase（callIndex 区分 R2 key）；与写作层的 brief_generation 分开，免得观测记录互相覆盖。
+  | 'report_v3'
   | 'other'
 
 export interface TraceContext {

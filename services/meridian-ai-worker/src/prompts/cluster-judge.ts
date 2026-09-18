@@ -76,8 +76,8 @@ export function getClusterJudgePrompt(articles: JudgeArticle[]): string {
 输出 JSON，不要任何其他文字：
 {
   "verdict": "EVENT" | "NO_EVENT" | "UNSURE",
-  "title": "这条在简报里的名字，落在具体的人/地/机构上，不超过 20 个字（NO_EVENT 时留空）",
-  "event": "一句话说清这件事是什么（NO_EVENT 时留空）",
+  "title": "这条在简报里的名字，**用英文写**，落在具体的人/地/机构上，不超过 10 个英文词（NO_EVENT 时留空）",
+  "event": "一句话说清这件事是什么，**用英文写**（NO_EVENT 时留空）",
   "reason": "一句话理由"
 }
 
@@ -86,5 +86,7 @@ export function getClusterJudgePrompt(articles: JudgeArticle[]): string {
 - verdict=NO_EVENT 表示这组只是同题材的一堆不同的事，整组不该成为简报里的一条
 - 信息不足以判断时给 UNSURE，不要硬猜
 - title 是给读者看的格名，不要写成「关于……的报道」这类空话；event 是给下游写作层的上下文
+- **title 与 event 必须是英文**：简报正文是英文的，这两个字段直接进成品（title 就是读者看到的条目名）。
+  中文来源的报道也照样用英文写，人名地名用通行英文写法。reason 用中文写没关系，它只进日志。
 ${JUDGE_DATA_BLOCK_MARK}${articles.map(a => `[${a.id}] ${a.title}`).join('\n')}`;
 }

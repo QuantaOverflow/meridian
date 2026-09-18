@@ -1,0 +1,17 @@
+{
+  "description": "每轮结束只读检查 Meridian 知识图谱结构及生成索引一致性；不调用 LLM。",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types \"$(git rev-parse --show-toplevel)/scripts/knowledge/stop-hook.ts\"",
+            "timeout": 15,
+            "statusMessage": "Checking knowledge graph and generated index"
+          }
+        ]
+      }
+    ]
+  }
+}

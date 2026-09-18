@@ -88,7 +88,20 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 架构决策记录 → `docs/adr/`
 
 ## 知识蒸馏（每个 spike / goal 结束时做）
+
+> **开工前先查 `docs/knowledge/INDEX.md`**：按任务找到旧尝试、实验、经验与可复用机制，说清
+> 本轮相对旧尝试的变化、为什么可能绕过失败、希望获得的唯一新信息。不要把相同机制换措辞当新架构。
+>
+> **GOAL 节点只在我主动提起时才写。** 不要提议"要不要起个 GOAL"——它不产生任何新信息，
+> 拿它当下一步动作只是用仪式占掉真正该做的事。上面那三个问题照答，但答在对话里，不是先立节点。
+>
+> spike 结束记录 **experiment + lesson**，链接对应 attempt；缺失运行条件标未知，小样本通过与扩展失败分别保留。
+> 提炼可复用功能时写 mechanism 的输入、输出与限制；组合 attempt 用 `incorporates` 明确调整，组合效果另验。
+> 证据、正常对照、成本、适用前提与失效条件必须保存；LLM 自报状态和机械通过不是独立语义验收。
+> 决定记录依据，旧决定取代不删除。格式见 `docs/knowledge/README.md`；跑 `pnpm -s knowledge` 校验并重建索引、反向链接与 graph.json。
+
 调研笔记和原型只留本地、不入 git（2026-09-12 定），所以**结论必须蒸馏进入库的文档**，否则等于没有：
+- 探索历史实体（goal / attempt / experiment / lesson / mechanism / decision，JSON frontmatter + 正文）→ `docs/knowledge/nodes/`，详细产物仍留本地，用 `source` 指过去
 - 新决定、证伪路线、实测上限 → 对应的 `docs/adr/`（没有就新开一份）
 - 新形成的术语 → `CONTEXT.md`
 - 进度与下一步 → `docs/ROADMAP.md`

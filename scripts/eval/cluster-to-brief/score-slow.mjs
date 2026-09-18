@@ -154,8 +154,8 @@ mkdirSync(`${HERE}out`, { recursive: true });
 const outF = `${HERE}out/slow-${armName}-${SPLIT}.json`;
 writeFileSync(outF, `${JSON.stringify({ arm: armName, split: SPLIT, at: new Date().toISOString(), coverageRatio: COVERAGE_RATIO, results }, null, 1)}\n`);
 console.log(`\n读数落盘: ${outF}`);
-console.log('注:判官与写作层可能同族同模型 → self-preference 泄漏,**只能臂间相对比较,不能当绝对门**。');
-console.log('注:归属类错误(主体/日期搬错)召回很低,这把尺看不见那一类。');
+console.log('注:事实正确性由 codex 判(不是 LLM 自判),但臂也由 codex 写 → self-preference 风险仍在,**只能臂间相对比较,不能当绝对门**。');
+console.log('注:归属类错误(主体/日期搬错)召回很低 —— 判定包写死「判不准标 ok 不硬猜」,所以硬错数是**下界**。自然错误实测 actor 占 60%,正是这类。');
 console.log('注:事件清单由 glm-flash 抽、未经人工核 → 覆盖率的绝对值打折读。');
 
 if (envBad) { console.error(`\n环境问题 ${envBad} 簇 —— 先补齐判定,不是质量问题`); process.exit(2); }

@@ -106,6 +106,11 @@ node verify.mjs --arm=out/arm-a --cluster=36     # 单簇
 
 ### dev / heldout 不许混用
 
+> **2026-09-18:heldout 两簇(28 `us airman` / 51 `china`)已被消耗**,被
+> `arms/atomic-evidence/structured-verifier/` 拿去造注入题跑过冻结验收
+> (`out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md`)。现在只剩 dev 五簇,
+> **最终验收没有干净的 heldout**;要泛化证据须另取未接触、跨事件的簇。
+
 在 dev 上反复调,**heldout 只在最后报一次**。混用就是过拟合 —— 这条抄
 `scripts/eval/article-quality/meta-eval.ts` 的设计(「迭代 prompt 时只对 dev 调,
 最终 κ/召回只在 heldout 报」)。
@@ -145,9 +150,14 @@ china      116篇   杂质 48/116 = 41% → judge 判 NO_EVENT 仍放行
 
 - **快档不判覆盖与正确性**。全绿只代表机械项通过。
 - **杂质标注只依据标题、未读正文**,所以杂质率是**下界**。
-- **归属类错误看不见**。主体/日期搬错这类错,快档和慢档都召回 ≈ 0。
-- **慢档的判官与写作层同族同模型**(glm-4.7-flash),self-preference 泄漏 →
-  **只能臂间相对比较,不能当绝对门**。
+- **归属类错误召回低**。主体/日期搬错这类错,快档看不见,慢档也系统性少报 —— 根因是判定包
+  写死的保守规则「判不准的归属类错误标 `ok`,不要硬猜造假 `hard`」。所以硬错数是**下界**。
+  2026-09-18 实测:自然错误里 actor(主体/说话人搬错)占 60%,正是这把尺最看不见的那类。
+- **慢档的事实正确性由 codex 判**,不是 LLM 自判;`glm-4.7-flash` 只抽事件清单(阶段 A),
+  所以它影响覆盖率的分母、不影响错误判定。self-preference 风险的形态是 **codex 判 codex
+  写的稿** → **只能臂间相对比较,不能当绝对门**。
+  (2026-09-18 订正:此处原写「判官与写作层同族同模型(glm-4.7-flash)」,与下文第
+  「判定环节换了主体」一节及 `build-judge-pack.mjs` 都不符。)
 - **时效缺陷这一档已摘掉**。fixture 文章只跨 0913–0915 三天(`TIME_RANGE_DAYS=2` 决定),
   这一档天生没有触发机会,它属于 `/stories` 那条线。
 - `houthi` 82 篇 264k 字符,逼近生产实测的超时线(91 篇 283k → 300 秒硬失败)。

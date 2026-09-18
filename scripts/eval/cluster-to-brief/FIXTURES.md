@@ -35,15 +35,28 @@ step 超时约束,所以用全量——那才是聚类真实交给下游的东�
 
 ## 判据的已知边界(必须写在任何读数旁边)
 
-- 判官与写作层同族同模型(glm-4.7-flash),self-preference 泄漏 →
-  **只能做臂间相对比较,不能当绝对门**
-- 对「主体/日期搬错」这类归属错误召回 ≈ 0,那类错这把尺看不见
+- **事实正确性由 codex 判**(慢档阶段 C),不是 LLM 自判。`glm-4.7-flash` 只用在阶段 A
+  抽事件清单 —— 所以**覆盖率**的分母受它影响(它漏掉的事件永远不进清单),**错误判定**不受。
+  2026-09-18 订正:此处原写「判官与写作层同族同模型(glm-4.7-flash)」,与 README 和
+  `build-judge-pack.mjs` 的实现都不符,已改。
+- self-preference 风险仍在,形态是 **codex 判 codex 写的稿** →
+  **只能做臂间相对比较,不能当绝对门**。主要防线是 dev/heldout 分割
+- 对「主体/日期搬错」这类归属错误召回低,**根因是判定包写死的保守规则**:「判不准的归属类
+  错误标 `ok` 并说明,不要硬猜造假 `hard`」。拿不准就算对,而归属类最容易拿不准,所以报出来的
+  硬错数是**下界**。2026-09-18 自然错误率实测:真实错误里 actor(主体/说话人搬错)占 60%,
+  正是这把尺最看不见的那类。要下「达标」这种绝对结论,须另换不同家的判官复判归属类
 - 判官自我一致性差:同一份稿隔轮再判结果会变,判完必须落逐条明细供复判对照
 
 ## dev / heldout 分割
 
 在 dev 上反复调,**heldout 只在最后报一次**。混用就是过拟合
 (`scripts/eval/article-quality/meta-eval.ts` 里那条设计:迭代只对 dev 调,最终读数只在 heldout 报)。
+
+> **2026-09-18:heldout 两簇已被消耗。** `us airman` 28 与 `china` 51 的文章被
+> `arms/atomic-evidence/structured-verifier/` 那条线拿去造人工注入题并跑过冻结验收
+> (见 `out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md`:「c28/c51 已经打开并使用,
+> 以后不得称仍是未接触 heldout」)。**现在只剩 dev 五簇,最终验收没有干净的 heldout。**
+> 要泛化证据得另取一批未接触、跨事件的簇。
 
 **dev**:`houthi` 82 · `israel` 39 · `cambodia` 17 · `sweden` 20 · `space force` 6
 **heldout**:`china` 116 · `us airman` 16

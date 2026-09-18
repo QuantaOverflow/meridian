@@ -11,16 +11,49 @@ _Avoid_: 评委、打分器、scorer(scorer 指机械指标计算,不是 LLM)
 **检测型判官 (Detection-judge / 桶①)**:
 "对每个条目做一个分类/取舍判断"这一族 eval harness——`intel-grounding`、`faithfulness`、`article-quality`、`coverage-judge`。与之并列的另三种问题形式各用各的指标族:**聚类**(B-cubed)、**排序**(NDCG)、**生成**(含错率/漏报率)。只有检测型判官共用召回/精确率那套指标。
 
-**把握分 (Confidence score)**:
-判官对单条判决"有几成确定"的量。**Meridian 的约定:把握分 = 投票占比(N 票里判某类的票数 k/N),不采信 LLM 自报的置信度**(后者业界公认不可靠)。
-_Avoid_: 自报置信度、self-reported confidence(明确排除)
+**投票占比 (Vote share)**:
+同一条判 N 次,某一类占 k 票,投票占比 = k/N。这是 Meridian 唯一采信的判官确定度——**不用 LLM 自报的置信度**(业界公认不可靠)。
+对应 Inspect AI 的 `epochs`(每个 sample 跑 N 次)+ `reducer`(mode/mean 合成一个 Score)。
+_Avoid_: 把握分(2026-09-18 废弃——它是给一个投票计数起的花名,而花名听起来恰好像它要排除的"自报置信度")
 
-**操作点 (Operating point)**:
-判官在"抓得多(召回)"与"误拦少(精确率/FPR)"之间选定的一个平衡位置。硬标签判官只有一个操作点;要一条曲线需可拧的把握分。
+**operating point**:
+判官在"抓得多(召回)"与"误拦少(精确率)"之间落在的那一个位置。信号检测/ROC 的既定术语,正文直接写英文——中译"操作点"生硬,而换成自造的中文词更糟。
+**跟阈值不是一回事**:阈值是你拧的旋钮,operating point 是拧到那儿得到的 (召回, 精确率) 这一对。
+硬标签判官**只有一个 operating point**,松紧不可调;要一条曲线,judge 必须能输出[[投票占比 (Vote share)]]。
 
-**误拦 (False flag / over-block)**:
+**误拦 (False positive, gating 语境)**:
 把本来合格的条目判成有问题(幻觉/低质/该拦)。精确率低 = 误拦多。作为运行时门时,误拦 = 冤枉压住合格产出。
 _Avoid_: 误报(口语可,正式用"误拦"统一)
+
+## Eval 的结构（借 Inspect AI 的词）
+
+只借我们本来没有词的那几个位置；[[判官 (Judge)]]、[[误拦 (False positive, gating 语境)]]、
+[[投票占比 (Vote share)]] 这些已有定义的照旧不动。
+
+**Sample**:
+一个待测单元。在 `scripts/eval/cluster-to-brief/` 里，**一个簇就是一个 sample**——input 是该簇全量原文，target 是从原文独立抽的事件清单。
+说"n=5 个簇"不如说"**dataset 只有 5 个 sample**"：后者一眼看得出样本量有多小。
+
+**Dataset**:
+一组 sample。本仓的 dataset 是 7 个固定簇，dev 5 / heldout 2（heldout 两簇已于 2026-09-18 被消耗，见 `FIXTURES.md`）。
+
+**Solver**:
+被测的那个实现，即[[候选 / 臂 (Candidate / arm)]]。考场只认它的输入输出（簇原文 → 成稿 + 每句出处），内部怎么实现不管。
+
+**Scorer**:
+把 solver 的产出判成分数的那一套。本仓分两档：快档 scorer 是纯代码（schema / 出处可解析 / 杂质率 / 二元判据），慢档 scorer 是[[判官 (Judge)]]。
+
+**grading instructions**:
+交给判官的那段评分说明——四档定义表加上"先核事实再读文风"、"判不准的归属类标 ok"这些守则。
+它是 scorer 的一部分，**改了它就等于换了一个 scorer**：2026-09-18 实测，instructions 里的四档定义表被截断后重判，同一批句子有两句换了档。
+_Avoid_: 尺（临时造的词，指代不清——既可能指 scorer，也可能指 instructions 或 metric）
+
+**判定包 (Judge pack)**:
+交给判官的那个文件，`out/<arm>/judge-pack-c<cid>.md`。里面装两样：**grading instructions**（评分守则）+ 待判的 samples（成稿逐句 + 每句所引原句 + 事件清单）。
+判官读它、把判定写回 `verdict-c<cid>.json`。它跟 grading instructions 不是一回事——instructions 只是它的头一段。
+
+**Metric**:
+把一批 Score 汇总成读数，例如核心层覆盖率、硬错条数、block 级含错比例。
 
 ## 写作层 / 事实准确性(见 ADR 0004)
 
@@ -32,7 +65,10 @@ _Avoid_: 骨架事实(同义,正式用"要点")、主线
 写作前一次 LLM 调用产出的中间结果:原文明说的先后、回应/因果、数字更新(旧值→最新值)、说法冲突、将来的事,每条带出处。写作照它写。
 
 **关系错 (Relation-level factual error)**:
-名字、数字都在材料里,但它们之间的关系写错了。按 FRANK 分类细分为:
+名字、数字都在材料里,但它们之间的关系写错了。下面五类是 Meridian 自定的,**受 FRANK 启发但不是它的子类**——
+两边是多对多:错接 ≈ EntE + CircE、说话人安错 ≈ EntE 的特例、混人 ≈ CorefE、编造因果 ≈ LinkE、时序错 ≈ LinkE + CircE;
+而 FRANK 的 PredE / OutE / GramE 在这套里没有对应(OutE「文外信息」还被下面的 _Avoid_ 明确排除)。
+**所以本仓的关系错读数不能跟 FRANK 系的论文或指标直接比。** 五类是:
 - **错接 (Misgraft)**:细节(数字、时间、属性)接到了别的事件或人身上
 - **说话人安错 (Misattribution)**:话或说法安给了别人,或把一个人的话泛化成"分析人士"
 - **混人 (Conflation)**:两个人/实体被写成一个,或只写姓、读者分不清是谁

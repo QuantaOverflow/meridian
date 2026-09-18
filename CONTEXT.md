@@ -2,11 +2,20 @@
 
 新闻聚合系统的领域词汇表(术语与其精确含义)。实现细节不进本文件——见代码与 `docs/`。
 
+**同一个对象在不同语境下有不同的名字，这是有意的**（DDD 的限界上下文）。最常撞到的一组：
+一个完整的「簇原文 → 成稿 + 出处」实现，在 **eval 语境**叫 [[Solver]]、在**实验设计语境**叫
+**臂 (arm)**、在**搜索语境**叫 [[候选 / 臂 (Candidate / arm)]]。三个词各自强调一面，都是别处的
+既定词，不合并——把「臂」换成 Solver，「对照臂必须同次跑」这句话就没法说了。
+章节结构对应语境：`Eval 的结构` 是 eval 语境，`开发方法论` 是搜索与实验设计语境。
+
 ## Eval / 判官
 
 **判官 (Judge)**:
-一个 LLM,对每个待测条目吐一个分类标签(如 supported/unsupported/contradicted),用来自动评判管线某一环的质量。
-_Avoid_: 评委、打分器、scorer(scorer 指机械指标计算,不是 LLM)
+实际做判断的那个模型——对每个待测条目吐一个标签(如 supported/unsupported),用来自动评判管线某一环的质量。
+它是 [[Scorer]] 的一部分，不是 Scorer 的同义词：Scorer 是打分的整套装置，判官是它内部调的模型。
+_Avoid_: 评委、打分器。
+（2026-09-19 订正：此处原写「scorer 指机械指标计算，不是 LLM」，与 Inspect AI 的标准用法相反——
+它的 `model_graded_qa` 本身就是一个 scorer。借入 Inspect 结构词之后不能再留一个反义的本地定义。）
 
 **检测型判官 (Detection-judge / 桶①)**:
 "对每个条目做一个分类/取舍判断"这一族 eval harness——`intel-grounding`、`faithfulness`、`article-quality`、`coverage-judge`。与之并列的另三种问题形式各用各的指标族:**聚类**(B-cubed)、**排序**(NDCG)、**生成**(含错率/漏报率)。只有检测型判官共用召回/精确率那套指标。
@@ -38,19 +47,42 @@ _Avoid_: 误报(口语可,正式用"误拦"统一)
 一组 sample。本仓的 dataset 是 7 个固定簇，dev 5 / heldout 2（heldout 两簇已于 2026-09-18 被消耗，见 `FIXTURES.md`）。
 
 **Solver**:
-被测的那个实现，即[[候选 / 臂 (Candidate / arm)]]。考场只认它的输入输出（簇原文 → 成稿 + 每句出处），内部怎么实现不管。
+被测的那个实现。考场只认它的输入输出（簇原文 → 成稿 + 每句出处），内部怎么实现不管。
+**同一对象的另外两个名字**：讲这次比较里谁对照谁时叫**臂 (arm)**（`--arm=` 焊在 harness 的 CLI 与输出路径里）；
+讲搜索时叫[[候选 / 臂 (Candidate / arm)]]（强调"可能被淘汰"）。
 
 **Scorer**:
-把 solver 的产出判成分数的那一套。本仓分两档：快档 scorer 是纯代码（schema / 出处可解析 / 杂质率 / 二元判据），慢档 scorer 是[[判官 (Judge)]]。
+把 solver 的产出判成分数的**整套装置**，含不含模型都算。本仓两档：
+
+```
+Scorer
+ ├ code scorer           快档：schema / 出处可解析 / 杂质率 / 二元判据。纯代码零 LLM
+ └ model-graded scorer   慢档：覆盖 + 正确性
+      └ [[判官 (Judge)]]  它内部调的那个模型
+```
+
+用 Inspect AI 的义（它的 `includes()`/`match()` 是 code scorer，`model_graded_qa` 是 model-graded scorer）。
+
+**grading prompt**:
+递给[[判官 (Judge)]]的**完整那一份**。Inspect AI 的 grading template 吃四个变量，我们的对应关系是：
+
+```
+question       簇原文           ← 我们不给（太大），换成每条断言自带的证据切片
+criterion      事件清单          ✓
+answer         待判句子 + 出处    ✓
+instructions   评分守则          ✓ 见下条
+```
+
+**把 question 换成证据切片是一个[[设计取值 (Design trait)]]**，不是省事：好处是判定局部化（实测 hard/ok 两轮零漂移），
+代价是切片不足时判官分不开「真没依据」和「引错了句子」——2026-09-19 实测 28 条「切片里找不到依据」，
+61% 被按守则放过、39% 被扣分，**两个方向的偏差同时存在**。
+落盘形态是 `out/<arm>/judge-pack-c<cid>.md`，文件名沿用 harness 既有的 judge-pack。
+_Avoid_: 包（说"包"时对方不知道指整份还是指其中的守则）
 
 **grading instructions**:
-交给判官的那段评分说明——四档定义表加上"先核事实再读文风"、"判不准的归属类标 ok"这些守则。
+[[grading prompt]] 里的评分守则那一段——四档定义表加上"先核事实再读文风"、"判不准的归属类标 ok"这些守则。
 它是 scorer 的一部分，**改了它就等于换了一个 scorer**：2026-09-18 实测，instructions 里的四档定义表被截断后重判，同一批句子有两句换了档。
 _Avoid_: 尺（临时造的词，指代不清——既可能指 scorer，也可能指 instructions 或 metric）
-
-**判定包 (Judge pack)**:
-交给判官的那个文件，`out/<arm>/judge-pack-c<cid>.md`。里面装两样：**grading instructions**（评分守则）+ 待判的 samples（成稿逐句 + 每句所引原句 + 事件清单）。
-判官读它、把判定写回 `verdict-c<cid>.json`。它跟 grading instructions 不是一回事——instructions 只是它的头一段。
 
 **Metric**:
 把一批 Score 汇总成读数，例如核心层覆盖率、硬错条数、block 级含错比例。
@@ -96,7 +128,8 @@ _Avoid_: 幻觉(太宽,还包括凭空编造;名字数字写错另算"接地错"
 _Avoid_: 把两层混在一轮里做——25%→10% 曾被误当架构改善，根因就是判据与材料都变了却当成同一把尺。
 
 **候选 / 臂 (Candidate / arm)**:
-一个**完整的**「簇原文 → 带出处成稿」实现，不是其中某一层。考场只认输入与输出，中间拆几步、传什么表示、调几次模型都不管（契约见 `scripts/eval/cluster-to-brief/README.md`）。
+一个**完整的**「簇原文 → 带出处成稿」实现，不是其中某一层。**在 eval 语境下这个对象叫 [[Solver]]**——
+同一个东西，这里的名字强调它是搜索空间里的一个点、可能被淘汰。考场只认输入与输出，中间拆几步、传什么表示、调几次模型都不管（契约见 `scripts/eval/cluster-to-brief/README.md`）。
 _Avoid_: 把某一层的组件叫候选——局部指标不能代替端到端判定
 
 **单变量设计变更 (Mutation)**:

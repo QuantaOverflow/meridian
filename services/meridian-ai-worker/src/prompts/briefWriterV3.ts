@@ -57,7 +57,7 @@ export function getWritePrompt(
 <material>
 ${material}
 </material>
-${relations ? `\nNotes on how events relate, taken from the original reporting:\n${relations}\n` : ''}
+${relations ? `\nNotes on how events relate. A model worked these out from the key points and their source sentences; they are not themselves quoted from the reporting:\n${relations}\n` : ''}
 ${tierTask(tier)}
 
 ${RULES}${names}
@@ -127,7 +127,7 @@ export function getOneSourceWritePrompt(
 <material>
 ${material}
 </material>
-${relations ? `\nNotes on how events relate, taken from the original reporting:\n${relations}\n` : ''}
+${relations ? `\nNotes on how events relate. A model worked these out from the key points and their source sentences; they are not themselves quoted from the reporting:\n${relations}\n` : ''}
 ${oneSourceTierTask(tier)}
 
 ${RULES_ONE_SOURCE}${names}

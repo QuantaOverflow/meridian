@@ -1,0 +1,413 @@
+{
+ "cluster": 43,
+ "name": "israel",
+ "articles": 39,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 74,
+ "mergedAway": 27,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 3,
+  "maxSupport": 6,
+  "coreTierOfMax": 0.5,
+  "core": 3,
+  "mid": 6,
+  "tail": 38
+ },
+ "events": [
+  {
+   "event": "Israeli Culture Minister Miki Zohar threatened to revoke the citizenship of filmmakers Yuval Abraham and Rachel Szor.",
+   "articleIds": [
+    992068,
+    994021,
+    996287,
+    1005082,
+    1001951,
+    1008135
+   ],
+   "nArticles": 6,
+   "nSources": 4
+  },
+  {
+   "event": "Israeli Culture Minister Miki Zohar accused the creators of the 'NAZA' documentary of a 'betrayal of the state' and self-loathing.",
+   "articleIds": [
+    996287,
+    1005082,
+    1001951
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Israeli forces have killed 1,107 Palestinians in the West Bank since October 7, 2023.",
+   "articleIds": [
+    994964,
+    998379,
+    1001422
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "Israeli forces struck a car in Gaza City's Tel al-Hawa neighbourhood, killing two Hamas engineers and wounding 13 people.",
+   "articleIds": [
+    996563,
+    1008135
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Israel's military chief Eyal Zamir ordered the military prosecutor to examine and advance possible legal measures concerning the film Naza and those involved.",
+   "articleIds": [
+    1000638,
+    1001951
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "The film Naza won the Special Jury Prize at the Venice Film Festival on Saturday.",
+   "articleIds": [
+    1001951,
+    1005082
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "The film Naza received a 25-minute standing ovation when it was screened at the Venice Film Festival.",
+   "articleIds": [
+    1005082,
+    1001951
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "The film Naza's official synopsis details the systems behind Israel's calculated mass killing of Palestinian civilians in Gaza.",
+   "articleIds": [
+    1005082,
+    1001951
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Israeli forces set up at least 925 movement obstacles, including roadblocks and unmanned checkpoints, in the West Bank by the end of 2025.",
+   "articleIds": [
+    998379,
+    1001422
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "International Organization for Migration estimates about 330,000 people remain displaced in Lebanon.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "UNHCR's Nadine Mazloum says displacement patterns remain highly fluid and often reversible.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Hezbollah responded to Israeli attacks on Lebanon on March 2, 2026.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israel currently occupies more than 50 villages in southern Lebanon.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The offensive in southern Lebanon has killed more than 4,380 people.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A June framework agreement between Israel and Lebanon did not stop Israeli attacks on southern Lebanon.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "More than 810,000 people in Lebanon have returned home or to nearby places since the 2024 ceasefire.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Soujoud Ramadan returned to her village of Froun after the 2024 ceasefire.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The International Organization for Migration reported 80 percent of displaced people are in five districts.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The International Organization for Migration reported 17,566 registered displaced people live in collective sites.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The International Organization for Migration reported 75 percent of displaced people are living in rented accommodation.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Norwegian Refugee Council's Maureen Philippon said she passed through villages with not one single standing wall.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Norwegian Refugee Council's Maureen Philippon said many locals from southern villages had to flee again after the resumption of attacks.",
+   "articleIds": [
+    986232
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces killed a pregnant Palestinian woman in Gaza.",
+   "articleIds": [
+    990120
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli quadcopters were deployed to track and target civilians in Gaza City.",
+   "articleIds": [
+    992100
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli Finance Minister Bezalel Smotrich approved more than 3,000 homes in the E1 settlement project.",
+   "articleIds": [
+    994491
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "West Virginia assistant football coach Noel Devine was arrested on a felony strangulation charge.",
+   "articleIds": [
+    995295
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces targeted two Hamas engineers, Hassan Ali Abu Nada and Abd al-Rahim Ahmad Khalil Khawa, accusing them of weapons production.",
+   "articleIds": [
+    996563
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces killed two teenagers during a military raid in al-Mughayyir, east of Ramallah, in early September.",
+   "articleIds": [
+    1001422
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces demolished every home in Khirbet al-Tabban, displacing about 70 people, including 30 children, in early September.",
+   "articleIds": [
+    1001422
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces killed a 14-year-old student named Aws in al-Mughayyir on April 21.",
+   "articleIds": [
+    998898
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces forcibly displaced at least 75 Palestinian communities and 33,000 Palestinians from refugee camps in the northern West Bank.",
+   "articleIds": [
+    998379
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli forces established at least 1,070,000 dunams of land under control via armed settlers by July 2026.",
+   "articleIds": [
+    998379
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli Prime Minister Benjamin Netanyahu stated that the documentary Naza is based on blood libels, deliberate distortions of reality, and grave false accusations against Israeli soldiers and the IDF",
+   "articleIds": [
+    1001951
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli Prime Minister Benjamin Netanyahu said that Israeli directors portraying the Israeli military as war criminals receive applause at the Venice festival.",
+   "articleIds": [
+    1001951
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The film Naza was produced by the UK's Guardian newspaper.",
+   "articleIds": [
+    1005082
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli strikes killed at least two people and destroyed tents in Gaza on 14 September.",
+   "articleIds": [
+    1006788
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israeli warplanes killed a family of four in Beit Lahia on 10 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A drone strike near Sumoud camp in Khan Younis killed Jihad Ismail on 11 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A pregnant woman, Iman Shalouf, died from wounds sustained days earlier on 12 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A Palestinian was killed by Israeli gunfire in al-Mawasi, Rafah on 14 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Gaza’s Ministry of Health reported 73,786 killed and 174,771 wounded on 14 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Al-Ahli Arab Hospital suspended its imaging department due to a failed generator on 13 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Gaza’s bus operators’ union announced a suspension of transport for doctors and nurses on 13 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israel approved only 13,445 litres of engine oil against 93,000 pending requests since March.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Twelve countries announced sanctions on Israeli settlement goods on 8 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israel ordered the UK to close its consulate in East Jerusalem on 9 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Israel barred 12 British public figures, including 11 MPs, on 9 September.",
+   "articleIds": [
+    1008135
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

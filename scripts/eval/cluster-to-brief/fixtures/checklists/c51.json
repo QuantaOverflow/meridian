@@ -1,0 +1,1208 @@
+{
+ "cluster": 51,
+ "name": "china",
+ "articles": 116,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 223,
+ "mergedAway": 83,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 7,
+  "maxSupport": 14,
+  "coreTierOfMax": 0.5,
+  "core": 2,
+  "mid": 24,
+  "tail": 114
+ },
+ "events": [
+  {
+   "event": "Anthropic CEO Dario Amodei said the AI industry should put the brakes on its fast-moving development.",
+   "articleIds": [
+    989443,
+    992101,
+    995400,
+    996386,
+    996736,
+    999799,
+    998239,
+    998830,
+    998902,
+    998704,
+    1000362,
+    1001412,
+    1007207,
+    1002994
+   ],
+   "nArticles": 14,
+   "nSources": 9
+  },
+  {
+   "event": "US President Donald Trump played down the need for his administration to check AI development.",
+   "articleIds": [
+    989443,
+    992101,
+    995400,
+    996386,
+    998902,
+    998755,
+    1001412,
+    1002287,
+    1002806,
+    1008977,
+    1009516
+   ],
+   "nArticles": 11,
+   "nSources": 6
+  },
+  {
+   "event": "Chinese Foreign Ministry spokesperson Guo Jiakun said fearmongering and confrontation disrupt global AI governance.",
+   "articleIds": [
+    996386,
+    996736,
+    996926,
+    999799,
+    998902,
+    998900
+   ],
+   "nArticles": 6,
+   "nSources": 4
+  },
+  {
+   "event": "US President Donald Trump posted on Truth Social that AI needs a 'strong and smart president' and accused critics of a 'sick conspiracy.'",
+   "articleIds": [
+    998755,
+    1001412,
+    1002287,
+    1002806,
+    1006117,
+    1006111
+   ],
+   "nArticles": 6,
+   "nSources": 4
+  },
+  {
+   "event": "OpenAI CEO Sam Altman joined Silicon Valley leaders in demanding industry-wide pacing of AI development.",
+   "articleIds": [
+    996151,
+    998704,
+    1000362,
+    1001412
+   ],
+   "nArticles": 4,
+   "nSources": 4
+  },
+  {
+   "event": "China's state-run Global Times dismissed Amodei's essay as a 'Cold War playbook' for the AI sector.",
+   "articleIds": [
+    996386,
+    996736,
+    999799,
+    998902
+   ],
+   "nArticles": 4,
+   "nSources": 3
+  },
+  {
+   "event": "The number of confirmed Ebola cases stood at more than 7,200, including more than 3,475 deaths, as of 14 September.",
+   "articleIds": [
+    1005495,
+    1007136,
+    1007135,
+    1008165
+   ],
+   "nArticles": 4,
+   "nSources": 2
+  },
+  {
+   "event": "Sam Altman said OpenAI would not go public in 2026 due to safety concerns.",
+   "articleIds": [
+    995400,
+    998239,
+    998830
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "xAI chief Elon Musk endorsed Amodei's position, writing 'Dario is right.'",
+   "articleIds": [
+    998239,
+    998830,
+    998704
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Global AI-linked stocks plunged on Monday after leaders of major AI companies called for a slower pace of development.",
+   "articleIds": [
+    998239,
+    998830,
+    1001412
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "OpenAI researcher Jacob Coxon resigned, saying companies developing frontier AI were moving too quickly.",
+   "articleIds": [
+    998239,
+    1001412,
+    1002287
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "The Democratic Republic of Congo's eastern provinces are experiencing multiple difficulties in containing the Ebola outbreak.",
+   "articleIds": [
+    1007136,
+    1007135,
+    1008165
+   ],
+   "nArticles": 3,
+   "nSources": 1
+  },
+  {
+   "event": "China's state security minister Chen Yixin warned of rising national security risks posed by AI.",
+   "articleIds": [
+    991392,
+    997234
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Microsoft CEO Satya Nadella agreed on slowing AI development.",
+   "articleIds": [
+    994853,
+    1000362
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Sam Altman, Demis Hassabis, and Elon Musk supported Amodei's call for a slowdown.",
+   "articleIds": [
+    995400,
+    1002994
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "China's Commerce Ministry dismissed US claims of Chinese AI 'distillation' as groundless and accused the US of pursuing a monopoly.",
+   "articleIds": [
+    996386,
+    996736
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "US President Donald Trump said he expects to discuss AI governance with Chinese leader Xi Jinping on September 24.",
+   "articleIds": [
+    996386,
+    996736
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Anthropic identified and shut down operations involving suspected state-sponsored spies, weapons engineers, and criminals using Claude.",
+   "articleIds": [
+    997740,
+    1001412
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Microsoft AI CEO Mustafa Suleyman released a draft code of conduct for AI models on Monday, September 14.",
+   "articleIds": [
+    998758,
+    1000362
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Hundreds gathered in Bukavu, Congo, for a mass funeral for 27 students killed in a school fire.",
+   "articleIds": [
+    1001410,
+    1002233
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "US President Donald Trump called himself 'the Hoax Buster' and likened concerns about AI safety to the 'RUSSIA, RUSSIA, RUSSIA HOAX'.",
+   "articleIds": [
+    1006111,
+    1008977
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Bill Gates Foundation warned that billions of people risk being left behind by AI because it does not understand their languages or conditions.",
+   "articleIds": [
+    1005327,
+    1008532
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "A group of MPs and peers identified human rights risks posed by AI.",
+   "articleIds": [
+    995400,
+    996824
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic published a threat intelligence report detailing misuse of Claude models from December 2025 to August 2026.",
+   "articleIds": [
+    997740,
+    998239
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "A new poll showed 23 percent of Americans believe President Donald Trump has handled artificial intelligence well, while 57 percent say he has handled it poorly.",
+   "articleIds": [
+    1002806,
+    1008977
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Trump said the only guardrail AI needs is a strong president.",
+   "articleIds": [
+    1008977,
+    1009516
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai filed a filing to raise HK$15.7 billion (US$2 billion) through a share placement and a US$3 billion convertible bond sale.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai announced an application to list on Shanghai's Star Market targeting up to 15 billion yuan.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's 60-day lock-up period following its July placement expired.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's stock closed at HK$793 on Friday, down 73 per cent from its intraday high of HK$2,980 on June 22.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's stock remained nearly seven times its January listing price.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's July placement raised HK$31.4 billion from the sale of 19.78 million shares at HK$1,588 each.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A six-month lock-up on 25.68 million initial public offering shares held by cornerstone investors expired.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's repeated tapping of capital markets underscores the heavy costs of developing frontier AI models.",
+   "articleIds": [
+    986508
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Z.ai's 2026 International AI Safety Report found that almost one billion people use AI for a wide range of tasks.",
+   "articleIds": [
+    987717
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The 2026 International AI Safety Report found generative AI had productivity gains of between 10 and 65 percent.",
+   "articleIds": [
+    987717
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Wipro said its use of AI had freed up capacity equivalent to 20,000 employees.",
+   "articleIds": [
+    987717
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Wipro Chief Technology Officer Sandhya Arun said the company was training more than 100,000 employees in advanced AI skills.",
+   "articleIds": [
+    987717
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The 2026 International AI Safety Report warned that 40 percent of jobs in emerging economies could be vulnerable to AI.",
+   "articleIds": [
+    987717
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Schools and police in the US issued warnings against a viral 'Cat in the Hat' social media trend.",
+   "articleIds": [
+    989176
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A 15-year-old in Hutchinson, Kansas, was arrested and charged with two counts of criminal threat after posting a Cat in the Hat video.",
+   "articleIds": [
+    989176
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Grand Junction police department increased its presence at two schools out of an abundance of caution following a Cat in the Hat post.",
+   "articleIds": [
+    989176
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Former White House AI czar David Sacks challenged warnings from AI leaders, saying the industry can slow down independently.",
+   "articleIds": [
+    992101
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A 75-year-old woman from Shanghai spent three million yuan on beauty treatments, depleting her retirement savings.",
+   "articleIds": [
+    992375
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Researchers from Sun Yat-sen University concluded that China could improve its image in the US by highlighting tourism and technology.",
+   "articleIds": [
+    992371
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US Transportation Secretary Sean Duffy sent a letter to Ford CEO Jim Farley on September 8, citing profound concern over Ford's ties to CATL and Geely.",
+   "articleIds": [
+    992935
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "David Sacks issued a scathing response to OpenAI CEO Sam Altman and Anthropic CEO Dario Amodei, telling them to 'cut the theater' and voluntarily halt their work if they believe their models are an 'a",
+   "articleIds": [
+    992939
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Nike's stock fell roughly 78% from its November 2021 peak, marking the largest drawdown in its history as a publicly traded business.",
+   "articleIds": [
+    994380
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "UBS began asking prospective junior investment bankers to prove their AI proficiency as part of its hiring process for 2027.",
+   "articleIds": [
+    993408
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China rolled out a nationwide overhaul of primary and middle-school textbooks, shifting their focus towards Chinese culture and 'telling China's story'.",
+   "articleIds": [
+    993319
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "GSK signed a memorandum of understanding in September last year with the University of Hong Kong and the Greater Bay Area International Clinical Trial Institute.",
+   "articleIds": [
+    993793
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Jack Thorne warned scriptwriters are using AI to cheat.",
+   "articleIds": [
+    993995
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Jack Thorne said AI must not impersonate actors, directors, and writers.",
+   "articleIds": [
+    993995
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Sam Altman said China could surpass the US in AI if American companies fail to act responsibly.",
+   "articleIds": [
+    995794
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Sam Altman clarified that slowing AI development does not mean stopping progress.",
+   "articleIds": [
+    995794
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic is on track to be profitable this quarter.",
+   "articleIds": [
+    995400
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Chen Binhua praised Taiwan compatriots for discussing a one country, two systems plan for Taiwan.",
+   "articleIds": [
+    995696
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Li Ci-ze submitted a detailed proposal on applying one country, two systems to Taiwan to a mainland social media channel in late August.",
+   "articleIds": [
+    995696
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic removed an account using its Claude model to run a commercial election manipulation platform across Malaysia.",
+   "articleIds": [
+    995695
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Chef Fei launched its first US outlet in San Diego on August 29.",
+   "articleIds": [
+    996149
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Mark Zuckerberg sent an email to Meta's top leadership on September 15, 2021, questioning whether the company should overhaul its strategy on internal safety research.",
+   "articleIds": [
+    996742
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "UK lawmakers urged Prime Minister Andy Burnham to back a ban on creating artificial superintelligence.",
+   "articleIds": [
+    996824
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "UK AI minister Kanishka Narayan urged AI labs to offer their models for testing to the AI Security Institute.",
+   "articleIds": [
+    996824
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "An Iran-linked operator used Claude to build a targeting file on US naval forces using public photographs and transponder data.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A weapons cell in Yemen used Claude Code to write guidance, navigation, and control software for a guided rocket and ballistic missile.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A China-linked operator used Claude to profile and attempt to recruit Uyghurs in Syria, including members of armed formations.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A Bamako-based consultant used Claude as the engineering workforce for a surveillance platform covering 25 million SIM cards.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic banned the account of the Bamako consultant and stripped a warrant requirement from a surveillance platform component.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic blocked a request to write a grant application for gain-of-function work on chikungunya at a military research institute.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Anthropic named Alibaba, Moonshot, DeepSeek, Xiaomi, Zhipu, SenseTime and MiniMax over unauthorised distillation.",
+   "articleIds": [
+    997740
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China's spy chief Chen Yixin cited Anthropic's Claude Mythos and OpenAI's ChatGPT-5.5-Cyber as posing serious risks to critical infrastructure.",
+   "articleIds": [
+    997234
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China tightened export controls for five critical rare-earth metals in October.",
+   "articleIds": [
+    998902
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US and Chinese governments are expected to hold AI safety talks this month as part of broader bilateral discussions.",
+   "articleIds": [
+    998239
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Asia Centre convened the Global Democracy Coalition Asia Regional Forum in 2026.",
+   "articleIds": [
+    1000981
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Asia Centre established an AI Hub to support the digital transformation of civil society organizations.",
+   "articleIds": [
+    1000981
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US tech and AI giant Palantir was named in a UN report for aiding Israel's war on Gaza.",
+   "articleIds": [
+    998902
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Google DeepMind CEO Demis Hassabis signed on to calls for AI caution.",
+   "articleIds": [
+    998704
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Microsoft's code of conduct prohibits AI models from considering requests related to weapons development, producing violent or sexually explicit content, or helping with the procurement of dangerous.",
+   "articleIds": [
+    1000362
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Microsoft CEO Mustafa Suleyman said the need for a code was urgent and that the last few months had been a watershed moment.",
+   "articleIds": [
+    1000362
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Oracle began cutting jobs on September 14, with employees finding out via a 6am email from Oracle Leadership.",
+   "articleIds": [
+    999288
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Oracle's restructuring costs rose by about $700 million, taking the expected cost of its fiscal 2026 plan to roughly $2.8 billion.",
+   "articleIds": [
+    999288
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Germany's military counter-intelligence agency MAD warned of a growing threat from hybrid attacks and the use of recruited contract agents.",
+   "articleIds": [
+    999685
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Germany's MAD annual report cited Germany's geostrategic position and NATO expansion as reasons for heightened targeting by Russian espionage.",
+   "articleIds": [
+    999685
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "European Central Bank President Christine Lagarde said Europe must develop its own AI technology and build more datacentres to avoid being cut off by the US or China.",
+   "articleIds": [
+    1000860
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Elon Musk endorsed Anthropic's proposal to pace AI development.",
+   "articleIds": [
+    1001412
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "OpenAI delayed its IPO due to concerns about uncontrollable AI.",
+   "articleIds": [
+    1001412
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Elon Musk's X Corp and SpaceXAI dropped their antitrust lawsuit against Apple.",
+   "articleIds": [
+    1001408
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The UN Security Council will hold a meeting on artificial intelligence next week.",
+   "articleIds": [
+    1001693
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US House Speaker Mike Johnson told CBS that the US should not lose its edge in the global AI competition with China.",
+   "articleIds": [
+    1002287
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China warned Panama of 'serious consequences' after most of its lawmakers set up a parliamentary exchange group with Taiwan.",
+   "articleIds": [
+    1002235
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A faction of the Democratic Forces for the Liberation of Rwanda (FDLR) signed a protocol covering disarmament, demobilization, and cantonment.",
+   "articleIds": [
+    1003987
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Democratic Republic of the Congo and Rwanda are scheduled to reconvene in Geneva on September 16 and 17 to discuss the implementation of the 2025 Washington Accords.",
+   "articleIds": [
+    1003987
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Securities Association of China sent a revised draft of its rules on 'clean practices' to brokerages, seeking feedback by September 29.",
+   "articleIds": [
+    1003242
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China's securities regulator and industry body are extending anti-corruption oversight to offshore brokerage operations for the first time.",
+   "articleIds": [
+    1003242
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Brokerages are required to establish clawback mechanisms to recover bonuses and performance pay from employees who violate ethical standards or regulatory rules.",
+   "articleIds": [
+    1003242
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A new snack called 'homework' made from rice paper has gained viral popularity among primary and secondary school students in China.",
+   "articleIds": [
+    1004273
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The United States Department of State spokesperson reaffirmed the parties' commitment to the Washington Accords for Peace and Prosperity.",
+   "articleIds": [
+    1003987
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The DRC and Rwanda agreed to hold a trilateral planning conference in October to guide their coordinated efforts.",
+   "articleIds": [
+    1003987
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Securities Association of China requires brokerages to prepare an annual report on integrity management for board review.",
+   "articleIds": [
+    1003242
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Huawei Technologies' landmark trial in a US court made jury selection especially important to ensuring a fair trial.",
+   "articleIds": [
+    1002753
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Dell Technologies CEO Michael Dell warned that industry-wide supply bottlenecks will be worse in 2027 than in 2026.",
+   "articleIds": [
+    1004908
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Dell Technologies CEO Michael Dell explained that the rapid leap from basic Large Language Models to complex reasoning engines has vastly outstripped manufacturing lead times.",
+   "articleIds": [
+    1004908
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Dell Technologies CEO Michael Dell said customers sort of go through five stages of grief, starting with 'OK' when facing higher prices.",
+   "articleIds": [
+    1004908
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Dell Technologies CEO Michael Dell said enterprise buyers increasingly view AI deployment as a critical driver of efficiency, innovation, and direct corporate value creation.",
+   "articleIds": [
+    1004908
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Salesforce announced $27 million in new education grants nationwide, including $18 million directly supporting public school districts in San Francisco, Oakland, New York City, Chicago, and Indy.",
+   "articleIds": [
+    1005400
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Salesforce CEO Marc Benioff wrote an initial $2.7 million check in 2013 as a down payment on a decade-long, $100 million pledge to public schools.",
+   "articleIds": [
+    1005400
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Salesforce CEO Marc Benioff said the only condition for the donation is that there is 'no hate, no discrimination'.",
+   "articleIds": [
+    1005400
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Salesforce announced it is bringing its 1-1-1 philanthropic model into schools through a relaunched Adopt-a-School program across more than 25 public schools nationwide.",
+   "articleIds": [
+    1005400
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Meta agreed to report cases related to child sexual abuse to appropriate law enforcement agencies in India.",
+   "articleIds": [
+    1004907
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Meta introduced the Model Capability Initiative (MCI) to collect data on how thousands of employees use their computers.",
+   "articleIds": [
+    1005922
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Democratic Republic of the Congo health authorities announced the Ebola outbreak has reached its peak and infection rates are slowing.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Congolese health minister Samuel Roger Kamba said the Bundibugyo variant of Ebola transmission is declining.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Samuel Roger Kamba reported a decline from about 120 to about 80 new cases per day.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Samuel Roger Kamba removed six health zones from the list because they had gone more than 42 days without new cases.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Samuel Roger Kamba removed four health zones because they had gone more than 21 days without a new case.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Sud-Ubangi region became the sixth province to report Ebola.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Bundibugyo virus outbreak was declared by Congolese authorities on 15 May.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The DRC received more than 70,000 doses of the Ervebo vaccine last month.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iracan Gratien de Saint-Nicolas warned against what he called 'triumphalism' regarding the Ebola outbreak.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iracan Gratien de Saint-Nicolas said some indicators showing an epidemic was under control seemed to have been omitted.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Jean Kaseya said a large portion of the mortality comes from the community.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Jean Kaseya said epidemiologists say the epidemic has reached its peak when all cases come from the list of contacts.",
+   "articleIds": [
+    1005495
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Roche Experience Days 2026 opened in Hong Kong on October 1, 2026, as a closed-door summit for healthcare executives.",
+   "articleIds": [
+    1006863
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Microsoft released a 'Humanist AI' Code of Conduct for its in-house MAI models on September 15, 2026.",
+   "articleIds": [
+    1007991
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Microsoft's MAI models will never generate working exploit code or provide operational guidance for cyberattacks.",
+   "articleIds": [
+    1007991
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Gates announced the Gates Foundation will spend at least $1 billion over two years on AI access.",
+   "articleIds": [
+    1008532
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China's tech giants introduced token quotas to cut AI costs.",
+   "articleIds": [
+    1008418
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Canterbury-Bankstown Council voted to ban AI smart glasses at public pools.",
+   "articleIds": [
+    1008634
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Australia's online safety regulator advised smart glasses companies to blur faces.",
+   "articleIds": [
+    1008634
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Uber cut about 3,300 jobs, or 10% of its global headcount.",
+   "articleIds": [
+    1009042
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Uber CEO Dara Khosrowshahi said riders will see cheaper rides from the layoffs.",
+   "articleIds": [
+    1009042
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Uber ended remote work, keeping only about 1% of staff remote.",
+   "articleIds": [
+    1009042
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Barack Obama said AI is moving faster than engineers can keep up.",
+   "articleIds": [
+    1009516
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The European Commission is set to propose the EU KIDS Act to ban minors under 15 from opening social media accounts.",
+   "articleIds": [
+    1009465
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Mark Cuban suggested a conspiracy theory that Meta and Google are amplifying anti-AI sentiment to subsidize their AI development.",
+   "articleIds": [
+    1009592
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Mark Cuban warned that human reactions to online content pose a greater risk than AI agents.",
+   "articleIds": [
+    1009592
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The U.K. production company PARTICLE 6 created Tilly Norwood, an AI actor for the film 'Misaligned'.",
+   "articleIds": [
+    1009626
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "SAG-AFTRA stated it is opposed to the replacement of human performers by synthetics.",
+   "articleIds": [
+    1009626
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China's Ministry of Industry and Information Technology and National Development and Reform Commission outlined priorities for the electronics and IT industry.",
+   "articleIds": [
+    1009461
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "China's five-year plan calls for the development of open-standard RISC-V integrated circuits.",
+   "articleIds": [
+    1009461
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

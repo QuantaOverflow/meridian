@@ -1,0 +1,218 @@
+{
+ "cluster": 37,
+ "name": "cambodia-thailand",
+ "articles": 17,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 34,
+ "mergedAway": 10,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 2,
+  "maxSupport": 3,
+  "coreTierOfMax": 0.5,
+  "core": 3,
+  "mid": 0,
+  "tail": 21
+ },
+ "events": [
+  {
+   "event": "Cambodia and Thailand began compulsory conciliation proceedings in Singapore yesterday to resolve a long-running maritime dispute.",
+   "articleIds": [
+    1009292,
+    1006837,
+    1007386
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Thailand’s Foreign Minister Sihasak Phuangketkaew said Thailand enters this conciliation in good faith, fully mindful of the provisions of UNCLOS.",
+   "articleIds": [
+    1009292,
+    1006837
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Cambodia initiated the UNCLOS process in June shortly after Prime Minister Anutin Charnvirakul’s government unilaterally cancelled a 2001 agreement with Cambodia governing joint offshore energy.",
+   "articleIds": [
+    1009292,
+    1006837
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Singapore's government raised the annual salaries of ministers, including Prime Minister Lawrence Wong, from S$2.2 million to S$3.6 million.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore's Prime Minister Lawrence Wong announced he will donate his entire pay increase to charity over the next five years.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore's government announced the first increase in ministerial salaries in 15 years.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore's government stated that raising ministers' pay was necessary to attract better talent into public service.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore's government announced that ministers will receive an initial one-off adjustment of up to 9 percent starting October 15.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore's government stated that by the end of the current government's term, most junior ministers are expected to earn around S$1.35 million.",
+   "articleIds": [
+    991963
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Myanmar's military-backed government accused its UN representative Kyaw Moe Tun of undertaking 'illegal activities' and misuse of state funds.",
+   "articleIds": [
+    993150
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Myanmar's military-backed government announced plans to establish a formal cooperation framework with Cambodia to foster closer ties between their armed forces.",
+   "articleIds": [
+    993147
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Thailand's government stated that it has evidence Cambodia stationed troops at Preah Vihear temple during border fighting.",
+   "articleIds": [
+    993148
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Energy ministers and executives met in Bangkok on Monday to discuss LNG price increases triggered by the Iran war.",
+   "articleIds": [
+    997643
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Singapore’s Defence Minister Chan Chun Sing visited China from Tuesday to Thursday to speak at the Beijing Xiangshan Forum.",
+   "articleIds": [
+    998656
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Indonesia’s digital banks backed by major tech and telecom firms added billions in customer deposits and rapidly scaled loan portfolios over the last few years.",
+   "articleIds": [
+    1009293
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "MariBank amassed S$1.9 billion in deposits by 2025 but posted a S$56 million loss due to tight regulatory oversight.",
+   "articleIds": [
+    1009293
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "GSX Bank’s Malaysian arm reported total assets of $479 million as of 2025 and a loan to deposit ratio of just 25 percent.",
+   "articleIds": [
+    1009293
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "MariBank Philippines had assets of just over $1 billion by the end of 2025, with its loan portfolio growing 64 percent year over year.",
+   "articleIds": [
+    1009293
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Maya Bank reported $1.25 billion in assets and saw its loan book jump 86 percent compared to 2024.",
+   "articleIds": [
+    1009293
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Cambodian Foreign Minister Prak Sokhonn told the Conciliation Commission that his government’s objective was to achieve a resolution that serves the peoples of both nations and contributes to peace,co",
+   "articleIds": [
+    1009292
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Indonesian Finance Minister Purbaya Yudhi Sadewa was sacked as finance minister on Monday and named his deputy Suahasil Nazara to the top finance job.",
+   "articleIds": [
+    1007388
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Purbaya Yudhi Sadewa said he found out about his termination in a phone call with the president’s spokesman Prasetyo Hadi on Monday.",
+   "articleIds": [
+    1007388
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Indonesia's finance ministry plans to absorb debt payments for the Whoosh high-speed railway.",
+   "articleIds": [
+    1008926
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Indonesia's government restructured the Whoosh railway debt over 80 years with annual instalments of about 1 trillion rupiah.",
+   "articleIds": [
+    1008926
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

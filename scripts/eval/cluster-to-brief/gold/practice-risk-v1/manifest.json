@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "created": "2026-09-17",
+  "purpose": "practice_only_not_validation",
+  "cases": 60,
+  "pairs": 30,
+  "clusters": [
+    1,
+    7,
+    36,
+    37,
+    43
+  ],
+  "supported": 30,
+  "unsupported": 30,
+  "errorSpans": 32,
+  "eventGroups": 18,
+  "remoteModelCalls": 0,
+  "heldoutRead": false,
+  "labelScope": "support by supplied evidence bundle, not global truth or cluster relevance",
+  "selection": "manual stratified behavioral cases; no claim of representative error prevalence",
+  "limitations": [
+    "30 paired evidence families are not 60 independent trials",
+    "multiple articles can share one event; eventGroupId is a minimum leakage grouping, not proof of independence",
+    "human-authored mutations are not naturally occurring model errors",
+    "labels are one non-blind Codex review, not multi-annotator gold",
+    "fully attributed statements are evaluated as reporting acts, not truth of attributed propositions",
+    "some compound negative cases have two explicitly enumerated error spans"
+  ]
+}

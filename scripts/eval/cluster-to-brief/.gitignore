@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+.cache/
+out/
+scratch/
+
+# 296 篇文章正文,约 1MB。可由 fetch-fixtures.mjs 从 clusters-<workflowId>.json + /events 重建,
+# 所以不入库。meta.json 与 clusters.json 照常入库——它们小,且是重建的依据。
+fixtures/content/

@@ -1,0 +1,188 @@
+{
+ "cluster": 1,
+ "name": "sweden",
+ "articles": 20,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 40,
+ "mergedAway": 22,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 3,
+  "maxSupport": 6,
+  "coreTierOfMax": 0.5,
+  "core": 6,
+  "mid": 6,
+  "tail": 6
+ },
+ "events": [
+  {
+   "event": "The outcome of the election may not be decided until Wednesday, when local election boards count early votes that did not make it to the polling stations by Election Day.",
+   "articleIds": [
+    990477,
+    991959,
+    994815,
+    995219,
+    998324,
+    997267
+   ],
+   "nArticles": 6,
+   "nSources": 5
+  },
+  {
+   "event": "The Sweden Democrats' support slipped almost 3 per cent from its 2022 result of 20.5 per cent and it fell from second to third place.",
+   "articleIds": [
+    991959,
+    997267,
+    997332,
+    1003988
+   ],
+   "nArticles": 4,
+   "nSources": 4
+  },
+  {
+   "event": "The Swedish Election Authority reported the four opposition parties were heading for 175 seats in the 349-seat parliament to 174 seats for the government alliance.",
+   "articleIds": [
+    991959,
+    994815,
+    995219
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Andersson told supporters that 'we must wait for the final election result' but added that 'right now we are leading'.",
+   "articleIds": [
+    991959,
+    994815,
+    995219
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Kristersson said he would explore 'possibilities' given the close result.",
+   "articleIds": [
+    991959,
+    995219,
+    999871
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "With 95% of votes counted, the left-leaning opposition bloc led by Magdalena Andersson widened its lead to three seats, leading 176 to 173 against the reigning centre-right coalition.",
+   "articleIds": [
+    995865,
+    999871,
+    1003988
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "Kosovo lawmakers voted to approve a new government led by Prime Minister Albin Kurti on September 13, 2026.",
+   "articleIds": [
+    987459,
+    988694
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Kosovo's parliament failed to elect deputy speakers of the assembly on September 13, 2026.",
+   "articleIds": [
+    987459,
+    988694
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "With 95 percent of votes counted on Monday, the four opposition parties held a three-seat majority in the 349-seat parliament over Prime Minister Kristersson's right-wing alliance.",
+   "articleIds": [
+    998324,
+    997267
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Kristersson said there is a very clear non-socialist majority, or non-left leaning economic majority in the Swedish parliament.",
+   "articleIds": [
+    994815,
+    995219
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Parliament can vote on a new prime minister on September 29 at the earliest.",
+   "articleIds": [
+    998324,
+    997267
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "SVT projected the right-wing bloc led by Ulf Kristersson was virtually tied with the centre-left opposition led by Magdalena Andersson.",
+   "articleIds": [
+    990477,
+    991959
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Jimmie Åkesson said that 'we will not know tonight' who will form the next government.",
+   "articleIds": [
+    991959
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Yong Hye-in, a lawmaker of the minor Basic Income Party, pulled out of consideration for the position of gender minister.",
+   "articleIds": [
+    993794
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Social Democrats held onto first place with a 28.1 percent share.",
+   "articleIds": [
+    1003988
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Magdalena Andersson started coalition negotiations to form a new government.",
+   "articleIds": [
+    999871
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Centre party said it would seek a government with a clear centre-right character.",
+   "articleIds": [
+    999871
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Centrist Reform Alliance (CRA) is set to split into two groups.",
+   "articleIds": [
+    1000985
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

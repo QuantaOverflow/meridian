@@ -1,0 +1,913 @@
+{
+ "cluster": 36,
+ "name": "houthi",
+ "articles": 82,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 157,
+ "mergedAway": 53,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 4,
+  "maxSupport": 8,
+  "coreTierOfMax": 0.5,
+  "core": 7,
+  "mid": 22,
+  "tail": 75
+ },
+ "events": [
+  {
+   "event": "Iran announced a meeting between Iraq and Gulf countries in Oman on Monday to discuss the Strait of Hormuz.",
+   "articleIds": [
+    987213,
+    992975,
+    994344,
+    998926,
+    996288,
+    996849,
+    997336,
+    997623
+   ],
+   "nArticles": 8,
+   "nSources": 7
+  },
+  {
+   "event": "Saudi Arabia shut its East-West oil pipeline on Friday following a drone attack.",
+   "articleIds": [
+    992937,
+    994376,
+    995414,
+    996074,
+    996847,
+    997336,
+    997623,
+    998378
+   ],
+   "nArticles": 8,
+   "nSources": 5
+  },
+  {
+   "event": "Oman announced the postponement of the Iran-Gulf states meeting in Salalah.",
+   "articleIds": [
+    989973,
+    990620,
+    991621,
+    992099,
+    1006366,
+    1005963
+   ],
+   "nArticles": 6,
+   "nSources": 5
+  },
+  {
+   "event": "Houthi forces launched attacks on targets in Saudi Arabia using dozens of ballistic missiles and drones on Sunday.",
+   "articleIds": [
+    996853,
+    996288,
+    996561,
+    996847,
+    997336,
+    1005931
+   ],
+   "nArticles": 6,
+   "nSources": 5
+  },
+  {
+   "event": "Iranian-backed Houthis captured the strategic island of Perim on Friday.",
+   "articleIds": [
+    992975,
+    995414,
+    996288,
+    996561
+   ],
+   "nArticles": 4,
+   "nSources": 4
+  },
+  {
+   "event": "The Panama-flagged oil tanker El Gaia was struck by an Iranian missile last month and rendered inoperable.",
+   "articleIds": [
+    1002874,
+    1002754,
+    1003989,
+    1006366
+   ],
+   "nArticles": 4,
+   "nSources": 4
+  },
+  {
+   "event": "At least one person was killed and four others wounded in an attack on an Iranian commercial vessel near Qeshm Island in the Strait of Hormuz.",
+   "articleIds": [
+    987213,
+    987066,
+    990620,
+    992975
+   ],
+   "nArticles": 4,
+   "nSources": 3
+  },
+  {
+   "event": "Oil prices rose more than 2% on Monday as fresh Houthi attacks on Saudi Arabia and Iranian strikes on vessels added to supply concerns.",
+   "articleIds": [
+    992937,
+    994344,
+    996288
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "The Houthis captured the port city of Mokha and the island of Perim inside the Bab el-Mandeb Strait.",
+   "articleIds": [
+    996561,
+    997336,
+    997623
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "The US military rejected Iran's Revolutionary Guards claim that the Panama-flagged tanker El Gaia struck a naval mine in the Strait of Hormuz.",
+   "articleIds": [
+    1002874,
+    1002754,
+    1006366
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "Omani Foreign Minister Badr Albusaidi announced the meeting was postponed 'in the interests of consensus'.",
+   "articleIds": [
+    989973,
+    990620,
+    992099
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "Iranian President Masoud Pezeshkian said Iran had no problems with the UAE or other regional countries.",
+   "articleIds": [
+    987065,
+    990620
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Iranian President Masoud Pezeshkian said Iran's objection was directed at US military bases in the region.",
+   "articleIds": [
+    987065,
+    996288
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Iran and Oman agreed to a temporary Hormuz shipping lane agreement.",
+   "articleIds": [
+    988965,
+    992975
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Demonstrators in Syria burned tyres and blocked highways in cities including Hama, Khan Sheikhoun, and Maarat al-Numan.",
+   "articleIds": [
+    994019,
+    998580
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Saudi Arabia's oil stocks at the Red Sea port of Yanbu could maintain exports for only five to seven days.",
+   "articleIds": [
+    994376,
+    996074
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Houthi forces captured the port city of Mokha on the Red Sea coast last week.",
+   "articleIds": [
+    996853,
+    996288
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Saudi Arabia's Crown Prince Mohammed bin Salman met with US Central Command chief Admiral Brad Cooper in Jeddah.",
+   "articleIds": [
+    997336,
+    997623
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Syrian parliament summoned Energy Minister Mohammed al-Bashir for a hearing on Thursday.",
+   "articleIds": [
+    998580,
+    1001419
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Syria's standing committee for the pricing of petroleum products issued a new temporary price list that took effect at midnight on Sunday.",
+   "articleIds": [
+    998580,
+    1001419
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Protests against fuel price increases spread across Syria for a second consecutive day on Monday.",
+   "articleIds": [
+    998580,
+    1001419
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Syria produces approximately 102,000 barrels of oil per day against domestic demand of around 325,000 barrels per day.",
+   "articleIds": [
+    998580,
+    1001419
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Major maintenance work at the Baniyas refinery in Tartus has reduced domestic refining capacity.",
+   "articleIds": [
+    998580,
+    1001419
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Donald Trump said he is open to negotiations to end the war with Iran.",
+   "articleIds": [
+    1006366,
+    1005963
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "The US spent an estimated $33.4bn on the war with Iran by 29 June, according to a Pentagon watchdog report.",
+   "articleIds": [
+    1006366,
+    1005963
+   ],
+   "nArticles": 2,
+   "nSources": 2
+  },
+  {
+   "event": "Yemen's Houthis advanced on government strongholds in Marib and Taiz.",
+   "articleIds": [
+    992098,
+    996853
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "The government raised fuel prices by up to 40% for diesel and up to 28% for gasoline.",
+   "articleIds": [
+    993046,
+    994019
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Saudi Arabia lifted all-clear alerts for the cities of Najran, Khamis Mushait, Jazan, and Abha on Monday.",
+   "articleIds": [
+    994344,
+    1006366
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "The average national cost of a gallon of regular unleaded topped $4.31 on September 14, 2026.",
+   "articleIds": [
+    1000691,
+    1001202
+   ],
+   "nArticles": 2,
+   "nSources": 1
+  },
+  {
+   "event": "Fighting between Yemen's Houthis and internationally recognised government forces worsened an already dire humanitarian and displacement crisis.",
+   "articleIds": [
+    987215
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Bahrain announced it would not participate in the planned meeting between Iran and Gulf countries.",
+   "articleIds": [
+    987213
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's Foreign Ministry spokesman Esmaeil Baghaei said the meeting was a sign of Iran's good intention to promote regional security.",
+   "articleIds": [
+    987213
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's Foreign Minister Abbas Araghchi warned that an expected agreement with Oman would not trigger a reopening of the Strait of Hormuz.",
+   "articleIds": [
+    987213
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Brics leaders adopted the New Delhi Declaration 2026, expressing serious concern over the escalation in West Asia and calling for maximum restraint.",
+   "articleIds": [
+    987065
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Escalating fighting along Yemen's western coast drove more than 2,000 Yemenis across the Red Sea to Djibouti.",
+   "articleIds": [
+    987211
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Houthis completed their takeover of Yemen's entire Red Sea coastline, capturing the port city of Mocha and the strategic island of Mayyun.",
+   "articleIds": [
+    987210
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Houthis are now positioned just 20 kilometres from the African coast and essentially control the strategically significant Bab al-Mandeb strait.",
+   "articleIds": [
+    987210
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "More than 2,000 people have fled Yemen to Djibouti over the past 24 hours, the International Organisation for Migration said.",
+   "articleIds": [
+    987210
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "India condemned an attack on the commercial vessel MT El Gaia off the coast of Oman.",
+   "articleIds": [
+    987066
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "India said 13 of the 14 Indian crew members onboard the MT El Gaia had been rescued.",
+   "articleIds": [
+    987066
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Abu Dhabi Crown Prince Sheikh Khaled bin Mohamed bin Zayed al-Nahyan met Iranian President Masoud Pezeshkian.",
+   "articleIds": [
+    988965
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iranian Foreign Minister Abbas Araghchi described the proposed Hormuz meeting as an 'important event'.",
+   "articleIds": [
+    988965
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US President Donald Trump said Iran 'wants to make a deal so bad' that 'they're calling constantly'.",
+   "articleIds": [
+    990620
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Saudi authorities issued flood warnings urging residents to avoid valleys and low-lying areas.",
+   "articleIds": [
+    993047
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Americans felt the squeeze from skyrocketing fuel prices, with gas rising 16 cents to a nationwide average of $4.31 per gallon.",
+   "articleIds": [
+    991999
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "All 50,000 U.S. personnel in the Middle East were placed on high alert.",
+   "articleIds": [
+    991998
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Soldiers calling themselves the Armed Forces for the Restoration of the Homeland attacked Air Base 101, the presidential palace, and the national broadcaster in a coordinated assault.",
+   "articleIds": [
+    993044
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "About 200 Russian Africa Corps soldiers helped loyalist forces retake Air Base 101 by evening.",
+   "articleIds": [
+    993044
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "At least 27 people were killed and about 100 mutineers were arrested during the mutiny.",
+   "articleIds": [
+    993044
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "President Donald Trump suggested the United States could remain in Iran after the war and take control of its oil resources.",
+   "articleIds": [
+    992934
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A vessel in the Strait of Hormuz was struck by a projectile, causing a fire and forcing its crew to evacuate.",
+   "articleIds": [
+    992937
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Houthi forces deployed fighters to the Hanish islands, 100 miles north of the Bab el-Mandeb strait on Monday.",
+   "articleIds": [
+    996288
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Saudi Arabia's oil production fell to 6.2 million barrels per day in August, its lowest level in 30 years.",
+   "articleIds": [
+    994376
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's foreign minister denied on Monday any involvement by Iran in the attack on Saudi Arabia's East-West pipeline.",
+   "articleIds": [
+    996288
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's foreign minister accused the United States of producing false news regarding the pipeline attack.",
+   "articleIds": [
+    996288
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "At least 11 people were injured in an ammonia gas leak in Jordan's Aqaba industrial complex.",
+   "articleIds": [
+    996851
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The southern port of Aqaba was evacuated as a precaution following reports of the gas leak.",
+   "articleIds": [
+    996851
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The gas leak, which happened during maintenance work, was contained in the industrial complex.",
+   "articleIds": [
+    996851
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Former CIA officer Scott Uehlinger said the US may be forced to intervene in the Red Sea.",
+   "articleIds": [
+    996850
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's Islamic Revolutionary Guard Corps said it intercepted and destroyed an advanced MQ-1 drone over the Strait of Hormuz.",
+   "articleIds": [
+    996849
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A Houthi projectile fell near the border with Yemen along the Red Sea, injuring two people and damaging a mosque and several other buildings.",
+   "articleIds": [
+    996561
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Brent crude rose $3.21 to $107.82 a barrel.",
+   "articleIds": [
+    996847
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Houthis hit civilian and economic sites in the cities of Abha, Khamis Mushait, Jizan and Najran, injuring 73 people.",
+   "articleIds": [
+    996847
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Yemeni government's military launched airstrikes on Houthi positions in the port city of Mokha, the coastal town of Dhubab and elsewhere in Taiz province.",
+   "articleIds": [
+    996561
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's judiciary seized assets of 240 dissidents and journalists and froze 182 bank accounts.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Police Chief Ahmadreza Radan announced that more than 6,000 people had been arrested over the January protests.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran executed at least 532 people since January, including at least 29 in connection with the January protests.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's judiciary made more than 2,000 inquiries to Iran's Central Bank regarding defendants' accounts.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iranian authorities arrested three members of the Mojahedin-e Khalq (MEK) in an operation the previous night.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Security forces prevented the Chaharshanbe Suri fire festival from being used to trigger further unrest.",
+   "articleIds": [
+    997569
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Houthi rebels seized the strategic islands of Greater and Lesser Hanish in the southern Red Sea.",
+   "articleIds": [
+    997623
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Saudi Arabia sought military assistance from Donald Trump to help fight the Houthis.",
+   "articleIds": [
+    997336
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The US provided only logistical and intelligence backing to Saudi Arabia.",
+   "articleIds": [
+    997336
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran denounced Austria's refusal to issue visas to the Iranian nuclear chief for the IAEA General Conference.",
+   "articleIds": [
+    997623
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Demonstrators in Hasakah and Deir ez-Zor blocked roads used by crude oil tankers and cut the al-Suway'iya bridge crossing between Syria and Iraq.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Residents in the city of al-Shahil blocked the road leading to the al-Omar oilfield, preventing tankers from passing.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Truck and haulage drivers in Raqqa staged a sit-in outside a grain storage centre, blocking the road to the silos.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Protesters in Idlib province blocked the M5 motorway near Maaret al-Numan.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A young man in Hasakah province attempted to set himself on fire in protest at price increases.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Energy Minister Mohammed al-Bashir stated that the price rise was needed to bridge a gap between the cost of importing petroleum products and their domestic selling prices.",
+   "articleIds": [
+    998580
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The USS George Washington recently replaced the USS Abraham Lincoln in the Middle East.",
+   "articleIds": [
+    998800
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "President Donald Trump admitted oil prices likely won't come down before the November 2026 midterm elections.",
+   "articleIds": [
+    1000691
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Houthis have tightened their grip on islands in the Red Sea, giving them control over a vital global shipping route.",
+   "articleIds": [
+    1001953
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Houthis have advanced down Yemen's Red Sea coast, raising questions about whether they can turn territorial gains into new revenue sources.",
+   "articleIds": [
+    1001954
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A video claiming to show Houthi rebels ambushing Saudi-backed mercenaries is actually footage of a 2024 Houthi military drill.",
+   "articleIds": [
+    1002430
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Regional officials stated that a crucial Saudi oil pipeline operated by Aramco would remain out of service for several weeks after being struck in a Houthi attack.",
+   "articleIds": [
+    1002430
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iran's IRGC stated the tanker El Gaia was travelling along the southern route through the Strait of Hormuz.",
+   "articleIds": [
+    1002754
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Panama canal plans to cut maritime traffic again due to worsening drought caused by El Niño.",
+   "articleIds": [
+    1004976
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Panama canal plans to allow an average of 29.5 vessels to transit daily from October.",
+   "articleIds": [
+    1004976
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Saudi Arabia may have launched a Chinese-made DF-15A ballistic missile in Yemen.",
+   "articleIds": [
+    1005923
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Debris believed to be a DF-15A missile booster was found in Raghwan district of Marib Governorate.",
+   "articleIds": [
+    1005923
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Oil prices rose more than 1% on Tuesday as concerns over global supplies intensified.",
+   "articleIds": [
+    1005931
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Brent crude futures gained $1.24 to $106.93 a barrel on Tuesday.",
+   "articleIds": [
+    1005931
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US West Texas Intermediate crude futures climbed $1.29 to $102.65 a barrel on Tuesday.",
+   "articleIds": [
+    1005931
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "US Central Command said the El Gaia tanker was hit again by an Iranian drone over the weekend.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A Pentagon watchdog report said the US spent an estimated $22.3bn on munitions during the first four months of its war with Iran.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The US suffered up to 30 MQ-9 Reaper drone losses, four F-15E fighter jets, and other aircraft during the war with Iran.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The US suffered significant equipment losses during a search-and-rescue operation in early April to recover an Air Force officer stranded in Iran.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The US incurred $113m in costs by early June, including the evacuation of American diplomats and citizens from the region.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iranian attacks caused an estimated $184m in damage to US diplomatic facilities in Iraq, Kuwait, Saudi Arabia, and the UAE.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Australian energy minister Chris Bowen said he would travel to Saudi Arabia next week to meet Prince Abdulaziz bin Salman.",
+   "articleIds": [
+    1006366
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Iranian Foreign Minister Abbas Araghchi will meet with Chinese counterpart Wang Yi in China on Wednesday.",
+   "articleIds": [
+    1009463
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Syrian President Ahmed al-Sharaa said on Tuesday that escalation is on the way in the region gripped by the Iran war.",
+   "articleIds": [
+    1009385
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Arab Media Summit kicked off on Tuesday in Dubai with a wide array of regional leaders and officials.",
+   "articleIds": [
+    1009385
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

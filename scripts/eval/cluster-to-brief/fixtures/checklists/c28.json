@@ -1,0 +1,310 @@
+{
+ "cluster": 28,
+ "name": "us airman",
+ "articles": 16,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 32,
+ "mergedAway": 2,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 4,
+  "maxSupport": 7,
+  "coreTierOfMax": 0.5,
+  "core": 8,
+  "mid": 8,
+  "tail": 14
+ },
+ "events": [
+  {
+   "event": "Pentagon's inspector general released a report detailing damage to US bases and embassies across eight countries.",
+   "articleIds": [
+    1004905,
+    1006511,
+    1006865,
+    1006787,
+    1006983,
+    1008572,
+    1008978
+   ],
+   "nArticles": 7,
+   "nSources": 6
+  },
+  {
+   "event": "The report stated that the war resulted in strategic inventory shortfalls for munitions.",
+   "articleIds": [
+    1006511,
+    1006865,
+    1006787,
+    1006983,
+    1008572,
+    1008978
+   ],
+   "nArticles": 6,
+   "nSources": 6
+  },
+  {
+   "event": "The report stated that the US war with Iran cost $33.4 billion between February 28 and June 30.",
+   "articleIds": [
+    1006511,
+    1006787,
+    1006983,
+    1008572,
+    1008978
+   ],
+   "nArticles": 5,
+   "nSources": 5
+  },
+  {
+   "event": "The report stated that $22.3 billion of the war's cost was spent on munitions.",
+   "articleIds": [
+    1006511,
+    1006787,
+    1006983,
+    1008572,
+    1008978
+   ],
+   "nArticles": 5,
+   "nSources": 5
+  },
+  {
+   "event": "U.S. Air Force officer shot down in Iran described the survival as a 'modern-day miracle'.",
+   "articleIds": [
+    993451,
+    992454,
+    995744,
+    997222,
+    998347
+   ],
+   "nArticles": 5,
+   "nSources": 4
+  },
+  {
+   "event": "The report listed four F-15 fighter jets destroyed, one F-35 damaged, and seven KC-135 tankers damaged.",
+   "articleIds": [
+    1006511,
+    1006787,
+    1008572,
+    1008978
+   ],
+   "nArticles": 4,
+   "nSources": 4
+  },
+  {
+   "event": "The F-15E fighter jet was shot down by an Iranian shoulder-fired missile on April 2.",
+   "articleIds": [
+    992454,
+    995744,
+    997222,
+    998347
+   ],
+   "nArticles": 4,
+   "nSources": 3
+  },
+  {
+   "event": "Bravo sent a message to US forces saying 'God is good'.",
+   "articleIds": [
+    992454,
+    995744,
+    997222,
+    998347
+   ],
+   "nArticles": 4,
+   "nSources": 3
+  },
+  {
+   "event": "Bravo climbed to a 7,000-foot ridgeline to evade Iranian forces.",
+   "articleIds": [
+    995744,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "The report estimated $184 million in damage to US diplomatic facilities in the Middle East.",
+   "articleIds": [
+    1004905,
+    1008572,
+    1008978
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "More than 90 American service members were deployed in a rescue operation for Bravo.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "The pilot 'Alpha' was rescued about six hours after the crash during a risky daytime operation.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "The rescue helicopters came under fire during the extraction of Alpha.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "US bombers and drones struck IRGC forces near Bravo's hiding place.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "The rescue force arrived at dawn on Easter Sunday to extract Bravo.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "The US military destroyed two rescue aircraft to prevent sensitive technology from falling into Iranian hands.",
+   "articleIds": [
+    992454,
+    997222,
+    998347
+   ],
+   "nArticles": 3,
+   "nSources": 2
+  },
+  {
+   "event": "The war with Iran was launched more than six months ago and shows no signs of ending.",
+   "articleIds": [
+    986133
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The United States fired off thousands of long-range, precision-guided missiles in the early days of the conflict.",
+   "articleIds": [
+    986133
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The Pentagon ordered the defense industry onto a 'wartime footing' to replenish depleted stockpiles.",
+   "articleIds": [
+    986133
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "Defense Secretary Pete Hegseth reportedly pressured two rescued airmen to appear on Bari Weiss's 60 Minutes.",
+   "articleIds": [
+    988040
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A 70-year-old hiker was rescued on Saturday after a week-long search on Isle Royale.",
+   "articleIds": [
+    991099
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "A US Air Force officer identified as 'Dude 44 Bravo' revealed he survived for nearly 50 hours in Iran.",
+   "articleIds": [
+    992454
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report estimated $157 million in damage to US diplomatic facilities in Iraq.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that up to 3,500 diplomatic personnel were displaced from the region.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report noted that Bahrain, Iraq, Jordan, Qatar, Saudi Arabia, and the UAE were placed under ordered departure.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that damage to the US Navy's hub in Bahrain created significant challenges for establishing naval bases.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that US military resupply cycles stretched to 14-18 days due to the shift to Diego Garcia.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that the US Embassy in Kuwait suspended operations after being struck by Iranian drones.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that the US Embassy in Kuwait resumed emergency operations in late June.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  },
+  {
+   "event": "The report stated that more than 600 attacks against US facilities in Iraq were recorded.",
+   "articleIds": [
+    1004905
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

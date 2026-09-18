@@ -1,0 +1,9 @@
+{
+  "name": "@meridian/eval-cluster-to-brief",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "node fetch-fixtures.mjs",
+    "verify": "node verify.mjs"
+  }
+}

@@ -1,0 +1,50 @@
+{
+ "cluster": 7,
+ "name": "space force",
+ "articles": 6,
+ "model": "@cf/zai-org/glm-4.7-flash",
+ "mergeThreshold": 0.9,
+ "eventsPerArticle": 2,
+ "rawEvents": 12,
+ "mergedAway": 9,
+ "batchesFailed": 0,
+ "tiers": {
+  "coreMin": 2,
+  "maxSupport": 3,
+  "coreTierOfMax": 0.5,
+  "core": 2,
+  "mid": 0,
+  "tail": 1
+ },
+ "events": [
+  {
+   "event": "US Space Force confirmed on Monday that the US has deployed weapons into orbit.",
+   "articleIds": [
+    1001691,
+    1002160,
+    1002427
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "US Secretary of the Air Force Troy Meink announced on Monday that the US now had 'on-orbit space control weapons' capable of defending American forces against hostile action.",
+   "articleIds": [
+    1005077,
+    1007986,
+    1009708
+   ],
+   "nArticles": 3,
+   "nSources": 3
+  },
+  {
+   "event": "US Secretary of the Air Force Troy Meink said revealing more about the capability would undermine its deterrent value.",
+   "articleIds": [
+    1007986
+   ],
+   "nArticles": 1,
+   "nSources": 1
+  }
+ ],
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+}

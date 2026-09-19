@@ -1,0 +1,43 @@
+{
+  "policyVersion": "fast@1",
+  "note": [
+    "快档的**通过线**只放在这里。expectations.json 只留事实与标注(簇里有哪些杂质、哪些文章属于同一事件),",
+    "verify.mjs 只出读数,过不过由本文件决定。",
+    "为什么要拆开:2026-09-20 —— 判据写成「必须拆 ≥2 块」(requireSplitOrReject/minBlocks),",
+    "架构从多块改成一簇一块后判据直接失效,三个臂已跑完的读数只能作废。",
+    "**改本文件不作废历史读数**:读数是事实,policy 是当时的产品目标;拿旧 verify-*.json 套新 policy 重判即可,",
+    "不需要重新生成简报。反过来也成立——policy 变了,历史结论要标明是按哪个 policyVersion 判的。"
+  ],
+  "checks": {
+    "note": "gate=true 进退出码(不合格),gate=false 只报读数。哪一条设门是产品取值,不是事实。",
+    "unresolvedSources": { "gate": true, "why": "出处解析不到 = 编号越界或文章不在簇内,出处是契约强制项" },
+    "sentencesWithoutSource": { "gate": true, "why": "同上" },
+    "markerLeaks": { "gate": true, "why": "[articleId:sentence] 抄进成稿,读者会看到(direct-raw c1/c36/c51 都出现过)" },
+    "truncatedSentences": { "gate": true, "why": "2026-09-20 加:句子没写完就截断(实例 'US President Donald Trump criticized the idea as ')是生成缺陷,读者直接可感知" },
+    "sourceQuoteMismatches": { "gate": true, "why": "2026-09-20 加:sources[].quote 对不上原文 = 出处标错或原句编造,零歧义" },
+    "noEventMixing": { "gate": true, "why": "取代 requireSplitOrReject:一块只许引同一个 eventGroup 的文章。一簇一块、拆多块、判不可写都能满足" },
+    "impurityRate": { "gate": true, "why": "选材这一步存在的意义就是筛掉搭便车的文章" },
+    "minSentences": { "gate": true, "why": "干净簇写太薄同样不合格(参照 emmy awards:8 篇写出一句话)" },
+    "sentencesWithUncitedNumbers": { "gate": false, "why": "归属类错误(主体/日期搬错)这把尺看不见,数字缺出处只当信号,判定留慢档" },
+    "sentencesWithUncitedQuotes": { "gate": false, "why": "正文引号内原话对不上所引原句 —— 先看误报率再决定设不设门" },
+    "redundantSentences": { "gate": false, "why": "两句展开同一原句的不同侧面是正当写法,设门会误拦" }
+  },
+  "thresholds": {
+    "note": [
+      "以下数值逐字沿用 2026-09-20 之前 expectations.json 里 pass.* 的取值,换文件不换读数口径。",
+      "impurityRateMax:成稿杂质率上限。impurityRateStrict=true 表示必须**严格低于**上限(等于也算不过)。",
+      "旧键 ifWrittenImpurityRateMax 已并入 impurityRateMax —— 两者语义本来相同(都只在 verdict=written 时生效)。",
+      "minSentences:verdict=written 时的句数下限。0 = 不设下限。"
+    ],
+    "default": { "impurityRateMax": null, "impurityRateStrict": false, "minSentences": 0 },
+    "clusters": {
+      "7": { "impurityRateMax": 0, "impurityRateStrict": false, "minSentences": 3 },
+      "1": { "impurityRateMax": 0.2, "impurityRateStrict": true },
+      "28": { "impurityRateMax": 0.125, "impurityRateStrict": true },
+      "36": { "impurityRateMax": 0.23, "impurityRateStrict": true },
+      "37": { "impurityRateMax": 0.24, "impurityRateStrict": false },
+      "43": {},
+      "51": {}
+    }
+  }
+}

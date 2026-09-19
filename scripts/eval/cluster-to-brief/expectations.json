@@ -8,7 +8,10 @@
     "passLineOrigin": "致命错/硬错的定义见 apps/backend/prototypes/block-writer/RUBRIC.md 第三节。核心层口径见 coreTierRule。",
     "coreTierRule": "核心层 = 支持篇数 >= ceil(该簇最大支持数 x coreTierOfMax),下限 2。2026-09-16 定,取代两个都失效的口径:(1) 原 rubric 的绝对 >=6 篇 —— 对 6 篇的簇算不出来、对 116 篇的簇形同虚设;(2) 按簇篇数取比例 —— 簇越大文章越分散到更多事件,占比必然随规模下降(c51 116 篇里最热事件也只有 14 篇 = 12%),任何固定比例都让大簇核心层为空,而空核心层会让 score-slow 跳过覆盖那一条,等于覆盖门在 c36/c37/c43/c51 这四个主判例上消失。",
     "coreTierOfMax": 0.5,
-    "coverageRatio": 0.667
+    "coverageRatio": 0.667,
+    "passLineMoved": "2026-09-20:快档(verify.mjs)的通过线全部搬到 policy.json —— 杂质率上限、句数下限、每条检查设不设门。这里只留**事实与标注**(impurities / eventGroups / duplicatePairs)与慢档仍在读的 pass.fatalErrors / pass.hardErrors。改 policy 不作废历史读数;拿旧的 out/verify-*.json 套新 policy 重判即可。",
+    "structuralCriteriaRemoved": "2026-09-20 删掉三个带架构假设的字段:pass.requireSplitOrReject、minBlocks、以及 expect=\"split-or-reject\"(c28/c37/c43/c51)。它们假定了多块架构,链路改成一簇一块后判据直接失效,三个臂的读数只能作废(CONTRACTS.md §4 的硬规矩即由此而来)。取代它的是性质判据 noEventMixing:**每个块引用的文章必须全部落在同一个 eventGroup 内**;一簇一块、拆多块、判 not_a_single_event 都能满足,所以新旧臂可比。口径有一处放宽:旧版的「一块只写主事件」还要求那个组是篇数最多的,新版不要求 —— 只写任一单个事件都合格。写成一块但跨事件、或引到未入组文章(单篇事件/杂质),仍然不合格。",
+    "eventGroupsCoverage": "只有 c28/c37/c43/c51 有 eventGroups 标注。c1/c7/c36 没有(它们是单事件簇,按定义没有 ≥2 篇的第二个事件),所以这三簇的 noEventMixing 读数是 unlabeled —— 既不算过也不算不过,不要当零缺陷看。"
   },
   "clusters": {
     "7": {
@@ -21,9 +24,7 @@
       "impurities": [],
       "pass": {
         "fatalErrors": 0,
-        "hardErrors": 0,
-        "impurityRateMax": 0,
-        "minSentences": 3
+        "hardErrors": 0
       },
       "failLooksLike": "出现任何簇外事实(本簇零杂质,所以簇外内容只能是编造或串源);或只写一句就收(参照 emmy awards 那条:8 篇写出一句话)"
     },
@@ -38,9 +39,7 @@
       "impurityNote": "Kosovo 组阁 x2、韩国内阁改组、日本中间派实验",
       "pass": {
         "fatalErrors": 0,
-        "hardErrors": 1,
-        "impurityRateMax": 0.2,
-        "impurityRateStrict": true
+        "hardErrors": 1
       },
       "knownAchievable": "2026-09-15 生产成稿在本簇达标:正文只写瑞典(Andersson 微弱领先/Kristersson 落后三席/瑞典民主党跌至第三/分析师警告组阁僵局),4 篇杂质一个字没写",
       "failLooksLike": "正文出现科索沃组阁、韩国内阁、日本中间派;或用 In other news / Meanwhile 把它们缝进来"
@@ -49,16 +48,18 @@
       "name": "us airman",
       "articles": 16,
       "split": "heldout",
-      "form": "low-impurity-single-event",
-      "why": "美伊战争中飞行员生还与弹药短缺,混入 2 篇无关",
-      "expect": "written",
+      "form": "two-event",
+      "why": "美伊战争中飞行员生还与弹药短缺,混入 2 篇无关。2026-09-20 用户定:这是两件事 —— 9 月 15 日五角大楼监察长报告(花费、战损、弹药短缺)与飞行员 4 月获救、9 月 13–14 日上 60 Minutes 的采访及争议;高管简报一块只写主事件(报告,8 篇)是对的",
+      "eventGroups": {
+        "Pentagon inspector general report on Iran war costs, losses and munitions shortfall": [1008978, 1008572, 1006983, 1006787, 1006865, 1006511, 1004905, 986133],
+        "Downed airman Bravo's survival and rescue, the 60 Minutes interview and the Hegseth pressure row": [998347, 997222, 995744, 992454, 993451, 988040]
+      },
+      "eventGroupsNote": "2026-09-20 按标题人工标。原 form 为 low-impurity-single-event、expect=written,改动前的读数(含本轮之前全部臂的快档)按旧口径算。",
       "impurities": [991099, 1008546],
       "impurityNote": "70 岁徒步者荒岛失踪获救、坦克进入战场 110 年史",
       "pass": {
         "fatalErrors": 0,
-        "hardErrors": 1,
-        "impurityRateMax": 0.125,
-        "impurityRateStrict": true
+        "hardErrors": 1
       },
       "knownAchievable": "生产成稿达标:只写国防工业转入战时状态、$33.4bn/$22.3bn 支出、Hegseth 描述营救、Parnell 否认 CNN 报道",
       "failLooksLike": "正文出现徒步者获救或坦克百年史"
@@ -74,9 +75,7 @@
       "impurityNote": "委内瑞拉 Chavez 形象/圭亚那石油/麦加大雨/叙利亚燃油抗议 x4/尼日尔兵变/Trump 访爱尔兰/约旦氨气泄漏/伊朗扣押异见者资产/伊斯兰世界叙事评论/各国转向煤炭/中期选举与油箱/Costco 机油涨价/印度季风撤退/巴拿马运河干旱/Maduro 盟友认罪/伊朗新阿亚图拉是诺兰粉丝",
       "pass": {
         "fatalErrors": 0,
-        "hardErrors": 1,
-        "impurityRateMax": 0.23,
-        "impurityRateStrict": true
+        "hardErrors": 1
       },
       "note": "82 篇 264k 字符,逼近生产实测的超时线(91 篇 283k → 300 秒硬失败)。想一次读完本簇的臂要自己解决延迟。",
       "failLooksLike": "复现 2026-09-15 成稿里这一段:「In other regional news, Oman postponed... Ryan Cummings said 'The insurrection indicates discord within the Nigerien armed forces' after mutineers attacked Air Base 101... Meanwhile, Venezuela's interim President Delcy Rodriguez launched a campaign... 'Venezuela renace'」——尼日尔兵变与委内瑞拉竞选口号不是红海危机的地区新闻"
@@ -87,15 +86,13 @@
       "split": "dev",
       "form": "minority-title",
       "why": "簇名来自少数派:17 篇里只有 4 篇是柬泰争端,多数是缅甸/印尼/东南亚杂项。另有 2 篇逐字重复",
-      "expect": "split-or-reject",
-      "minBlocks": 2,
       "mainEventArticles": [993148, 1009292, 1006837, 1007386],
+      "eventGroups": { "Cambodia-Thailand maritime/border dispute": [993148, 1009292, 1006837, 1007386] },
+      "eventGroupsNote": "2026-09-19 由 mainEventArticles 直接转写;其余 13 篇是杂质或单篇事件。",
       "impurities": [991963, 993150, 993147, 996953, 1005116, 995694, 1000984, 997643, 998656, 1009293, 1009290, 1007388, 1008926],
       "impurityNote": "最高薪领导人加薪/缅甸 UN 代表权 x2/泰国依赖动态 x2(逐字重复)/印尼换财长 x3/印度撤销恐怖指控/东南亚 LNG/新加坡访华/东南亚数字银行/缅甸雇佣兵",
       "duplicatePairs": [[996953, 1005116]],
       "pass": {
-        "requireSplitOrReject": true,
-        "ifWrittenImpurityRateMax": 0.24,
         "fatalErrors": 0
       },
       "failLooksLike": "复现 2026-09-15 成稿:顶着 `cambodia-thailand border dispute and un conciliation` 这个标题,正文全篇写缅甸 UN 代表权(Min Aung Hlaing 被多国接待/Kyaw Moe Tun 倒戈/信任状委员会 9 月 8 日推迟),柬泰一个字没写"
@@ -106,17 +103,21 @@
       "split": "dev",
       "form": "topic-bag",
       "why": "「所有提到 Israel 的文章」。至少含 6 个互不相同的事件,外加 4 篇与以色列毫无关系的新闻",
-      "expect": "split-or-reject",
-      "minBlocks": 2,
       "impurities": [986636, 995295, 1008981, 1009181, 1001409, 990132, 998897, 1007389],
       "impurityNote": "大屠杀生还者故事(非当天新闻)/西弗吉尼亚橄榄球名人被控重罪勒颈/佛蒙特枪手称 NPR 电台命令他开枪/UN 专家称白俄罗斯司法针对卢卡申科反对者/苏丹援助网络濒临崩溃/叙利亚儿童被路边爆炸物炸死/「一个党能同时是左翼和锡安主义者吗」评论/泰国罕见反以抗议+印巴水争议合辑",
       "distinctEvents": ["加沙军事行动与伤亡", "黎巴嫩南部战事与流离失所", "B'Tselem 报告与西岸定居点暴力", "NAZA 纪录片争议与吊销公民权威胁", "西岸定居点货物制裁与外交危机", "UN 呼吁调查加沙瓦砾下遇难者"],
+      "eventGroups": {
+        "West Bank: B'Tselem/NGO reports on dismantling Palestinian life, settler violence": [1004503, 1001976, 1001415, 1001422, 998379, 994964, 994491, 998898],
+        "NAZA documentary controversy": [1001951, 1000638, 1005082, 996287, 994021, 992068],
+        "Israeli strikes and casualties in Gaza": [1006788, 1003991, 996563, 992100, 990120, 987684],
+        "Settlement-goods sanctions and diplomatic fallout": [1009695, 1008135]
+      },
+      "eventGroupsNote": "2026-09-19 按标题人工标(与 impurities 同一口径)。只列 ≥2 篇的事件;1 篇的事件与杂质不入组。West Bank 组含定居点扩张地图(994491)与占领区上学(998898)两篇,讲的是同一处境。",
       "pass": {
-        "requireSplitOrReject": true,
         "fatalErrors": 0
       },
       "judgeEvidence": "judge 已判对,是下游放行的:单词标题 `israel` 是 dominantEntity 兜底的指纹(judgeCluster 按 prompt 在 NO_EVENT 时留空 title,planBlocksFromJudgements 的 `title.trim() || fallbackTitle()` 兜底成主导专名),而那条不变量明写「NO_EVENT / UNSURE → 仍然出块,只进计数」",
-      "failLooksLike": "顶着单词标题 `israel`,四段各讲一件事(加沙孕妇被杀 → B'Tselem 报告与西岸失业率 → 威尼斯电影节 NAZA 获奖与吊销公民权 → UN 警告瓦砾下战争罪)。无论四段各自多准、文笔多好,只要是一块就判失败"
+      "failLooksLike": "顶着单词标题 `israel`,四段各讲一件事(加沙孕妇被杀 → B'Tselem 报告与西岸失业率 → 威尼斯电影节 NAZA 获奖与吊销公民权 → UN 警告瓦砾下战争罪)。无论四段各自多准、文笔多好,四段跨四个事件就是混写,不合格。2026-09-20 口径更新:不合格的原因是**跨事件**,不是「只写了一块」—— 一块只写 West Bank 那一组是合格的"
     },
     "51": {
       "name": "china",
@@ -124,13 +125,19 @@
       "split": "heldout",
       "form": "super-bag",
       "why": "最难的一个。不是「AI 话题袋」而是「AI + 中国 + 刚果 + 杂项」超级袋:杂质超过 40 篇,另有三组逐字重复文章。生产截断到 30 篇后写成了单块头条 `china`",
-      "expect": "split-or-reject",
-      "minBlocks": 3,
+      "eventGroups": {
+        "AI slowdown call by tech CEOs and the reactions to it (Trump, Beijing, markets, industry)": [1009516, 1008977, 1007999, 1006111, 1006033, 1002806, 1001412, 1000693, 998654, 998704, 998755, 992101, 989443, 989497, 987794, 998900, 998902, 999799, 996926, 996736, 996386, 996151, 998830, 998277, 998239, 995400, 988773, 1006986, 1002994, 995794, 994853, 992939],
+        "Microsoft AI code of conduct": [1007991, 1000362, 998758],
+        "China's intelligence agencies warn of AI threat": [1008539, 997234, 991392],
+        "US Congress AI regulation push": [1006117, 1002287],
+        "UK lawmakers push for AI regulation": [1007595, 996824],
+        "Obama urges Democrats to prioritize AI": [987260, 987696]
+      },
+      "eventGroupsNote": "2026-09-19 sonnet agent 按标题标、主会话合并:呼吁放缓与各方直接反应(Trump、北京、股市、业界)按 c43 同一口径算一个事件(32 篇)。只列 ≥2 篇的事件,其余 72 篇(含全部杂质)不入组。",
       "impurities": [989176, 991153, 992375, 992371, 992935, 994380, 993408, 993319, 993793, 994294, 995453, 996396, 995898, 995696, 996149, 997174, 997399, 997568, 1001410, 1002233, 1000981, 999288, 999685, 1001408, 1002994, 1002993, 1002992, 1002753, 1002235, 1003242, 1003987, 1004273, 1004908, 1005400, 1005081, 1005495, 1005798, 1006863, 1007391, 1007136, 1007135, 1008165, 1008634, 1008415, 1009042, 1008927, 1009465, 1009626],
       "impurityNote": "'Cat in the Hat' 病毒趋势/新疆货运卡车游记/奶奶被骗45万美元/旅游提升中国形象/Ford 回应运输部长/Nike 股价/投行招聘/中国学生学英语/大湾区医疗数据/反躺平拒升职/8月中国维权x2(逐字重复)/Morning news brief/北京赞台湾学者/炒猪王称号/刚果采矿救雨林/冲绳知事选举/刚果学校火灾x3/亚洲民主被重塑/Oracle 裁员/德国情报警告/X撤诉苹果/华尔街日报中文x3/华为美国审判/北京威胁巴拿马/打击海外券商/卢旺达-刚果和平/吃作业缓解考压/Michael Dell/Benioff 捐款/收紧公民出行/刚果埃博拉见顶/花旗聘中国负责人/Roche 活动/寻找外教/中国缩减美国卡关刚果埃博拉x3(逐字重复)/悉尼眼镜禁令/垃圾代收服务/Uber 裁员/癌症研究/EU 限制未成年社媒/AI 演员访谈",
       "duplicatePairs": [[995453, 996396], [1007136, 1007135], [1007135, 1008165], [1002994, 1002993]],
       "pass": {
-        "requireSplitOrReject": true,
         "fatalErrors": 0
       },
       "failLooksLike": "顶着单词标题 `china`,把 Trump 谈 AI 竞争、Amodei/Altman/Nadella 表态、FRONTIER Act 与 AI Kill Switch Act、盖茨基金会 10 亿美元承诺缝成一块头条"

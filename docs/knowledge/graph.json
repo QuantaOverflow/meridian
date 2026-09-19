@@ -662,6 +662,27 @@
       "content": "**已完成**：ai-worker 新增 `/meridian/report-v3`；`write-block-v3` 接上代码检查器（`marks` 只进内部\n观测，读者看不到）；backend workflow 改成 报告 → 分层 4/10/其余 → 写作 v3 → 三节拼装 → 起标题 →\n每期一份 v3 记录落 R2。`pnpm typecheck` 通过，本地 e2e 跑出过完整一期（25 块、4/10/11、23 条标记）。\n**（写于部署前；已过期）未部署、未 commit。**\n\n**2026-09-18 纠正**：本链路已于 2026-09-15T12:37Z 部署，reports 94/95/96 三期均为 v3 产出；\n代码已于 2026-09-18 补提交（commit 320d9fe）。当前状态见 decision-brief-v3-deployed。\n本节点余下内容保留为部署前的历史记录。\n\n**2026-09-15 更新**：曾被当作唯一降本杠杆的 L2（抽取产出约束）已固化进代码并过了 M1 复验，\n质量不伤，但**省不了钱**——同日两次跑 −6.3% / +0.7%，跨过基线，落在跑间波动里\n（见 decision-tighter-output-constraint）。**$10.20 的缺口没被补上**，下面第 ① 条仍要人拍板。\n\n同日的分步归因找到一个大一个量级的入口：去重 95.3% 的输入是重复贴的同一段判定说明书，\n打包判定的算术上限是省总成本 18.3%，且各簇都吃得到（中位也会真降）——见 measure-dedup-fixed-overhead。\n**未实测**，风险是跨组乱并。\n\n**三件悬着的**（需要人拍板）：① 月成本 $10.20 vs 上限 $10——抬上限还是封顶每份报告 16 篇（→$8.87）；\n② 提供方一抖触发重试，`observed` / `usage-recorded` 两道门必挂（span 数按「尝试」计、trace 按「调用」计，\n失败那次拿不到 usage）——门的口径要不要改成「逻辑调用 + 提供方尝试 + 未知成本尝试」三个字段；\n③ 标题大小写的修复只在函数级验过，整链复验要再花一轮 e2e。\n\n验收脚本 `apps/backend/prototypes/brief-v3-prod/accept.ts`（冻结，sha 前 16 位 `ad73a86083b8b1df`），\n三档 M1/M2/M3 的门与读数口径都在里面。"
     },
     {
+      "id": "decision-eval-module-contracts",
+      "type": "decision",
+      "title": "eval 按 dataset/solver/scorer/judge 四层定契约,借 Inspect 的概念但不引入框架",
+      "date": "2026-09-20",
+      "status": "accepted",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "scripts/eval/cluster-to-brief 整个模块;不含生产代码",
+      "source": "scripts/eval/cluster-to-brief/CONTRACTS.md;docs/adr/0005-eval-bootstrap-and-ruler-recalibration.md",
+      "conditions": [
+        "判官是 Claude Code 的 subagent,零 API 费;引入 Inspect 会把它改成付费 API 调用",
+        "生成侧全在 JS,Inspect 的 solver 需 shell 调 JS,多一层边界"
+      ],
+      "evidence_origin": "local_record",
+      "action": "adopt",
+      "invalidates_when": "判官需要无人值守跑(进 CI/定时),或有第三方要复现这套 eval——那时再评估引入 Inspect",
+      "file": "decision-eval-module-contracts.md",
+      "content": "**定下的四条不变量**(全文见 `CONTRACTS.md`):\n\n1. **dataset 定在最宽的稳定边界**:一天全量文章 + 聚类快照 + 选中列表,而不是当前架构的入口。\n   架构往上游挪(比如把事件分离前移)时 dataset 不用重做。\n2. **标注挂在输入上**:事件分组、杂质名单、事件清单都是输入的属性,换架构不失效。\n3. **判据只描述输出性质,不得出现结构词**。`requireSplitOrReject(必须拆 ≥2 块)` 换成\n   `noEventMixing(每个块引用的文章必须落在同一事件组内)`——一块、多块、判不可写都适用,\n   实测 v1 的五块输出与 v6 的一块输出能用同一条判据比较。\n4. **评分与生成分离**:scorer 只读已落盘的产物,任何时候可重跑,改判据不必重新生成。\n   这条直接抄自 Inspect 的 offline scoring。\n\n**从 Inspect 抄的**:solver 是任意代码、scorer 只看输出与 target、多 scorer 并列、\nsample 带 metadata 供分层、epochs + 归约、样本级错误是一等状态、日志记全配置。\n\n**没抄的**:框架本身。理由见 conditions。\n\n**Inspect 也不负责的两件**(正是这一轮栽的地方):判官准不准、判据该定成什么。"
+    },
+    {
       "id": "decision-exact-premerge",
       "title": "逐字相同的事实先合并（preMergeIdentical）——这是修 bug，不是降本",
       "date": "2026-09-13",
@@ -2076,6 +2097,34 @@
       "content": "没有共同有效题由整句漏错变为代码槽正确拦截，新增四个漏判。零语义拒绝不等于正常题零损失，引用契约失败还会挡掉正常候选。详见原结果与 out/atomic-evidence/practice-v1/local-review.json。"
     },
     {
+      "id": "experiment-prod-day-real-distribution",
+      "type": "experiment",
+      "title": "真实一天不挑选的 25 簇上跑 v6：读者可见错 6.5%、出处挂错 22%、路由门拒掉 32%",
+      "date": "2026-09-20",
+      "status": "recorded",
+      "tasks": [
+        "演化组合架构",
+        "设计验收门"
+      ],
+      "scope": "cron-brief-1789822849701(2026-09-19)当天 selected_for_intel 的 25 簇 818 篇;臂=direct-raw 路由门+主线筛选+最后一步写+exec 篇幅+按报道量必写+mech 修复;k=3;判官=sonnet subagent,未与人工标注对齐",
+      "source": "scripts/eval/cluster-to-brief/datasets/prod-0919.json;判定与分类结果只在本地 scratchpad(未入 git)",
+      "conditions": [
+        "判官只拿成稿引用的那几句判,与慢档「证据由判官全簇检索」不是同一把尺,两者读数不可直接比",
+        "判官未对齐,精确值不可信(见 lesson-judge-needs-alignment);量级可信",
+        "c36 第一次运行有一个窗口连续三次校验失败,续跑补齐后才计入"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "prototype_evaluation",
+      "outcome": "mixed",
+      "inputs": "25 簇 818 篇全量原文(未按 30 篇截断);事件签名抽取 46 次调用;写作 17 簇 × 3 次",
+      "evaluation": "快档机械判据(零 LLM) + 三个 sonnet 判官逐句对照被引原句 + 第二遍把每条 flag 分成「事实在簇内别处」「簇内根本没有」「只是关系编造」;后者两个独立 agent 跑出 55/8/8/1 与 55/9/7/1,一致",
+      "result": "路由门拒 8/25(32%),人工核标题确认拒得对,全是杂项堆;写出来的 17 簇 × 3 = 51 篇 248 句:快档全绿(数字缺出处 3、引语 1、块内重复 7 对);判官 flag 72 句(29%),分类后**读者可见的错 16 句=6.5%**(编造事实 8、编造关系 8),**出处挂错 55 句=22%**(事实真但被引那句撑不住);整篇有读者可见错或混写的 20/51=39%;混写 12/51 集中在路由门放行的大簇",
+      "cost": "Workers AI:签名 46 次 + 窗口约 330 次 + 写作 51 次;判官为 Claude subagent,零 API 费;墙钟约 2 小时",
+      "record_completeness": "complete",
+      "file": "experiment-prod-day-real-distribution.md",
+      "content": "**第一次在不挑选的真实分布上量。** 之前四代都只在 7 个按难度手挑的簇上比。\n\n### 两层错误必须分开\n\n| | 句子 | 读者能不能看出来 | 修法 |\n|---|---|---|---|\n| 编造事实 8 + 编造关系 8 | 16/248 = **6.5%** | 能 | 换模型 / 写作层 |\n| 出处挂错(事实在簇里是真的,被引那句撑不住) | 55/248 = **22%** | 看不出来 | 代码回查补出处 |\n\n合成一个 29% 会把结论带偏:四分之三其实是引用没挂对,不是编造。\n\n**典型的读者可见错**:c11「本次死亡人数超过 2023 年白沙瓦 101 人」(本次 21–31 人,方向写反)、\nc3 三次运行都写「法律专家预测」(全簇无此消息源)、c25「Boris Johnson 受伤」(原文只说官员被疏散)。\n\n### 路由门的读数\n\n25 个簇拒掉 8 个(c6/c28/c34/c41/c50/c54/c57/c58),人工核了这 8 个簇的文章标题,**全是杂项堆**\n(c58 183 篇里有枪支、莫迪生日、慕尼黑啤酒节、宝莱坞婚礼)。生产当天对这些簇照写不误,\n简报里就有标题叫「India」「California」「Trump」「Delhi」的条目。\n\n代价:每个袋子里通常藏着一两个真实小故事(休达驱赶移民、南海撞船、珀斯鲨鱼袭击),占 13–19%,\n随袋子一起被拒。要捞回来得在上游把袋子拆成事件。"
+    },
+    {
       "id": "experiment-production-baseline-same-scorer",
       "type": "experiment",
       "title": "生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格",
@@ -2971,6 +3020,27 @@
       "content": "原本的判断是「归并阈值 `MERGE_TH = 0.90` 没有标定记录,偏高会让同一事件劈成两条,调一下就行」。\n实测**调不动** —— 两类的余弦分布完全重叠,而且假的排在真的前面:\n\n| | cos |\n|---|---|\n| c36 **真重复**(Oman 推迟会议的两种写法) | 0.899 |\n| c51 **非重复**(Amodei 说该放缓 ↔ Musk 表示支持) | **0.900** |\n| c36 真重复(El Gaia 被击中 ↔ IRGC 反驳) | 0.897 |\n| c51 非重复(Amodei 说该放缓 ↔ Nadella 表示同意) | 0.897 |\n| c28 **语义相反**(使馆暂停运作 ↔ 使馆恢复应急运作) | 0.899 |\n\n最后一行最能说明问题:**两条描述相反动作的事件,余弦 0.899。**\n\n按 [0.80, 0.90) 这个区间统计,dev+heldout 报出 2938 对「疑似未归并」,\nc51 的「碰到核心层」是核心层条数的 5650% —— 这不是读数,是噪声。\n\n### 处置\n\n检测器降级为**线索**:每簇只打余弦最高的 3 对供人工排查,**不报总数、不写进清单文件、不跨轮比较**。\n一个分不开类别的信号不该产出计数。\n留着是因为排序还有点用 —— 肉眼在 c36 找到的三对真重复都落在 top-3 里\n(一个簇三个样本,不是保证)。\n\n### 对这笔债的意义\n\n债的性质变了:不是「便宜的修法存在、本轮没空」,而是**便宜的修法不存在**。\n要真修得换机制 —— 让 LLM 判两条是不是同一事件,或者用「共享 articleId + 数字集合交集 + 实体重叠」\n做硬判据。那是新工作,不是调参。见 [[decision-hold-checklist-tiering]]。"
     },
     {
+      "id": "lesson-coverage-metric-pushes-listing",
+      "type": "lesson",
+      "title": "覆盖率当通过线会把写作推成事态清单,而读者要的是高管简报",
+      "date": "2026-09-20",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门",
+        "演化组合架构"
+      ],
+      "scope": "慢档通过线「核心层覆盖 ≥2/3」;v3→v5 三代在 c28/c51 上的加长与必写改动;用户 2026-09-19/20 的两次判定",
+      "source": "会话记录;docs/knowledge/nodes/experiment-prod-day-real-distribution.md",
+      "conditions": [
+        "核心层由「报道篇数 ≥ 最大支持数一半」定义,量的是被报道次数,不是重要性"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failure_mode",
+      "invalidates_when": "读者明确要求「覆盖全面的事实汇编」而非高管简报",
+      "file": "lesson-coverage-metric-pushes-listing.md",
+      "content": "**发生了什么**:为了过「核心层覆盖 ≥2/3」,我把篇幅从 4–7 句加到 8–14 句,再加「必写」约束。\n读数确实变好,但用户读后的判定是:原型像「结构化信息汇编」,生产那版虽然信息少却是「高管简报」,\n他要后者。**两代优化朝着一条与读者价值相反的线在走。**\n\n**还有一处我自己走偏**:我一度提议「只要求前 K 件事」来让简报变短——那是在删事实。\n高管简报的短靠**往上综合**(一句归纳一组事实、只留一两个关键数字),不是少写几件事。\n\n**尺本身也会偏向清单**:判官逐条判「这条事件写到没有」,概括写法容易被判漏\n(c36 把「Perim 岛」写成「红海诸岛」被判没命中)。所以覆盖率在结构上偏袒枚举式写法。\n\n**可操作**:\n- 指标要拿读者价值校准一次,成本最低的方式是把两份成稿摆给用户读(几分钟,零成本),\n  而不是跑更多轮。\n- 通过线与 scorer 分开存放,目标变了只改通过线,历史读数不作废(已落实为 `policy.json`)。"
+    },
+    {
       "id": "lesson-dev-winner-fails-heldout",
       "type": "lesson",
       "title": "dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信",
@@ -3013,6 +3083,47 @@
       "invalidates_when": "在跨日期、未接触的簇上重测，引用不足率的优势不再是量级差异",
       "file": "lesson-grounding-is-citation-quality.md",
       "content": "**旧账**：逐句接地（生成候选句后逐句拿它声称的出处去核，核不住整句丢掉）\n在旧 scorer 上把硬错从 5 压到 1，这个数字被写进了归因。\n\n**为什么是假的**：旧判定包只给判官「成稿引的那一句」，一句话有多个成分时缺的那半常在紧邻句里，\n判官看不到就记成 hard。而这个过滤器问的正是同一个问题——被引那句撑得住吗，撑不住就删。\n**过滤器和门读的是同一份证据、用的是同一个判据，等于同一个测试跑了两遍，一遍当过滤器一遍当门。**\n所以门当然全绿。它优化的是 scorer 的缺陷，不是质量。\n\n**新账**（dev 五簇，盲判）：\n\n| 轴 | grounded | direct-raw |\n|---|---|---|\n| 引用不足率 | **14.8%** | 27.6% |\n| 核心层覆盖 | 76.2% | 95.2% |\n| 硬错 | 2 | 1 |\n\n硬错优势归零；**引用质量优势是真的，近 2 倍，属于能站住的量级差异**。覆盖代价也是真的\n（c37 核心层 0/3 判不合格，写了缅甸没写柬泰）。\n\n**过滤器的形状**：召回 100%、精度 6% —— 为清掉 5 条硬错毁了 66 条判官判为正确的句子。\n高召回低精度的过滤器，在候选池厚的簇上代价被稀释，在候选池薄的簇上直接把正题削光\n（c37 纯净候选丢 88%、杂质候选只丢 49%）。\n\n### 对 crossover 的意义\n\nCONTEXT.md 的判据是「供体的那个优势必须已经被归因过」。\n**归因换了对象但仍然成立**：可以当供体，但接过去的是「引用标得准」，**不是**「写得对」。\n接的时候要连 limits 一起接——它会砍掉大量候选，在候选池薄的簇上要有兜底。"
+    },
+    {
+      "id": "lesson-handpicked-fixtures-dont-extrapolate",
+      "type": "lesson",
+      "title": "按难度手挑的 7 簇只能加速迭代,比例不能外推到生产",
+      "date": "2026-09-20",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门",
+        "演化组合架构"
+      ],
+      "scope": "fixtures-r94 的 7 簇(4 个按难度挑的难例)对比 prod-0919 的 25 簇(当天全部选中簇)",
+      "source": "docs/knowledge/nodes/experiment-prod-day-real-distribution.md",
+      "conditions": [
+        "两套数据用的是同一个臂、同一批判官口径"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "diagnostic_observation",
+      "invalidates_when": "手挑集合按真实分布做了分层抽样,并验证过各层比例与生产一致",
+      "file": "lesson-handpicked-fixtures-dont-extrapolate.md",
+      "content": "7 簇里 4 个是按难度挑进来的(题材袋 c43、超大题材袋 c51、少数派标题 c37、受污染 c36),\n难例占一大半;生产真实一天里这类占三分之一。**在手挑集合上得到的任何比例,方向和数值都会偏。**\n\n这一轮的具体表现:\n- 在 7 簇上我只肉眼挑可疑句,报了 4.6% 的「下限」;真实一天逐句核是 6.5% 读者可见 + 22% 出处挂错。\n  不是「真实分布更差」,是**手挑集合上从没量准过**。\n- 反过来,简单簇在手挑集合里几乎不存在:真实一天里 c14 三次运行零缺陷、c12/c19 各只有 1 句。\n  失败率随簇形态差异巨大,不分层看就是一锅粥。\n\n**可操作**:手挑集合只用来快速迭代(跑得快、难例密度高、能快速暴露新改动的破绽);\n**上线与否只看不挑选的一整天**,并按簇形态分层报。"
+    },
+    {
+      "id": "lesson-judge-needs-alignment",
+      "type": "lesson",
+      "title": "没与人工对齐的判官把缺陷数虚高 4 倍——混淆「出处挂错」与「编造」",
+      "date": "2026-09-20",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "2026-09-20 三个临时 sonnet 判官判 51 篇 248 句;第二遍分类由两个独立 agent 各跑一次",
+      "source": "docs/knowledge/nodes/experiment-prod-day-real-distribution.md",
+      "conditions": [
+        "判官 prompt 是临时写的,没有金标、没有一致率、不在指纹机制内"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failure_mode",
+      "invalidates_when": "判官在 ≥30 条人工标注上量过真阳率/真阴率,且比例与人工一致",
+      "file": "lesson-judge-needs-alignment.md",
+      "content": "判官标了 72 条「不合格」,逐条回查后**只有 16 条(22%)是读者可见的真错**,其余 55 条是\n「事实在簇内别处有原文、只是被引的那句没写到」。两者的修法完全不同:一个要换模型,一个写代码补出处。\n\n**根因是证据范围没写死**:判官被要求「只拿被引的那句判」,于是把所有「这句撑不住」都归成编造。\n它自己也判错过——c5「当地男子把猫送到庇护所」被判为与原文矛盾,而同一篇文章里就有这句话。\n\n**做成机制**(`judges/<axis>.md`):`citation-support` 只许读被引的那句,其余四轴必须读全簇,\n两轴的唯一区别就是证据范围;每份规格都写死这一条并附上本次的 4 倍虚高作为理由。\n\n**另一个同期失败**:一个 agent 自报完成、输出文件根本没落盘,报的比例差点被直接采用。\n现在由 `collect-verdicts.mjs` 拿退出码拦(文件、schema、覆盖、promptId 四项),不过就不采用。\n\n**可操作**:任何新判官进对比表之前,先在 ≥30 条人工标注上量真阳率/真阴率;\n没量过的判官,其比例只能当量级参考。"
     },
     {
       "id": "lesson-practice-typed-anchors",
@@ -3096,6 +3207,26 @@
       "invalidates_when": "在未接触、跨事件材料上复验 B 臂，或把判定真正交给代码比较后重新定位失败",
       "file": "lesson-restate-before-judge.md",
       "content": "跨四个批次稳定复现的形状：模型在 reason 与所选证据片段里已经复述了正确的原文信息，却把关系相反\n的候选判成 supported。窄语法规则的检出增量跨全部批次为 0（heldout 有 factorGuard 消融坐实），所以\n失败不在检索、上下文或接口，在**判定**这一步。\n\n`measure-attribution-not-faithfulness` 记的 57% 引用是事后合理化，与这个形状同源：引用和判定本就\n解耦，引用是判完之后补的。\n\n把任务定义从「审计候选是否被完整支持」改成「先分别陈述两侧对同一事实的说法，再判是否一致」，\n同模型同上下文下检出 3/8 → 7/8、误拦仅 +1。但**它是削弱不是消灭**：27,000 km² 那题两侧复述都正确\n且并排摆着，仍判 supported。判定还是模型在做，只是脚手架变好了。\n\n两条边界：\n- 翻任务定义不能翻成「假定有错去找」。反向举证臂把 17 条全判 unsupported，误拦 9/9。\n- 结构化字段里确实含有代码够得着的信息（五行数量-单位比对正好命中那条漏放），但同一次比对也在\n  一条正常题上误报，n=1 不足以说「判定归代码」这条路赢了。"
+    },
+    {
+      "id": "lesson-run-variance-needs-epochs",
+      "type": "lesson",
+      "title": "同一版配置每次跑结果不同——单次运行的结论会把归因指向错的改动",
+      "date": "2026-09-20",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "direct-raw exec 臂,温度 0.1/0.3、无 seed;7 簇 ×3 次与 17 簇 ×3 次两批",
+      "source": "docs/knowledge/nodes/experiment-prod-day-real-distribution.md",
+      "conditions": [
+        "Workers AI 不提供 seed;窗口步与写作步都重跑才算一次独立重复"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failure_mode",
+      "invalidates_when": "同一配置连跑 3 次,各轴读数极差接近 0",
+      "file": "lesson-run-variance-needs-epochs.md",
+      "content": "**实例**:\n- c28 的「块内是否跨事件」三次是 `mixed / ok / mixed`,单次运行会得出相反结论。\n- c28 的飞行员营救线在 v6 单次运行里写到了,连跑三次则 0/3 都没写——当初「v6 覆盖两条线」是运气。\n- 我曾把「营救线消失」归因到刚加的杂烩规则上,实际是窗口步重跑后那几条重点的报道篇数从 4 变 3、\n  掉出了必写档。**单次运行下的归因把因果指错了一整轮。**\n\n**可操作**:默认 k=3;单次结果标成假设;报均值与极差而不是单值;\n任何「改了 X 所以 Y 变好」的说法,先确认 Y 的极差小于观察到的差值。"
     },
     {
       "id": "lesson-scorer-steers-search",
@@ -3614,6 +3745,30 @@
       "content": "**它做的事**:把「多少篇文章报道了它」当成重要性的代理,据此决定哪些事件进入覆盖门的判定范围。\n尾层 96/141(68%)大多是单篇报道的细节,要求简报覆盖每条单源细节是错的,所以分层本身有必要。\n\n**各臂共用同一份清单**,所以分层的系统性偏差对臂间比较是对称的 —— 这是它在缺陷已知的情况下\n仍然可用的唯一理由。绝对覆盖率不可信。\n\n2026-09-19 对核心层 21 条做了双模型校核(opus + sonnet),改写 6 条、补 15 条口径分歧;\n分层本身未校核,见 [[decision-hold-checklist-tiering]]。"
     },
     {
+      "id": "mechanism-citation-repair",
+      "type": "mechanism",
+      "title": "写完由代码补出处:数字与引语不在所引原句里就去材料里找字面包含它的原句",
+      "date": "2026-09-20",
+      "status": "candidate",
+      "tasks": [
+        "治事实关系错",
+        "设计验收门"
+      ],
+      "scope": "direct-raw exec 臂(DIRECT_RAW_WRITE_REPAIR=mech);materials = 本次写作用到的全部重点原句",
+      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(repairCitations / contextOf)",
+      "conditions": [
+        "成稿逐句带出处",
+        "比对只认字面包含(数字去千分位、引语归一大小写与标点)"
+      ],
+      "evidence_origin": "local_record",
+      "input": "成稿句子 + 它声称的出处 + 材料池(重点指向的原句,含代词句的前一句)",
+      "output": "补过出处的句子(只增不删)+ 补了几处的计数",
+      "limits": "只覆盖数字与引号内 ≥2 词的原话;专名、从句、结论这些补不了——真实一天里出处挂错仍有 22%;找不到就原样留着,由快档报读数",
+      "invalidates_when": "扩到专名与从句后误补出现(补上的原句其实不支撑该句)",
+      "file": "mechanism-citation-repair.md",
+      "content": "**两个确定性修复,合起来算一个机制**:\n\n1. **补出处**:句中数字/引语若不在被引原句里,去材料池找字面包含它的原句补进 sources。\n   只增不删、只认字面包含,所以不会把出处改错。真实一天 51 篇里补了 19 处,\n   数字缺出处从每批 2–8 句降到 3/248,引语降到 1/248。\n2. **代词句带上前一句**:材料里若某条原句以代词开头或含「he added」这类无主名引述,\n   自动把同篇前一句一起给写作层。治的是 c1 那次把分析师的话安到 Andersson 名下(v6 唯一硬错),\n   加了之后同类错误在后续 18 篇里没再出现。\n\n**为什么值得单独记**:这两条是零 LLM、可判定的,和「靠 prompt 压」形成对照——\n同期用 prompt 禁止编造关系,三次运行仍然出现;而机械补出处的读数是稳定的。"
+    },
+    {
       "id": "mechanism-dominant-storyline-filter",
       "type": "mechanism",
       "title": "按合并后的主导主线筛文章，再交给下游生成",
@@ -3794,6 +3949,30 @@
       "verification": "development_signal_only",
       "file": "mechanism-support-ranking.md",
       "content": "支持度不是事实真伪；单源受证据完整支持的事实不应被直接淘汰"
+    },
+    {
+      "id": "mechanism-write-once-at-end",
+      "type": "mechanism",
+      "title": "改写只发生一次,且发生在看得见全局的最后一步",
+      "date": "2026-09-20",
+      "status": "candidate",
+      "tasks": [
+        "演化组合架构",
+        "治事实关系错"
+      ],
+      "scope": "direct-raw exec 臂;窗口 30k 字符、每窗最多 12 条重点、每条最多 4 个出处;glm-4.7-flash",
+      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(DIRECT_RAW_WRITE_AT_END)",
+      "conditions": [
+        "簇内全量原文可读,不做 30 篇截断",
+        "窗口步与写作步用同一个模型"
+      ],
+      "evidence_origin": "local_record",
+      "input": "一个簇的全量原文,逐句编号",
+      "output": "一块正文(3–5 句高管简报)+ 每句的出处句编号;或 not_a_single_event + 理由",
+      "limits": "窗口步每条重点最多引 4 篇,报道篇数到 4 就封顶,4 篇与 20 篇的事看起来一样重;跨窗口的同一件事不会合并计数;必写档只取最高一档时,一篇之差就能让一整条线掉出简报(实测 c28 营救线 0/3);写作步仍会编造关系与消息源(读者可见错 6.5%)",
+      "invalidates_when": "改成两遍写(写完再核)后,读者可见错率不降或覆盖明显下降",
+      "file": "mechanism-write-once-at-end.md",
+      "content": "**替换的旧做法**:窗口步各写各的句子,最后一步只挑不改。那样成稿是十来次调用的句子拼接,\n没有主次也没有过渡,用户读后判定为「结构化信息汇编」,不是简报。\n\n**为什么放在最后**:写作需要全局视野(谁是主线、什么该压缩),而窗口步天然只看得到一个窗口。\n把改写挪到最后一步之后,同一批材料写出来的是连贯的一段。\n\n**为什么只写一次**:每多一次转述就多一层失真。前面的步骤只标「哪几句重要」,\n写作层直接读原句——这避开了已证伪的「级间传代理」。\n\n**配套**:`mechanism-citation-repair` 修出处;按报道量排序并标必写(限制见上)。"
     },
     {
       "id": "method-goal-guided-evolution",
@@ -4303,6 +4482,26 @@
       "to": "invariant-citation-resolvable"
     },
     {
+      "from": "decision-eval-module-contracts",
+      "type": "based_on",
+      "to": "lesson-judge-needs-alignment"
+    },
+    {
+      "from": "decision-eval-module-contracts",
+      "type": "based_on",
+      "to": "lesson-handpicked-fixtures-dont-extrapolate"
+    },
+    {
+      "from": "decision-eval-module-contracts",
+      "type": "based_on",
+      "to": "lesson-coverage-metric-pushes-listing"
+    },
+    {
+      "from": "decision-eval-module-contracts",
+      "type": "based_on",
+      "to": "lesson-run-variance-needs-epochs"
+    },
+    {
       "from": "decision-exact-premerge",
       "type": "constrained_by",
       "to": "invariant-support-count"
@@ -4646,6 +4845,21 @@
       "to": "lesson-practice-typed-anchors"
     },
     {
+      "from": "experiment-prod-day-real-distribution",
+      "type": "yields",
+      "to": "lesson-handpicked-fixtures-dont-extrapolate"
+    },
+    {
+      "from": "experiment-prod-day-real-distribution",
+      "type": "yields",
+      "to": "lesson-judge-needs-alignment"
+    },
+    {
+      "from": "experiment-prod-day-real-distribution",
+      "type": "yields",
+      "to": "lesson-run-variance-needs-epochs"
+    },
+    {
       "from": "experiment-production-baseline-same-scorer",
       "type": "yields",
       "to": "lesson-production-replacement-justified"
@@ -4831,6 +5045,14 @@
       "to": "mechanism-raw-candidate-discovery",
       "attributes": {
         "scope": "凡是靠丢候选拿到的硬错下降，在新 scorer 上要重新归因才能当 crossover 供体"
+      }
+    },
+    {
+      "from": "lesson-handpicked-fixtures-dont-extrapolate",
+      "type": "supersedes",
+      "to": "lesson-dev-winner-fails-heldout",
+      "attributes": {
+        "scope": "把「dev→heldout 排序会翻」推进到「手挑集合→真实分布,比例本身不可外推」;前者论据仍成立"
       }
     },
     {
@@ -5031,6 +5253,11 @@
       "to": "lesson-scorer-steers-search"
     },
     {
+      "from": "mechanism-citation-repair",
+      "type": "justified_by",
+      "to": "lesson-judge-needs-alignment"
+    },
+    {
       "from": "mechanism-dominant-storyline-filter",
       "type": "justified_by",
       "to": "lesson-scorer-steers-search"
@@ -5077,6 +5304,11 @@
       "from": "mechanism-support-ranking",
       "type": "justified_by",
       "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "mechanism-write-once-at-end",
+      "type": "justified_by",
+      "to": "lesson-run-variance-needs-epochs"
     },
     {
       "from": "method-goal-guided-evolution",

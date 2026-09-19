@@ -85,6 +85,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
+- 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md` 与 `scripts/eval/cluster-to-brief/CONTRACTS.md`（四层契约、判据不得带架构假设、判官要先对齐）
 - 架构决策记录 → `docs/adr/`
 
 ## 知识蒸馏（每个 spike / goal 结束时做）

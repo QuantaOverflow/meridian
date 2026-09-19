@@ -1,0 +1,9 @@
+{
+  "axis": "citation-support",
+  "labels": [
+    { "cluster": 3, "run": 1, "ref": "b1s3", "label": "fail", "note": "被引句只有死亡数，「首次」这个成分要靠簇里另一篇才能补上" },
+    { "cluster": 3, "run": 1, "ref": "b1s4", "label": "pass", "note": "两条出处合起来把主体、日期、动作都说到了" },
+    { "cluster": 7, "run": 1, "ref": "b2s1", "label": "fail", "note": "quote 与 articleId:sentence 对不上，出处不可解析" },
+    { "cluster": 7, "run": 1, "ref": "b2s2", "label": "pass", "note": "随机抽样标的，判官没报旗标；真阴那一格要靠这类条目才有分母" }
+  ]
+}

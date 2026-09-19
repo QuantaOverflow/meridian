@@ -14,7 +14,7 @@
   "coreTierOfMax": 0.5,
   "core": 3,
   "mid": 0,
-  "tail": 21
+  "tail": 2
  },
  "events": [
   {
@@ -25,7 +25,10 @@
     1007386
    ],
    "nArticles": 3,
-   "nSources": 3
+   "nSources": 3,
+   "variants": [
+    "开始时点在簇内有两个口径：1009292:1/:3 用相对日期『yesterday』（昨天闭门会、今天公开陈述），1006837:1 称两国外长『周二』在新加坡交换开场陈述，1006837:7 称首轮调解会在新加坡『周一至周三』举行。即：程序始于周一、开场陈述在周二。"
+   ]
   },
   {
    "event": "Thailand’s Foreign Minister Sihasak Phuangketkaew said Thailand enters this conciliation in good faith, fully mindful of the provisions of UNCLOS.",
@@ -34,7 +37,10 @@
     1006837
    ],
    "nArticles": 2,
-   "nSources": 2
+   "nSources": 2,
+   "variants": [
+    "泰国外长姓氏两个拼法：1009292:5 作 Sihasak Phuangketkaew，1006837:7 作 Sihasak Phuangketkeow。清单取前者。"
+   ]
   },
   {
    "event": "Cambodia initiated the UNCLOS process in June shortly after Prime Minister Anutin Charnvirakul’s government unilaterally cancelled a 2001 agreement with Cambodia governing joint offshore energy.",
@@ -43,132 +49,15 @@
     1006837
    ],
    "nArticles": 2,
-   "nSources": 2
-  },
-  {
-   "event": "Singapore's government raised the annual salaries of ministers, including Prime Minister Lawrence Wong, from S$2.2 million to S$3.6 million.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore's Prime Minister Lawrence Wong announced he will donate his entire pay increase to charity over the next five years.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore's government announced the first increase in ministerial salaries in 15 years.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore's government stated that raising ministers' pay was necessary to attract better talent into public service.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore's government announced that ministers will receive an initial one-off adjustment of up to 9 percent starting October 15.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore's government stated that by the end of the current government's term, most junior ministers are expected to earn around S$1.35 million.",
-   "articleIds": [
-    991963
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Myanmar's military-backed government accused its UN representative Kyaw Moe Tun of undertaking 'illegal activities' and misuse of state funds.",
-   "articleIds": [
-    993150
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Myanmar's military-backed government announced plans to establish a formal cooperation framework with Cambodia to foster closer ties between their armed forces.",
-   "articleIds": [
-    993147
-   ],
-   "nArticles": 1,
-   "nSources": 1
+   "nSources": 2,
+   "variants": [
+    "被取消的文件描述两个口径：1009292:8 称『2001 年协议』，涵盖联合海上油气勘探与 OCA 海界划定；1006837:3 称泰国终止的是一份『25 年历史的谅解备忘录』。两者可对应同一文件但表述不同；清单取 2001 年协议一说。"
+   ]
   },
   {
    "event": "Thailand's government stated that it has evidence Cambodia stationed troops at Preah Vihear temple during border fighting.",
    "articleIds": [
     993148
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Energy ministers and executives met in Bangkok on Monday to discuss LNG price increases triggered by the Iran war.",
-   "articleIds": [
-    997643
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Singapore’s Defence Minister Chan Chun Sing visited China from Tuesday to Thursday to speak at the Beijing Xiangshan Forum.",
-   "articleIds": [
-    998656
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Indonesia’s digital banks backed by major tech and telecom firms added billions in customer deposits and rapidly scaled loan portfolios over the last few years.",
-   "articleIds": [
-    1009293
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "MariBank amassed S$1.9 billion in deposits by 2025 but posted a S$56 million loss due to tight regulatory oversight.",
-   "articleIds": [
-    1009293
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "GSX Bank’s Malaysian arm reported total assets of $479 million as of 2025 and a loan to deposit ratio of just 25 percent.",
-   "articleIds": [
-    1009293
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "MariBank Philippines had assets of just over $1 billion by the end of 2025, with its loan portfolio growing 64 percent year over year.",
-   "articleIds": [
-    1009293
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Maya Bank reported $1.25 billion in assets and saw its loan book jump 86 percent compared to 2024.",
-   "articleIds": [
-    1009293
    ],
    "nArticles": 1,
    "nSources": 1
@@ -180,39 +69,34 @@
    ],
    "nArticles": 1,
    "nSources": 1
-  },
-  {
-   "event": "Indonesian Finance Minister Purbaya Yudhi Sadewa was sacked as finance minister on Monday and named his deputy Suahasil Nazara to the top finance job.",
-   "articleIds": [
-    1007388
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Purbaya Yudhi Sadewa said he found out about his termination in a phone call with the president’s spokesman Prasetyo Hadi on Monday.",
-   "articleIds": [
-    1007388
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Indonesia's finance ministry plans to absorb debt payments for the Whoosh high-speed railway.",
-   "articleIds": [
-    1008926
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
-   "event": "Indonesia's government restructured the Whoosh railway debt over 80 years with annual instalments of about 1 trillion rupiah.",
-   "articleIds": [
-    1008926
-   ],
-   "nArticles": 1,
-   "nSources": 1
   }
  ],
- "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。",
+ "rawEventsBeforeDepurify": 24,
+ "impurityFilter": {
+  "at": "2026-09-18",
+  "impurityArticles": 13,
+  "droppedEvents": 19,
+  "eventsWithStrippedIds": 0,
+  "droppedExamples": [
+   "Singapore's government raised the annual salaries of ministers, including Prime Minister Lawrence Wong, from S$2.2 million to S$3.6 million.",
+   "Singapore's Prime Minister Lawrence Wong announced he will donate his entire pay increase to charity over the next five years.",
+   "Singapore's government announced the first increase in ministerial salaries in 15 years.",
+   "Singapore's government stated that raising ministers' pay was necessary to attract better talent into public service.",
+   "Singapore's government announced that ministers will receive an initial one-off adjustment of up to 9 percent starting October 15.",
+   "Singapore's government stated that by the end of the current government's term, most junior ministers are expected to earn around S$1.35 million."
+  ],
+  "note": "后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。"
+ },
+ "coreAudit": {
+  "at": "2026-09-18",
+  "auditors": [
+   "opus",
+   "sonnet"
+  ],
+  "coreAudited": 3,
+  "totalEvents": 5,
+  "note": "只校核了核心层(设门那一层)。次层/尾层未校核;「该有而没抽到」与「支持篇数算错导致的错误分层」两类失效结构上查不到,见 decision-hold-checklist-tiering",
+  "trail": []
+ }
 }

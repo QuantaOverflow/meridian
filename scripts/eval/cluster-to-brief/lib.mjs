@@ -98,3 +98,21 @@ export function numbersIn(text) {
 
 /** 成稿切句。与文章切句同一套规则,便于按句核对。 */
 export const proseSentences = splitSentences;
+
+// ── 覆盖的判定范围 ──────────────────────────────────────────────────────
+/**
+ * 哪些事件要判覆盖:**核心层 + 次层**(支持篇数 ≥2),尾层不判。
+ *
+ * 尾层大多是单篇报道的细节,不进任何门、不进 frontier 任何轴 —— 判它纯属浪费:
+ * dev 五簇 141 条事件里 96 条是尾层(68%),而判官最慢的环节就是逐条生成 JSON。
+ * 要求简报覆盖每条单源细节本来也是错的判据。
+ *
+ * **口径只在这里定义一次**,build-judge-pack 与 score-slow 都读它 —— 两边各算一次
+ * 就会出现「包里没列、却被判漏判」这种不报错的错位。
+ * eventId 保持原编号(不重排),否则与清单文件对不上。
+ */
+export function gradedEventIds(ck) {
+  return (ck?.events ?? []).map((e, i) => ({ id: i + 1, n: e.nArticles }))
+    .filter(x => x.n >= 2)
+    .map(x => x.id);
+}

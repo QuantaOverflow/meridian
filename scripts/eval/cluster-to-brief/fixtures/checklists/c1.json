@@ -13,8 +13,8 @@
   "maxSupport": 6,
   "coreTierOfMax": 0.5,
   "core": 6,
-  "mid": 6,
-  "tail": 6
+  "mid": 4,
+  "tail": 4
  },
  "events": [
   {
@@ -28,7 +28,11 @@
     997267
    ],
    "nArticles": 6,
-   "nSources": 5
+   "nSources": 5,
+   "variants": [
+    "最终结果何时出来有两个口径：多数文章（991959:5 / 995219:6 / 994815:8）称周三点完迟到的邮寄票/海外票即可定音；999871:21 则称『海外票周三点完后，最终选举结果要到周末才出』。清单锁死『周三』这一口径。另：周三所点票种的表述也不同——991959/995219 称 early votes，994815 称 postal votes + ballots cast from abroad，990477:10 只提海外票。",
+    "多数源（991959:5、995219:6、994815:8、990477:10、998324:15、997267:10）暗示结果可能在周三（清点海外/迟到选票后）明朗；但 999871:21 明确说'周三清点海外选票后，最终结果要到周末才出'——与清单暗示的'周三见分晓'口径不一致，判官需知道有这个更晚的时间线说法。"
+   ]
   },
   {
    "event": "The Sweden Democrats' support slipped almost 3 per cent from its 2022 result of 20.5 per cent and it fell from second to third place.",
@@ -39,17 +43,25 @@
     1003988
    ],
    "nArticles": 4,
-   "nSources": 4
+   "nSources": 4,
+   "variants": [
+    "本届得票率有两个口径：1003988:8 为 17.5%，997267:22 与 998324:29 为 17.6%，995219:16 为『just under 18%』。2022 基数亦有两说：991959:15 与 1003988:8 明确 20.5%，997267:22 / 998324:29 只说『more than 20%』。清单本身未写本届具体数值，只写『跌近 3 个百分点、从 20.5%』，两种口径都不与之直接冲突。",
+    "清单只写'跌了近3个百分点'（照抄 991959:15，未给最终数字），但簇内对跌后具体数值口径不一：17.5%（1003988:8）、17.6%（997267:22、998324:29）、'略低于18%'（995219:16）。三个数字互不相同。"
+   ]
   },
   {
-   "event": "The Swedish Election Authority reported the four opposition parties were heading for 175 seats in the 349-seat parliament to 174 seats for the government alliance.",
+   "event": "With 92 per cent of the vote counted early Monday, the Swedish Election Authority reported the four opposition parties were heading for 175 seats in the 349-seat parliament to 174 seats for the government alliance.",
    "articleIds": [
     991959,
     994815,
     995219
    ],
    "nArticles": 3,
-   "nSources": 3
+   "nSources": 3,
+   "variants": [
+    "同一事实（选举管理局公布的两阵营席位）簇内至少两个口径：175–174（991959:4，计票 92%，周一凌晨）与 176–173（995219:5，计票 >94%；1003988:3，周一；995865:2 与 999871:2 在 95% 时亦为 176–173；998324:14 / 997267:9 表述为『三席多数』，计票 95%）。",
+    "清单写'175席对174席'，逐字照抄 991959:4（92%选票计票时的口径）。但更多源在计票比例更高时报的是'176对173'：995219:5（94%）、1003988:3（周一）、998324:14/997267:9（95%，'三席多数'）。同一事实随计票进度变化出现两个口径，清单锁死了较早、较少见的那个。"
+   ]
   },
   {
    "event": "Andersson told supporters that 'we must wait for the final election result' but added that 'right now we are leading'.",
@@ -79,25 +91,10 @@
     1003988
    ],
    "nArticles": 3,
-   "nSources": 2
-  },
-  {
-   "event": "Kosovo lawmakers voted to approve a new government led by Prime Minister Albin Kurti on September 13, 2026.",
-   "articleIds": [
-    987459,
-    988694
-   ],
-   "nArticles": 2,
-   "nSources": 2
-  },
-  {
-   "event": "Kosovo's parliament failed to elect deputy speakers of the assembly on September 13, 2026.",
-   "articleIds": [
-    987459,
-    988694
-   ],
-   "nArticles": 2,
-   "nSources": 2
+   "nSources": 2,
+   "variants": [
+    "与 995865:2、999871:2 的'176对173'一致，但这与 #3 登记的'175对174'（991959:4，92%计票时）是同一件事在不同计票进度下的两个口径，二者不应被判官当成两条独立且互斥的事实。"
+   ]
   },
   {
    "event": "With 95 percent of votes counted on Monday, the four opposition parties held a three-seat majority in the 349-seat parliament over Prime Minister Kristersson's right-wing alliance.",
@@ -144,14 +141,6 @@
    "nSources": 1
   },
   {
-   "event": "Yong Hye-in, a lawmaker of the minor Basic Income Party, pulled out of consideration for the position of gender minister.",
-   "articleIds": [
-    993794
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
    "event": "The Social Democrats held onto first place with a 28.1 percent share.",
    "articleIds": [
     1003988
@@ -174,15 +163,47 @@
    ],
    "nArticles": 1,
    "nSources": 1
-  },
-  {
-   "event": "The Centrist Reform Alliance (CRA) is set to split into two groups.",
-   "articleIds": [
-    1000985
-   ],
-   "nArticles": 1,
-   "nSources": 1
   }
  ],
- "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。",
+ "rawEventsBeforeDepurify": 18,
+ "impurityFilter": {
+  "at": "2026-09-18",
+  "impurityArticles": 4,
+  "droppedEvents": 4,
+  "eventsWithStrippedIds": 0,
+  "droppedExamples": [
+   "Kosovo lawmakers voted to approve a new government led by Prime Minister Albin Kurti on September 13, 2026.",
+   "Kosovo's parliament failed to elect deputy speakers of the assembly on September 13, 2026.",
+   "Yong Hye-in, a lawmaker of the minor Basic Income Party, pulled out of consideration for the position of gender minister.",
+   "The Centrist Reform Alliance (CRA) is set to split into two groups."
+  ],
+  "note": "后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。"
+ },
+ "coreAudit": {
+  "at": "2026-09-18",
+  "auditors": [
+   "opus",
+   "sonnet"
+  ],
+  "coreAudited": 6,
+  "totalEvents": 14,
+  "note": "只校核了核心层(设门那一层)。次层/尾层未校核;「该有而没抽到」与「支持篇数算错导致的错误分层」两类失效结构上查不到,见 decision-hold-checklist-tiering",
+  "trail": [
+   {
+    "eventId": 3,
+    "action": "rewrite",
+    "confidence": "single_auditor",
+    "by": "opus",
+    "problems": [
+     "number",
+     "time",
+     "duplicate"
+    ],
+    "was": "The Swedish Election Authority reported the four opposition parties were heading for 175 seats in the 349-seat parliament to 174 seats for the government alliance.",
+    "now": "With 92 per cent of the vote counted early Monday, the Swedish Election Authority reported the four opposition parties were heading for 175 seats in the 349-seat parliament to 174 seats for the government alliance.",
+    "why": "数字本身忠于 991959:4，但清单删掉了原句的『With 92 per cent of the vote counted early Monday』这一时点限定，使一个随计票推进而变化的中间快照被写成无条件事实，与簇内 176–173 的更晚口径直接打架；且与本清单 #6（95% 时 176–173）是同一事实的两条互斥登记。另：登记的 3 篇支持里，994815:5 讲的是比例代表制与 4% 门槛，与本条无关，实际只有 2 篇支持且二者数字不同。"
+   }
+  ]
+ }
 }

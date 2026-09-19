@@ -6,10 +6,26 @@
  */
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { loadCluster, sentenceOf } from '../../lib.mjs';
+import { filterGrounded } from './local-grounding.mjs';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const ROOT = new URL('../../', import.meta.url).pathname;
-const OUT = `${ROOT}out/direct-raw`;
+// 单变量开关：DIRECT_RAW_LOCAL_GROUNDING=1 时，候选进选择池前先做逐句接地（见 local-grounding.mjs）。
+// 窗口缓存**两个臂共用**（都在 out/direct-raw/c<id>-windows/），所以两臂的候选池逐条相同，
+// 唯一的差别就是过滤。只有成稿与记账分开落盘。
+// DIRECT_RAW_ROUTE_GATE=1：嫁接 structure-router 的**路由门**（只要它那一个判定，不要它的文章筛选）。
+// 读 out/structure-router/structure-c<id>.json，structure=topic_bag 就直接判不可写，不进生成。
+// 只嫁接门、不嫁接筛选，理由是实测：按 dominantStorylineKey 选文章精度 89–100%，但 c36 召回只有
+// 13%（63 篇正题里只选出 8 篇）、c43 26% —— 那正是 structure-router 覆盖只有 14% 的原因。
+// DIRECT_RAW_STORYLINE_FILTER=1：嫁接 structure-router 的**主线筛选**——只把
+// canonicalStorylineKey == dominantStorylineKey 的文章喂给生成。注意必须用合并后的
+// canonicalStorylineKey，不是合并前的 storylineKey：后者在 c36 上只匹配 8 篇（真实主导成分 56 篇）。
+// 拿人工标注对照实测：c1 精度/召回 100%/100%、c7 100%/100%、c37 100%/100%、c43 96%/81%、c36 88%/78%。
+const GROUNDED = process.env.DIRECT_RAW_LOCAL_GROUNDING === '1';
+const ROUTE_GATE = process.env.DIRECT_RAW_ROUTE_GATE === '1';
+const STORYLINE_FILTER = process.env.DIRECT_RAW_STORYLINE_FILTER === '1';
+const SHARED = `${ROOT}out/direct-raw`;
+const OUT = `${ROOT}out/direct-raw${ROUTE_GATE ? '-routed' : ''}${STORYLINE_FILTER ? '-storyline' : ''}${GROUNDED ? '-grounded' : ''}`;
 const ENDPOINT = process.env.AI_WORKER_URL ?? 'http://localhost:8787/meridian/chat';
 const MODEL = process.env.DIRECT_RAW_MODEL ?? '@cf/zai-org/glm-4.7-flash';
 const WINDOW_CHARS = Number(process.env.DIRECT_RAW_WINDOW_CHARS ?? 30_000);
@@ -276,13 +292,39 @@ function selectionOk(x, candidateIds) {
 async function runCluster(clusterId, options = {}) {
   const t0 = Date.now();
   const cluster = loadCluster(clusterId);
+  let storylineDropped = 0;
+  if (STORYLINE_FILTER) {
+    const sp = `${ROOT}out/structure-router/structure-c${clusterId}.json`;
+    if (!existsSync(sp)) throw new Error(`c${clusterId}: 主线筛选要 ${sp}，先跑 arms/structure-router/run.mjs`);
+    const st = JSON.parse(readFileSync(sp, 'utf8'));
+    const keep = new Set(st.signatures.filter(x => x.canonicalStorylineKey === st.dominantStorylineKey).map(x => x.articleId));
+    if (keep.size >= 2) {
+      storylineDropped = cluster.articles.length - keep.size;
+      cluster.articles = cluster.articles.filter(a => keep.has(a.id));
+      console.log(`  [c${clusterId}] 主线筛选：${keep.size + storylineDropped} → ${keep.size} 篇（丢 ${storylineDropped}）`);
+    } else console.log(`  [c${clusterId}] 主线筛选跳过：主导成分只有 ${keep.size} 篇`);
+  }
   const windows = makeWindows(cluster.articles);
   console.log(`c${clusterId}: ${cluster.articles.length} articles -> ${windows.length} windows (${windows.map(w => w.chars).join(', ')} chars)`);
   if (options.plan) return;
 
   mkdirSync(OUT, { recursive: true });
+  if (ROUTE_GATE) {
+    const sp = `${ROOT}out/structure-router/structure-c${clusterId}.json`;
+    if (!existsSync(sp)) throw new Error(`c${clusterId}: 路由门要 ${sp}，先跑 arms/structure-router/run.mjs`);
+    const st = JSON.parse(readFileSync(sp, 'utf8'));
+    if (st.structure !== 'single_story') {
+      const reason = `${st.structure}: largest storyline covers ${(st.directShare * 100).toFixed(1)}% with a ${(st.dominanceMargin * 100).toFixed(1)}-point lead`;
+      writeFileSync(`${OUT}/c${clusterId}.json`, JSON.stringify({ cluster: clusterId, verdict: 'not_a_single_event', reason, blocks: [] }, null, 2));
+      writeFileSync(`${OUT}/c${clusterId}-run.json`, JSON.stringify({ cluster: clusterId, routeGate: 'rejected', structure: st.structure, directShare: st.directShare, dominanceMargin: st.dominanceMargin, elapsed_s: +((Date.now() - t0) / 1000).toFixed(2) }, null, 2));
+      console.log(`c${clusterId}: 路由门判不可写（${reason}）`);
+      return;
+    }
+    console.log(`  [c${clusterId}] 路由门放行：${st.dominantStorylineKey} ${(st.directShare * 100).toFixed(1)}%`);
+  }
   const cachePath = `${OUT}/c${clusterId}-candidates.json`;
-  const windowCacheDir = `${OUT}/c${clusterId}-windows`;
+  // 只有不筛文章时才共用窗口缓存——筛过之后窗口切分变了，缓存不再对应
+  const windowCacheDir = STORYLINE_FILTER ? `${OUT}/c${clusterId}-windows` : `${SHARED}/c${clusterId}-windows`;
   mkdirSync(windowCacheDir, { recursive: true });
   const callsPath = `${OUT}/calls.jsonl`;
   const batches = await pool(windows, CONCURRENCY, async w => {
@@ -304,7 +346,14 @@ async function runCluster(clusterId, options = {}) {
     });
     return candidates;
   });
-  const candidates = batches.flat();
+  const generated = batches.flat();
+  let candidates = generated, groundingDropped = [];
+  if (GROUNDED) {
+    const r = filterGrounded(generated, (a, n) => sentenceOf(cluster, a, n));
+    candidates = r.kept; groundingDropped = r.dropped;
+    atomicWriteJson(`${OUT}/c${clusterId}-grounding-dropped.json`, { cluster: clusterId, generated: generated.length, kept: candidates.length, dropped: groundingDropped });
+    console.log(`  [c${clusterId}] 逐句接地：${generated.length} → ${candidates.length}（丢 ${groundingDropped.length}）`);
+  }
   atomicWriteJson(cachePath, { version: 1, cluster: clusterId, windows: windows.map(({ text, ...w }) => w), candidates });
   if (!candidates.length) throw new Error(`c${clusterId}: model returned no direct-written candidates`);
   const ids = candidates.map(c => c.id);
@@ -314,13 +363,20 @@ async function runCluster(clusterId, options = {}) {
   const output = assemble(clusterId, selection, candidates);
   writeFileSync(`${OUT}/c${clusterId}.json`, JSON.stringify(output, null, 2));
   const elapsed = +((Date.now() - t0) / 1000).toFixed(2);
-  writeFileSync(`${OUT}/c${clusterId}-run.json`, JSON.stringify({ cluster: clusterId, articles: cluster.articles.length, windows: windows.length, candidates: candidates.length, elapsed_s: elapsed, model: MODEL, window_chars: WINDOW_CHARS }, null, 2));
+  writeFileSync(`${OUT}/c${clusterId}-run.json`, JSON.stringify({ cluster: clusterId, routeGate: ROUTE_GATE ? 'passed' : 'off', storylineDropped, articles: cluster.articles.length, windows: windows.length, candidates: candidates.length, generated: generated.length, localGrounding: GROUNDED, groundingDropped: groundingDropped.length, elapsed_s: elapsed, model: MODEL, window_chars: WINDOW_CHARS }, null, 2));
   console.log(`c${clusterId}: ${output.verdict}, ${output.blocks.length} blocks, ${elapsed}s`);
 }
 
 async function main() {
   const args = argsOf(process.argv.slice(2));
   const targets = args.cluster ? [Number(args.cluster)] : DEV;
+  // heldout(28/51)是一次性资源:跑过之后对本臂不再是「未见过的数据」,再看结果回去调就是过拟合。
+  // 要跑必须显式 ALLOW_HELDOUT=1,让这个动作在命令行里留痕。
+  const offDev = targets.filter(c => !DEV.includes(c));
+  if (offDev.length && process.env.ALLOW_HELDOUT !== '1') {
+    throw new Error(`c${offDev.join(',')} 不在 dev 内。要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。`);
+  }
+  if (offDev.length) console.error(`⚠️ 正在消耗 heldout: ${offDev.map(c => 'c' + c).join(',')}`);
   for (const cid of targets) await runCluster(cid, { plan: !!args.plan, resume: !!args.resume });
 }
 

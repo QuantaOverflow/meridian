@@ -25,7 +25,10 @@
     1002427
    ],
    "nArticles": 3,
-   "nSources": 3
+   "nSources": 3,
+   "variants": [
+    "武器数量表述簇内不一：1005077:1 为单数『a space weapon』，1001691:1 / 1002427:1 / 1002160:1 / 1009708:1 均为复数『weapons』。确认主体的说法也有粗细之分：多数文章为 US Space Force，1009708:1 记作『the US military』。清单取复数 + Space Force，与多数口径一致。"
+   ]
   },
   {
    "event": "US Secretary of the Air Force Troy Meink announced on Monday that the US now had 'on-orbit space control weapons' capable of defending American forces against hostile action.",
@@ -35,7 +38,11 @@
     1009708
    ],
    "nArticles": 3,
-   "nSources": 3
+   "nSources": 3,
+   "variants": [
+    "同一句『on-orbit space control weapons capable of defending the Joint Force against hostile adversary action』在簇内有两个归属口径：1007986:2/:4 与 1009708:2 归给空军部长 Troy Meink 本人；1001691:2、1002427:2、1002160:2 则归给『a US Space Force spokesperson』的书面声明。清单锁死 Meink 这一口径。",
+    "清单把'on-orbit space control weapons capable of defending... against hostile action/adversary action'这句话的说出者写成 Troy Meink 本人，与 1007986:2/4、1005077:2、1009708:2 一致；但几乎相同的措辞（'defending the Joint Force against hostile adversary action'）在 1002160:2、1002427:2、1001691:2 里被明确归为'a (Space Force) spokesperson said in a statement'，未提 Meink 姓名。同一句话在簇内被分别归给具名官员和匿名发言人，是施事口径冲突。"
+   ]
   },
   {
    "event": "US Secretary of the Air Force Troy Meink said revealing more about the capability would undermine its deterrent value.",
@@ -46,5 +53,25 @@
    "nSources": 1
   }
  ],
- "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。",
+ "rawEventsBeforeDepurify": 3,
+ "impurityFilter": {
+  "at": "2026-09-18",
+  "impurityArticles": 0,
+  "droppedEvents": 0,
+  "eventsWithStrippedIds": 0,
+  "droppedExamples": [],
+  "note": "后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。"
+ },
+ "coreAudit": {
+  "at": "2026-09-18",
+  "auditors": [
+   "opus",
+   "sonnet"
+  ],
+  "coreAudited": 2,
+  "totalEvents": 3,
+  "note": "只校核了核心层(设门那一层)。次层/尾层未校核;「该有而没抽到」与「支持篇数算错导致的错误分层」两类失效结构上查不到,见 decision-hold-checklist-tiering",
+  "trail": []
+ }
 }

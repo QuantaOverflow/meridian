@@ -20,6 +20,8 @@
  *   node build-checklist.mjs                 # 全部 7 簇(已缓存的跳过)
  *   node build-checklist.mjs --cluster=7      # 单簇,建议先拿最小的簇冒烟
  *   node build-checklist.mjs --force          # 无视缓存重抽
+ *   node build-checklist.mjs --depurify       # 把杂质文章从已缓存清单里剔掉(零 LLM)
+ *   node build-checklist.mjs --merge-audit    # 列出每簇最相似的几对事件供人工排查(零 LLM,不报总数)
  *
  * 退出码: 0 成功;1 有簇的批次报废;2 环境问题(服务没起、模型缺失)
  */
@@ -75,6 +77,120 @@ function computeTiers(events) {
 let targets = Object.keys(EXP.clusters);
 if (args.cluster) targets = targets.filter(c => c === String(args.cluster));
 if (!targets.length) { console.error(`没有匹配的簇: ${args.cluster}`); process.exit(2); }
+
+// ── --merge-audit:列出每簇最相似的几对事件,**供人工排查**────────────────────
+// 这不是指标,是线索。2026-09-19 实测:余弦**分不开**「同一事件的两种措辞」与「同一话题的两件事」——
+// c36 的真重复(Oman 推迟会议的两种写法)cos 0.899,而 c51 的非重复
+// (Amodei 说该放缓 ↔ Musk 表示支持)cos 0.900,分布完全重叠且假的排在真的前面。
+// 所以**不报总数、不写进清单文件、不跨轮比较**:一个分不开类别的信号不该产出计数。
+// 留着是因为它排序还有用 —— 肉眼在 c36 找到的三对真重复都落在 top-3 里
+// (一个簇三个样本的观察,不是保证:别的簇的真重复可能排在更后面)。
+//
+// 背景债:归并阈值 MERGE_TH=0.90 偏高会让同一事件劈成两条、支持篇数被分走、双双掉出核心层。
+// 调阈值修不了(见上),要换机制。见 decision-hold-checklist-tiering。
+if (args.mergeAudit || args['merge-audit']) {
+  const TOP = Number(process.env.MERGE_AUDIT_TOP ?? 3);
+  for (const cid of targets) {
+    const f = `${CACHE}/c${cid}.json`;
+    if (!existsSync(f)) continue;
+    const x = JSON.parse(readFileSync(f, 'utf8'));
+    delete x.mergeAudit;   // 清掉早先那版写进去的计数,那是噪声
+    writeFileSync(f, `${JSON.stringify(x, null, 1)}\n`);
+    const texts = x.events.map(e => e.event);
+    if (texts.length < 2) continue;
+    const vec = embed(texts, `mergeaudit-c${cid}`, OUT);
+    const pairs = [];
+    for (let i = 0; i < texts.length; i++) {
+      const vi = vec.get(texts[i]); if (!vi) continue;
+      for (let j = i + 1; j < texts.length; j++) {
+        const vj = vec.get(texts[j]); if (!vj) continue;
+        const c = vi.reduce((s, v, k) => s + v * vj[k], 0);
+        if (c < MERGE_TH) pairs.push({ a: i + 1, b: j + 1, cos: +c.toFixed(3) });
+      }
+    }
+    pairs.sort((p, q) => q.cos - p.cos);
+    const core = i => x.events[i - 1].nArticles >= x.tiers.coreMin ? '(核心)' : '';
+    console.log(`\nc${cid} ${x.name} —— 最相似的 ${TOP} 对(余弦不能判定是否重复,仅供人工排查)`);
+    for (const p of pairs.slice(0, TOP)) {
+      console.log(`  ${p.cos}  #${p.a}${core(p.a)} ${x.events[p.a - 1].event.slice(0, 70)}`);
+      console.log(`      ↔  #${p.b}${core(p.b)} ${x.events[p.b - 1].event.slice(0, 70)}`);
+    }
+  }
+  console.log('\n这些是线索不是读数:不报总数、不跨轮比较、不进任何指标表。');
+  process.exit(0);
+}
+
+// ── --depurify:把杂质文章从已缓存的清单里剔掉(零 LLM)────────────────────
+// 为什么要剔:覆盖率的分母里混进了只有杂质文章报道的事件。c1 的 18 条事件里有 4 条(22%)
+// 出处**全部**来自杂质文章(科索沃组阁 x2、韩国、CRA),于是**正确剔掉科索沃的臂反而被扣分**
+// —— 次层覆盖 4/6 掉到 2/6。尺在奖励"把杂质写进去"。
+//
+// 为什么是后置过滤而不是重抽:重抽会同时换掉分批构成与事件措辞(c1 20 篇去 4 篇 → 3 批变 2 批),
+// 前后读数不可比,而本轮要的恰恰是"同一批事件,去掉杂质前后"的对照。残余偏差是二阶的
+// (同批里的杂质文章可能影响过某条事件的措辞),记为已知边界。
+if (args.depurify) {
+  let n = 0;
+  for (const cid of targets) {
+    const f = `${CACHE}/c${cid}.json`;
+    if (!existsSync(f)) { console.log(`c${cid} 无清单,跳过`); continue; }
+    const x = JSON.parse(readFileSync(f, 'utf8'));
+    if (x.impurityFilter && !args.force) { console.log(`c${cid} 已去杂质(${x.impurityFilter.at}),跳过`); continue; }
+    const imp = new Set(EXP.clusters[cid]?.impurities ?? []);
+    const { articles } = loadCluster(cid);
+    const srcOf = new Map(articles.map(a => [a.id, a.sourceId]));
+
+    const dropped = [];
+    let stripped = 0;
+    const kept = [];
+    for (const e of x.events) {
+      const clean = e.articleIds.filter(id => !imp.has(id));
+      if (!clean.length) { dropped.push(e.event); continue; }
+      if (clean.length !== e.articleIds.length) stripped++;
+      kept.push({
+        event: e.event,
+        articleIds: clean,
+        nArticles: clean.length,
+        nSources: new Set(clean.map(id => srcOf.get(id))).size,
+      });
+    }
+    kept.sort((a, b) => (b.nArticles - a.nArticles) || (b.nSources - a.nSources));
+
+    const before = x.tiers;
+    x.rawEventsBeforeDepurify = x.events.length;
+    x.events = kept;
+    x.tiers = computeTiers(kept);
+    x.impurityFilter = {
+      at: new Date().toISOString().slice(0, 10),
+      impurityArticles: imp.size,
+      droppedEvents: dropped.length,
+      eventsWithStrippedIds: stripped,
+      droppedExamples: dropped.slice(0, 6),
+      note: '后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。',
+    };
+    writeFileSync(f, `${JSON.stringify(x, null, 1)}\n`);
+    console.log(
+      `c${String(cid).padEnd(3)} ${String(x.name).padEnd(17)} 事件 ${x.rawEventsBeforeDepurify} → ${kept.length}` +
+      `(删 ${dropped.length} 条全杂质、${stripped} 条剔了部分出处)  coreMin ${before?.coreMin ?? '-'} → ${x.tiers.coreMin}  ` +
+      `核心 ${before?.core ?? '-'} → ${x.tiers.core} / 次层 ${x.tiers.mid} / 尾层 ${x.tiers.tail}`
+    );
+    if (dropped.length) console.log(`     删掉的: ${dropped.slice(0, 3).map(d => d.slice(0, 50)).join(' | ')}`);
+    n++;
+  }
+  // 机械可判的验收:跑完不许再有"出处全为杂质文章"的事件
+  let bad = 0;
+  for (const cid of targets) {
+    const f = `${CACHE}/c${cid}.json`;
+    if (!existsSync(f)) continue;
+    const x = JSON.parse(readFileSync(f, 'utf8'));
+    const imp = new Set(EXP.clusters[cid]?.impurities ?? []);
+    const n2 = x.events.filter(e => e.articleIds.length && e.articleIds.every(id => imp.has(id))).length;
+    if (n2) { console.error(`❌ c${cid} 仍有 ${n2} 条事件出处全为杂质文章`); bad += n2; }
+  }
+  console.log(`\n去杂质 ${n} 份清单(零 LLM)`);
+  if (bad) process.exit(1);
+  console.log('✅ 全部簇:出处全为杂质文章的事件数 = 0');
+  process.exit(0);
+}
 
 // ── --retier:只重算分层,不重抽事件(零 LLM)──────────────────────────────
 // 改了核心层口径之后用它。事件本身不变,所以不该为此再花一次抽取的钱。

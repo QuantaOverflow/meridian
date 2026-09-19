@@ -14,7 +14,7 @@
   "coreTierOfMax": 0.5,
   "core": 3,
   "mid": 6,
-  "tail": 38
+  "tail": 37
  },
  "events": [
   {
@@ -41,14 +41,18 @@
    "nSources": 3
   },
   {
-   "event": "Israeli forces have killed 1,107 Palestinians in the West Bank since October 7, 2023.",
+   "event": "According to an NGO, Israel killed at least 1,107 Palestinians in attacks across the occupied West Bank between October 2023 and September 2026.",
    "articleIds": [
     994964,
     998379,
     1001422
    ],
    "nArticles": 3,
-   "nSources": 2
+   "nSources": 2,
+   "variants": [
+    "西岸死亡人数两个口径:至少 1,107——998379:9「Between October 2023 and September 2026, Israel killed at least 1,107 Palestinians in attacks across the occupied West Bank, the NGO said」;约 1,087——1001422:35「B'Tselem counted about 1,087 Palestinians killed by Israeli forces in the West Bank since October 2023, roughly a quarter of them children」。清单锁了 1,107,且抹掉了「at least / about」这两个约数限定。",
+    "1,107人(998379:9,原文归因于'the NGO said') vs 1,087人(1001422:35,原文归因于'B'Tselem counted about 1,087')——同一事实(西岸自2023年10月以来被以色列/以色列部队杀死的巴勒斯坦人数)在簇内存在两个不同数字口径。"
+   ]
   },
   {
    "event": "Israeli forces struck a car in Gaza City's Tel al-Hawa neighbourhood, killing two Hamas engineers and wounding 13 people.",
@@ -233,14 +237,6 @@
    "nSources": 1
   },
   {
-   "event": "West Virginia assistant football coach Noel Devine was arrested on a felony strangulation charge.",
-   "articleIds": [
-    995295
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
    "event": "Israeli forces targeted two Hamas engineers, Hassan Ali Abu Nada and Abd al-Rahim Ahmad Khalil Khawa, accusing them of weapons production.",
    "articleIds": [
     996563
@@ -409,5 +405,42 @@
    "nSources": 1
   }
  ],
- "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。",
+ "rawEventsBeforeDepurify": 47,
+ "impurityFilter": {
+  "at": "2026-09-18",
+  "impurityArticles": 8,
+  "droppedEvents": 1,
+  "eventsWithStrippedIds": 0,
+  "droppedExamples": [
+   "West Virginia assistant football coach Noel Devine was arrested on a felony strangulation charge."
+  ],
+  "note": "后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。"
+ },
+ "coreAudit": {
+  "at": "2026-09-18",
+  "auditors": [
+   "opus",
+   "sonnet"
+  ],
+  "coreAudited": 3,
+  "totalEvents": 46,
+  "note": "只校核了核心层(设门那一层)。次层/尾层未校核;「该有而没抽到」与「支持篇数算错导致的错误分层」两类失效结构上查不到,见 decision-hold-checklist-tiering",
+  "trail": [
+   {
+    "eventId": 3,
+    "action": "rewrite",
+    "confidence": "both_auditors",
+    "by": "opus",
+    "problems": [
+     "epistemic",
+     "time",
+     "number"
+    ],
+    "was": "Israeli forces have killed 1,107 Palestinians in the West Bank since October 7, 2023.",
+    "now": "According to an NGO, Israel killed at least 1,107 Palestinians in attacks across the occupied West Bank between October 2023 and September 2026.",
+    "why": "两处硬伤:一是两个数字都带 NGO 出处(the NGO said / B'Tselem counted),清单写成不带出处的既成事实,读者与判官无从知道这是统计口径而非官方数字;二是时间窗被改写——证据是 October 2023 至 September 2026 的区间,清单写成「since October 7, 2023」,10 月 7 日这个具体日期在本条的任何证据里都没有出现(987684:30 提的 7 October 2023 是加沙战争起点、对应的是另一组加沙伤亡数)。此外 1,107 只有一篇支持,簇内另有 1,087 的口径,已记入 conflictingFigures。"
+   }
+  ]
+ }
 }

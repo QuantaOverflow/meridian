@@ -14,7 +14,7 @@
   "coreTierOfMax": 0.5,
   "core": 8,
   "mid": 8,
-  "tail": 14
+  "tail": 13
  },
  "events": [
   {
@@ -226,14 +226,6 @@
    "nSources": 1
   },
   {
-   "event": "A 70-year-old hiker was rescued on Saturday after a week-long search on Isle Royale.",
-   "articleIds": [
-    991099
-   ],
-   "nArticles": 1,
-   "nSources": 1
-  },
-  {
    "event": "A US Air Force officer identified as 'Dude 44 Bravo' revealed he survived for nearly 50 hours in Iran.",
    "articleIds": [
     992454
@@ -306,5 +298,16 @@
    "nSources": 1
   }
  ],
- "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。"
+ "caveat": "基准从原文独立抽,未经人工核。glm-flash 的抽取质量没有独立验过 —— 覆盖率的绝对值据此打折读,臂间相对比较不受影响(各臂共用同一份)。",
+ "rawEventsBeforeDepurify": 30,
+ "impurityFilter": {
+  "at": "2026-09-18",
+  "impurityArticles": 2,
+  "droppedEvents": 1,
+  "eventsWithStrippedIds": 0,
+  "droppedExamples": [
+   "A 70-year-old hiker was rescued on Saturday after a week-long search on Isle Royale."
+  ],
+  "note": "后置过滤:整条出处都是杂质文章的事件删除,幸存事件里的杂质 articleId 剔除后重算 nArticles/nSources 与分层。事件措辞未重抽。"
+ }
 }

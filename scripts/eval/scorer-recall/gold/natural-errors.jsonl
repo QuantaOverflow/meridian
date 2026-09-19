@@ -1,0 +1,15 @@
+{"id":1,"block":"c0-lead","category":"actor","layer":"写作层","match":"which she said could hollow out key industries","why":"「could hollow out key industries」是 Carney 说的,被挂到 Joly 名下。报告里两条是分开的两行,写作层融成一句并合并了主语"}
+{"id":2,"block":"c0-lead","category":"actor","layer":"写作层","match":"what she called the best deal","why":"Jamieson Greer 是男性,原文自始至终只写 Greer said,没有代词。「she」是模型自行补的假属性","inClusterRefutable":false,"ceilingNote":"簇内原文没有 he/his,只靠本簇原文推不翻 —— 限定「只对照本簇原文」的判据必然漏这条"}
+{"id":3,"block":"c0-lead","category":"actor","layer":"写作层","match":"Historian Robert Bothwell","why":"引语张冠李戴:这句话是 Daniel Béland(McGill 政治学者)说的。报告的 quotes 块标注正确,写作层仍接错"}
+{"id":4,"block":"c0-more","category":"actor","layer":"写作层","match":"piggybank","why":"比喻方向反转。原文是加拿大把美国当钱罐子,候选写成 Trump 管加拿大叫钱罐子"}
+{"id":5,"block":"c0-more","category":"actor","layer":"写作层","match":"if Carney continues treating him","why":"条件从句属于 Trump 那半句,Greer 的威胁是无条件的。两条相邻事实融成一句,条件挂错人"}
+{"id":6,"block":"c3-lead","category":"epistemic","layer":"写作层","match":"responded by shooting down three Saudi drones","why":"单方声称、对方未回应、同一发言人自相矛盾(另处称四架),被去掉消息源写成事实,并加了原文没有的因果"}
+{"id":7,"block":"c3-lead","category":"quantity","layer":"写作层(relations 步)","match":"replaced an earlier figure of 84 troops","why":"两个互不相干的数字被编成「更新关系」,原文不存在这条更新"}
+{"id":8,"block":"c3-lead","category":"time","layer":"写作层","match":"On September 8","why":"报告里 8 Sep 是报道日期,攻势本身写的是 last week,日期被搬成了事件日期"}
+{"id":9,"block":"c3-more","category":"actor","layer":"写作层","match":"Saudi Arabia led by Major-General Turki al-Maliki","why":"「沙特领导的联军发言人」被压成「沙特由 al-Maliki 领导」,联军发言人变成了沙特的领导人"}
+{"id":10,"block":"c13-lead","category":"time","layer":"写作层(relations 步)","match":"before it collapsed","why":"原文不支持「倒塌前」,最直白的读法是倒塌之后(原文直接称其为 the collapsed building)。时序反转直接改写问责叙事"}
+{"id":11,"block":"c13-lead","category":"actor","layer":"写作层","match":"The civic body suspended five officials","why":"停职的是德里政府(停的正是 MCD 的人),下令调查的是首席部长。写成 civic body 等于让被问责方自己问责自己"}
+{"id":12,"block":"c13-lead","category":"time","layer":"写作层","match":"joined rescue efforts on Monday","why":"周一发生的是抗议不是救援。两条事实融合,日期从抗议那条搬到救援那条"}
+{"id":13,"block":"c13-more","category":"actor","layer":"写作层","match":"The Delhi government suspended five MCD officials","why":"拆除令是 MCD 下的。与 #11 方向正好相反 —— 同一份报告的两个 block 把施事对调,说明写作层在猜施事"}
+{"id":14,"block":"c18-lead","category":"actor","layer":"写作层","match":"He said this was about changing the power relationship","why":"代词 He 指向上一句的 Taylor(反对派领袖),原话是总理 Albanese 的且立场相反 —— 让反对者替政府说话"}
+{"id":15,"block":"c18-more","category":"state","layer":"写作层(relations 步)","match":"replaced an earlier draft law requiring a digital duty of care","why":"my feed my way 本身就是那套 digital duty of care 立法的一部分,不存在任何替换"}

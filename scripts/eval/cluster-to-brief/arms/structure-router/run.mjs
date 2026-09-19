@@ -20,8 +20,15 @@ const DEV = [7, 1, 36, 37, 43];
 const selfTest = Boolean(args['self-test']);
 const resume = Boolean(args.resume);
 const targets = selfTest ? [] : args.cluster ? [Number(args.cluster)] : String(args.split ?? 'dev') === 'dev' ? DEV : [];
-if (!selfTest && (!targets.length || targets.some(x => !DEV.includes(x)))) {
-  throw new Error('This prototype is dev-only. Use --cluster=7|1|36|37|43 or --split=dev.');
+// dev-only 闸:防止 heldout(28/51)被随手消耗。**heldout 是一次性资源** ——
+// 跑过之后它对本臂就不再是「未见过的数据」,再看结果回去调就等于过拟合。
+// 要跑 heldout 必须显式声明 ALLOW_HELDOUT=1,让这个动作在命令行里留痕。
+const ALLOW_HELDOUT = process.env.ALLOW_HELDOUT === '1';
+if (!selfTest && (!targets.length || (!ALLOW_HELDOUT && targets.some(x => !DEV.includes(x))))) {
+  throw new Error('This prototype is dev-only. Use --cluster=7|1|36|37|43 or --split=dev. 要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。');
+}
+if (ALLOW_HELDOUT && targets.some(x => !DEV.includes(x))) {
+  console.error(`⚠️ 正在消耗 heldout: ${targets.filter(x => !DEV.includes(x)).map(c => 'c' + c).join(',')} —— 跑完这些簇对本臂不再是未见过的数据`);
 }
 
 const BATCH_SIZE = Number(process.env.ROUTER_BATCH_SIZE ?? 18);

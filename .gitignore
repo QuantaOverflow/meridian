@@ -259,3 +259,4 @@ docs/*-handoff.md
 docs/engineering-notes/
 apps/*/prototypes/
 services/*/prototypes/
+scripts/eval/*/prototypes/

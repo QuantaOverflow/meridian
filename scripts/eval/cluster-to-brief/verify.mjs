@@ -143,6 +143,38 @@ function verifyCluster(cid, exp) {
     }
   }
 
+  // —— 块内冗余(2026-09-19 加)——————————————————————————————————————
+  // 判据:**同一块内**两句引到同一条原句 → 这两句在讲同一件事。纯机械,零 LLM。
+  // 为什么要量:实测 direct-raw 每 10 句就有 1 句在重复同块内说过的事,四个判官都主动报过,
+  // 而在此之前没有任何指标记录它 —— 读者能直接感知,scorer 却看不见。
+  // 实例:c37 块 3 的 5 句里两对重复(b3s1≈b3s3 都引 993147:15、b3s2≈b3s5 都引 993147:7)。
+  // **只报不设门**:两句展开同一原句的不同侧面是正当写法,设门会误拦。
+  let dupPairs = 0, dupSents = 0;
+  const dupExamples = [];
+  blocks.forEach((b, bi) => {
+    const sents = Array.isArray(b.sentences) ? b.sentences : [];
+    const keysOf = si => new Set((sents[si]?.sources ?? []).map(sr => `${sr?.articleId}:${sr?.sentence}`));
+    const involved = new Set();
+    for (let i = 0; i < sents.length; i++) {
+      const ki = keysOf(i);
+      if (!ki.size) continue;
+      for (let j = i + 1; j < sents.length; j++) {
+        const shared = [...keysOf(j)].filter(k => ki.has(k));
+        if (!shared.length) continue;
+        dupPairs++;
+        involved.add(i); involved.add(j);
+        if (dupExamples.length < 3) {
+          dupExamples.push(`b${bi + 1}s${i + 1} / b${bi + 1}s${j + 1} 同引 ${shared[0]}: "${String(sents[i]?.text ?? '').slice(0, 45)}…"`);
+        }
+      }
+    }
+    dupSents += involved.size;
+  });
+  read.redundantPairs = dupPairs;
+  read.redundantSentences = dupSents;
+  read.redundancyRate = allSents.length ? +(dupSents / allSents.length).toFixed(3) : null;
+  if (dupExamples.length) read.redundancyExamples = dupExamples;
+
   read.unresolvedSources = unresolved;
   read.sentencesWithoutSource = noSource;
   read.impureSentences = impureSents;
@@ -215,6 +247,7 @@ for (const [cid, r] of Object.entries(results)) {
   for (const e of r.envProblems) console.log(`  [环境] ${e}`);
   for (const e of r.failures) console.log(`  [不合格] ${e}`);
   if (r.read.numberExamples) console.log(`  [读数] 数字无出处 ${r.read.sentencesWithUncitedNumbers} 句: ${r.read.numberExamples.join(' | ')}`);
+  if (r.read.redundancyExamples) console.log(`  [读数] 块内冗余 ${r.read.redundantSentences}/${r.read.sentences} 句(${r.read.redundantPairs} 对): ${r.read.redundancyExamples.join(' | ')}`);
 }
 
 mkdirSync(`${HERE}out`, { recursive: true });

@@ -5,9 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadCluster } from '../../lib.mjs';
 import { askJSON, cos, embed, setCallsPath } from '../../slow-lib.mjs';
+import { OUT_ROOT } from '../../lib.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
-const OUT = `${ROOT}out/structure-router`;
+const OUT = `${OUT_ROOT}structure-router`;
 const CACHE = `${OUT}/cache`;
 mkdirSync(CACHE, { recursive: true });
 setCallsPath(`${OUT}/calls.jsonl`);

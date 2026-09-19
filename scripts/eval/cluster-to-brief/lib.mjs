@@ -34,10 +34,17 @@ export function splitSentences(text) {
 import { readFileSync, existsSync } from 'node:fs';
 
 const HERE = new URL('.', import.meta.url).pathname;
-export const FIX = `${HERE}fixtures/`;
+/**
+ * CTB_WORKSPACE=<dir>：换一套 fixture 与产物目录（内含 fixtures/、expectations.json、out/）。
+ * 用途：拿一整天未经挑选的生产簇量真实分布，而 7 簇 fixture 是按难度挑的、比例不可外推。
+ * 不设时一切照旧，仍是本目录下的 fixtures/ 与 out/。
+ */
+export const WORKSPACE = process.env.CTB_WORKSPACE ? `${String(process.env.CTB_WORKSPACE).replace(/\/$/, '')}/` : HERE;
+export const FIX = `${WORKSPACE}fixtures/`;
+export const OUT_ROOT = `${WORKSPACE}out/`;
 
 export function loadExpectations() {
-  return JSON.parse(readFileSync(`${HERE}expectations.json`, 'utf8'));
+  return JSON.parse(readFileSync(`${WORKSPACE}expectations.json`, 'utf8'));
 }
 
 /**
@@ -94,6 +101,25 @@ export function numbersIn(text) {
     out.add(x);
   }
   return out;
+}
+
+// ── 引语核对(纯机械)────────────────────────────────────────────────────
+/**
+ * 句中引号内的原话(双引号 "" “” 与弯单引号 ‘’,以及前后是空格/标点的直单引号 'x y')。
+ * 只取 ≥2 个词的片段:单词引语(如 'hoax')太短,落在任何句子里都可能碰巧对上。
+ */
+export function quotesIn(text) {
+  const t = String(text ?? '');
+  const out = [];
+  for (const re of [/"([^"]+)"/g, /“([^”]+)”/g, /‘([^’]+)’/g, /(?:^|[\s(])'([^']+?)'(?=[\s.,;:!?)]|$)/g]) {
+    for (const m of t.matchAll(re)) if (m[1].trim().split(/\s+/).length >= 2) out.push(m[1].trim());
+  }
+  return out;
+}
+
+/** 引语比对用的归一:小写、去标点与引号、压空白。模型改大小写或丢逗号不算改原话。 */
+export function normQuote(s) {
+  return String(s ?? '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** 成稿切句。与文章切句同一套规则,便于按句核对。 */

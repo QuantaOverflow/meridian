@@ -2,7 +2,7 @@
 
 > 自动生成：修改 nodes/ 后运行 `pnpm -s knowledge`。
 
-实体 133 个 · 关系 185 条 · schema v2
+实体 157 个 · 关系 224 条 · schema v2
 
 开工前对照：相关尝试 → 实验与经验 → 可复用机制 → 本轮变化与新信息。局部通过不等于组合通过。
 
@@ -12,7 +12,7 @@
 
 ### 上线简报v3
 
-- **决定**：[简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md) · `live` · [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `live`
+- **决定**：[简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md) · `live` · [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `superseded`
 
 ### 控制成稿长度
 
@@ -28,7 +28,7 @@
 
 ### 提高链路健壮性
 
-- **实验与分析记录**：[窄语法论元接管真实动作回放：正常配对恢复，旧关系错误保留](nodes/experiment-argument-router-replay.md) · `recorded` · 结果：mixed · [v0.19.1机械归属补齐40真LLM修补回归：漏放0%，忠实诊断失败5%](nodes/experiment-binding-repair-regression.md) · `recorded` · 结果：passed · [真实动作与参与者拆分：动作忠实，事件参与者仍混入报告层](nodes/experiment-event-kernel-split.md) · `recorded` · 结果：failed · [引用harness修复后40新开发对照真实运行：漏放5/20，语义未识别6/20，复核7/40](nodes/experiment-expanded-dev-quote-gate.md) · `recorded` · 结果：failed · [v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%](nodes/experiment-factor-choice-dev.md) · `recorded` · 结果：failed · [四新开发事件真实冻结探针：父句状态一致，引用接口拖垮整批且窄规则未覆盖](nodes/experiment-fresh-dev-frozen-probe.md) · `recorded` · 结果：mixed · [漏错优先完整缓存回放：三旧漏点已补，收益依赖旧基线与局部复核](nodes/experiment-full-practice-leak-replay.md) · `recorded` · 结果：mixed · [预留c28/c51冻结验收60条：漏放10%，忠实诊断失败13.3%，未达标](nodes/experiment-heldout-binding-verifier.md) · `recorded` · 结果：failed · [历史证据摘要：重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住](nodes/experiment-history-measure-retry-signature-gap.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [角色接口修复：机械定位重复词、隔离坏行为并保留漏项义务](nodes/experiment-isolated-role-repair.md) · `recorded` · 结果：mixed · [REST机械方案诊断：七目标执行，重复引用不可表示及源抽取阻断旧核验](nodes/experiment-mechanical-rest-scheme.md) · `recorded` · 结果：failed · [真实代词与配对接入代码比较：旧归因/警告完成态错误已定位，正常配对仍未知](nodes/experiment-relation-chain-dev.md) · `recorded` · 结果：mixed · [v0.18补单位偏好后40另批真LLM：漏放仍10%，忠实诊断失败20%](nodes/experiment-relation-confirm-dev.md) · `recorded` · 结果：failed · [目标句隔离、四引用接口与机械规范化消除既有转换阻断](nodes/experiment-target-only-role-repair.md) · `recorded` · 结果：mixed · [开发binding替代REST：短6/6、长4/5成功，认证异常仍未消除](nodes/experiment-workers-ai-rest-connectivity.md) · `recorded` · 结果：mixed
+- **实验与分析记录**：[窄语法论元接管真实动作回放：正常配对恢复，旧关系错误保留](nodes/experiment-argument-router-replay.md) · `recorded` · 结果：mixed · [v0.19.1机械归属补齐40真LLM修补回归：漏放0%，忠实诊断失败5%](nodes/experiment-binding-repair-regression.md) · `recorded` · 结果：passed · [Claude Code知识库harness兼容性诊断：底座可共享，规则入口与Stop注册尚待适配](nodes/experiment-claude-knowledge-harness-compatibility.md) · `recorded` · 结果：observed · [真实动作与参与者拆分：动作忠实，事件参与者仍混入报告层](nodes/experiment-event-kernel-split.md) · `recorded` · 结果：failed · [引用harness修复后40新开发对照真实运行：漏放5/20，语义未识别6/20，复核7/40](nodes/experiment-expanded-dev-quote-gate.md) · `recorded` · 结果：failed · [v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%](nodes/experiment-factor-choice-dev.md) · `recorded` · 结果：failed · [四新开发事件真实冻结探针：父句状态一致，引用接口拖垮整批且窄规则未覆盖](nodes/experiment-fresh-dev-frozen-probe.md) · `recorded` · 结果：mixed · [漏错优先完整缓存回放：三旧漏点已补，收益依赖旧基线与局部复核](nodes/experiment-full-practice-leak-replay.md) · `recorded` · 结果：mixed · [预留c28/c51冻结验收60条：漏放10%，忠实诊断失败13.3%，未达标](nodes/experiment-heldout-binding-verifier.md) · `recorded` · 结果：failed · [历史证据摘要：重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住](nodes/experiment-history-measure-retry-signature-gap.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [角色接口修复：机械定位重复词、隔离坏行为并保留漏项义务](nodes/experiment-isolated-role-repair.md) · `recorded` · 结果：mixed · [REST机械方案诊断：七目标执行，重复引用不可表示及源抽取阻断旧核验](nodes/experiment-mechanical-rest-scheme.md) · `recorded` · 结果：failed · [真实代词与配对接入代码比较：旧归因/警告完成态错误已定位，正常配对仍未知](nodes/experiment-relation-chain-dev.md) · `recorded` · 结果：mixed · [v0.18补单位偏好后40另批真LLM：漏放仍10%，忠实诊断失败20%](nodes/experiment-relation-confirm-dev.md) · `recorded` · 结果：failed · [目标句隔离、四引用接口与机械规范化消除既有转换阻断](nodes/experiment-target-only-role-repair.md) · `recorded` · 结果：mixed · [开发binding替代REST：短6/6、长4/5成功，认证异常仍未消除](nodes/experiment-workers-ai-rest-connectivity.md) · `recorded` · 结果：mixed
 - **经验与观察**：[重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住](nodes/measure-retry-signature-gap.md) · `live`
 
 ### 改去重
@@ -65,18 +65,23 @@
 ### 演化组合架构
 
 - **目标与约束**：[聚类后到简报：覆盖、安全与成本共同达标](nodes/goal-cluster-to-brief.md) · `active`
-- **尝试与方案**：[自由生成风险问题规划](nodes/attempt-auto-risk-question.md) · `tested` · [受约束风险槽与代码模板问题](nodes/attempt-constrained-risk-slots.md) · `proposed` · [direct-raw 原型](nodes/attempt-direct-raw.md) · `tested` · [evidence-graph 原型](nodes/attempt-evidence-graph.md) · `tested` · [按完全相同证据包隔离原子核验](nodes/attempt-evidence-isolation.md) · `tested` · [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md) · `proposed` · [扩展练习上比较完整支持核验、模型槽与显式词代码槽](nodes/attempt-practice-risk-slots.md) · `tested` · [人工窄风险问题核验](nodes/attempt-specialist-risk.md) · `tested` · [structure-router 原型](nodes/attempt-structure-router.md) · `tested` · [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md) · `tested`
-- **实验与分析记录**：[自动风险问题规划：四句开发探针](nodes/experiment-auto-risk-four.md) · `recorded` · 结果：failed · [direct-raw：c36 冻结慢档](nodes/experiment-direct-raw-c36.md) · `recorded` · 结果：failed · [evidence-graph：c36 冻结慢档](nodes/experiment-evidence-graph-c36.md) · `recorded` · 结果：failed · [证据隔离：八句探针](nodes/experiment-isolation-eight.md) · `recorded` · 结果：passed · [证据隔离：30 句扩展](nodes/experiment-isolation-expanded.md) · `recorded` · 结果：failed · [证据隔离：聚焦 v5](nodes/experiment-isolation-v5.md) · `recorded` · 结果：failed · [机械字段接管回放：明确词法错误修复，would和复杂scope保留未知](nodes/experiment-mechanical-fields-replay.md) · `recorded` · 结果：mixed · [机械接管真实部分运行：正常句字段路径连通，两次连接失败后停止](nodes/experiment-mechanical-real-partial.md) · `recorded` · 结果：not_evaluated · [REST机械方案诊断：七目标执行，重复引用不可表示及源抽取阻断旧核验](nodes/experiment-mechanical-rest-scheme.md) · `recorded` · 结果：failed · [固定命题单字段诊断：显式否定仍漏检，混合任务也有局部干扰](nodes/experiment-minimal-fields.md) · `recorded` · 结果：mixed · [60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29](nodes/experiment-practice-sixty.md) · `recorded` · 结果：failed · **历史摘要，运行细节不完整** · [回读核验输出：断言遗漏、关系不等价、数值状态错拼与拒绝理由越界](nodes/experiment-relation-factor-review.md) · `recorded` · 结果：observed · [人工窄问题与全维度检查：八例对照](nodes/experiment-specialist-eight.md) · `recorded` · 结果：mixed · [structure-router：c36 冻结慢档](nodes/experiment-structure-router-c36.md) · `recorded` · 结果：failed · [拆分角色与状态加错误反馈：五次自然修复两次接口通过，语义错误仍漏检](nodes/experiment-structured-split-heal.md) · `recorded` · 结果：mixed · [结构核验组件本地测试：代码可诊断三类参考错误，但真实转换未验且两正常整句pending](nodes/experiment-structured-verifier-local.md) · `recorded` · 结果：observed · [真实结构核验部分烟测：证据漏报告关系、图错对齐，未知不算正确检错](nodes/experiment-structured-verifier-real-partial.md) · `recorded` · 结果：failed
-- **经验与观察**：[枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系](nodes/lesson-practice-typed-anchors.md) · `recorded` · [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md) · `recorded` · [三臂在 c36 都未达标：覆盖与证据约束的职责需要分离](nodes/lesson-three-arm-tradeoff.md) · `recorded` · [自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验](nodes/measure-auto-risk-question-drift.md) · `live` · [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md) · `live`
-- **可复用机制与方法**：[相同证据包隔离接口](nodes/mechanism-evidence-isolation.md) · `candidate` · [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md) · `candidate` · [结构分诊，不直接控制最终选材](nodes/mechanism-shape-triage.md) · `candidate` · [单风险问题核验接口](nodes/mechanism-specialist-question-gate.md) · `candidate` · [多源支持用于重要性排序，不作真假准入门](nodes/mechanism-support-ranking.md) · `candidate` · [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active`
+- **尝试与方案**：[自由生成风险问题规划](nodes/attempt-auto-risk-question.md) · `tested` · [受约束风险槽与代码模板问题](nodes/attempt-constrained-risk-slots.md) · `proposed` · [direct-raw 原型](nodes/attempt-direct-raw.md) · `tested` · [evidence-graph 原型](nodes/attempt-evidence-graph.md) · `tested` · [按完全相同证据包隔离原子核验](nodes/attempt-evidence-isolation.md) · `tested` · [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md) · `proposed` · [扩展练习上比较完整支持核验、模型槽与显式词代码槽](nodes/attempt-practice-risk-slots.md) · `tested` · [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md) · `tested` · [人工窄风险问题核验](nodes/attempt-specialist-risk.md) · `tested` · [structure-router 原型](nodes/attempt-structure-router.md) · `tested` · [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md) · `tested`
+- **实验与分析记录**：[自动风险问题规划：四句开发探针](nodes/experiment-auto-risk-four.md) · `recorded` · 结果：failed · [路由门+主线筛选接上 direct-raw：dev 五簇通过 4/5，direct-raw 同批 2/5](nodes/experiment-crossover-routed-storyline-dev.md) · `recorded` · 结果：mixed · [direct-raw：c36 冻结慢档](nodes/experiment-direct-raw-c36.md) · `recorded` · 结果：failed · [evidence-graph：c36 冻结慢档](nodes/experiment-evidence-graph-c36.md) · `recorded` · 结果：failed · [新 scorer 上五臂 × dev 五簇盲判：direct-raw-routed 被支配，逐句接地的优势落在引用质量一轴](nodes/experiment-frontier-dev5-blind.md) · `recorded` · 结果：mixed · [heldout 两簇首次启用：routed-storyline 4/4 全过、dev 第一名 direct-raw 垮掉、生产 0/4](nodes/experiment-heldout-replacement-candidate.md) · `recorded` · 结果：passed · [证据隔离：八句探针](nodes/experiment-isolation-eight.md) · `recorded` · 结果：passed · [证据隔离：30 句扩展](nodes/experiment-isolation-expanded.md) · `recorded` · 结果：failed · [证据隔离：聚焦 v5](nodes/experiment-isolation-v5.md) · `recorded` · 结果：failed · [机械字段接管回放：明确词法错误修复，would和复杂scope保留未知](nodes/experiment-mechanical-fields-replay.md) · `recorded` · 结果：mixed · [机械接管真实部分运行：正常句字段路径连通，两次连接失败后停止](nodes/experiment-mechanical-real-partial.md) · `recorded` · 结果：not_evaluated · [REST机械方案诊断：七目标执行，重复引用不可表示及源抽取阻断旧核验](nodes/experiment-mechanical-rest-scheme.md) · `recorded` · 结果：failed · [固定命题单字段诊断：显式否定仍漏检，混合任务也有局部干扰](nodes/experiment-minimal-fields.md) · `recorded` · 结果：mixed · [60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29](nodes/experiment-practice-sixty.md) · `recorded` · 结果：failed · **历史摘要，运行细节不完整** · [生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格](nodes/experiment-production-baseline-same-scorer.md) · `recorded` · 结果：mixed · [回读核验输出：断言遗漏、关系不等价、数值状态错拼与拒绝理由越界](nodes/experiment-relation-factor-review.md) · `recorded` · 结果：observed · [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md) · `recorded` · 结果：passed · [人工窄问题与全维度检查：八例对照](nodes/experiment-specialist-eight.md) · `recorded` · 结果：mixed · [structure-router：c36 冻结慢档](nodes/experiment-structure-router-c36.md) · `recorded` · 结果：failed · [拆分角色与状态加错误反馈：五次自然修复两次接口通过，语义错误仍漏检](nodes/experiment-structured-split-heal.md) · `recorded` · 结果：mixed · [结构核验组件本地测试：代码可诊断三类参考错误，但真实转换未验且两正常整句pending](nodes/experiment-structured-verifier-local.md) · `recorded` · 结果：observed · [真实结构核验部分烟测：证据漏报告关系、图错对齐，未知不算正确检错](nodes/experiment-structured-verifier-real-partial.md) · `recorded` · 结果：failed
+- **经验与观察**：[dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md) · `recorded` · [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md) · `recorded` · [枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系](nodes/lesson-practice-typed-anchors.md) · `recorded` · [替换生产的方向成立：差距是量级的,不是边际的;但延迟风险未测](nodes/lesson-production-replacement-justified.md) · `recorded` · [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md) · `recorded` · [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md) · `recorded` · [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md) · `recorded` · [主线筛选在 41% 杂质的超级袋上没把正题筛掉：剔 54/116 篇，句数 50→49、次层覆盖反而更高](nodes/lesson-storyline-filter-holds-on-superbag.md) · `recorded` · [三臂在 c36 都未达标：覆盖与证据约束的职责需要分离](nodes/lesson-three-arm-tradeoff.md) · `recorded` · [自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验](nodes/measure-auto-risk-question-drift.md) · `live` · [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md) · `live`
+- **可复用机制与方法**：[按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md) · `candidate` · [相同证据包隔离接口](nodes/mechanism-evidence-isolation.md) · `candidate` · [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md) · `candidate` · [结构分诊，不直接控制最终选材](nodes/mechanism-shape-triage.md) · `candidate` · [单风险问题核验接口](nodes/mechanism-specialist-question-gate.md) · `candidate` · [多源支持用于重要性排序，不作真假准入门](nodes/mechanism-support-ranking.md) · `candidate` · [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active`
 - **决定**：[暂缓自由问题 planner 与 specialist 融合](nodes/decision-hold-auto-risk-integration.md) · `accepted`
+
+### 维护探索知识库
+
+- **实验与分析记录**：[Claude Code知识库harness兼容性诊断：底座可共享，规则入口与Stop注册尚待适配](nodes/experiment-claude-knowledge-harness-compatibility.md) · `recorded` · 结果：observed
 
 ### 设计验收门
 
 - **尝试与方案**：[历史尝试：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/attempt-history-falsified-rarr-default-on.md) · `historical`
-- **实验与分析记录**：[历史证据摘要：无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文](nodes/experiment-history-falsified-intrinsic-self-correction.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/experiment-history-falsified-rarr-default-on.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化](nodes/experiment-history-measure-attribution-not-faithfulness.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%](nodes/experiment-history-measure-detection-ceiling.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差](nodes/experiment-history-measure-importance-signal-comparison.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md) · `recorded` · 结果：observed
-- **经验与观察**：[无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文](nodes/falsified-intrinsic-self-correction.md) · `live` · [RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/falsified-rarr-default-on.md) · `live` · [验收单位该是 block 不是句；注入题的形状与自然错误分布对不上](nodes/lesson-acceptance-unit-block-not-sentence.md) · `recorded` · [引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化](nodes/measure-attribution-not-faithfulness.md) · `live` · [自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验](nodes/measure-auto-risk-question-drift.md) · `live` · [便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%](nodes/measure-detection-ceiling.md) · `live` · [相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界](nodes/measure-evidence-bundle-isolation.md) · `live` · [拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差](nodes/measure-importance-signal-comparison.md) · `live` · [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md) · `live`
-- **可复用机制与方法**：[固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active` · [验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去](nodes/method-two-fighting-readings.md) · `active`
+- **实验与分析记录**：[历史证据摘要：无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文](nodes/experiment-history-falsified-intrinsic-self-correction.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/experiment-history-falsified-rarr-default-on.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化](nodes/experiment-history-measure-attribution-not-faithfulness.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%](nodes/experiment-history-measure-detection-ceiling.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差](nodes/experiment-history-measure-importance-signal-comparison.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md) · `recorded` · 结果：observed · [生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格](nodes/experiment-production-baseline-same-scorer.md) · `recorded` · 结果：mixed · [新 scorer 在 82 句自然金标上召回 12/15 = 80%、精确率 86%（上一代 20%/33%）](nodes/experiment-scorer-detection-recall-natural.md) · `recorded` · 结果：observed · [scorer 四变体对照：证据从单句放宽到 ±2 句，判官漂移 18%→0%；二元拆分反而升到 6%](nodes/experiment-scorer-evidence-width-c1.md) · `recorded` · 结果：observed · [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md) · `recorded` · 结果：passed
+- **经验与观察**：[无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文](nodes/falsified-intrinsic-self-correction.md) · `live` · [RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/falsified-rarr-default-on.md) · `live` · [验收单位该是 block 不是句；注入题的形状与自然错误分布对不上](nodes/lesson-acceptance-unit-block-not-sentence.md) · `recorded` · [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md) · `recorded` · [dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md) · `recorded` · [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md) · `recorded` · [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md) · `recorded` · [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md) · `recorded` · [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md) · `recorded` · [引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化](nodes/measure-attribution-not-faithfulness.md) · `live` · [自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验](nodes/measure-auto-risk-question-drift.md) · `live` · [核心层 21 条双模型校核:6 条内容有错、15 条丢了口径分歧;sonnet 零误报但漏 2 条综合判断题](nodes/measure-checklist-core-audit.md) · `recorded` · [便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%](nodes/measure-detection-ceiling.md) · `live` · [相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界](nodes/measure-evidence-bundle-isolation.md) · `live` · [拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差](nodes/measure-importance-signal-comparison.md) · `live` · [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md) · `live`
+- **可复用机制与方法**：[按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md) · `candidate` · [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md) · `candidate` · [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md) · `candidate` · [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active` · [验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去](nodes/method-two-fighting-readings.md) · `active`
+- **决定**：[暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md) · `accepted` · [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md) · `accepted`
 
 ### 降低写作层成本
 
@@ -91,7 +96,7 @@
 - **实验与分析记录**：[历史证据摘要：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）](nodes/experiment-history-falsified-bigger-extraction-batch.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%](nodes/experiment-history-falsified-dedup-candidate-tightening.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13](nodes/experiment-history-falsified-input-position-truncation.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好](nodes/experiment-history-falsified-minimal-unit-compression.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向](nodes/experiment-history-falsified-sentence-semantic-folding.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平](nodes/experiment-history-measure-analysis-fields-vs-report.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）](nodes/experiment-history-measure-cost-input-output-split.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型](nodes/experiment-history-measure-cross-article-redundancy.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）](nodes/experiment-history-measure-dedup-fixed-overhead.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数](nodes/experiment-history-measure-report-cost-structure.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · [历史证据摘要：重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住](nodes/experiment-history-measure-retry-signature-gap.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整**
 - **经验与观察**：[「小模型 + 更多推理步骤 ≈ 大模型单次」在无 verifier 的开放式生成上是文献空白，抄不到结论](nodes/claim-inference-scaling-gap.md) · `live` · [新闻是倒金字塔，主干事实集中在前几句，长尾多是背景](nodes/claim-inverted-pyramid.md) · `live` · [成本可能是被「模型写出来的字」撑起来的，而不是喂进去的原文（输出贵 6.7 倍）](nodes/claim-output-bound-cost.md) · `superseded` · [抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）](nodes/falsified-bigger-extraction-batch.md) · `live` · [收紧去重候选（top-8→5、余弦 0.70→0.75）：省 6% 成本，骨架事实掉 14%](nodes/falsified-dedup-candidate-tightening.md) · `live` · [位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13](nodes/falsified-input-position-truncation.md) · `live` · [把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好](nodes/falsified-minimal-unit-compression.md) · `live` · [句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向](nodes/falsified-sentence-semantic-folding.md) · `live` · [同一批文章被 LLM 读三遍；但拿文章分析的字段替代报告层抽取，覆盖掉一截且成本只打平](nodes/measure-analysis-fields-vs-report.md) · `live` · [抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）](nodes/measure-cost-input-output-split.md) · `live` · [跨文章句子重复率只有 23.5%（加权），且高度依赖新闻类型](nodes/measure-cross-article-redundancy.md) · `live` · [去重 95.3% 的输入是重复贴的同一段判定说明书（125 次调用只判 453 条事实，平均 3.62 条/次）](nodes/measure-dedup-fixed-overhead.md) · `live` · [成本 85% 在报告层；其内部抽取 50% / 去重 37% / 各方 13%，且 ≈ 56 neurons × 篇数](nodes/measure-report-cost-structure.md) · `live` · [重试只认 3040/3046，连接层故障（Network connection lost / aborted）吃不住](nodes/measure-retry-signature-gap.md) · `live`
 - **可复用机制与方法**：[最小单元是「谓词+类型化论元」，去修饰留主谓宾骨架，「谁说的」单独建模](nodes/claim-minimal-unit-representation.md) · `candidate` · [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active` · [验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去](nodes/method-two-fighting-readings.md) · `active`
-- **决定**：[简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `live` · [逐字相同的事实先合并（preMergeIdentical）——这是修 bug，不是降本](nodes/decision-exact-premerge.md) · `live` · [抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤](nodes/decision-tighter-output-constraint.md) · `live`
+- **决定**：[简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `superseded` · [逐字相同的事实先合并（preMergeIdentical）——这是修 bug，不是降本](nodes/decision-exact-premerge.md) · `live` · [抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤](nodes/decision-tighter-output-constraint.md) · `live`
 
 ## 时间线：尝试、实验与决定
 
@@ -116,7 +121,7 @@
 - 2026-09-14 · 尝试与方案 · [历史尝试：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13](nodes/attempt-history-falsified-input-position-truncation.md) · `historical`
 - 2026-09-14 · 尝试与方案 · [历史尝试：把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好](nodes/attempt-history-falsified-minimal-unit-compression.md) · `historical`
 - 2026-09-14 · 尝试与方案 · [历史尝试：句子层语义折叠（抽取前先把跨文章近重复并成堆）：冗余不够，且会并错方向](nodes/attempt-history-falsified-sentence-semantic-folding.md) · `historical`
-- 2026-09-14 · 决定 · [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `live`
+- 2026-09-14 · 决定 · [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `superseded`
 - 2026-09-14 · 决定 · [抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤](nodes/decision-tighter-output-constraint.md) · `live`
 - 2026-09-14 · 实验与分析记录 · [历史证据摘要：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）](nodes/experiment-history-falsified-bigger-extraction-batch.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整**
 - 2026-09-14 · 实验与分析记录 · [历史证据摘要：位置截断选材（核心 4 篇全文 + 其余前 5 句）：省 57.7% 调用，主簇召回 11/13→6/13](nodes/experiment-history-falsified-input-position-truncation.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整**
@@ -171,6 +176,7 @@
 - 2026-09-18 · 决定 · [简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md) · `live`
 - 2026-09-18 · 实验与分析记录 · [窄语法论元接管真实动作回放：正常配对恢复，旧关系错误保留](nodes/experiment-argument-router-replay.md) · `recorded` · 结果：mixed
 - 2026-09-18 · 实验与分析记录 · [v0.19.1机械归属补齐40真LLM修补回归：漏放0%，忠实诊断失败5%](nodes/experiment-binding-repair-regression.md) · `recorded` · 结果：passed
+- 2026-09-18 · 实验与分析记录 · [Claude Code知识库harness兼容性诊断：底座可共享，规则入口与Stop注册尚待适配](nodes/experiment-claude-knowledge-harness-compatibility.md) · `recorded` · 结果：observed
 - 2026-09-18 · 实验与分析记录 · [真实动作与参与者拆分：动作忠实，事件参与者仍混入报告层](nodes/experiment-event-kernel-split.md) · `recorded` · 结果：failed
 - 2026-09-18 · 实验与分析记录 · [引用harness修复后40新开发对照真实运行：漏放5/20，语义未识别6/20，复核7/40](nodes/experiment-expanded-dev-quote-gate.md) · `recorded` · 结果：failed
 - 2026-09-18 · 实验与分析记录 · [v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%](nodes/experiment-factor-choice-dev.md) · `recorded` · 结果：failed
@@ -180,6 +186,16 @@
 - 2026-09-18 · 实验与分析记录 · [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md) · `recorded` · 结果：observed
 - 2026-09-18 · 实验与分析记录 · [只换任务定义不加约束：已知失败题检出 3/8 → 7/8，误拦仅 +1](nodes/experiment-reframe-task-definition.md) · `recorded` · 结果：mixed
 - 2026-09-18 · 实验与分析记录 · [v0.18补单位偏好后40另批真LLM：漏放仍10%，忠实诊断失败20%](nodes/experiment-relation-confirm-dev.md) · `recorded` · 结果：failed
+- 2026-09-19 · 尝试与方案 · [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md) · `tested`
+- 2026-09-19 · 决定 · [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md) · `accepted`
+- 2026-09-19 · 决定 · [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md) · `accepted`
+- 2026-09-19 · 实验与分析记录 · [路由门+主线筛选接上 direct-raw：dev 五簇通过 4/5，direct-raw 同批 2/5](nodes/experiment-crossover-routed-storyline-dev.md) · `recorded` · 结果：mixed
+- 2026-09-19 · 实验与分析记录 · [新 scorer 上五臂 × dev 五簇盲判：direct-raw-routed 被支配，逐句接地的优势落在引用质量一轴](nodes/experiment-frontier-dev5-blind.md) · `recorded` · 结果：mixed
+- 2026-09-19 · 实验与分析记录 · [heldout 两簇首次启用：routed-storyline 4/4 全过、dev 第一名 direct-raw 垮掉、生产 0/4](nodes/experiment-heldout-replacement-candidate.md) · `recorded` · 结果：passed
+- 2026-09-19 · 实验与分析记录 · [生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格](nodes/experiment-production-baseline-same-scorer.md) · `recorded` · 结果：mixed
+- 2026-09-19 · 实验与分析记录 · [新 scorer 在 82 句自然金标上召回 12/15 = 80%、精确率 86%（上一代 20%/33%）](nodes/experiment-scorer-detection-recall-natural.md) · `recorded` · 结果：observed
+- 2026-09-19 · 实验与分析记录 · [scorer 四变体对照：证据从单句放宽到 ±2 句，判官漂移 18%→0%；二元拆分反而升到 6%](nodes/experiment-scorer-evidence-width-c1.md) · `recorded` · 结果：observed
+- 2026-09-19 · 实验与分析记录 · [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md) · `recorded` · 结果：passed
 
 ## 全部实体与双向关系
 
@@ -195,6 +211,7 @@
   - 入边 `addresses` ← [按完全相同证据包隔离原子核验](nodes/attempt-evidence-isolation.md)
   - 入边 `addresses` ← [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md)
   - 入边 `addresses` ← [扩展练习上比较完整支持核验、模型槽与显式词代码槽](nodes/attempt-practice-risk-slots.md)
+  - 入边 `addresses` ← [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)
   - 入边 `addresses` ← [人工窄风险问题核验](nodes/attempt-specialist-risk.md)
   - 入边 `addresses` ← [structure-router 原型](nodes/attempt-structure-router.md)
   - 入边 `addresses` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)
@@ -247,6 +264,7 @@
   - 解决目标 → [聚类后到简报：覆盖、安全与成本共同达标](nodes/goal-cluster-to-brief.md)
   - 由实验验证 → [direct-raw：c36 冻结慢档](nodes/experiment-direct-raw-c36.md)
   - 包含机制 → [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md)
+  - 入边 `varies_from` ← [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)（changed: 生成前加两道上游处理：按主导主线筛文章、按结构分诊决定是否直接判不可写；生成与选材本身一字未改；reason: direct-raw 在 dev 上过不了的两个簇（c1 杂质放大、c37 该拒未拒）都不是生成质量问题，而 structure-router 在这两处恰好是对的）
 - [evidence-graph 原型](nodes/attempt-evidence-graph.md) · `tested` · `attempt-evidence-graph`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -326,6 +344,17 @@
   - 由实验验证 → [60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29](nodes/experiment-practice-sixty.md)
   - 入边 `varies_from` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)（changed: 从词锚点问题与LLM支持判断改成独立业务图转换、显式对齐接口及代码比较；reason: 词命中未保证断言覆盖和数量/状态/归因绑定；需分开转换与判断以定位错误）
   - 入边 `cautions` ← [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)（scope: 增加检查项不保证覆盖第二断言或保证跨字段关系一致；正确拒绝不保证理由接地）
+- [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md) · `tested` · `attempt-routed-storyline-direct-raw`
+  - 范围：dev 五簇；heldout 两簇已被别的线消耗，未跑。慢档读数来自旧 scorer（单句证据切片），其缺陷见 lesson-scorer-steers-search
+  - 来源性质：local_record
+  - 条件：两个开关都读 out/structure-router/structure-c<id>.json，必须先跑 arms/structure-router/run.mjs；筛文章后窗口切分改变，不能复用 direct-raw 的窗口缓存；只加路由门时可以复用；路由门排在筛选之后执行；对判不可写的簇，拒绝发生在任何 LLM 调用之前
+  - 解决目标 → [聚类后到简报：覆盖、安全与成本共同达标](nodes/goal-cluster-to-brief.md)
+  - 改变旧尝试 → [direct-raw 原型](nodes/attempt-direct-raw.md)（changed: 生成前加两道上游处理：按主导主线筛文章、按结构分诊决定是否直接判不可写；生成与选材本身一字未改；reason: direct-raw 在 dev 上过不了的两个簇（c1 杂质放大、c37 该拒未拒）都不是生成质量问题，而 structure-router 在这两处恰好是对的）
+  - 融合机制 → [结构分诊，不直接控制最终选材](nodes/mechanism-shape-triage.md)（adaptation: 只取它的路由判定（single_story / topic_bag），不取 structure-router 用它做的文章筛选与写作）
+  - 融合机制 → [按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md)（adaptation: 筛完的文章交给 direct-raw 原样的窗口化生成，不交给 structure-router 自己的 writer）
+  - 由实验验证 → [路由门+主线筛选接上 direct-raw：dev 五簇通过 4/5，direct-raw 同批 2/5](nodes/experiment-crossover-routed-storyline-dev.md)
+  - 入边 `cautions` ← [替换生产的方向成立：差距是量级的,不是边际的;但延迟风险未测](nodes/lesson-production-replacement-justified.md)（scope: 读全量原文的延迟在生产规模上未测 —— c36 82 篇已逼近 300 秒超时线,而生产当时是截断到 30 篇跑的）
+  - 入边 `cautions` ← [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)（scope: 该臂在 c43 的硬错 2>1 出自有缺陷的 scorer，未坐实是真事实错）
 - [人工窄风险问题核验](nodes/attempt-specialist-risk.md) · `tested` · `attempt-specialist-risk`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -398,6 +427,16 @@
   - 条件：额外窄schema：地点绑定同damage事件的homes/vehicles数量；明确Iran judiciary同seizure people/accounts两槽；相同完整25年协议patient+purpose的terminated actor；不存在完整绑定不猜测；沿用v0.18全文/整数span选择和整句模型fallback，不把代码覆盖误当完整语义覆盖；新冻结版本skip-cache重新调用真Workers AI，无远程judge，heldout仍未读；最多25逻辑50HTTP90000tokens/60秒每请求，batch2最多5单条修复；v0.19未执行仅测试发现前缀边界缺陷，保留未运行plan，修复后另冻v0.19.1，不覆盖历史
   - 形成经验 → [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)
   - 入边 `evaluated_by` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)
+- [Claude Code知识库harness兼容性诊断：底座可共享，规则入口与Stop注册尚待适配](nodes/experiment-claude-knowledge-harness-compatibility.md) · `recorded` · 结果：observed · `experiment-claude-knowledge-harness-compatibility`
+  - 范围：本地Claude Code 2.1.269配置静态检查、现有Stop脚本5项测试及官方协议核对；未修改客户端配置，未在Claude会话中验证真实触发
+  - 来源性质：local_record
+  - 条件：主agent只读检查项目及用户Claude settings中的hook事件与knowledge匹配，不输出其他配置或secret；项目settings.json不存在，settings.local.json只有SessionStart/UserPromptSubmit，没有知识库Stop注册，已检查用户文件也无知识库Stop注册；运行时/plugin/managed配置未验；Claude官方文档说明默认读取CLAUDE.md而非AGENTS.md，支持@AGENTS.md导入；本项目CLAUDE.md有知识库摘要，但无该导入，现有本地hook命令也没有显式引用AGENTS或knowledge，脚本间接行为未全面审计；Claude官方Stop支持hook_event_name、stop_hook_active及decision:block/reason；现脚本相应协议匹配、有内容指纹成功缓存、只读检查和一次续跑上限。此为静态协议兼容判断，不是客户端触发证据
+- [路由门+主线筛选接上 direct-raw：dev 五簇通过 4/5，direct-raw 同批 2/5](nodes/experiment-crossover-routed-storyline-dev.md) · `recorded` · 结果：mixed · `experiment-crossover-routed-storyline-dev`
+  - 范围：dev 五簇（7/1/36/37/43），heldout 未跑。慢档读数出自旧 scorer（证据=成稿自引的单句），该 scorer 的缺陷当天另测出来，见 lesson-scorer-steers-search——覆盖与快档不受影响，硬错/失真的绝对值不可信
+  - 来源性质：local_record
+  - 条件：四个臂同一批固定输入（fixtures 的 7 簇，dev 5 个），同一套快档脚本；慢档判官为 Claude subagent（继承主会话 opus），非 glm；判定包合并两臂句子、打散去标识后盲判，同一句在两臂都出现时只判一次回填两边；对照臂 direct-raw 在同一轮重跑，不引用 2026-09-16 的旧读数；行内引用号在打散前统一剥除（A 臂 31/151 句带、B 臂 8/118 带，不剥会 100% 泄漏臂身份）；剥除后留下 ,. 这类标点残渣，判官确认不影响事实判定；两臂句子几乎不重合（各簇共有 0/0/1/0/2 句），去重未省下工作量
+  - 形成经验 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+  - 入边 `evaluated_by` ← [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)
 - [direct-raw：c36 冻结慢档](nodes/experiment-direct-raw-c36.md) · `recorded` · 结果：failed · `experiment-direct-raw-c36`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -432,6 +471,12 @@
   - 条件：相对旧60题缓存回放冻结组件代码/请求hash，改材料；开发文章1000985/1003362/1004976/1001409未在原练习使用，主Codex自编非盲，heldout c28/c51未读；ContextStore半径2未截断，主Codex本地检查上下文足够，参考不进入请求；Workers AI仅被测模型，无远程judge；glm-4.7-flash REST及Gateway，thinking关闭，max_tokens5000，温度0/修复0.1，每失败至多一次修复；最大5逻辑/10HTTP/18000token停止阈值/每请求60秒；实际路由继承整批失败转复核；事后逐句6/8接口通过不追认放行，不修改冻结输出或用本地答案替代模型
   - 形成经验 → [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)
   - 入边 `evaluated_by` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)
+- [新 scorer 上五臂 × dev 五簇盲判：direct-raw-routed 被支配，逐句接地的优势落在引用质量一轴](nodes/experiment-frontier-dev5-blind.md) · `recorded` · 结果：mixed · `experiment-frontier-dev5-blind`
+  - 范围：dev 五簇（1/7/36/37/43），heldout 两簇已被消耗、无干净验收集。n=5 且七簇全部来自同一次生产运行（cron-brief-1789477249362，2026-09-15），不是从簇的总体独立抽样
+  - 来源性质：local_record
+  - 条件：**盲判**：判定包拷进洗过牌的代号目录（P/Q/R/S/T），判官看不到臂名，判完按 MAP.json 回填；五条轴在跑之前声明：核心层覆盖、正确性(fatal/hard/distortion)、引用不足率、块内冗余率、成本；判官模型同一轮必须一致（全部 opus），由 judge-pack meta 的 judgeModel 记录、frontier.mjs 断言；22 个格子；c37 上三个臂判 not_a_single_event（该簇期望 split-or-reject，属正确行为，不进判定；块内冗余是机械读数（同块两句引同一条原句），只报不设门
+  - 形成经验 → [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md)
+  - 形成经验 → [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md)
 - [漏错优先完整缓存回放：三旧漏点已补，收益依赖旧基线与局部复核](nodes/experiment-full-practice-leak-replay.md) · `recorded` · 结果：mixed · `experiment-full-practice-leak-replay`
   - 范围：60开发练习/32错误点的旧真实基线与少量已复核关系补丁缓存回放，非分解原型全量真实运行或独立验证
   - 来源性质：local_record
@@ -444,6 +489,12 @@
   - 条件：核验组件逐项与v0.19.1回归冻结hash相同，先precommit再读来源再编写冻结60条；不按结果改prompt/schema/factor/routing，不删失败题，不重试语义错误；每簇hash固定取15文章，原文半径2未截断，5风险类型目标均衡，997234无早期数量时调用前记录改归因，最终quantity5/actor7/polarity6/state6/scope6；未按规则coverage筛选；glm-4.7-flash真Workers AI REST+Gateway skip-cache、thinking关闭、max_tokens5000、temperature0/合同修复0.1，batch2，35逻辑70HTTP110000tokens/单请求60秒，最多5单条修复，无远程judge；主Codex本地先读所有源窗口再读全部60保留raw审计，结果与逐raw hash绑定；标签不进入请求。底层Pentagon战争等事件与开发文章可能相关，30文章不等于30独立事件；c28/c51现在已消费不得再称未接触heldout
   - 形成经验 → [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)
   - 入边 `evaluated_by` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)
+- [heldout 两簇首次启用：routed-storyline 4/4 全过、dev 第一名 direct-raw 垮掉、生产 0/4](nodes/experiment-heldout-replacement-candidate.md) · `recorded` · 结果：passed · `experiment-heldout-replacement-candidate`
+  - 范围：heldout 两簇(28 us airman 16 篇/13% 杂质、51 china 116 篇/41% 杂质)。**这一轮把它们消耗掉了** —— 对这三个候选,它们不再是未见过的数据
+  - 来源性质：local_record
+  - 条件：**heldout 此前从未被任何臂跑过**(2026-09-18 被 structured-verifier 那条线拿去造过注入题,但没有臂在上面产出过成稿)；两个原型臂盲判(代号 X/Y 洗牌),生产无法盲判(它一句出处都没有)；判官全部 sonnet,与 dev 那一轮同尺同模型；运行前给两个原型加了 ALLOW_HELDOUT=1 显式闸,让消耗 heldout 这个动作在命令行留痕；c51 的检索缺口明显偏高(direct-raw 20/82=24%、routed-storyline 25/76=33%,dev 五簇合计 12%)—— 116 篇的簇里 top-8 覆盖不住,**正确性读数因此偏高**
+  - 形成经验 → [dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md)
+  - 形成经验 → [主线筛选在 41% 杂质的超级袋上没把正题筛掉：剔 54/116 篇，句数 50→49、次层覆盖反而更高](nodes/lesson-storyline-filter-holds-on-superbag.md)
 - [历史证据摘要：抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）](nodes/experiment-history-falsified-bigger-extraction-batch.md) · `recorded` · 结果：observed · **历史摘要，运行细节不完整** · `experiment-history-falsified-bigger-extraction-batch`
   - 范围：仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知
   - 来源性质：local_record
@@ -608,6 +659,7 @@
   - 范围：四个簇、83 句，来自 brief-v3-prod 的 M2 run（跑的是产品代码路径）；非盲单人判定，不是独立金标
   - 来源性质：local_record
   - 条件：候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致；原文来自同 run 的 out/raw/<c>/A/batch*.json；scripts/eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照；判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号；有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用
+  - 形成经验 → [验收单位该是 block 不是句；注入题的形状与自然错误分布对不上](nodes/lesson-acceptance-unit-block-not-sentence.md)
   - 入边 `based_on` ← [简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md)
   - 入边 `based_on` ← [逐级有损压缩的流水线会系统性丢信息，这是独立文献观测到的现象，不是本仓孤例](nodes/measure-pipeline-cascade-loss.md)（scope: 补充四簇M2回顾中的relations伪造与写作融合局部观察；不是外部文献复现或逐级压缩因果消融，不改变文献来源边界）
   - 入边 `based_on` ← [写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍](nodes/measure-writer-input-anatomy.md)（scope: 补充四簇M2回顾分析中写作材料的来源坐标渲染与事实融合观察；不改变原实验条件或宣称独立泛化验收）
@@ -617,10 +669,16 @@
   - 条件：Workers AI 是被测模块；参考标签与语义判断来自当前 Codex，无远程 judge
   - 形成经验 → [枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系](nodes/lesson-practice-typed-anchors.md)
   - 入边 `evaluated_by` ← [扩展练习上比较完整支持核验、模型槽与显式词代码槽](nodes/attempt-practice-risk-slots.md)
+- [生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格](nodes/experiment-production-baseline-same-scorer.md) · `recorded` · 结果：mixed · `experiment-production-baseline-same-scorer`
+  - 范围：dev 五簇(1/7/36/37/43),全部来自同一次生产运行 cron-brief-1789477249362(2026-09-15)。无跨日期证据,heldout 已消耗
+  - 来源性质：local_record
+  - 条件：**这是本仓第一次把原型与被替换对象放进同一把尺**。此前「原型更好」建立在原型互比上,生产的 18.3% 错误率是另一条流水线(M2 run,语料 id 90xxxx)手工标注的,与原型读数不可比；五个原型臂盲判(代号洗牌),**生产无法盲判** —— 它一句出处都没有,判官一眼认得出,可能有偏向；判官模型全部 sonnet,由 judge-pack meta 的 judgeModel 记录并由 frontier.mjs 断言一致；生产的杂质率与块内冗余**算不出来**(两者都靠逐句出处判),表里显示 0 不是干净；生产成稿由 report 94 的 `<u>**title**</u>` 分块抽取,按 brief_stories 的 cluster_id↔title 映射到五个 fixture 簇
+  - 形成经验 → [替换生产的方向成立：差距是量级的,不是边际的;但延迟风险未测](nodes/lesson-production-replacement-justified.md)
 - [只换任务定义不加约束：已知失败题检出 3/8 → 7/8，误拦仅 +1](nodes/experiment-reframe-task-definition.md) · `recorded` · 结果：mixed · `experiment-reframe-task-definition`
   - 范围：17 条题全部取自已消耗的 heldout c28/c51 与已调优的开发批，且按已知失败挑选；定性死活判断，非通过率、非泛化证据
   - 来源性质：local_record
   - 条件：三臂同题、同 batch 大小（2）、同一次运行内交错跑完；对照臂 A′ 真跑而非引用历史 results，以消除题集与 batching 混淆；@cf/zai-org/glm-4.7-flash，真 Workers AI REST+Gateway，skip-cache、thinking 关闭、temperature 0；无远程 judge；判据跑前冻进 plan.json：主读数=8 条已知失败题中 status 翻成 unsupported 且 errorChoice 指对片段的条数；打架读数=9 条正常题误拦数；误拦比 A′ 多 2 条以上即判该臂以误拦换漏放；题目正常与错误成对共用同一句窗口，17 条不是 17 个独立事件；新增文件仅 reframe-seeds.mjs / reframe-probe.mjs，未改任何冻结组件；事后复跑 heldout-eval.mjs 不报 drift
+  - 形成经验 → [核验失败在判定步不在检索步；改任务定义能削弱它，但没消灭「两侧都复述对仍判 supported」](nodes/lesson-restate-before-judge.md)
   - 入边 `based_on` ← [单风险问题核验接口](nodes/mechanism-specialist-question-gate.md)（scope: 只支持已知失败探针中判定步可改善，不支持该gate整体达标；非独立泛化证据）
 - [真实代词与配对接入代码比较：旧归因/警告完成态错误已定位，正常配对仍未知](nodes/experiment-relation-chain-dev.md) · `recorded` · 结果：mixed · `experiment-relation-chain-dev`
   - 范围：v0.10/v0.11复用真实抽取的四已知开发候选，主Codex非盲语义复核后代码比较，不是独立可靠性或整句通过
@@ -639,6 +697,24 @@
   - 来源性质：local_record
   - 条件：候选、原句和原模型输出均来自已完成练习；不能识别隐藏推理阶段
   - 形成经验 → [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)
+- [新 scorer 在 82 句自然金标上召回 12/15 = 80%、精确率 86%（上一代 20%/33%）](nodes/experiment-scorer-detection-recall-natural.md) · `recorded` · 结果：observed · `experiment-scorer-detection-recall-natural`
+  - 范围：金标来自 brief-v3-prod 的 M2 run（老 v3 写作层，自然错误率 18.3%），**不是** cluster-to-brief 的任何一个臂；召回不能直接外推到那批臂
+  - 来源性质：local_record
+  - 条件：grading instructions 与 cluster-to-brief 的判定包逐字同源（含「判不准的归属类错误标 ok」那条）；该流水线不标逐句出处，所以只判事实正确性一件事，没有覆盖维、没有引用维；金标按**文本匹配**定位，不按句号：生产 splitter 与 lib.mjs 不同构（c0-lead 生产切 14 句、我们切 13 句），按句号对会静默指到相邻句；判官为 Claude subagent（opus），一个簇一个判官，只读判定包；金标本身是 2026-09-18 由 Claude Opus 5 逐句对照原文标注的，不是神谕，其自身错误率未测
+  - 形成经验 → [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md)
+  - 入边 `based_on` ← [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md)
+- [scorer 四变体对照：证据从单句放宽到 ±2 句，判官漂移 18%→0%；二元拆分反而升到 6%](nodes/experiment-scorer-evidence-width-c1.md) · `recorded` · 结果：observed · `experiment-scorer-evidence-width-c1`
+  - 范围：只在 c1（sweden，49 句待判、18 条事件）上做；c1 此后即为调参过的样本，不能再用它验收新 scorer
+  - 来源性质：local_record
+  - 条件：四个变体判同一批 49 句（取自 crossover 那轮的合并判定包），事件清单与守则其余部分完全相同；每个变体两个**独立** subagent 各判一次；同一 agent 判两次会照抄，量不到漂移；V0 基线是 crossover 那轮 c1 的两轮读数，其中 33 句两轮都判过；V4 的检索器是 IDF 加权词面重叠、取 top-8，不是 embedding；成稿自引的句子在 top-8 之外并集追加（97 条出处里 12 条没进 top-8）；判官为 Claude subagent，继承主会话 opus，零远程 LLM 调用
+  - 形成经验 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+- [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md) · `recorded` · 结果：passed · `experiment-scorer-retrieval-evidence-dev`
+  - 范围：cluster-to-brief harness 的慢档；信度在 c43 上量（两臂各两个独立判官，63 句），反向检验在 c7/c37 上做。heldout 未跑，无人工金标
+  - 来源性质：local_record
+  - 条件：证据由脚本用成稿句去整簇原文检索 top-8（本地 e5-small，384 维已归一化），与成稿引了谁无关；成稿声称的出处另行呈现，只用于新增的 citedSentenceSuffices 一维，守则写明两维互不回改；事件清单先做去杂质（--depurify，零 LLM），否则覆盖率分母里混着只有杂质文章报道的事件；成稿正文里泄漏的行内引用号在组装判定包时剥除并合并重复标点（direct-raw c43 36 句里 16 处）；判官为 Claude subagent（opus），各判官只读判定包一个文件，互不可见
+  - 形成经验 → [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md)
+  - 形成经验 → [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md)
+  - 入边 `based_on` ← [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md)
 - [人工窄问题与全维度检查：八例对照](nodes/experiment-specialist-eight.md) · `recorded` · 结果：mixed · `experiment-specialist-eight`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -800,6 +876,30 @@
   - 条件：有效样本 4 个簇；形状分布来自单一日期快照，季节性未知
   - 失效条件：在多期、跨日期的自然简报上重测错误形状，且分布与本次不同
   - 适用范围内的警示 → [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)（scope: 其 60 条注入验收材料的形状与自然分布不符，测出的召回不可直接迁移）
+  - 入边 `yields` ← [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md)
+- [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md) · `recorded` · `lesson-cosine-cannot-detect-duplicate-events`
+  - 范围：本地 e5-small(384 维已归一化)对事件清单里的单句事件描述;未试别的向量模型、未试加数字/实体特征
+  - 来源性质：local_record
+  - 条件：真重复的判定是肉眼确认(c36 三对),样本很小；只测了 e5-small 的裸余弦,没测「共享 articleId + 数字集合交集 + 实体重叠」这类组合判据
+  - 失效条件：换向量模型或加入数字/实体硬特征后,两类分布出现可分的间隔
+  - 适用范围内的警示 → [按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md)（scope: 归并失败导致的错误分层,靠调阈值修不了）
+  - 入边 `based_on` ← [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md)
+- [dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md) · `recorded` · `lesson-dev-winner-fails-heldout`
+  - 范围：direct-raw 与 direct-raw-routed-storyline 在 dev 五簇与 heldout 两簇上的对照;同尺同判官模型
+  - 来源性质：local_record
+  - 条件：heldout 两簇此前从未被任何臂产出过成稿；c51 检索缺口 24–33%(dev 12%),正确性读数偏高 —— 但这对两个臂是同向的,不影响相对比较
+  - 失效条件：在跨日期的新 heldout 上重测,dev 与 heldout 的排序一致
+  - 取代 → [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md)（scope: 把「三簇→五簇结论会翻」推进到「dev→heldout 结论会翻」,前者的论据仍然成立）
+  - 入边 `yields` ← [heldout 两簇首次启用：routed-storyline 4/4 全过、dev 第一名 direct-raw 垮掉、生产 0/4](nodes/experiment-heldout-replacement-candidate.md)
+- [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md) · `recorded` · `lesson-grounding-is-citation-quality`
+  - 范围：cluster-to-brief 的 direct-raw-grounded 臂；证据来自新 scorer 上 dev 五簇盲判与 c7/c37 的反向检验。无人工金标
+  - 来源性质：local_record
+  - 条件：新 scorer 的事实证据由脚本全簇检索，与成稿引了谁无关；引用质量单列为 citedSentenceSuffices；旧读数出自「证据=成稿自引的单句」那把 scorer，与本条不可比
+  - 失效条件：在跨日期、未接触的簇上重测，引用不足率的优势不再是量级差异
+  - 取代 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)（scope: 只取代其中「逐句接地硬错 5→1」这条归因与 (a)(b) 两项缺陷的现状描述；(c) 已补上指标，(d) 仍缺）
+  - 适用范围内的警示 → [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md)（scope: 凡是靠丢候选拿到的硬错下降，在新 scorer 上要重新归因才能当 crossover 供体）
+  - 入边 `yields` ← [新 scorer 上五臂 × dev 五簇盲判：direct-raw-routed 被支配，逐句接地的优势落在引用质量一轴](nodes/experiment-frontier-dev5-blind.md)
+  - 入边 `yields` ← [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md)
 - [枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系](nodes/lesson-practice-typed-anchors.md) · `recorded` · `lesson-practice-typed-anchors`
   - 范围：practice-risk-v1 人工材料上的当前 glm 核验接口，不能推论所有结构化核验无效
   - 来源性质：local_record
@@ -808,6 +908,13 @@
   - 适用范围内的警示 → [受约束风险槽与代码模板问题](nodes/attempt-constrained-risk-slots.md)（scope: practice-risk-v1 人工材料上的当前 glm 填槽与精确词锚点核验接口仍漏判角色、方向和状态关系；不能推论所有结构化核验无效）
   - 入边 `based_on` ← [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)
   - 入边 `yields` ← [60 题练习：共同有效材料上代码槽漏错 7/29，整句对照 3/29](nodes/experiment-practice-sixty.md)
+- [替换生产的方向成立：差距是量级的,不是边际的;但延迟风险未测](nodes/lesson-production-replacement-justified.md) · `recorded` · `lesson-production-replacement-justified`
+  - 范围：dev 五簇、同一天快照;结论限于「方向成立」,不等于「可以上线」
+  - 来源性质：local_record
+  - 条件：唯一一次原型与被替换对象在同一把尺下的比较；生产未盲判;杂质率与冗余对生产是空值
+  - 失效条件：在跨日期簇上重测,或全量读在 ≥100 篇的簇上撞超时
+  - 适用范围内的警示 → [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)（scope: 读全量原文的延迟在生产规模上未测 —— c36 82 篇已逼近 300 秒超时线,而生产当时是截断到 30 篇跑的）
+  - 入边 `yields` ← [生产 r94 首次进同一把尺：唯一有致命错的候选，核心层覆盖 47.6%、出处 0/45、快档五簇全不合格](nodes/experiment-production-baseline-same-scorer.md)
 - [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md) · `recorded` · `lesson-relation-factor-observability`
   - 范围：practice-v1 已知错误输出的回顾；不是对模型内部过程或通用能力的结论
   - 来源性质：local_record
@@ -843,6 +950,44 @@
   - 失效条件：在未接触、跨事件材料上复验 B 臂，或把判定真正交给代码比较后重新定位失败
   - 取代 → [核验因素诊断需区分断言覆盖、关系配对与解释忠实性](nodes/lesson-relation-factor-observability.md)（scope: 只更新失败定位与可改善性，不推翻其观测记录）
   - 适用范围内的警示 → [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md)（scope: 该组合含 specialist-question-gate，其判定步尚未立住）
+  - 入边 `yields` ← [只换任务定义不加约束：已知失败题检出 3/8 → 7/8，误拦仅 +1](nodes/experiment-reframe-task-definition.md)
+- [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md) · `recorded` · `lesson-scorer-steers-search`
+  - 范围：cluster-to-brief harness；证据来自 c1 的四变体对照与 dev 五簇的多臂读数，均非人工金标
+  - 来源性质：local_record
+  - 条件：「引用错位 18%、真没依据 0 条」这个比例只在 c1 上量过，别的簇未测；覆盖率分母的污染只核过 c1（18 条里 4 条出处全为杂质文章）；其余簇未逐条核
+  - 失效条件：scorer 改成证据由评分方检索、且事件清单剔除杂质文章之后，在未接触簇上重测这两条
+  - 适用范围内的警示 → [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)（scope: 该臂在 c43 的硬错 2>1 出自有缺陷的 scorer，未坐实是真事实错）
+  - 适用范围内的警示 → [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md)（scope: 凡是靠「丢掉引用不当的候选」拿到的硬错下降，都要先排除是在迎合旧门）
+  - 入边 `yields` ← [路由门+主线筛选接上 direct-raw：dev 五簇通过 4/5，direct-raw 同批 2/5](nodes/experiment-crossover-routed-storyline-dev.md)
+  - 入边 `yields` ← [scorer 四变体对照：证据从单句放宽到 ±2 句，判官漂移 18%→0%；二元拆分反而升到 6%](nodes/experiment-scorer-evidence-width-c1.md)
+  - 入边 `supersedes` ← [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md)（scope: 只取代其中「逐句接地硬错 5→1」这条归因与 (a)(b) 两项缺陷的现状描述；(c) 已补上指标，(d) 仍缺）
+  - 入边 `justified_by` ← [按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md)
+  - 入边 `justified_by` ← [按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md)
+  - 入边 `justified_by` ← [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md)
+  - 入边 `justified_by` ← [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md)
+- [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md) · `recorded` · `lesson-small-sample-flips`
+  - 范围：cluster-to-brief 的 dev 五簇；七簇全部取自同一次生产运行，不是独立抽样
+  - 来源性质：local_record
+  - 条件：对照是同一把 scorer、同一轮、盲判、同一判官模型 —— 翻转不能归因于尺或跑间波动
+  - 失效条件：dataset 扩到 12 个以上跨日期簇之后重测
+  - 适用范围内的警示 → [按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md)（scope: 「主线筛选压制乱安来源」这条在三簇上是 3:1，五簇上是 4:3）
+  - 入边 `yields` ← [新 scorer 上五臂 × dev 五簇盲判：direct-raw-routed 被支配，逐句接地的优势落在引用质量一轴](nodes/experiment-frontier-dev5-blind.md)
+  - 入边 `supersedes` ← [dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md)（scope: 把「三簇→五簇结论会翻」推进到「dev→heldout 结论会翻」,前者的论据仍然成立）
+- [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md) · `recorded` · `lesson-source-stripping-undetected`
+  - 范围：cluster-to-brief 的 grading instructions；证据来自定向抽查（32 句逐句核）与补守则前后的 dev 读数对照
+  - 来源性质：local_record
+  - 条件：补守则同时改变了 packId，全部旧判定被指纹闸自动隔离、重判 —— 前后读数出自不同的两把 scorer，是设计如此，不是可比的 A/B
+  - 失效条件：在跨日期簇上重测，消息源剥离类的判定不再出现，或出现大量误判
+  - 适用范围内的警示 → [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md)（scope: 证据换成检索并不会自动让「剥掉消息源」被扣分，那要靠 grading instructions 里单独写一档）
+  - 入边 `yields` ← [新 scorer 在 82 句自然金标上召回 12/15 = 80%、精确率 86%（上一代 20%/33%）](nodes/experiment-scorer-detection-recall-natural.md)
+  - 入边 `yields` ← [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md)
+- [主线筛选在 41% 杂质的超级袋上没把正题筛掉：剔 54/116 篇，句数 50→49、次层覆盖反而更高](nodes/lesson-storyline-filter-holds-on-superbag.md) · `recorded` · `lesson-storyline-filter-holds-on-superbag`
+  - 范围：c51 china（116 篇、48 篇杂质 = 41%）单簇;c28（13% 杂质）同轮无剔除压力。**heldout 已被这一轮消耗**
+  - 来源性质：local_record
+  - 条件：对照是同一基座同一轮:direct-raw(不筛)vs direct-raw-routed-storyline(筛),盲判；c51 检索缺口 24–33%,正确性读数偏高,但对两臂同向
+  - 失效条件：在跨日期的新超级袋上重测,筛选后核心层或次层覆盖低于不筛
+  - 适用范围内的警示 → [按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md)（scope: 把 limits 里「未在 heldout 上验」这条解掉,但只有 c51 一簇的 n=1 证据）
+  - 入边 `yields` ← [heldout 两簇首次启用：routed-storyline 4/4 全过、dev 第一名 direct-raw 垮掉、生产 0/4](nodes/experiment-heldout-replacement-candidate.md)
 - [三臂在 c36 都未达标：覆盖与证据约束的职责需要分离](nodes/lesson-three-arm-tradeoff.md) · `recorded` · `lesson-three-arm-tradeoff`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -874,6 +1019,13 @@
   - 依赖机制或方法 → [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md)
   - 引出新尝试 → [受约束风险槽与代码模板问题](nodes/attempt-constrained-risk-slots.md)
   - 入边 `yields` ← [自动风险问题规划：四句开发探针](nodes/experiment-auto-risk-four.md)
+- [核心层 21 条双模型校核:6 条内容有错、15 条丢了口径分歧;sonnet 零误报但漏 2 条综合判断题](nodes/measure-checklist-core-audit.md) · `recorded` · `measure-checklist-core-audit`
+  - 范围：dev 五簇的核心层 21 条(占清单 141 条的 14.9%);次层 24 条与尾层 96 条未校核
+  - 来源性质：local_record
+  - 条件：两个校核者读同一份证据包(全簇检索 top-6 + 每篇支持文章各自最匹配的一句),互不可见；唯一变量是模型(opus / sonnet),指令逐字相同；校核只查「清单写得对不对」,查不到「该有而没抽到」与「支持篇数算错导致的错误分层」
+  - 失效条件：重抽清单、或把校核扩到次层之后重测
+  - 适用范围内的警示 → [按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md)（scope: 核心层内容已校核并修正,分层与完整性仍未验）
+  - 入边 `based_on` ← [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md)
 - [抽取这一步 62.2% 的 neurons 是输出；去重/各方/写作层反过来（输入 66–74%）](nodes/measure-cost-input-output-split.md) · `live` · `measure-cost-input-output-split`
   - 范围：仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知
   - 来源性质：local_record
@@ -972,6 +1124,24 @@
   - 失效条件：无（这是调研给的形状，能不能用取决于模型档次与目标）
   - 入边 `cautions` ← [强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽](nodes/falsified-five-slot-srl.md)（scope: 强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽；成立条件见正文，失效条件：换到能稳定做结构化论元抽取的模型档次（且成本账仍划算））
   - 入边 `cautions` ← [把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好](nodes/falsified-minimal-unit-compression.md)（scope: 把最小单元当降本手段：产出比现行自由句还长（52–56% vs 40–50%），但召回更好；成立条件见正文，失效条件：目标从「省 token」换成「提质量/可核对性」——那时这条结论不适用）
+- [按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md) · `candidate` · `mechanism-checklist-tiering`
+  - 范围：cluster-to-brief 的慢档覆盖轴;dev 五簇 + heldout 两簇都在用,核心层内容经过一次双模型校核,分层本身未验
+  - 来源性质：local_record
+  - 条件：核心层门槛必须是相对的:绝对 >=6 篇在 6 篇的簇上算不出来、在 116 篇的簇上形同虚设;按簇规模取比例则让大簇核心层恒为空(簇越大文章越分散到更多事件)；口径只在 computeTiers 里定义一次,score-slow 读清单里写好的 coreMin,不自己算
+  - 失效条件：某轮臂间排名翻转可归因到分层,或需要报覆盖率的绝对值而非臂间比较
+  - 保留依据 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+  - 入边 `selects` ← [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md)（action: hold）
+  - 入边 `cautions` ← [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md)（scope: 归并失败导致的错误分层,靠调阈值修不了）
+  - 入边 `cautions` ← [核心层 21 条双模型校核:6 条内容有错、15 条丢了口径分歧;sonnet 零误报但漏 2 条综合判断题](nodes/measure-checklist-core-audit.md)（scope: 核心层内容已校核并修正,分层与完整性仍未验）
+- [按合并后的主导主线筛文章，再交给下游生成](nodes/mechanism-dominant-storyline-filter.md) · `candidate` · `mechanism-dominant-storyline-filter`
+  - 范围：dev 五簇上与人工杂质标注对照；2026-09-19 在 heldout 的 c51(116 篇/41% 杂质)上端到端验过一次；未验跨日期语料
+  - 来源性质：local_record
+  - 条件：必须用 e5 合并后的 canonicalStorylineKey，不是合并前的 storylineKey：后者在 c36 上只匹配 8 篇，而真实主导成分是 56 篇；主导成分少于 2 篇时跳过筛选，不把簇筛空
+  - 失效条件：在跨日期的新超级袋上，筛选后的核心层或次层覆盖低于不筛；或精度跌破 0.9
+  - 保留依据 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+  - 入边 `incorporates` ← [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)（adaptation: 筛完的文章交给 direct-raw 原样的窗口化生成，不交给 structure-router 自己的 writer）
+  - 入边 `cautions` ← [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md)（scope: 「主线筛选压制乱安来源」这条在三簇上是 3:1，五簇上是 4:3）
+  - 入边 `cautions` ← [主线筛选在 41% 杂质的超级袋上没把正题筛掉：剔 54/116 篇，句数 50→49、次层覆盖反而更高](nodes/lesson-storyline-filter-holds-on-superbag.md)（scope: 把 limits 里「未在 heldout 上验」这条解掉,但只有 c51 一簇的 n=1 证据）
 - [相同证据包隔离接口](nodes/mechanism-evidence-isolation.md) · `candidate` · `mechanism-evidence-isolation`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -979,6 +1149,13 @@
   - 保留依据 → [相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界](nodes/measure-evidence-bundle-isolation.md)
   - 入边 `contains` ← [按完全相同证据包隔离原子核验](nodes/attempt-evidence-isolation.md)
   - 入边 `incorporates` ← [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md)（adaptation: 只隔离入选候选；不能把隔离当作事实正确保证）
+- [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md) · `candidate` · `mechanism-pack-fingerprint`
+  - 范围：cluster-to-brief 慢档；已随一次真实的守则变更跑通（6 份旧判定被自动隔离）
+  - 来源性质：local_record
+  - 条件：grading instructions 必须抽成独立模块才算得出指纹 —— build-judge-pack.mjs 是脚本、有顶层副作用；自测覆盖三种失效：缺指纹 / 包被改过 / 尺改了但包没重建，期望 exit 2
+  - 失效条件：出现一种改动会改变判定结果却不改变 packId 与 scorerSrcId
+  - 保留依据 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+  - 入边 `selects` ← [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md)（action: adopt）
 - [原文高召回候选发现](nodes/mechanism-raw-candidate-discovery.md) · `candidate` · `mechanism-raw-candidate-discovery`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -986,12 +1163,23 @@
   - 保留依据 → [三臂在 c36 都未达标：覆盖与证据约束的职责需要分离](nodes/lesson-three-arm-tradeoff.md)
   - 入边 `contains` ← [direct-raw 原型](nodes/attempt-direct-raw.md)
   - 入边 `incorporates` ← [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md)（adaptation: 从成稿器提炼为高召回素材池）
+  - 入边 `cautions` ← [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md)（scope: 凡是靠丢候选拿到的硬错下降，在新 scorer 上要重新归因才能当 crossover 供体）
+  - 入边 `cautions` ← [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)（scope: 凡是靠「丢掉引用不当的候选」拿到的硬错下降，都要先排除是在迎合旧门）
+- [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md) · `candidate` · `mechanism-scorer-evidence-retrieval`
+  - 范围：cluster-to-brief 慢档；dev 五簇上用过，heldout 未验，跨日期语料未验
+  - 来源性质：local_record
+  - 条件：簇内句向量按簇缓存，缓存键带句子条数与首末句 —— 静默用旧向量是最危险的失效方式（检索照样出结果，全是错的）；不能换成整簇一次直读：[[measure-detection-ceiling]] 实测整簇判官召回只有 26%
+  - 失效条件：citedNotInEvidence 超过 15%，或在跨日期簇上判官普遍报「检索缺口」
+  - 保留依据 → [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md)
+  - 入边 `selects` ← [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md)（action: adopt）
+  - 入边 `cautions` ← [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md)（scope: 证据换成检索并不会自动让「剥掉消息源」被扣分，那要靠 grading instructions 里单独写一档）
 - [结构分诊，不直接控制最终选材](nodes/mechanism-shape-triage.md) · `candidate` · `mechanism-shape-triage`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
   - 失效条件：从 router 提炼的新职责边界；不是旧取样控制器的已验证效果
   - 保留依据 → [三臂在 c36 都未达标：覆盖与证据约束的职责需要分离](nodes/lesson-three-arm-tradeoff.md)
   - 入边 `incorporates` ← [组合草案：先规划、按需核验、同槽补位](nodes/attempt-plan-verify-backfill.md)（adaptation: 从选材控制器调整为结构分诊）
+  - 入边 `incorporates` ← [把 structure-router 的路由门与主线筛选接到 direct-raw 的生成上](nodes/attempt-routed-storyline-direct-raw.md)（adaptation: 只取它的路由判定（single_story / topic_bag），不取 structure-router 用它做的文章筛选与写作）
 - [单风险问题核验接口](nodes/mechanism-specialist-question-gate.md) · `candidate` · `mechanism-specialist-question-gate`
   - 范围：仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收
   - 来源性质：local_record
@@ -1038,7 +1226,7 @@
   - 失效条件：链路被回滚或替换、或三项缺陷修复后重新部署（那时另立节点记录新状态）
   - 取代 → [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md)
   - 依据 → [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md)
-- [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `live` · `decision-brief-v3-production-state`
+- [简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10](nodes/decision-brief-v3-production-state.md) · `superseded` · `decision-brief-v3-production-state`
   - 范围：仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知
   - 来源性质：local_record
   - 失效条件：成本上限被重定、或任一降本方案落地、或链路被部署（那时本节点改成已上线）
@@ -1059,6 +1247,23 @@
   - 依据 → [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md)
   - 选择或暂缓 → [自由生成风险问题规划](nodes/attempt-auto-risk-question.md)（action: hold）
   - 选择或暂缓 → [受约束风险槽与代码模板问题](nodes/attempt-constrained-risk-slots.md)（action: next_experiment_only）
+- [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md) · `accepted` · `decision-hold-checklist-tiering`
+  - 范围：cluster-to-brief 的覆盖轴;本轮只保证「臂间比较可用」,不保证覆盖率绝对值
+  - 来源性质：local_record
+  - 条件：各臂共用同一份清单,所以分层的系统性偏差对臂间比较是对称的；核心层 21 条的内容已校核并修正,分层本身未验
+  - 失效条件：某轮臂间排名翻转可归因到分层;或需要报覆盖率的绝对值而非臂间比较;或核心层校核结果与某臂的覆盖判定直接冲突
+  - 依据 → [核心层 21 条双模型校核:6 条内容有错、15 条丢了口径分歧;sonnet 零误报但漏 2 条综合判断题](nodes/measure-checklist-core-audit.md)
+  - 依据 → [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md)
+  - 选择或暂缓 → [按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md)（action: hold）
+- [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md) · `accepted` · `decision-scorer-retrieval-evidence`
+  - 范围：cluster-to-brief 慢档；dev 五簇上跑通，heldout 无干净验收集
+  - 来源性质：local_record
+  - 条件：取值是在两个候选之间选：被引句 ±2 句窗口 vs 全簇 top-k 检索；窗口取值首测信度更好（0% vs 6%），仍被淘汰 —— 理由是效度而非信度
+  - 失效条件：在跨日期、未接触的簇上重测，检索缺口超过 15% 或两判官不一致率回到 5% 以上
+  - 依据 → [scorer 换成全簇检索证据：两判官不一致率 18% → 0%，逐句接地的硬错优势随之消失](nodes/experiment-scorer-retrieval-evidence-dev.md)
+  - 依据 → [新 scorer 在 82 句自然金标上召回 12/15 = 80%、精确率 86%（上一代 20%/33%）](nodes/experiment-scorer-detection-recall-natural.md)
+  - 选择或暂缓 → [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md)（action: adopt）
+  - 选择或暂缓 → [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md)（action: adopt）
 - [抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤](nodes/decision-tighter-output-constraint.md) · `live` · `decision-tighter-output-constraint`
   - 范围：仅限原节点正文与 source 所述模型、样本、目标及评测口径；未记录的条件未知
   - 来源性质：local_record

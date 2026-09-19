@@ -3,7 +3,7 @@
   "id": "decision-brief-v3-production-state",
   "title": "简报 v3 已接进生产代码、本地 e2e 跑通，卡在月成本 $10.20 超上限 $10",
   "date": "2026-09-14",
-  "status": "live",
+  "status": "superseded",
   "source": "apps/backend/prototypes/brief-v3-prod/out/STOP.md",
   "invalidates_when": "成本上限被重定、或任一降本方案落地、或链路被部署（那时本节点改成已上线）",
   "type": "decision",

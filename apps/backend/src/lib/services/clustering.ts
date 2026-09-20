@@ -57,6 +57,19 @@ export interface ClusteringResult {
     noisePoints: number;
     totalArticles: number;
   };
+  /**
+   * ml 侧回传的 config_used **原样**保留（不挑字段）。
+   *
+   * 2026-09 教训：这里原本只把 umap/hdbscan 几个字段挑进 parameters，
+   * clustering_algorithm / agglomerative_* 全被丢掉。于是生产镜像停在 6-25、
+   * 聚类算法换了却没生效，落盘的观测文件里没有任何"实际生效的配置"可对，
+   * 三个半月无人发现。新增字段而不是改 parameters：parameters 的形状下游在用。
+   */
+  configUsed?: Record<string, any>;
+  /** ml 侧 clustering_stats 原样保留。**只作诊断旁证**，不得替换 statistics（原因见下方注释）。 */
+  clusteringStats?: Record<string, any>;
+  /** ml 侧 model_info 原样保留：排查"跑的到底是哪个镜像/哪个模型"。 */
+  modelInfo?: Record<string, any>;
 }
 
 export interface ClusteringServiceResponse {
@@ -211,6 +224,9 @@ export class ClusteringService {
             size: number;
             items: Array<{ id: number; [key: string]: any }>;
           }>;
+          // 索引签名：ml 侧会回传 backend 根本没发过的字段（clustering_algorithm /
+          // agglomerative_threshold 等），它们恰恰是"实际生效的配置"里最关键的部分，
+          // 不能因为类型里没写到就在解析时把它们丢掉。
           config_used?: {
             umap_n_neighbors?: number;
             umap_n_components?: number;
@@ -219,12 +235,15 @@ export class ClusteringService {
             hdbscan_min_cluster_size?: number;
             hdbscan_min_samples?: number;
             hdbscan_epsilon?: number;   // ML 侧字段名(clustering.py:634),非发送侧的 hdbscan_cluster_selection_epsilon
+            [key: string]: unknown;
           };
           clustering_stats?: {
             n_clusters?: number;
             n_outliers?: number;
             n_samples?: number;
+            [key: string]: unknown;
           };
+          model_info?: Record<string, unknown>;
         };
         
 
@@ -266,7 +285,14 @@ export class ClusteringService {
             totalClusters: clusters.filter(c => c.clusterId !== NOISE_CLUSTER_ID).length,
             noisePoints: noiseCluster?.articleIds.length ?? 0,
             totalArticles: mlResult.clustering_stats?.n_samples || dataset.articles.length
-          }
+          },
+          // 运行身份：ml 侧回传什么就原样带什么，不挑字段。挑字段等于提前替调用方决定
+          // "哪些配置值得看"——而这次没生效的恰恰是没被挑中的 clustering_algorithm。
+          // clusteringStats 只是诊断旁证：它的 n_outliers 与真实 -1 组差约 8 倍（见上），
+          // 不能拿来替换 statistics。
+          configUsed: mlResult.config_used,
+          clusteringStats: mlResult.clustering_stats,
+          modelInfo: mlResult.model_info
         };
 
         return {

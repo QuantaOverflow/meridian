@@ -16,7 +16,17 @@ mkdirSync(DS_DIR, { recursive: true });
 process.env.CTB_DATASET_DIR = DS_DIR;
 process.env.CTB_DATA_ROOT = DATA_ROOT;
 
-const { loadDataset, datasetClusters, loadClusterArticles, labelsOf, recordConsumption } = await import('./dataset.mjs');
+const {
+  loadDataset,
+  datasetClusters,
+  loadClusterArticles,
+  loadArticlesByIds,
+  labelsOf,
+  recordConsumption,
+  recordDropped,
+  droppedArticleIds,
+  datasetArticleIds,
+} = await import('./dataset.mjs');
 
 const write = (id, obj) => writeFileSync(`${DS_DIR}${id}.json`, `${JSON.stringify(obj, null, 2)}\n`);
 const good = () => ({
@@ -66,6 +76,22 @@ rejects(ds => { ds.clusters['10'].labels.eventGroups.x = [101, 999]; }, /不在�
 rejects(ds => { ds.clusters['10'].labels.eventGroups.x = [101]; }, /只有 1 篇/);
 rejects(ds => { delete ds.articles['102']; }, /articles 里没有 102 的元数据/);
 rejects(ds => { delete ds.consumed; }, /缺 consumed/);
+// 丢弃池:两个方向都要断言,否则标注挂在一个取不到正文的空编号上也没人报错
+rejects(ds => { ds.dropped = { noise: [], notSelected: {} }, ds.dropped.noise = null; }, /noise 必须是整数数组/);
+rejects(ds => { ds.dropped = { noise: [], notSelected: null }; }, /notSelected 必须是对象/);
+rejects(ds => {
+  ds.dropped = { noise: [301], notSelected: {} }; // 301 没有元数据
+}, /dropped\.noise：articles 里没有 301 的元数据/);
+rejects(ds => {
+  ds.articles['301'] = { title: 'E', url: 'http://e', publishDate: '2026-01-01T00:00:00.000Z', sourceId: 5 };
+  ds.dropped = { noise: [301], notSelected: { 12: [301] } };
+}, /在丢弃池里重复出现/);
+rejects(ds => { ds.dropped = { noise: [101], notSelected: {} }; }, /已在收录簇里/);
+rejects(ds => {
+  ds.articles['301'] = { title: 'E', url: 'http://e', publishDate: '2026-01-01T00:00:00.000Z', sourceId: 5 };
+  ds.dropped = { noise: [], notSelected: { 10: [301] } };
+}, /同时出现在 clusters 里/);
+rejects(ds => { ds.dropped = { noise: [], notSelected: { '-1': [301] } }; }, /簇编号必须是整数字符串/);
 // id 与文件名不一致 = 悄悄用错数据集
 rejects(ds => { ds.id = 'other'; }, /id 与文件名不一致/);
 writeFileSync(`${DS_DIR}broken.json`, '{not json');
@@ -122,6 +148,48 @@ for (const k of ['id', 'source', 'days', 'clusterSnapshot', 'selection', 'cluste
 assert.throws(() => recordConsumption('synth', {}), /必须写明 by/);
 // 写回的清单仍然合法
 assert.equal(loadDataset('synth').consumed.length, 3);
+
+// ── 丢弃池:可缺键(向后兼容),写入只补不覆盖 ────────────────────────────
+const base0 = good();
+base0.id = 'synth2';
+write('synth2', base0);
+const ds2Before = loadDataset('synth2');
+assert.deepEqual(droppedArticleIds(ds2Before), [], '没有 dropped 键的老清单照常合法,丢弃池为空');
+assert.deepEqual(datasetArticleIds(ds2Before), [101, 102, 103, 201]);
+assert.deepEqual(datasetArticleIds(ds2Before, { includeDropped: true }), [101, 102, 103, 201]);
+
+const droppedMeta = {
+  302: { title: 'F', url: 'http://f', publishDate: '2026-01-01T00:00:00.000Z', sourceId: 6 },
+  301: { title: 'E', url: 'http://e', publishDate: '2026-01-02T00:00:00.000Z', sourceId: 5 },
+  303: { title: 'G', url: 'http://g', publishDate: '2026-01-01T12:00:00.000Z', sourceId: 7 },
+  // 已在清单里的编号:元数据必须**不被覆盖**,标注就挂在它上面
+  101: { title: '覆盖了就说明只补不覆盖是假的', url: 'x', publishDate: 'x', sourceId: 999 },
+};
+const res = recordDropped('synth2', { noise: [302, 301], notSelected: { 12: [303] }, articles: droppedMeta });
+assert.equal(res.added, 3, '只补清单还没有的编号');
+assert.deepEqual(res.dropped.noise, [301, 302], 'noise 落盘时排序');
+
+const ds2 = loadDataset('synth2');
+assert.deepEqual(ds2.dropped, { noise: [301, 302], notSelected: { 12: [303] } });
+assert.deepEqual(droppedArticleIds(ds2).sort((a, b) => a - b), [301, 302, 303]);
+assert.deepEqual(datasetArticleIds(ds2, { includeDropped: true }), [101, 102, 103, 201, 301, 302, 303]);
+assert.deepEqual(datasetArticleIds(ds2), [101, 102, 103, 201], '不传开关时仍只有收录的那批');
+assert.equal(ds2.articles['101'].title, 'A', 'recordDropped 不许覆盖既有元数据');
+assert.equal(ds2.articles['101'].sourceId, 1);
+assert.equal(ds2.articles['301'].title, 'E');
+// 标注与其余键一字不改
+for (const k of ['id', 'source', 'days', 'clusterSnapshot', 'selection', 'clusters', 'consumed']) {
+  assert.deepEqual(ds2[k], base0[k], `recordDropped 不该动 ${k}`);
+}
+
+// 丢弃池里的文章要能取到正文,否则标不了
+mkdirSync(`${DATA_ROOT}synth2/content`, { recursive: true });
+assert.throws(() => loadArticlesByIds(ds2, [301], 'dropped'), /的 dropped 缺 1 篇正文/);
+writeFileSync(`${DATA_ROOT}synth2/content/301.txt`, 'Dropped article body. Second sentence.');
+const dropped301 = loadArticlesByIds(ds2, [301], 'dropped');
+assert.equal(dropped301.length, 1);
+assert.equal(dropped301[0].title, 'E');
+assert.deepEqual(dropped301[0].sentences, ['Dropped article body.', 'Second sentence.']);
 
 rmSync(TMP, { recursive: true, force: true });
 console.log('dataset tests passed');

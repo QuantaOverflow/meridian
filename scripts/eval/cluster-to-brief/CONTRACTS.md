@@ -29,6 +29,10 @@
       }
     }
   },
+  "dropped": {
+    "noise": [901, 902],
+    "notSelected": { "<clusterId>": [903, 904] }
+  },
   "consumed": [{ "at": "2026-09-20", "by": "exec-support-mech", "note": "首轮真实分布" }]
 }
 ```
@@ -38,6 +42,28 @@
 - 顶层 `articles` 是文章元数据，**随清单入 git**（2026-09-20 加）：`out/` 整目录 gitignore，元数据只放那里等于随时会丢，人工标注就失去依据；正文才是可重建的部分。
 - 正文落 `out/_data/<id>/content/<articleId>.txt`（gitignore），由 `fetch-dataset.mjs --dataset=<id>` 按清单重建。
 - **split 与消耗记录**：`consumed` 只增不改；用过的 dataset 对该臂不再是未见过的数据。
+
+### 1.1 `dropped`：丢弃池（可选键，2026-09-20 加）
+
+`clusters` 只收 `selection`（现为 `selected_for_intel`）选中的那批。**漏报恰恰发生在没被选中的文章里**，
+只标收录的部分，这份 dataset 从定义上就算不出漏报率——标多少遍都没用。`dropped` 就是补上那一半。
+
+| 字段 | 语义 | 来源 |
+|---|---|---|
+| `dropped.noise` | 当天聚类判为噪声（`clusterId = -1`）的文章编号 | `clusterSnapshot` 指的 R2 快照里 `clusterId === -1` 那一项的 `articleIds` |
+| `dropped.notSelected` | 成了簇、但该簇没进 `selection` —— 按簇编号分组 | 快照里 `clusterId >= 0` 且**不在** `clusters` 里的簇 |
+
+硬约束（`validateManifest` 全部当场断言，违反即拒绝载入）：
+
+- 整个 `dropped` 键**可缺**。老清单没有它照常合法，这是向后兼容的边界。
+- 丢弃池与收录池**互斥**：`dropped` 里的文章编号不得出现在任何 `clusters[].articleIds` 里，池内也不得重复。
+- `dropped.notSelected` 的簇编号不得与 `clusters` 的簇编号相同；噪声组不进 `notSelected`（它的编号是 -1，放 `noise`）。
+- 丢弃池里每篇都必须在顶层 `articles` 里有元数据——取不到元数据就标不了，留个空编号等于没收录。
+- 正文与收录的那批落同一个 `out/_data/<id>/content/` 目录，同样由 `fetch-dataset.mjs` 重建。
+
+重建命令：`node fetch-dataset.mjs --dataset=<id> --include-dropped`（可加 `--snapshot=<本地快照.json>` 省一次 R2 往返）。
+开关只管「从快照算出丢弃池并写进清单」；清单里**已经有** `dropped` 之后，不带开关的普通重建也会把它的正文一起补齐。
+写入走 `recordDropped()`：**只补不覆盖**——只写 `dropped`，`articles` 里只补清单还没有的编号，既有元数据与 `labels` 一个字不碰。
 
 ## 2. Solver（被测系统）
 

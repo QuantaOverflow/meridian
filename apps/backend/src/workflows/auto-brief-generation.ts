@@ -790,7 +790,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 步骤 2: 聚类分析 (ML Service)
       // =====================================================================
       await observability.logStep('clustering_analysis', 'started');
-      
+
+      // 优先使用用户传入的 clusteringOptions（来自 generate API 的 body），否则用 BRIEF_CLUSTERING_OPTIONS。
+      // 2026-09-05:启发式默认改成直接用 BRIEF_CLUSTERING_OPTIONS。
+      // 原来那套按数据规模算 min_cluster_size / n_components 的分支是 UMAP+HDBSCAN 时代的
+      // 遗留,凝聚聚类只有一个阈值参数、与数据规模无关,继续留着只会让「没传参数」这条路径
+      // 悄悄跑在另一套算法上(150 篇时 min_cluster_size 会算到 15)。
+      //
+      // 放在 step **外**：它只是取值，而 step 重放时回调不会再执行，
+      // 写在步内的话下面落盘用的 configSent 会是 undefined。
+      const effectiveClusteringOptions = clusteringOptions ?? BRIEF_CLUSTERING_OPTIONS;
+
       const clusteringResult = await step.do('执行聚类分析', defaultStepConfig, async (): Promise<ClusteringResult> => {
         console.log(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
         
@@ -815,13 +825,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           embeddings: dataset.embeddings
         };
         
-        // 优先使用用户传入的 clusteringOptions（来自 generate API 的 body），
-        // 否则根据数据规模启发式生成默认值
-        // 2026-09-05:启发式默认改成直接用 BRIEF_CLUSTERING_OPTIONS。
-        // 原来那套按数据规模算 min_cluster_size / n_components 的分支是 UMAP+HDBSCAN 时代的
-        // 遗留,凝聚聚类只有一个阈值参数、与数据规模无关,继续留着只会让「没传参数」这条路径
-        // 悄悄跑在另一套算法上(150 篇时 min_cluster_size 会算到 15)。
-        const effectiveClusteringOptions = clusteringOptions ?? BRIEF_CLUSTERING_OPTIONS;
+        // effectiveClusteringOptions 在 step 外取值（原因见那里的注释）
         console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'heuristic-default'}):`, JSON.stringify(effectiveClusteringOptions));
 
         const response = await clusteringService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
@@ -850,6 +854,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 观测性：落一份 cluster_id → article_ids 映射到 R2。
       // 簇成员在 workflow 内是临时数据，被毙簇的文章无处可查；持久化后
       // story-validation eval 才能按 cluster_id 取回被拒簇的原文做二审。
+      //
+      // configSent / configUsed **必须并排记**：2026-09 生产 ml-service 镜像停在 6-25，
+      // 聚类算法换了却没生效，三个半月无人发现——病正是这两者不一致，而落盘里一个都没有。
+      // 只记其中一个看不出错位。mlStats 只是诊断旁证：statistics 仍从 clusters 自推
+      // （clustering_stats.n_outliers 与真实 -1 组系统性差约 8 倍，见 clustering.ts）。
       try {
         await this.env.ARTICLES_BUCKET.put(
           `observability/clustering/${workflowId}.json`,
@@ -857,6 +866,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             workflowId,
             createdAt: new Date().toISOString(),
             statistics: clusteringResult.statistics,
+            configSent: effectiveClusteringOptions,
+            configUsed: clusteringResult.configUsed ?? null,
+            mlStats: clusteringResult.clusteringStats ?? null,
+            modelInfo: clusteringResult.modelInfo ?? null,
             clusters: clusteringResult.clusters.map(c => ({
               clusterId: c.clusterId,
               articleIds: c.articleIds,
@@ -865,6 +878,65 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         );
       } catch (persistErr) {
         console.warn(`[AutoBrief] clustering 映射落盘失败 (workflow=${workflowId}):`, persistErr);
+      }
+
+      // ── 文章去向表 ────────────────────────────────────────────────────────
+      // 回答业务上最常问的「某件大事为什么没进简报」：一篇文章一条记录，记它走到哪一关、
+      // 被哪一关拦下、进了简报的话在哪一块。
+      //
+      // 刻意**不新增 step**：CF Workflow 单 step 输出约 1MB 上限，上千篇文章的表容易顶上去；
+      // 多一个 step 也多一份平台 canceled 的风险。改成在 run() 作用域里随各步结果累积，
+      // 最后一次性落 R2。累积用的全部是 step 的**输出**（重放时由引擎回放），故可重放。
+      const ARTICLE_JOURNEY_STAGES = ['clustered', 'judged', 'selected', 'written'] as const;
+      type ArticleJourneyEntry = {
+        clusterId: number | null;
+        reachedStage: string;
+        droppedAt: string | null;
+        dropReason: string | null;
+        blockIdx: number | null;
+      };
+      const articleJourney = new Map<number, ArticleJourneyEntry>();
+      const persistArticleJourney = async () => {
+        try {
+          await this.env.ARTICLES_BUCKET.put(
+            `observability/article-journey/${workflowId}.json`,
+            JSON.stringify({
+              workflowId,
+              createdAt: new Date().toISOString(),
+              stages: ARTICLE_JOURNEY_STAGES,
+              articles: Object.fromEntries(articleJourney),
+            }, null, 2)
+          );
+          console.log(`[AutoBrief] 文章去向表落盘: ${articleJourney.size} 篇`);
+        } catch (persistErr) {
+          console.warn(`[AutoBrief] 文章去向表落盘失败 (workflow=${workflowId}):`, persistErr);
+        }
+      };
+
+      // 第 1 关 clustered：记归属簇。-1 噪声桶在簇判定里被显式跳过（`clusterId < 0 continue`），
+      // 所以它**就是**这一关的拦下原因，记 noise。
+      for (const article of dataset.articles) {
+        articleJourney.set(article.id, {
+          clusterId: null,
+          reachedStage: 'clustered',
+          droppedAt: 'clustered',
+          dropReason: 'not_in_any_cluster',
+          blockIdx: null,
+        });
+      }
+      for (const c of clusteringResult.clusters) {
+        for (const id of c.articleIds) {
+          const entry = articleJourney.get(id);
+          if (!entry) continue; // ml 侧回传了不属于本窗口的 id，忽略
+          entry.clusterId = c.clusterId;
+          if (c.clusterId < 0) {
+            entry.droppedAt = 'clustered';
+            entry.dropReason = 'noise';
+          } else {
+            entry.droppedAt = null;
+            entry.dropReason = null;
+          }
+        }
       }
 
       // =====================================================================
@@ -1080,6 +1152,27 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         return insertedIds;
       });
 
+      // 第 2 关 judged：进了某一块 = 过关。
+      // ⚠️ 这一关**没有**「被判官毙掉」这条去向：rejectedClusters 恒为空，NO_EVENT / UNSURE
+      // 只标记不丢弃（见上方簇判定的注释）。所以过了聚类却不在任何块里，只可能是块物化时
+      // 被 DEFAULT_ARTICLE_CAP 截掉或跨簇同名合并时去重掉——两者都发生在「簇判定」step
+      // **内部**（assembleBlocks），步外只拿得到合计数 droppedArticles，分不出是哪一种，
+      // 故合记为 block_article_cap。
+      const judgedPassArticleIds = new Set<number>(
+        (validatedStories.stories as any[]).flatMap((s: any) =>
+          Array.isArray(s.articleIds) ? (s.articleIds as number[]) : []
+        )
+      );
+      for (const [id, entry] of articleJourney) {
+        if (entry.droppedAt) continue;
+        if (judgedPassArticleIds.has(id)) {
+          entry.reachedStage = 'judged';
+        } else {
+          entry.droppedAt = 'judged';
+          entry.dropReason = 'block_article_cap';
+        }
+      }
+
       // =====================================================================
       // 检查故事质量阈值 - 如果没有有效故事则停止工作流
       // =====================================================================
@@ -1132,6 +1225,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             })
             .where(eq($brief_runs.workflow_id, workflowId));
         });
+
+        // 一块都没出的这一期最该有去向表：此时每篇都停在 clustered / judged 两关之一。
+        await persistArticleJourney();
 
         return {
           success: false,
@@ -1321,6 +1417,34 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => console.log(
         `  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`
       ));
+
+      // 第 3 关 selected：排名信息在 ranked 里是完整的（全量候选按分降序），
+      // 所以被截断的能记下**真实名次**，不必记 unknown；被同事件配额挤掉的在 capped 里，
+      // 两种落选原因分开记——「排不进前 N」和「同一件事已经占满格」对读者是两回事。
+      const selectedArticleIds = new Set<number>(
+        (storiesForIntelligence as any[]).flatMap((s: any) =>
+          Array.isArray(s.articleIds) ? (s.articleIds as number[]) : []
+        )
+      );
+      const cappedStories = new Set<any>(capped.map(x => x.story));
+      const rankDropReason = new Map<number, string>();
+      ranked.forEach((r, i) => {
+        const reason = cappedStories.has(r.story)
+          ? `per_event_cap_${PER_EVENT_BLOCK_CAP}`
+          : `rank_${i + 1}_beyond_top${maxStoriesToGenerate}`;
+        const ids: number[] = Array.isArray((r.story as any).articleIds) ? (r.story as any).articleIds : [];
+        for (const id of ids) if (!rankDropReason.has(id)) rankDropReason.set(id, reason);
+      });
+      for (const [id, entry] of articleJourney) {
+        if (entry.droppedAt) continue;
+        if (selectedArticleIds.has(id)) {
+          entry.reachedStage = 'selected';
+          continue;
+        }
+        entry.droppedAt = 'selected';
+        // ranked 覆盖全部候选块，所以正常一定取得到；取不到说明两处口径对不上，标 unknown 不猜。
+        entry.dropReason = rankDropReason.get(id) ?? 'unknown';
+      }
 
       // 观测性：标记被选中跑 intel 的 stories
       await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {
@@ -1592,6 +1716,40 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         tiers: { lead: tierCount('lead'), more: tierCount('more'), brief: tierCount('brief') },
         marks: markTotal,
       });
+
+      // 第 4 关 written：一块 = 一份报告 = 一个被选中的 story，三者用同一个 idx
+      // （storiesForIntelligence 的下标）串起来。走到这里还没被拦下的文章，去向只有三种：
+      // 报告生成失败、块写作重试耗尽、进了某一块。
+      // blockIdx 取它在 writtenBlocks（已按 pos 排序）里的位置——renderBriefV3 就是按这个
+      // 顺序渲染的，所以它就是读者看到的块序。
+      const blockIdxByStoryIdx = new Map<number, number>();
+      writtenBlocks.forEach((b, k) => blockIdxByStoryIdx.set(b.idx, k));
+      const reportFailedStoryIdx = new Set<number>(intelFailures.map((f) => f.idx));
+      const storyIdxByArticle = new Map<number, number>();
+      (storiesForIntelligence as any[]).forEach((s: any, i: number) => {
+        const ids: number[] = Array.isArray(s.articleIds) ? s.articleIds : [];
+        for (const id of ids) if (!storyIdxByArticle.has(id)) storyIdxByArticle.set(id, i);
+      });
+      for (const [id, entry] of articleJourney) {
+        if (entry.droppedAt) continue;
+        const storyIdx = storyIdxByArticle.get(id);
+        if (storyIdx === undefined) {
+          // 上一关判它进了选择层，这一关却找不到归属块，说明两处口径对不上。宁可标 unknown 也不猜。
+          entry.droppedAt = 'written';
+          entry.dropReason = 'unknown';
+          continue;
+        }
+        const blockIdx = blockIdxByStoryIdx.get(storyIdx);
+        if (blockIdx === undefined) {
+          entry.droppedAt = 'written';
+          entry.dropReason = reportFailedStoryIdx.has(storyIdx) ? 'report_generation_failed' : 'block_write_failed';
+          continue;
+        }
+        entry.reachedStage = 'written';
+        entry.blockIdx = blockIdx;
+      }
+
+      await persistArticleJourney();
 
       // 拼装：三节 markdown 全由代码渲染（见 lib/core/brief-v3.ts），唯一的调用是给整篇起标题。
       const briefAssembleStepConfig: WorkflowStepConfig = {

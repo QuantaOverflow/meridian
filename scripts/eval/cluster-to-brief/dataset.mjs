@@ -15,6 +15,10 @@
  * 且 out/ 整个目录 gitignore —— 元数据只放在 out/ 里等于随时会丢，人工标注就没了依据。
  * 所以元数据跟清单一起入 git，正文才是可重建的那部分。
  *
+ * 顶层 `dropped`（可选，2026-09-20 加）承载**被丢弃池**：当天聚类出来、但没进 `selection` 的文章。
+ * 没有它这份 dataset 从定义上就算不出漏报率 —— 漏报恰恰发生在被丢的那批里，
+ * 只标收录的部分，标多少遍都量不到。语义与来源见 CONTRACTS.md §1。
+ *
  * 目录可换（测试用，也方便另置一份数据）：
  *   CTB_DATASET_DIR=<dir>   清单目录，默认 ./datasets/
  *   CTB_DATA_ROOT=<dir>     正文根目录，默认 <CTB_WORKSPACE>out/_data/
@@ -87,6 +91,36 @@ export function validateManifest(ds, expectedId, where = 'inline') {
     }
   }
 
+  // 丢弃池（可选，老清单没有这个键照常合法）。两个方向都断言：
+  // 被丢的编号不许跟收录的重叠，也不许没有元数据 —— 否则标注时取不到正文，等于标了个空号。
+  if (ds.dropped !== undefined) {
+    const d = ds.dropped;
+    if (!isObj(d)) fail('dropped 必须是对象');
+    if (!isIntArray(d.noise)) fail('dropped.noise 必须是整数数组（没有写 []）');
+    if (!isObj(d.notSelected)) fail('dropped.notSelected 必须是对象（没有写 {}）');
+
+    const selected = new Set(Object.values(ds.clusters).flatMap(c => c.articleIds));
+    const seen = new Set();
+    const take = (ids, at) => {
+      for (const id of ids) {
+        if (selected.has(id)) fail(`${at}：${id} 已在收录簇里（丢弃池与收录池必须互斥）`);
+        if (seen.has(id)) fail(`${at}：${id} 在丢弃池里重复出现`);
+        seen.add(id);
+        if (!isObj(ds.articles[String(id)])) fail(`${at}：articles 里没有 ${id} 的元数据`);
+      }
+    };
+    if (new Set(d.noise).size !== d.noise.length) fail('dropped.noise 有重复');
+    take(d.noise, 'dropped.noise');
+    for (const [cid, ids] of Object.entries(d.notSelected)) {
+      const at = `dropped.notSelected["${cid}"]`;
+      if (!/^\d+$/.test(cid)) fail(`${at}：簇编号必须是整数字符串（噪声组放 dropped.noise）`);
+      if (ds.clusters[cid]) fail(`${at}：${cid} 同时出现在 clusters 里`);
+      if (!isIntArray(ids) || !ids.length) fail(`${at}：必须是非空整数数组`);
+      if (new Set(ids).size !== ids.length) fail(`${at}：有重复`);
+      take(ids, at);
+    }
+  }
+
   if (!Array.isArray(ds.consumed)) fail('缺 consumed 数组（没消耗过写 []）');
   for (const [i, r] of ds.consumed.entries()) {
     if (!isObj(r) || typeof r.at !== 'string' || typeof r.by !== 'string') fail(`consumed[${i}] 缺 at 或 by`);
@@ -135,11 +169,18 @@ function clusterOf(ds, clusterId) {
  * `content` 一并返回：scorer 要验 `quote` 是正文子串，否则它得再读一遍文件。
  */
 export function loadClusterArticles(ds, clusterId) {
-  const c = clusterOf(ds, clusterId);
+  return loadArticlesByIds(ds, clusterOf(ds, clusterId).articleIds, `cluster ${clusterId}`);
+}
+
+/**
+ * 按编号载入若干篇（丢弃池里的文章也走这条，它们不属于任何收录簇）。
+ * `where` 只进报错信息，说清缺的正文是哪一批的。
+ */
+export function loadArticlesByIds(ds, ids, where = 'articles') {
   const dir = ds._paths.content;
   const articles = [];
   const missing = [];
-  for (const id of c.articleIds) {
+  for (const id of ids) {
     const p = `${dir}${id}.txt`;
     if (!existsSync(p)) { missing.push(id); continue; }
     const content = readFileSync(p, 'utf8');
@@ -155,7 +196,7 @@ export function loadClusterArticles(ds, clusterId) {
   }
   if (missing.length) {
     throw new Error(
-      `dataset ${ds.id} 的 cluster ${clusterId} 缺 ${missing.length} 篇正文` +
+      `dataset ${ds.id} 的 ${where} 缺 ${missing.length} 篇正文` +
         `（先跑 node fetch-dataset.mjs --dataset=${ds.id}）：${missing.slice(0, 10).join(',')}`
     );
   }
@@ -184,6 +225,47 @@ export function recordConsumption(id, { by, note = '', at, ...opts } = {}) {
   return ds.consumed;
 }
 
+/**
+ * 写入丢弃池。**只补不覆盖**：从磁盘重读清单，只写 `dropped`，
+ * `articles` 里只补清单还没有的编号 —— 已在库的元数据（人工标注挂在它上面）一个字都不碰。
+ * 写回前跑一遍 validateManifest，坏清单绝不落盘。
+ *
+ *   noise        聚类噪声组（clusterId = -1）的文章编号
+ *   notSelected  { "<clusterId>": [articleId...] }，成簇但没进 selection 的簇
+ *   articles     这批文章的元数据 { "<articleId>": {title,url,publishDate,sourceId} }
+ */
+export function recordDropped(id, { noise = [], notSelected = {}, articles = {}, ...opts } = {}) {
+  const manifest = `${datasetDir(opts)}${id}.json`;
+  const ds = JSON.parse(readFileSync(manifest, 'utf8'));
+
+  ds.articles = ds.articles ?? {};
+  let added = 0;
+  for (const [aid, meta] of Object.entries(articles)) {
+    if (ds.articles[aid]) continue; // 已有的不动
+    ds.articles[aid] = meta;
+    added++;
+  }
+  ds.dropped = {
+    noise: [...noise].sort((a, b) => a - b),
+    notSelected: Object.fromEntries(
+      Object.entries(notSelected)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([cid, ids]) => [cid, [...ids].sort((a, b) => a - b)])
+    ),
+  };
+
+  validateManifest(ds, id, manifest);
+  writeFileSync(manifest, `${JSON.stringify(ds, null, 2)}\n`);
+  return { added, dropped: ds.dropped };
+}
+
+/** 丢弃池里的全部文章编号（噪声 + 未选中的簇，去重后）。没有 dropped 就是空数组。 */
+export function droppedArticleIds(ds) {
+  const d = ds.dropped;
+  if (!d) return [];
+  return [...new Set([...d.noise, ...Object.values(d.notSelected).flat()])];
+}
+
 /** fetch-dataset.mjs 用：正文该落哪。其它模块不需要知道这个路径。 */
 export function contentDirOf(ds) {
   return ds._paths.content;
@@ -196,7 +278,8 @@ export function ensureContentDir(ds) {
   return dir;
 }
 
-/** 清单里全部文章编号（跨簇去重后）。 */
-export function datasetArticleIds(ds) {
-  return [...new Set(Object.values(ds.clusters).flatMap(c => c.articleIds))];
+/** 清单里全部文章编号（跨簇去重后）。`includeDropped` 时把丢弃池也算上。 */
+export function datasetArticleIds(ds, { includeDropped = false } = {}) {
+  const selected = Object.values(ds.clusters).flatMap(c => c.articleIds);
+  return [...new Set(includeDropped ? [...selected, ...droppedArticleIds(ds)] : selected)];
 }

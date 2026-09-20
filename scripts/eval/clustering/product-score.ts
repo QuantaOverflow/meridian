@@ -1,7 +1,7 @@
 /**
  * 产品口径打分器。零 LLM、零网络、纯确定性。
  *
- *   tsx product-score.ts --window=F1 [--strict] [--topic] <labels.json ...>
+ *   tsx product-score.ts --window=F1 [--strict] [--topic] [--no-dist] [--worst=8] <labels.json ...>
  *
  * ## 为什么另起一把尺（2026-09-05）
  *
@@ -29,9 +29,27 @@
  *   跨簇数     交付事件的成员散在几个簇，宏平均              （不跨簇）
  *   完整率     交付事件的最大一块占该事件的比例，宏平均       （不跨簇的强度）
  *   进簇率     落进 ≥2 簇的文章占全库比例                    （防「难的全扔噪声」刷分）
+ *
+ * ## 为什么表格之后还要打一段分布（2026-09-20）
+ *
+ * 上面七个数全是均值/比例，**均值会把尾巴摊平**。实测 F2 `--min=3`：完整率均值 0.918
+ * 看着没问题，可 57 个交付事件里 40 个是 1.0（毫发无损），剩下 17 个被削掉两到五成材料
+ * （最差的「美国全球暂停移民签证面谈」10 篇只进 5 篇、「Dolly Parton 逝世」12 篇只进 6 篇）。
+ * ADR 0003 当年拍板时只看到 0.918 这一个数，判断不出尾巴有没有问题。
+ *
+ * 结论不是加新指标，而是**让打分器自己把分布打出来**，不依赖有人记得去查 —— 所以
+ * 分桶计数 + p10 + 最差 N 个事件默认就打，`--no-dist` 才关掉。
  */
 import { readFileSync } from 'node:fs';
 import { loadFull, referencePartition } from './full-score.js';
+
+/** 单个交付事件的完整率明细。只喂分布段，不进表格。 */
+interface Whole {
+  事件: string; // 金标 jsonl 的 event 字段（ref label 去掉 `E:` / `T:` 前缀就是它）
+  总篇数: number; // 当前口径下该事件的篇数（宽松 = members + related）
+  最大块: number; // 落进同一个簇的最多篇数
+  完整率: number; // 最大块 / 总篇数
+}
 
 interface Row {
   name: string;
@@ -42,6 +60,7 @@ interface Row {
   题材袋率: number;
   跨簇数: number;
   完整率: number;
+  明细: Whole[];
 }
 
 function scoreOne(
@@ -96,7 +115,8 @@ function scoreOne(
   let delivered = 0;
   let spreadSum = 0;
   let wholeSum = 0;
-  for (const [, ids] of targets) {
+  const 明细: Whole[] = [];
+  for (const [g, ids] of targets) {
     const spread = new Map<number, number>();
     for (const id of ids) {
       const c = inCluster.get(id);
@@ -109,6 +129,7 @@ function scoreOne(
     delivered++;
     spreadSum += [...spread.values()].filter(n => n >= 1).length;
     wholeSum += top / ids.length;
+    明细.push({ 事件: g.slice(g.indexOf(':') + 1), 总篇数: ids.length, 最大块: top, 完整率: top / ids.length });
   }
 
   const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -121,6 +142,7 @@ function scoreOne(
     题材袋率: r3(pocket / Math.max(1, clusters.length)),
     跨簇数: r3(spreadSum / Math.max(1, delivered)),
     完整率: r3(wholeSum / Math.max(1, delivered)),
+    明细,
   };
 }
 
@@ -129,6 +151,9 @@ const win = (argv.find(a => a.startsWith('--window=')) ?? '--window=F1').split('
 const strict = argv.includes('--strict');
 const minSize = Number((argv.find(a => a.startsWith('--min=')) ?? '--min=2').split('=')[1]);
 const topic = argv.includes('--topic');
+// 分布段默认打开（`--dist` 只是显式写出来的同义词），要关得显式传 `--no-dist`
+const dist = !argv.includes('--no-dist');
+const worstN = Number((argv.find(a => a.startsWith('--worst=')) ?? '--worst=8').split('=')[1]);
 const files = argv.filter(a => !a.startsWith('--'));
 
 const gold = loadFull(win);
@@ -176,4 +201,53 @@ for (const r of rows) {
       pad(r.跨簇数.toFixed(2), 9) +
       r.完整率.toFixed(3)
   );
+}
+
+// ── 完整率分布（默认打开，`--no-dist` 关）──────────────────────────────
+//
+// 表里的完整率是宏平均，尾巴被摊平；这里把同一批交付事件按桶铺开，再点名最差的几个。
+// 分桶是左闭右开（1.0 单独一桶），所以五个桶的计数加起来正好等于交付事件数。
+if (dist) {
+  const width = (s: string) => [...s].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 2 : 1), 0);
+  const clip = (s: string, n: number) => {
+    let out = '';
+    for (const c of s) {
+      if (width(out) + width(c) > n) return out + '…';
+      out += c;
+    }
+    return out;
+  };
+  // 线性插值分位数（同 numpy 默认口径）：只有 1 个样本时退化成那个样本本身
+  const quantile = (xs: number[], p: number) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const i = (s.length - 1) * p;
+    const lo = Math.floor(i);
+    const hi = Math.ceil(i);
+    return s[lo] + (s[hi] - s[lo]) * (i - lo);
+  };
+  const buckets: Array<[string, (x: number) => boolean]> = [
+    ['1.0', x => x >= 1],
+    ['0.8-1.0', x => x >= 0.8 && x < 1],
+    ['0.6-0.8', x => x >= 0.6 && x < 0.8],
+    ['0.4-0.6', x => x >= 0.4 && x < 0.6],
+    ['<0.4', x => x < 0.4],
+  ];
+
+  for (const r of rows) {
+    const vs = r.明细.map(d => d.完整率);
+    console.log(`\n【完整率分布 · ${r.name}】交付事件 ${vs.length} 个` + (vs.length ? `；p10 = ${quantile(vs, 0.1).toFixed(3)}` : ''));
+    for (const [label, hit] of buckets) {
+      const n = vs.filter(hit).length;
+      console.log('  ' + pad(label, 10) + String(n).padStart(4) + '  ' + '█'.repeat(n));
+    }
+    if (!r.明细.length) continue;
+    const worst = [...r.明细].sort((a, b) => a.完整率 - b.完整率 || b.总篇数 - a.总篇数).slice(0, worstN);
+    console.log(`  完整率最差 ${worst.length} 个事件：`);
+    console.log('  ' + pad('完整率', 9) + pad('总篇数', 9) + pad('最大块', 9) + '事件');
+    for (const d of worst) {
+      console.log(
+        '  ' + pad(d.完整率.toFixed(2), 9) + pad(String(d.总篇数), 9) + pad(String(d.最大块), 9) + clip(d.事件, 34)
+      );
+    }
+  }
 }

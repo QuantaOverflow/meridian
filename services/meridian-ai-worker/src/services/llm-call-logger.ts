@@ -30,6 +30,9 @@ export type LLMCallPhase =
   // 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧。抽取、去重、各方三种调用共用这个
   // phase（callIndex 区分 R2 key）；与写作层的 brief_generation 分开，免得观测记录互相覆盖。
   | 'report_v3'
+  // 简报块 v6：一个簇的原文 → 窗口标重点 + 一次写作。与 report_v3 / brief_generation 分开，
+  // 理由同上——共用 phase 会让三条链路的 R2 观测记录互相覆盖。
+  | 'brief_block_v6'
   | 'other'
 
 export interface TraceContext {

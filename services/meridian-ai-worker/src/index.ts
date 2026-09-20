@@ -14,6 +14,7 @@ import {
 import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
 import { BriefWriterV3Service } from './services/brief-writer-v3'
 import { ReportV3Service } from './services/report-v3'
+import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
@@ -918,6 +919,33 @@ app.post('/meridian/report-v3', async (c) => {
   } catch (error: any) {
     console.error('Report v3 error:', error)
     return c.json<APIResponse<null>>({ success: false, error: `Failed to build report v3: ${error?.message ?? String(error)}` }, 500)
+  }
+})
+
+// 简报块 v6：一个簇的原文 → 一块 3–5 句的高管简报（services/brief-block-v6.ts）。
+// 请求体与 /meridian/report-v3 逐字同构，backend 可复用同一份文章材料。旧端点一个不动。
+app.post('/meridian/brief-block-v6', async (c) => {
+  try {
+    const body = await c.req.json()
+    const articles = Array.isArray(body?.articles) ? body.articles : null
+    if (!articles || !articles.length) {
+      return c.json<APIResponse<null>>({ success: false, error: 'articles must be a non-empty array' }, 400)
+    }
+    const bad = articles.findIndex(
+      (a: any) => !Number.isInteger(a?.id) || typeof a?.title !== 'string' || typeof a?.content !== 'string' || !a.content.trim()
+    )
+    if (bad >= 0) {
+      return c.json<APIResponse<null>>({ success: false, error: `articles[${bad}] needs {id:int, title:string, content:non-empty string}` }, 400)
+    }
+    const service = new BriefBlockV6Service(c.env, readTraceContext(c.req.raw))
+    const data = await service.generate(
+      { title: typeof body?.title === 'string' ? body.title : '', articles },
+      body?.skipCache === true
+    )
+    return c.json<APIResponse<typeof data>>({ success: true, data })
+  } catch (error: any) {
+    console.error('Brief block v6 error:', error)
+    return c.json<APIResponse<null>>({ success: false, error: `Failed to build brief block v6: ${error?.message ?? String(error)}` }, 500)
   }
 })
 

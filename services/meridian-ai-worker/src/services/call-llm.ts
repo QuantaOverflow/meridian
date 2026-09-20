@@ -68,6 +68,15 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 报告层 v3：抽取（每批 ≤20 句）、去重分组、各方与分歧三种调用。maxTokens 与 frequency_penalty
   // 沿用原型实测值（各方那次要读整簇原文、产出最长，故按最大的给，单次调用再按需覆盖）。
   report_v3: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.2 },
+  // 简报块 v6：窗口标重点 + 一次写作，两种调用共用这个 phase（callIndex 区分 R2 key）。
+  // maxTokens 8000 与 temperature 0.1 沿用原型实测值（原型 chatJson 的 max_tokens=8000）。
+  // **不设 frequency_penalty**：原型没有它，而 v6 与生产的那份对比读数（同 3 簇，写作层
+  // 缺陷 0/12 对 5/14）就是在没有它的配置下测出来的。移植时曾按本仓 glm-4.7-flash 的既有
+  // 防复读约定加到 0.4，c12 随即出现窗口 3 三次全被 anchorOk 拒（模型引窗口外 articleId 或
+  // 越界句号）、丢掉 4 篇材料，而原型同一输入 4 窗全过。是不是它导致的没有验，但这里的取舍
+  // 很清楚：实测过的配置优先于未实测的约定。复读由解析处的 detectRepetition 挡（见
+  // services/brief-block-v6.ts），那才是真正拦得住的那层。
+  brief_block_v6: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0, maxTokens: 6000, skipCache: false },
   other: { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 4000, skipCache: false },

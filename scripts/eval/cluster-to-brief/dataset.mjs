@@ -19,13 +19,17 @@
  * 没有它这份 dataset 从定义上就算不出漏报率 —— 漏报恰恰发生在被丢的那批里，
  * 只标收录的部分，标多少遍都量不到。语义与来源见 CONTRACTS.md §1。
  *
+ * 顶层 `split`（可选，2026-09-20 加）标这**整份**属于 dev / validation / test。
+ * 对齐 Inspect 的口径：split 是「载入哪一份数据集」，不是样本的属性。
+ * 簇级 `metadata.split` 是它之前的错误形状，已废弃（保留不删，见 datasetClusters）。
+ *
  * 目录可换（测试用，也方便另置一份数据）：
  *   CTB_DATASET_DIR=<dir>   清单目录，默认 ./datasets/
  *   CTB_DATA_ROOT=<dir>     正文根目录，默认 <CTB_WORKSPACE>out/_data/
  * 环境变量在每次调用时读，不在 import 时定死 —— 否则测试没法先 import 再换目录。
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { splitSentences, OUT_ROOT } from './lib.mjs';
+import { splitSentences, OUT_ROOT, loadCluster } from './lib.mjs';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
@@ -42,6 +46,16 @@ function dataRoot(opts = {}) {
 
 const isObj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const isIntArray = x => Array.isArray(x) && x.every(v => Number.isInteger(v));
+
+/**
+ * 清单写回的缩进，必须与生成方（build-checklist.mjs / fetch-dataset.mjs 一律 `null, 1`）一致。
+ * 不一致的代价不是难看：第一次记消耗就把整份清单重排版，`git diff` 炸成几千行，
+ * 真正改了的那一行（consumed 追加）淹在里面，review 时看不出来。
+ */
+const INDENT = 1;
+
+/** 顶层 split 的取值（Inspect 的口径：split 是「载入哪一份数据集」，整份一个值）。 */
+const SPLITS = ['dev', 'validation', 'test'];
 
 // ── 清单校验 ────────────────────────────────────────────────────────────
 /**
@@ -62,6 +76,13 @@ export function validateManifest(ds, expectedId, where = 'inline') {
   if (!Array.isArray(ds.days) || !ds.days.length) fail('缺 days');
   for (const d of ds.days) if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d))) fail(`days 里 ${d} 不是 YYYY-MM-DD`);
   if (typeof ds.selection !== 'string' || !ds.selection) fail('缺 selection');
+
+  // 顶层 split（可选，2026-09-20 加）：整份 dataset 属于哪一层，缺失合法（老清单向后兼容）。
+  // 存在就必须是三个值之一——拼错一个字母（"valid" / "Test"）不会让任何下游报错，
+  // 只会让「这份是不是 holdout」这个问题永远答错。
+  if (ds.split !== undefined && !SPLITS.includes(ds.split)) {
+    fail(`split 只能是 ${SPLITS.join(' / ')}（缺这个键也合法），收到 ${JSON.stringify(ds.split)}`);
+  }
 
   if (!isObj(ds.articles)) fail('缺 articles 映射');
   if (!isObj(ds.clusters) || !Object.keys(ds.clusters).length) fail('clusters 为空');
@@ -148,7 +169,13 @@ export function loadDataset(id, opts = {}) {
   return attachPaths(raw, manifest, `${dataRoot(opts)}${id}/content/`);
 }
 
-/** 簇编号列表（整数、升序）。`split` 按 metadata.split 过滤；不传就是全部。 */
+/**
+ * 簇编号列表（整数、升序）。`split` 按 **簇级** `metadata.split` 过滤；不传就是全部。
+ *
+ * 簇级 `metadata.split` 已废弃（2026-09-20）：分层是整份 dataset 的属性（顶层 `split`），
+ * 不是某个簇的。这个参数只为老清单（`fixtures-r94` / `prod-0919`）的既有调用方留着，
+ * 行为一个字不改；**新 dataset 不再写 `metadata.split`，新代码不要依赖它**。
+ */
 export function datasetClusters(ds, { split } = {}) {
   return Object.entries(ds.clusters)
     .filter(([, c]) => split === undefined || c.metadata.split === split)
@@ -205,10 +232,84 @@ export function loadArticlesByIds(ds, ids, where = 'articles') {
   return articles;
 }
 
+/**
+ * 臂（`arms/*`）的统一簇载入入口：`ds` 是 loadDataset 的返回就走 dataset 层，
+ * 传 null/undefined 就回退到 lib.mjs 的 `loadCluster`（老的 fixtures/ 路径）。
+ *
+ * 放在这里而不是某个臂里：`--dataset` 要接的不止一个臂，抹平逻辑长在哪个臂里，
+ * 下一个臂就得再抄一份，两份迟早对不齐。lib.mjs 不能放（它被本文件 import，反过来就成循环）。
+ *
+ * 两条路返回的形状必须**逐字一致**：
+ *   `{ clusterId, articles: [{ id, title, url, publishDate, sourceId, content, sentences }] }`
+ * 下游 `sentenceOf` / 窗口切分 / 出处核对全靠 `sentences` 的编号，形状分叉不会报错、只会让读数悄悄错。
+ * 唯一要补的是 `url`：loadClusterArticles 不回它（它在清单的 articles 映射里）。
+ */
+export function loadClusterFrom(ds, clusterId) {
+  if (!ds) return loadCluster(clusterId);
+  const articles = loadClusterArticles(ds, clusterId).map(a => ({
+    id: a.id,
+    title: a.title,
+    url: ds.articles[String(a.id)]?.url ?? '',
+    publishDate: a.publishDate,
+    sourceId: a.sourceId,
+    content: a.content,
+    sentences: a.sentences,
+  }));
+  return { clusterId: Number(clusterId), articles };
+}
+
 /** 判定用的 target。返回副本，免得调用方改了标注还自以为读的是清单。 */
 export function labelsOf(ds, clusterId) {
   const { labels } = clusterOf(ds, clusterId);
   return { impurities: [...labels.impurities], eventGroups: { ...labels.eventGroups } };
+}
+
+// ── sample 视图 ─────────────────────────────────────────────────────────
+/**
+ * 把一份 dataset 切成若干 sample。
+ *
+ * **sample 是视图，不是数据本身**：同一份 dataset 里「一个簇」和「一天的全部文章」都可以是
+ * 一个 sample，取决于要判什么。所以切分不落盘、不进清单，按需实例化——
+ * 清单里只有成员与标注，换一种判法换一个视图，数据一个字不用改。
+ *
+ * 与 `datasetClusters` 的关系：`datasetClusters` 只回簇编号，调用方还得自己再去取标注与元数据，
+ * 于是「一个 sample 是什么」散在每个臂里各写一遍。`sampleView` 是它的上层，把
+ * 编号 + input + target + metadata 一次给全。**后续新臂走 `sampleView`**；
+ * `datasetClusters` 留给已有调用方（含它的 `split` 过滤），不动。
+ *
+ * `input` 只给 articleIds，**不在这里读正文**：视图只管切分，正文由 `loadClusterArticles` /
+ * `loadClusterFrom` 按需读。把 665 篇正文塞进视图，只为拿一个簇编号列表也要全读一遍。
+ *
+ * @param {object} ds       loadDataset 的返回
+ * @param {object} [o]
+ * @param {'cluster'|'day'} [o.view='cluster']  切分粒度
+ * @param {{clusters?: number[], limit?: number}} [o.scope]  范围；不传 = 全部
+ * @returns {Array<{id: string, input: object, target: object, metadata: object}>}
+ */
+export function sampleView(ds, { view = 'cluster', scope } = {}) {
+  if (view === 'day') {
+    throw new Error(
+      'sampleView: view="day" 还没实现（留桩）。整天一个 sample，它的 target 是**当天的全局事件清单**，' +
+        '而这份清单怎么造还没验过精度——照现在的造法做出来的 target 本身就不可信，' +
+        '拿它判出来的读数只会把错误算成系统的。见 ADR 0003 已证伪清单第 6 条。'
+    );
+  }
+  if (view !== 'cluster') throw new Error(`sampleView: 不认识的 view "${view}"（现有 cluster，day 留桩）`);
+
+  let ids = scope?.clusters ? scope.clusters.map(Number) : datasetClusters(ds);
+  if (scope?.limit !== undefined) {
+    if (!Number.isInteger(scope.limit) || scope.limit < 0) throw new Error('sampleView: scope.limit 必须是非负整数');
+    ids = ids.slice(0, scope.limit);
+  }
+  return ids.map(cid => {
+    const c = clusterOf(ds, cid); // 点名了不存在的簇就当场炸：抄错簇号不该静默少一个样本
+    return {
+      id: `c${cid}`,
+      input: { clusterId: Number(cid), articleIds: [...c.articleIds] },
+      target: labelsOf(ds, cid),
+      metadata: { ...c.metadata },
+    };
+  });
 }
 
 /**
@@ -221,7 +322,7 @@ export function recordConsumption(id, { by, note = '', at, ...opts } = {}) {
   const ds = JSON.parse(readFileSync(manifest, 'utf8'));
   const history = Array.isArray(ds.consumed) ? ds.consumed : [];
   ds.consumed = [...history, { at: at ?? new Date().toISOString().slice(0, 10), by, note }];
-  writeFileSync(manifest, `${JSON.stringify(ds, null, 2)}\n`);
+  writeFileSync(manifest, `${JSON.stringify(ds, null, INDENT)}\n`);
   return ds.consumed;
 }
 
@@ -255,7 +356,7 @@ export function recordDropped(id, { noise = [], notSelected = {}, articles = {},
   };
 
   validateManifest(ds, id, manifest);
-  writeFileSync(manifest, `${JSON.stringify(ds, null, 2)}\n`);
+  writeFileSync(manifest, `${JSON.stringify(ds, null, INDENT)}\n`);
   return { added, dropped: ds.dropped };
 }
 

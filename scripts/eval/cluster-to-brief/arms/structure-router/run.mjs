@@ -3,34 +3,16 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadCluster } from '../../lib.mjs';
 import { askJSON, cos, embed, setCallsPath } from '../../slow-lib.mjs';
-import { OUT_ROOT } from '../../lib.mjs';
+import { runArm } from '../../runner.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
-const OUT = `${OUT_ROOT}structure-router`;
-const CACHE = `${OUT}/cache`;
-mkdirSync(CACHE, { recursive: true });
-setCallsPath(`${OUT}/calls.jsonl`);
 
-const args = Object.fromEntries(process.argv.slice(2).map(x => {
-  const m = /^--([^=]+)=?(.*)$/.exec(x);
-  return m ? [m[1], m[2] === '' ? true : m[2]] : [x, true];
-}));
-const DEV = [7, 1, 36, 37, 43];
-const selfTest = Boolean(args['self-test']);
-const resume = Boolean(args.resume);
-const targets = selfTest ? [] : args.cluster ? [Number(args.cluster)] : String(args.split ?? 'dev') === 'dev' ? DEV : [];
-// dev-only 闸:防止 heldout(28/51)被随手消耗。**heldout 是一次性资源** ——
-// 跑过之后它对本臂就不再是「未见过的数据」,再看结果回去调就等于过拟合。
-// 要跑 heldout 必须显式声明 ALLOW_HELDOUT=1,让这个动作在命令行里留痕。
-const ALLOW_HELDOUT = process.env.ALLOW_HELDOUT === '1';
-if (!selfTest && (!targets.length || (!ALLOW_HELDOUT && targets.some(x => !DEV.includes(x))))) {
-  throw new Error('This prototype is dev-only. Use --cluster=7|1|36|37|43 or --split=dev. 要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。');
-}
-if (ALLOW_HELDOUT && targets.some(x => !DEV.includes(x))) {
-  console.error(`⚠️ 正在消耗 heldout: ${targets.filter(x => !DEV.includes(x)).map(c => 'c' + c).join(',')} —— 跑完这些簇对本臂不再是未见过的数据`);
-}
+/** 产物布局：根目录由 runner 给，根目录下怎么摆（signature 缓存、calls）是本臂的事。 */
+const pathsOf = base => ({ out: base, cache: `${base}/cache` });
+
+// --self-test 只跑纯函数自测,不碰任何簇、不发任何请求,所以它在 runner 之外自己判。
+const selfTest = process.argv.slice(2).includes('--self-test');
 
 const BATCH_SIZE = Number(process.env.ROUTER_BATCH_SIZE ?? 18);
 const MERGE_THRESHOLD = Number(process.env.ROUTER_MERGE_THRESHOLD ?? 0.87);
@@ -240,8 +222,18 @@ function validBlock(block, selected) {
     }));
 }
 
-async function runOne(cid) {
-  const cluster = loadCluster(cid);
+/**
+ * 跑一个 sample。`sample.input.cluster` 是 runner 载好的 `{ clusterId, articles }`；
+ * `options`：`{ plan, resume, outDir }`。本臂没有 --plan 这档（它没有「只切窗口不发请求」的中间态），
+ * 所以 options.plan 一律不看——与迁移前把 --plan 当未知参数忽略掉是同一个行为。
+ */
+export async function runSample(sample, options = {}) {
+  const cid = sample.input.clusterId;
+  const cluster = sample.input.cluster;
+  const { out: OUT, cache: CACHE } = pathsOf(options.outDir);
+  const resume = !!options.resume;
+  mkdirSync(CACHE, { recursive: true });
+  setCallsPath(`${OUT}/calls.jsonl`);
   console.log(`\n[c${cid}] batched structure · ${cluster.articles.length} articles · batch=${BATCH_SIZE} · resume=${resume}`);
   const signatures = await loadSignatureBatches(cid, cluster.articles, {
     batchSize: BATCH_SIZE, cacheDir: CACHE, resume,
@@ -321,8 +313,22 @@ async function runSelfTest() {
   console.log('structure-router self-test: ok');
 }
 
+export const meta = {
+  name: 'structure-router',
+  consumerId: () => 'structure-router',
+  // 本臂的 dev 闸文案与范围写法与 direct-raw 历史上不同（它认 --split=dev，报错是英文那句），
+  // 机制在 runner，这里只声明这两处差异——搬迁不改一个字。
+  fixtures: {
+    ids: (args, dev) => (String(args.split ?? 'dev') === 'dev' ? dev : []),
+    devOnlyError: () =>
+      'This prototype is dev-only. Use --cluster=7|1|36|37|43 or --split=dev. 要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。',
+    heldoutWarn: offDev =>
+      `⚠️ 正在消耗 heldout: ${offDev.map(c => 'c' + c).join(',')} —— 跑完这些簇对本臂不再是未见过的数据`,
+  },
+};
+
 if (selfTest) await runSelfTest();
 else {
-  for (const cid of targets) await runOne(cid);
-  console.log(`\nDone: ${targets.map(x => `c${x}`).join(', ')} -> ${OUT}`);
+  const { ids, outDir } = await runArm({ meta, runSample });
+  console.log(`\nDone: ${ids.map(x => `c${x}`).join(', ')} -> ${pathsOf(outDir).out}`);
 }

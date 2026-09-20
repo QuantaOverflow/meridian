@@ -26,6 +26,7 @@ const {
   recordDropped,
   droppedArticleIds,
   datasetArticleIds,
+  sampleView,
 } = await import('./dataset.mjs');
 
 const write = (id, obj) => writeFileSync(`${DS_DIR}${id}.json`, `${JSON.stringify(obj, null, 2)}\n`);
@@ -92,6 +93,10 @@ rejects(ds => {
   ds.dropped = { noise: [], notSelected: { 10: [301] } };
 }, /同时出现在 clusters 里/);
 rejects(ds => { ds.dropped = { noise: [], notSelected: { '-1': [301] } }; }, /簇编号必须是整数字符串/);
+// 顶层 split 拼错一个字母不会让任何下游报错,只会让「这份是不是 holdout」永远答错
+rejects(ds => { ds.split = 'bogus'; }, /split 只能是/);
+rejects(ds => { ds.split = 'Test'; }, /split 只能是/);
+rejects(ds => { ds.split = null; }, /split 只能是/);
 // id 与文件名不一致 = 悄悄用错数据集
 rejects(ds => { ds.id = 'other'; }, /id 与文件名不一致/);
 writeFileSync(`${DS_DIR}broken.json`, '{not json');
@@ -103,6 +108,13 @@ const ds = loadDataset('synth');
 assert.deepEqual(datasetClusters(ds), [10, 11]);
 assert.deepEqual(datasetClusters(ds, { split: 'dev' }), [10]);
 assert.deepEqual(datasetClusters(ds, { split: 'heldout' }), [11]);
+// 顶层 split 两个方向:缺键合法(good() 就没写),写对了照常载入
+assert.equal(ds.split, undefined, '缺 split 的清单照常合法');
+const withSplit = good();
+withSplit.id = 'synth-split';
+withSplit.split = 'validation';
+write('synth-split', withSplit);
+assert.equal(loadDataset('synth-split').split, 'validation');
 
 // ── 缺正文:报错必须点名重建命令,否则调用方不知道下一步做什么 ──────────
 assert.throws(() => loadClusterArticles(ds, 10), /fetch-dataset\.mjs --dataset=synth/);
@@ -133,6 +145,28 @@ assert.deepEqual(labelsOf(ds, 11), { impurities: [], eventGroups: {} });
 labels.impurities.push(999);
 assert.deepEqual(labelsOf(ds, 10).impurities, [103], 'labelsOf 必须返回副本');
 
+// ── sample 视图 ────────────────────────────────────────────────────────
+const samples = sampleView(ds);
+assert.deepEqual(samples.map(s => s.id), ['c10', 'c11'], '默认 cluster 粒度,每簇一个 sample');
+assert.deepEqual(samples[0].input, { clusterId: 10, articleIds: [101, 102, 103] });
+assert.deepEqual(samples[0].target, { impurities: [103], eventGroups: { 'Two boats collided': [101, 102] } });
+assert.equal(samples[0].metadata.routerStructure, 'topic_bag');
+assert.equal('content' in samples[0].input, false, 'input 只给编号,正文按需读');
+// scope:显式列表与 limit
+assert.deepEqual(sampleView(ds, { scope: { clusters: [11] } }).map(s => s.id), ['c11']);
+assert.deepEqual(sampleView(ds, { scope: { clusters: [11] } })[0].input.articleIds, [201]);
+assert.deepEqual(sampleView(ds, { scope: { limit: 1 } }).map(s => s.id), ['c10']);
+assert.deepEqual(sampleView(ds, { scope: { limit: 0 } }), []);
+// 抄错簇号不该静默少一个样本
+assert.throws(() => sampleView(ds, { scope: { clusters: [999] } }), /没有 cluster 999/);
+// target 是副本:调用方改了不该回写清单
+sampleView(ds)[0].target.impurities.push(999);
+assert.deepEqual(labelsOf(ds, 10).impurities, [103], 'sampleView 的 target 必须是副本');
+// day 粒度留桩:它的 target(全局事件清单)造法还没验过精度
+assert.throws(() => sampleView(ds, { view: 'day' }), /还没实现/);
+assert.throws(() => sampleView(ds, { view: 'day' }), /ADR 0003/);
+assert.throws(() => sampleView(ds, { view: 'week' }), /不认识的 view/);
+
 // ── 消耗记录:只增不改 ──────────────────────────────────────────────────
 recordConsumption('synth', { by: 'arm-a', note: '快档', at: '2026-01-04' });
 recordConsumption('synth', { by: 'arm-b', at: '2026-01-05' });
@@ -148,6 +182,22 @@ for (const k of ['id', 'source', 'days', 'clusterSnapshot', 'selection', 'cluste
 assert.throws(() => recordConsumption('synth', {}), /必须写明 by/);
 // 写回的清单仍然合法
 assert.equal(loadDataset('synth').consumed.length, 3);
+
+// 缩进:写回必须与生成方(一律 `null, 1`)一致。不一致的话第一次记消耗就整份重排版,
+// git diff 炸成几千行、真正改的那一行淹在里面 —— 逐行比一遍,变化只许出现在 consumed 上。
+const canon = good();
+canon.id = 'synth-indent';
+writeFileSync(`${DS_DIR}synth-indent.json`, `${JSON.stringify(canon, null, 1)}\n`);
+const beforeLines = readFileSync(`${DS_DIR}synth-indent.json`, 'utf8').split('\n');
+recordConsumption('synth-indent', { by: 'arm-c', at: '2026-01-06' });
+const afterLines = readFileSync(`${DS_DIR}synth-indent.json`, 'utf8').split('\n');
+const changed = [
+  ...beforeLines.filter(l => !afterLines.includes(l)),
+  ...afterLines.filter(l => !beforeLines.includes(l)),
+];
+assert.deepEqual(changed.filter(l => !/"(at|by|note)"|^\s*[{}],?$/.test(l)), [],
+  `记一次消耗不该动 consumed 以外的行,实际动了: ${JSON.stringify(changed.slice(0, 5))}`);
+assert.equal(afterLines.length - beforeLines.length, 5, 'consumed 追加一条 = 多 5 行(一个对象三个字段)');
 
 // ── 丢弃池:可缺键(向后兼容),写入只补不覆盖 ────────────────────────────
 const base0 = good();

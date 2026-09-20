@@ -5,7 +5,8 @@
  * model is only allowed to select candidate ids and group them into blocks; assembly is exact.
  */
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
-import { loadCluster, sentenceOf, numbersIn, quotesIn, normQuote, OUT_ROOT } from '../../lib.mjs';
+import { sentenceOf, numbersIn, quotesIn, normQuote, OUT_ROOT } from '../../lib.mjs';
+import { runArm } from '../../runner.mjs';
 import { filterGrounded } from './local-grounding.mjs';
 
 const HERE = new URL('.', import.meta.url).pathname;
@@ -75,11 +76,19 @@ const WRITE_LEN = WRITE_TIER === 'exec'
   involved said.` }
   : { max: 8, sources: 4, text: `About 4–7 sentences in a single paragraph, roughly 600–1,000 characters. Open with the most
   important development, then the key details, then what the people involved said.` };
-const SHARED = `${OUT_ROOT}direct-raw`;
-const CANDIDATE_OUT = `${OUT_ROOT}direct-raw${ROUTE_GATE ? '-routed' : ''}${STORYLINE_FILTER ? '-storyline' : ''}${GROUNDED ? '-grounded' : ''}`;
-const WRITE_OUT = `${CANDIDATE_OUT}-write`;
-const ANCHOR_CACHE = `${WRITE_OUT}${ANCHOR_SOURCES === 4 ? '' : `-a${ANCHOR_SOURCES}`}${RUN}`;
-const OUT = WRITE_AT_END ? `${WRITE_OUT}${WRITE_TIER === 'more' ? '' : `-${WRITE_TIER}`}${WRITE_SUPPORT ? '-support' : ''}${REPAIR_FULL ? '-repair' : WRITE_REPAIR ? '-mech' : ''}${!REPAIR_FULL && MUST_SLACK ? `-slack${MUST_SLACK}` : ''}${RUN}` : `${CANDIDATE_OUT}${SINGLE_BLOCK ? '-single' : ''}`;
+/**
+ * 产物布局：**根目录由 runner 给**（它知道这轮的数据来自哪里），根目录下怎么分支是本臂的事——
+ * 开关组合决定 candidate/write/anchor 各落哪一层。原来这些是模块级常量，算得出它们的
+ * 那个后缀却来自 argv，于是臂里躺着一行数据来源的解析。
+ */
+function pathsOf(base) {
+  const candidateOut = `${base}${ROUTE_GATE ? '-routed' : ''}${STORYLINE_FILTER ? '-storyline' : ''}${GROUNDED ? '-grounded' : ''}`;
+  const writeOut = `${candidateOut}-write`;
+  const anchorCache = `${writeOut}${ANCHOR_SOURCES === 4 ? '' : `-a${ANCHOR_SOURCES}`}${RUN}`;
+  const out = WRITE_AT_END ? `${writeOut}${WRITE_TIER === 'more' ? '' : `-${WRITE_TIER}`}${WRITE_SUPPORT ? '-support' : ''}${REPAIR_FULL ? '-repair' : WRITE_REPAIR ? '-mech' : ''}${!REPAIR_FULL && MUST_SLACK ? `-slack${MUST_SLACK}` : ''}${RUN}` : `${candidateOut}${SINGLE_BLOCK ? '-single' : ''}`;
+  // shared：不筛文章时的窗口缓存位置，就是根目录本身（不带任何开关后缀，所以两个臂共用）
+  return { shared: base, candidateOut, writeOut, anchorCache, out };
+}
 // 出处标签 [articleId:sentence] 不许出现在成稿里（快档 verify.mjs 同一条判据）
 const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
 // 模型常把引用标签写进句尾（实测 c28 五句全带 [986133:3, 1006787:2]），标签对读者无意义、出处已在 sources。
@@ -90,14 +99,6 @@ const MODEL = process.env.DIRECT_RAW_MODEL ?? '@cf/zai-org/glm-4.7-flash';
 const WINDOW_CHARS = Number(process.env.DIRECT_RAW_WINDOW_CHARS ?? 30_000);
 const OVERLAP_ARTICLES = Number(process.env.DIRECT_RAW_OVERLAP_ARTICLES ?? 1);
 const CONCURRENCY = Number(process.env.DIRECT_RAW_CONCURRENCY ?? 2);
-const DEV = [7, 1, 36, 37, 43];
-
-function argsOf(argv) {
-  return Object.fromEntries(argv.map(x => {
-    const m = /^--([^=]+)=?(.*)$/.exec(x);
-    return m ? [m[1], m[2] === '' ? true : m[2]] : [x, true];
-  }));
-}
 
 export function rawArticle(a) {
   const lines = a.sentences.map((s, i) => `[${a.id}:${i + 1}] ${s}`).join('\n');
@@ -553,9 +554,16 @@ function selectionOk(x, candidateIds) {
   return true;
 }
 
-async function runCluster(clusterId, options = {}) {
+/**
+ * 跑一个 sample。`sample.input.cluster` 是 runner 已经载好的 `{ clusterId, articles }`——
+ * 本臂不碰任何加载函数，也就不需要知道这批文章从哪来。
+ * `options`：`{ plan, resume, outDir }`，outDir 是 runner 定的产物根目录。
+ */
+export async function runSample(sample, options = {}) {
   const t0 = Date.now();
-  const cluster = loadCluster(clusterId);
+  const clusterId = sample.input.clusterId;
+  const cluster = sample.input.cluster;
+  const { shared: SHARED, candidateOut: CANDIDATE_OUT, anchorCache: ANCHOR_CACHE, out: OUT } = pathsOf(options.outDir);
   let storylineDropped = 0;
   if (STORYLINE_FILTER) {
     const sp = `${OUT_ROOT}structure-router/structure-c${clusterId}.json`;
@@ -663,17 +671,24 @@ async function runCluster(clusterId, options = {}) {
   console.log(`c${clusterId}: ${output.verdict}, ${output.blocks.length} blocks, ${elapsed}s`);
 }
 
+export const meta = {
+  name: 'direct-raw',
+  /** consumed 的 by：臂名 + 影响读数的开关。光看这一行就知道这份数据是被哪一版臂用掉的。 */
+  consumerId() {
+    const flags = [
+      GROUNDED && 'grounded', ROUTE_GATE && 'routed', STORYLINE_FILTER && 'storyline',
+      SINGLE_BLOCK && 'single', WRITE_AT_END && 'write', WRITE_TIER !== 'more' && WRITE_TIER,
+      WRITE_SUPPORT && 'support', REPAIR_FULL ? 'repair' : WRITE_REPAIR && 'mech',
+      !REPAIR_FULL && MUST_SLACK && `slack${MUST_SLACK}`, RUN && RUN.slice(1),
+    ].filter(Boolean);
+    return [meta.name, ...flags].join('-');
+  },
+  /** 根目录 → 本轮成稿真正落的那一层。runner 只拿它打开跑横幅。 */
+  resolveOutDir: base => pathsOf(base).out,
+};
+
 async function main() {
-  const args = argsOf(process.argv.slice(2));
-  const targets = args.cluster ? [Number(args.cluster)] : DEV;
-  // heldout(28/51)是一次性资源:跑过之后对本臂不再是「未见过的数据」,再看结果回去调就是过拟合。
-  // 要跑必须显式 ALLOW_HELDOUT=1,让这个动作在命令行里留痕。
-  const offDev = targets.filter(c => !DEV.includes(c));
-  if (offDev.length && process.env.ALLOW_HELDOUT !== '1') {
-    throw new Error(`c${offDev.join(',')} 不在 dev 内。要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。`);
-  }
-  if (offDev.length) console.error(`⚠️ 正在消耗 heldout: ${offDev.map(c => 'c' + c).join(',')}`);
-  for (const cid of targets) await runCluster(cid, { plan: !!args.plan, resume: !!args.resume });
+  await runArm({ meta, runSample });
 }
 
 if (process.argv[1] && new URL(`file://${process.argv[1]}`).pathname === new URL(import.meta.url).pathname) {

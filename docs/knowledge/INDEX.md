@@ -2,7 +2,7 @@
 
 > 自动生成：修改 nodes/ 后运行 `pnpm -s knowledge`。
 
-实体 165 个 · 关系 234 条 · schema v2
+实体 167 个 · 关系 234 条 · schema v2
 
 开工前对照：相关尝试 → 实验与经验 → 可复用机制 → 本轮变化与新信息。局部通过不等于组合通过。
 
@@ -53,6 +53,10 @@
 - **经验与观察**：[抽取批大小 20→60：省 41–47% neurons，但召回真掉（−17%~−25%，满覆盖对照）](nodes/falsified-bigger-extraction-batch.md) · `live` · [强迫模型逐字摘抄五槽论元（SRL 抽取式）：glm-flash 95 个框架里 55 个把整句塞进谓词槽](nodes/falsified-five-slot-srl.md) · `live`
 - **决定**：[抽取 prompt 加一条更严的产出约束：整报告口径两次跑 −6.3% / +0.7%，等于没省（少写的字被约束文字吃回去），但质量不伤](nodes/decision-tighter-output-constraint.md) · `live`
 
+### 改聚类
+
+- **经验与观察**：[生产无金标几何漏报检测器已证伪：噪声池再凝聚查漏，精度仅 0.05–0.33，无可用操作点](nodes/lesson-noise-pool-leak-detection-falsified.md) · `recorded`
+
 ### 治事实关系错
 
 - **目标与约束**：[聚类后到简报：覆盖、安全与成本共同达标](nodes/goal-cluster-to-brief.md) · `active`
@@ -82,6 +86,10 @@
 - **经验与观察**：[无外部证据的自我修正会让质量下降（GSM8K 95.5%→91.5%）；自检必须挂到原文](nodes/falsified-intrinsic-self-correction.md) · `live` · [RARR 式「自动核对并改稿」默认开：78 条修改只落地 10 条，且核对依据是报告不是原文](nodes/falsified-rarr-default-on.md) · `live` · [验收单位该是 block 不是句；注入题的形状与自然错误分布对不上](nodes/lesson-acceptance-unit-block-not-sentence.md) · `recorded` · [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md) · `recorded` · [覆盖率当通过线会把写作推成事态清单,而读者要的是高管简报](nodes/lesson-coverage-metric-pushes-listing.md) · `recorded` · [dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信](nodes/lesson-dev-winner-fails-heldout.md) · `recorded` · [逐句接地的真机制是「引用标得准」，不是「写得对」——旧的硬错归因作废](nodes/lesson-grounding-is-citation-quality.md) · `recorded` · [按难度手挑的 7 簇只能加速迭代,比例不能外推到生产](nodes/lesson-handpicked-fixtures-dont-extrapolate.md) · `recorded` · [没与人工对齐的判官把缺陷数虚高 4 倍——混淆「出处挂错」与「编造」](nodes/lesson-judge-needs-alignment.md) · `recorded` · [同一版配置每次跑结果不同——单次运行的结论会把归因指向错的改动](nodes/lesson-run-variance-needs-epochs.md) · `recorded` · [scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质](nodes/lesson-scorer-steers-search.md) · `recorded` · [三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异](nodes/lesson-small-sample-flips.md) · `recorded` · [剥掉消息源没有任何一档在扣分——补一条守则后硬错立刻从全 0 变成能分辨臂](nodes/lesson-source-stripping-undetected.md) · `recorded` · [引用「正确」不等于生成「忠实」：实测高达 57% 的引用是事后合理化](nodes/measure-attribution-not-faithfulness.md) · `live` · [自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验](nodes/measure-auto-risk-question-drift.md) · `live` · [核心层 21 条双模型校核:6 条内容有错、15 条丢了口径分歧;sonnet 零误报但漏 2 条综合判断题](nodes/measure-checklist-core-audit.md) · `recorded` · [便宜模型上的事实错检测上限：代码 45–49% 召回、逐句判官 82%/42%、整簇判官 26%/68%](nodes/measure-detection-ceiling.md) · `live` · [相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界](nodes/measure-evidence-bundle-isolation.md) · `live` · [拿金标同预算对照，票数仍是最好的单一重要性信号；位置/标题/数字全都更差](nodes/measure-importance-signal-comparison.md) · `live` · [八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证](nodes/measure-specialist-risk-gate.md) · `live`
 - **可复用机制与方法**：[按支持篇数给事件清单分层,核心层作为覆盖门的判定范围](nodes/mechanism-checklist-tiering.md) · `candidate` · [写完由代码补出处:数字与引语不在所引原句里就去材料里找字面包含它的原句](nodes/mechanism-citation-repair.md) · `candidate` · [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md) · `candidate` · [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md) · `candidate` · [固定目标与验收尺，小原型看信号，按职责融合并持续回归，让架构受约束地演化](nodes/method-goal-guided-evolution.md) · `active` · [验收必须留一条会跟主读数打架的读数，否则会被单边指标骗过去](nodes/method-two-fighting-readings.md) · `active`
 - **决定**：[eval 按 dataset/solver/scorer/judge 四层定契约,借 Inspect 的概念但不引入框架](nodes/decision-eval-module-contracts.md) · `accepted` · [暂缓修复事件清单的分层可靠性:只修核心层内容,分层与完整性欠着](nodes/decision-hold-checklist-tiering.md) · `accepted` · [慢档 scorer 采用「评分方检索证据 + 引用质量单列 + 清单去杂质」，并加指纹闸](nodes/decision-scorer-retrieval-evidence.md) · `accepted`
+
+### 运维容器部署
+
+- **经验与观察**：[CF Container 部署的壳与镜像是两个产物：deployments list 只反映壳，判镜像要看 containers info 的 version 与 LAST MODIFIED](nodes/lesson-container-image-deploy-gap.md) · `recorded`
 
 ### 降低写作层成本
 
@@ -886,6 +894,11 @@
   - 失效条件：在多期、跨日期的自然简报上重测错误形状，且分布与本次不同
   - 适用范围内的警示 → [独立业务结构转换作为确定性核验接口](nodes/attempt-structured-verifier-interface.md)（scope: 其 60 条注入验收材料的形状与自然分布不符，测出的召回不可直接迁移）
   - 入边 `yields` ← [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md)
+- [CF Container 部署的壳与镜像是两个产物：deployments list 只反映壳，判镜像要看 containers info 的 version 与 LAST MODIFIED](nodes/lesson-container-image-deploy-gap.md) · `recorded` · `lesson-container-image-deploy-gap`
+  - 范围：meridian-ml-service（Python/FastAPI on CF Container）的一次真实部署故障复盘；仅本仓一例，未验证是否是 CF Container 平台的普遍行为
+  - 来源性质：local_record
+  - 条件：部署命令从 services/meridian-ml-service 子目录执行（符合 CLAUDE.md「永不从 root 部署」的约束），排除了「部署路径错」这个可能性；故障只在 docker.io 网络不通的环境触发；网络通畅的机器上同一份 Dockerfile 能正常 build，本条经验不代表 Dockerfile 本身有语法错误；发现窗口长达三个多月（2026-06-25 镜像构建到 2026-09-20 才发现未生效），中间没有任何一次部署检查过镜像版本
+  - 失效条件：Dockerfile 改用不依赖拉取 docker.io 的 syntax 声明方式（例如固定本地已缓存的 buildkit 前端，或部署流程里加一道镜像版本核对步骤后仍观察到同类故障——若那时依旧只看 deployments list 就判断“已生效”，本条经验才算被推翻）
 - [e5 余弦分不开「同一事件的两种措辞」与「同一话题的两件事」——归并阈值调不动](nodes/lesson-cosine-cannot-detect-duplicate-events.md) · `recorded` · `lesson-cosine-cannot-detect-duplicate-events`
   - 范围：本地 e5-small(384 维已归一化)对事件清单里的单句事件描述;未试别的向量模型、未试加数字/实体特征
   - 来源性质：local_record
@@ -932,6 +945,11 @@
   - 入边 `based_on` ← [eval 按 dataset/solver/scorer/judge 四层定契约,借 Inspect 的概念但不引入框架](nodes/decision-eval-module-contracts.md)
   - 入边 `yields` ← [真实一天不挑选的 25 簇上跑 v6：读者可见错 6.5%、出处挂错 22%、路由门拒掉 32%](nodes/experiment-prod-day-real-distribution.md)
   - 入边 `justified_by` ← [写完由代码补出处:数字与引语不在所引原句里就去材料里找字面包含它的原句](nodes/mechanism-citation-repair.md)
+- [生产无金标几何漏报检测器已证伪：噪声池再凝聚查漏，精度仅 0.05–0.33，无可用操作点](nodes/lesson-noise-pool-leak-detection-falsified.md) · `recorded` · `lesson-noise-pool-leak-detection-falsified`
+  - 范围：两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `scripts/eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）
+  - 来源性质：local_record
+  - 条件：口径必须写清 --min=3、宽松 members+related、两窗中哪一窗——这轮一开始误用 --min=2 复测，得到与 ADR 对不上的读数，一度误判「ADR 本身有错」，改回 --min=3 才对齐；后续任何人复用这条经验时必须先核对口径；进簇率只有 0.379(F1)/0.350(F2)，噪声池占约 65% 的文章；但其中 81% 是金标里本来就只有一篇报道的孤稿——真正被漏掉的多篇事件只占全库 4.9%(F1)/6.4%(F2)；按 ≥3 篇口径，F1 只有 3 个事件、F2 只有 4 个事件被整簇漏掉，全部是 3–4 篇的边缘事件（印尼野火、突尼斯抗议、悉尼马拉松/欧冠抽签、蒙大拿枪击、里昂欧冠、西甲巴萨）；≥5 篇的事件零整个丢失；候选生成脚本/阈值网格的具体代码路径未知——这是本轮探针的产物，未落成 eval harness 里的可复现脚本
+  - 失效条件：换一种候选生成方式（例如用实体重叠、时间窗口、标题关键词等非纯几何特征去筛噪声池候选组），或者真漏报事件的样本量显著增大（比如聚类阈值改得更松、真漏报从个位数变成几十个）之后，在同一口径下重测这条结论——只要精度仍在个位数区间且没有可用操作点，本条不算被推翻；只有测出稳定可用的精度/召回权衡才算推翻
 - [枚举类型与精确词锚点仍会核对词出现而漏掉角色、方向和状态关系](nodes/lesson-practice-typed-anchors.md) · `recorded` · `lesson-practice-typed-anchors`
   - 范围：practice-risk-v1 人工材料上的当前 glm 核验接口，不能推论所有结构化核验无效
   - 来源性质：local_record

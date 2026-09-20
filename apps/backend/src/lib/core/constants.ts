@@ -41,18 +41,9 @@ export const ARTICLE_PROCESSING = {
 export const BRIEF_CLUSTERING_OPTIONS = {
   // 2026-09-05:UMAP+HDBSCAN → 不降维 + 余弦阈值凝聚(average linkage)。
   //
-  // 两窗人读金标(F1 1142 篇/119 事件、F2 1252 篇/130 事件)产品口径实测
-  // (口径:<2 篇的簇与 <2 篇的事件都不计入;打分器 scripts/eval/clustering/product-score.ts):
-  //
-  //                      交付率  簇纯度  题材袋率  跨簇数  完整率
-  //   旧 UMAP+HDBSCAN F2  0.936  0.354   0.286    1.02   0.996
-  //   新 凝聚 t=0.10  F2  0.960  0.804   0.178    1.08   0.951
-  //   旧 UMAP+HDBSCAN F1  0.966  0.408   0.273    1.02   0.996
-  //   新 凝聚 t=0.10  F1  0.915  0.864   0.099    1.10   0.970
-  //
-  // 交付率=该成簇的事件成没成簇;簇纯度=一块里主导事件占几成;题材袋率=有多少块其实没有事;
-  // 跨簇数/完整率=一件事有没有被切开。算法与阈值的完整来历见 ml-service clustering.py
-  // 的 ClusteringConfig 注释(含 t=0.06~0.10 的纯度-交付前沿与四条失败的绕法)。
+  // 读数不在这里存:这里存过一份三个多月没人核对、与 ADR 实测对不上的读数表,是本身
+  // 就会过期的陷阱。现场跑 scripts/eval/clustering/product-score.ts 拿读数,权威口径
+  // 与两窗金标结果见 docs/adr/0003-cluster-as-brief-block.md。
   //
   // umapParams/hdbscanParams 保留:算法开关切回 'umap_hdbscan' 时它们仍是生效参数(回滚路径)。
   clusteringAlgorithm: 'agglomerative_cosine',

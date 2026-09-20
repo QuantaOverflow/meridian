@@ -1,0 +1,579 @@
+{
+ "axis": "citation-support",
+ "createdAt": "2026-09-21",
+ "provenance": {
+  "sample": "v6 on fixtures-r94, 3 runs, 87 sentences → 固定种子随机抽 60",
+  "annotators": [
+   "A=sonnet",
+   "B=haiku",
+   "C=codex"
+  ],
+  "protocol": "三方独立标注；18 条分歧由人裁决；从 42 条一致里随机抽 15 条人工复核，未发现共盲",
+  "adjudicator": "user + opus 复核"
+ },
+ "labels": [
+  {
+   "cluster": 43,
+   "run": 2,
+   "ref": "b1s2",
+   "id": "r2c43b1s2",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 2,
+   "ref": "b1s3",
+   "id": "r2c28b1s3",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 2,
+   "ref": "b1s5",
+   "id": "r2c43b1s5",
+   "label": "fail",
+   "note": "evidence 支撑 AI targeting 与超过 73,000 人死亡，但没有说该纪录片引发了更广泛的国际争论",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c1b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 3,
+   "ref": "b1s2",
+   "id": "r3c43b1s2",
+   "label": "pass",
+   "note": "撤销国籍那句原文只有 “He”，前文不在被引范围内。C 认为归不到 “Israeli officials” 就算 fail。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 51,
+   "run": 1,
+   "ref": "b1s3",
+   "id": "r1c51b1s3",
+   "label": "fail",
+   "note": "原文只说 Trump 提过 guardrail，没说 “强总统是唯一必要的 guardrail”。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 1,
+   "run": 1,
+   "ref": "b1s5",
+   "id": "r1c1b1s5",
+   "label": "fail",
+   "note": "成稿写 “within a non-socialist majority”，原文只说 explore possibilities given the close result，没有这个范围限定。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 7,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c7b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 3,
+   "ref": "b1s3",
+   "id": "r3c51b1s3",
+   "label": "fail",
+   "note": "evidence 未给出 Jacob Coxon 的姓名或辞职事实，且股市下跌被归因于多家公司高管的减速呼吁而非他的表态",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 1,
+   "ref": "b1s2",
+   "id": "r1c36b1s2",
+   "label": "fail",
+   "note": "evidence 没有超过 2,000 人逃往 Djibouti，也只说袭击 Saudi targets，未限定为 military bases",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 2,
+   "ref": "b1s3",
+   "id": "r2c36b1s3",
+   "label": "fail",
+   "note": "evidence 没有提到 King Khalid airbase 遭袭",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c36b1s4",
+   "label": "fail",
+   "note": "成稿写 “沙特寻求美国情报支持”，原文是 “美国主动提供”（US has offered）——动作方向反了。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 36,
+   "run": 1,
+   "ref": "b1s3",
+   "id": "r1c36b1s3",
+   "label": "fail",
+   "note": "缺油警告在原文里出自 kingdom 内的 traders，成稿写成 kingdom 本身警告。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 36,
+   "run": 3,
+   "ref": "b1s2",
+   "id": "r3c36b1s2",
+   "label": "fail",
+   "note": "原文说 “as much as $108”，成稿写 “above $108”；且把该组织推进与管道袭击合并成同一个涨价原因。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 28,
+   "run": 3,
+   "ref": "b1s3",
+   "id": "r3c28b1s3",
+   "label": "fail",
+   "note": "evidence 只把约 1.84 亿美元损失定位到 Middle East，没有列明 Iraq、Kuwait、Saudi Arabia 和 UAE 四国",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 3,
+   "ref": "b1s4",
+   "id": "r3c36b1s4",
+   "label": "fail",
+   "note": "原文说也门战事造成流离失所，成稿写成是对沙特目标的袭击造成的。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 7,
+   "run": 3,
+   "ref": "b1s3",
+   "id": "r3c7b1s3",
+   "label": "fail",
+   "note": "“specific details remain classified” 四条原文里都没出现，只重复了 kinetic/non-kinetic 那句官方表述。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 7,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c7b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c28b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 1,
+   "ref": "b1s2",
+   "id": "r1c51b1s2",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 7,
+   "run": 2,
+   "ref": "b1s5",
+   "id": "r2c7b1s5",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 3,
+   "ref": "b1s4",
+   "id": "r3c28b1s4",
+   "label": "fail",
+   "note": "“约三年” 与 “固体火箭发动机/技工瓶颈” 在被引范围内没被连到一起。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 36,
+   "run": 3,
+   "ref": "b1s3",
+   "id": "r3c36b1s3",
+   "label": "fail",
+   "note": "evidence 明确说是 Oman 推迟会议，不是 Saudi Arabia",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c43b1s1",
+   "label": "fail",
+   "note": "evidence 只说纪录片在 Venice 首映并获 25 分钟掌声，没有说它赢得 Special Jury Prize",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 7,
+   "run": 3,
+   "ref": "b1s2",
+   "id": "r3c7b1s2",
+   "label": "fail",
+   "note": "evidence 只泛称 hostile adversary，没有提 Russia、China、其 warfighting-domain 观点或其军力发展",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 7,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c7b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c51b1s4",
+   "label": "fail",
+   "note": "evidence 没有说 China 指控美国采取 containment strategy",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 2,
+   "ref": "b1s1",
+   "id": "r2c51b1s1",
+   "label": "fail",
+   "note": "evidence 只支持 Amodei 的呼吁，没有 Sam Altman、Elon Musk 或安全措施跟不上进展的内容",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 2,
+   "ref": "b1s2",
+   "id": "r2c1b1s2",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 3,
+   "ref": "b1s3",
+   "id": "r3c43b1s3",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 2,
+   "ref": "b1s5",
+   "id": "r2c28b1s5",
+   "label": "fail",
+   "note": "产能瓶颈那句原文是 “it warned”，“it” 指谁要靠上下文。C 认为归不到 Pentagon 就算 fail。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 43,
+   "run": 2,
+   "ref": "b1s4",
+   "id": "r2c43b1s4",
+   "label": "fail",
+   "note": "blood libels 是 Zamir 的说法，不是 Netanyahu 对影片的称呼",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c43b1s4",
+   "label": "fail",
+   "note": "evidence 支撑准入调查及遗骸回收，但没有说准入目的为 document war crimes",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 1,
+   "ref": "b1s5",
+   "id": "r1c36b1s5",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c51b1s4",
+   "label": "fail",
+   "note": "evidence 没有 China 指控美国使用 containment tactics 的内容",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 7,
+   "run": 3,
+   "ref": "b1s4",
+   "id": "r3c7b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 2,
+   "ref": "b1s2",
+   "id": "r2c51b1s2",
+   "label": "fail",
+   "note": "evidence 说 debate intensified，但没有说 Coxon 的辞职加剧了对 guardrails 的呼吁",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c51b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 2,
+   "ref": "b1s1",
+   "id": "r2c1b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 2,
+   "ref": "b1s5",
+   "id": "r2c1b1s5",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 1,
+   "ref": "b1s1",
+   "id": "r1c28b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 43,
+   "run": 3,
+   "ref": "b1s4",
+   "id": "r3c43b1s4",
+   "label": "fail",
+   "note": "evidence 显示限制或禁止非法定居点商品的是 UK 等国，不是 Israeli government，且未给出领馆位于 East Jerusalem",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 1,
+   "ref": "b1s1",
+   "id": "r1c36b1s1",
+   "label": "fail",
+   "note": "成稿点名 “Bab al-Mandeb strait”，原文只说 another vital waterway；油价同样是 $108 vs above $108。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 1,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c1b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c28b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 28,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c28b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 3,
+   "ref": "b1s5",
+   "id": "r3c1b1s5",
+   "label": "fail",
+   "note": "成稿写 “face questions about their influence”（面临质疑），原文是 “gave the party substantial influence”（已有影响）。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 43,
+   "run": 1,
+   "ref": "b1s2",
+   "id": "r1c43b1s2",
+   "label": "fail",
+   "note": "evidence 未给出两名 filmmakers 的姓名，也没有 portraying IDF soldiers as perpetrators of intentional crimes 这一指控",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 1,
+   "ref": "b1s1",
+   "id": "r1c51b1s1",
+   "label": "fail",
+   "note": "原文没说放缓的目的包含 “prevent a Chinese lead”；Trump 的 hoax 表态也未明确是在否定该提议。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 28,
+   "run": 2,
+   "ref": "b1s1",
+   "id": "r2c28b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 51,
+   "run": 2,
+   "ref": "b1s3",
+   "id": "r2c51b1s3",
+   "label": "pass",
+   "note": "成稿写 Trump 主张 “维持领先而非施加监管”，原文说的是 “unnecessary over-regulation”，不完全等价。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 1,
+   "run": 1,
+   "ref": "b1s1",
+   "id": "r1c1b1s1",
+   "label": "pass",
+   "note": "成稿说 “three seats”，原文先说 one-seat advantage 再说 three seats。B 认为口径变了算 fail。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 28,
+   "run": 3,
+   "ref": "b1s5",
+   "id": "r3c28b1s5",
+   "label": "fail",
+   "note": "成稿点名国防部长 Hegseth 施压飞行员，四条原文都只说 Pentagon 否认 “this entire story”，没出现 Hegseth。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 51,
+   "run": 3,
+   "ref": "b1s5",
+   "id": "r3c51b1s5",
+   "label": "fail",
+   "note": "“Cold War playbook” 那句原文是 “It said”。C 认为归不到中国外交部就算 fail。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 7,
+   "run": 1,
+   "ref": "b1s5",
+   "id": "r1c7b1s5",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 3,
+   "ref": "b1s4",
+   "id": "r3c1b1s4",
+   "label": "fail",
+   "note": "同上，另一轮的同一个问题：“non-socialist majority” 这个限定原文没有。",
+   "source": "裁决"
+  },
+  {
+   "cluster": 36,
+   "run": 1,
+   "ref": "b1s4",
+   "id": "r1c36b1s4",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 36,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c36b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 3,
+   "ref": "b1s1",
+   "id": "r3c1b1s1",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  },
+  {
+   "cluster": 1,
+   "run": 3,
+   "ref": "b1s2",
+   "id": "r3c1b1s2",
+   "label": "pass",
+   "note": "",
+   "source": "三票一致"
+  }
+ ],
+ "alignment": {
+  "measuredAt": "2026-09-21",
+  "judge": {
+   "model": "sonnet (Claude subagent)",
+   "promptId": "f657f9cd6f4eaa26",
+   "spec": "judges/citation-support.md"
+  },
+  "n": 60,
+  "tp": 27,
+  "fp": 0,
+  "tn": 29,
+  "fn": 4,
+  "tpr": 0.871,
+  "tnr": 1,
+  "precision": 1,
+  "agreement": 0.933,
+  "caveats": [
+   "判官漏掉的 4 条全是「隐含关系」类：因果被强加、动机被嫁接、语义方向相反、代词归因。判官对显式缺失（数字/人名/地名没出现）抓得准，对关系被悄悄加上抓不到。",
+   "sonnet 既是金标的标注者之一（A）又是被测判官，读数偏高；但它在 18 条分歧里只对了 10 条，金标最终与它分歧 8 条，偏差有限。",
+   "精度与真阴率都是 1.000 —— 60 条样本上出现两个满分，通常意味着样本不够难，真实部署不应期待此数。",
+   "codex 不能用这份金标测：它 17/18 与裁决一致、且参与了 42 条一致投票，等于对着自己的答案打分。要测 codex 需另标一批它没参与的金标。"
+  ]
+ }
+}

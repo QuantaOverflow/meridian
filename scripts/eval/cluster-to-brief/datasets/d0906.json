@@ -1,0 +1,3047 @@
+{
+ "id": "d0906",
+ "source": {
+  "workflowId": "offline-agg-d0906",
+  "kind": "offline-reclustered",
+  "builtAt": "2026-09-20T06:22:56.436Z",
+  "runAtSimulated": "2026-09-06T13:00:00.000Z",
+  "timeRangeDays": 1,
+  "articleLimit": 1500,
+  "clusteringConfig": {
+   "umap_n_components": 10,
+   "umap_n_neighbors": 15,
+   "umap_min_dist": 0,
+   "umap_metric": "cosine",
+   "hdbscan_min_cluster_size": 5,
+   "hdbscan_min_samples": 3,
+   "hdbscan_epsilon": 0,
+   "hdbscan_metric": "euclidean",
+   "clustering_algorithm": "agglomerative_cosine",
+   "agglomerative_threshold": 0.1,
+   "agglomerative_linkage": "average",
+   "agglomerative_min_cluster_size": 3
+  },
+  "mlImage": "aa794758"
+ },
+ "days": [
+  "2026-09-05",
+  "2026-09-06"
+ ],
+ "clusterSnapshot": null,
+ "selection": "all_clustered",
+ "split": "test",
+ "articles": {
+  "883074": {
+   "title": "China launches plan for 3D satellite chain to monitor sun and cosmic explosions",
+   "url": "https://www.scmp.com/news/china/science/article/3366483/china-launches-plan-3d-satellite-network-monitor-sun-and-cosmic-explosions",
+   "publishDate": "2026-09-05T05:00:06.000Z",
+   "sourceId": 15
+  },
+  "883433": {
+   "title": "What different world maps get right - and what they get wrong",
+   "url": "https://www.bbc.co.uk/news/articles/cly5r60v4mro?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T05:46:02.000Z",
+   "sourceId": 7
+  },
+  "883556": {
+   "title": "US drafting post-war plan for the Middle East, report says",
+   "url": "http://www.euronews.com/2026/09/05/us-drafting-post-war-plan-for-the-middle-east-report-says",
+   "publishDate": "2026-09-05T06:04:40.000Z",
+   "sourceId": 13
+  },
+  "883610": {
+   "title": "Greek air force jet crashes at annual aerial show, starts fire",
+   "url": "https://abcnews.com/International/wireStory/greek-air-force-jet-crashes-annual-aerial-show-136224237",
+   "publishDate": "2026-09-05T05:26:11.000Z",
+   "sourceId": 12
+  },
+  "883617": {
+   "title": "Serbia's ruling populists propose President Vucic switch to prime minister after election",
+   "url": "https://abcnews.com/International/wireStory/serbias-ruling-populists-propose-president-vucic-switch-prime-136223674",
+   "publishDate": "2026-09-05T05:26:50.000Z",
+   "sourceId": 12
+  },
+  "883631": {
+   "title": "How Asian shipyards in Japan, Korea, Philippines keep US warships battle ready",
+   "url": "https://www.scmp.com/news/china/military/article/3366489/how-asian-shipyards-japan-korea-and-philippines-keep-us-warships-battle-ready",
+   "publishDate": "2026-09-05T06:00:06.000Z",
+   "sourceId": 15
+  },
+  "883632": {
+   "title": "Masked anti-immigrant protesters block UK port",
+   "url": "https://www.scmp.com/news/world/europe/article/3366495/uk-government-condemns-masked-anti-immigrant-protesters-blocking-dover-port",
+   "publishDate": "2026-09-05T05:36:26.000Z",
+   "sourceId": 15
+  },
+  "883681": {
+   "title": "New York gallery sues Alaska Airlines for allegedly ruining half a million dollars in Japanese artwork",
+   "url": "https://www.independent.co.uk/news/world/americas/alaska-airlines-ruined-japanese-art-lawsuit-b3044885.html",
+   "publishDate": "2026-09-05T05:35:13.000Z",
+   "sourceId": 16
+  },
+  "883730": {
+   "title": "‘Don’t give me these useless jumlas’: MP Kangana Ranaut pulls up officials over Rs 11 crore MPLADS funds",
+   "url": "https://timesofindia.indiatimes.com/city/shimla/dont-give-me-these-useless-jumlas-mp-kangana-ranaut-pulls-up-officials-over-rs-11-crore-mplads-funds/articleshow/133801631.cms",
+   "publishDate": "2026-09-05T05:41:59.000Z",
+   "sourceId": 14
+  },
+  "883734": {
+   "title": "Parents gifted their son a flat on condition he care for them; after he neglected them, Bombay HC cancelled the gift, but here’s why he may still inherit it later",
+   "url": "https://timesofindia.indiatimes.com/business/india-business/parents-gifted-their-son-a-flat-on-condition-he-care-for-them-after-he-neglected-them-bombay-hc-cancelled-the-gift-but-heres-why-he-may-still-inherit-it-later/articleshow/133795029.cms",
+   "publishDate": "2026-09-05T06:10:20.000Z",
+   "sourceId": 14
+  },
+  "883736": {
+   "title": "THE IMPOSSIBLE: Messi and Ronaldo could finally play together on same team after special invite from former teammate",
+   "url": "https://timesofindia.indiatimes.com/sports/football/top-stories/the-impossible-messi-and-ronaldo-could-finally-play-together-on-same-team-after-special-invite-from-former-teammate/articleshow/133798533.cms",
+   "publishDate": "2026-09-05T05:20:34.000Z",
+   "sourceId": 14
+  },
+  "883738": {
+   "title": "In 1844, a Mexican land grant gave settlers rights across what is now an 80,000-acre Colorado ranch; nearly two centuries later, the access fight has become the state’s longest-running land dispute",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-1844-a-mexican-land-grant-gave-settlers-rights-across-what-is-now-an-80000-acre-colorado-ranch-nearly-two-centuries-later-the-access-fight-has-become-the-states-longest-running-land-dispute/articleshow/133755132.cms",
+   "publishDate": "2026-09-05T05:30:23.000Z",
+   "sourceId": 14
+  },
+  "883740": {
+   "title": "Millions of hours of Ukraine drone data being used to train AI: Report",
+   "url": "https://timesofindia.indiatimes.com/world/europe/millions-of-hours-of-ukraine-drone-data-being-used-to-train-ai-report/articleshow/133801734.cms",
+   "publishDate": "2026-09-05T05:23:30.000Z",
+   "sourceId": 14
+  },
+  "883747": {
+   "title": "In 1842, a North Carolina mission school began on mountain farmland; 184 years later, an 86.7-acre easement completes protection of land stewarded there for 130 years",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-1842-a-north-carolina-mission-school-began-on-mountain-farmland-184-years-later-an-86-7-acre-easement-completes-protection-of-land-stewarded-there-for-130-years/articleshow/133797971.cms",
+   "publishDate": "2026-09-05T05:30:00.000Z",
+   "sourceId": 14
+  },
+  "883775": {
+   "title": "\"Portrait of a Lady,\" Italian painting looted by Nazis, ordered returned to Jewish collector's heir",
+   "url": "https://www.cbsnews.com/news/portrait-lady-nazi-looted-painting-returned-argentina/",
+   "publishDate": "2026-09-05T05:58:31.000Z",
+   "sourceId": 17
+  },
+  "883818": {
+   "title": "Steve Witkoff and Jared Kushner land in Moscow aiming to revive Ukraine talks",
+   "url": "https://www.theguardian.com/world/2026/sep/05/steve-witkoff-jared-kushner-russia-revive-ukraine-talks",
+   "publishDate": "2026-09-05T06:04:29.000Z",
+   "sourceId": 8
+  },
+  "883823": {
+   "title": "Civilians among at least 60 killed in Yemen as ground fighting escalates",
+   "url": "https://www.theguardian.com/world/2026/sep/05/yemen-ground-fighting-escalates-houthi-rebels-government-forces",
+   "publishDate": "2026-09-05T05:47:19.000Z",
+   "sourceId": 8
+  },
+  "883830": {
+   "title": "‘The chancellor is in a bind’: is No 11 at odds with Burnham’s big vision?",
+   "url": "https://www.theguardian.com/politics/2026/sep/05/john-healey-andy-burnham-labour-economics",
+   "publishDate": "2026-09-05T06:00:38.000Z",
+   "sourceId": 8
+  },
+  "883834": {
+   "title": "Cut the cameras: Flock surveillance cameras spur rare bipartisan backlash",
+   "url": "https://www.theguardian.com/technology/2026/sep/05/flock-cameras-political-backlash",
+   "publishDate": "2026-09-05T06:00:37.000Z",
+   "sourceId": 8
+  },
+  "883849": {
+   "title": "Coach Luis Enrique unconcerned by PSG’s poor start to French league season",
+   "url": "https://www.aljazeera.com/sports/2026/9/5/coach-luis-enrique-unconcerned-by-psgs-poor-start-to-french-league-season?traffic_source=rss",
+   "publishDate": "2026-09-05T06:07:52.000Z",
+   "sourceId": 9
+  },
+  "883850": {
+   "title": "Why has the Trump administration ordered staff to take polygraph tests?",
+   "url": "https://www.aljazeera.com/news/2026/9/5/why-has-the-trump-administration-ordered-staff-to-take-polygraph-tests?traffic_source=rss",
+   "publishDate": "2026-09-05T05:54:33.000Z",
+   "sourceId": 9
+  },
+  "883851": {
+   "title": "UK gov’t condemns masked anti-immigrant protesters blocking Dover port",
+   "url": "https://www.aljazeera.com/news/2026/9/5/uk-govt-condemns-masked-anti-immigrant-protesters-blocking-dover-port?traffic_source=rss",
+   "publishDate": "2026-09-05T05:51:29.000Z",
+   "sourceId": 9
+  },
+  "883852": {
+   "title": "Arsenal vs Chelsea: Premier League – prediction, teams, lineups",
+   "url": "https://www.aljazeera.com/sports/2026/9/5/arsenal-vs-chelsea-premier-league-prediction-teams-lineups?traffic_source=rss",
+   "publishDate": "2026-09-05T05:20:42.000Z",
+   "sourceId": 9
+  },
+  "883853": {
+   "title": "‘Stop the boats’ masked protesters block England’s Port of Dover",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/stop-the-boats-masked-protesters-block-englands-port-of-dover?traffic_source=rss",
+   "publishDate": "2026-09-05T05:09:24.000Z",
+   "sourceId": 9
+  },
+  "883854": {
+   "title": "Iran President Pezeshkian calls for unity as US ramps up economic pressure",
+   "url": "https://www.aljazeera.com/economy/2026/9/5/iran-president-pezeshkian-calls-for-unity-as-us-ramps-up-economic-pressure?traffic_source=rss",
+   "publishDate": "2026-09-05T05:07:36.000Z",
+   "sourceId": 9
+  },
+  "883982": {
+   "title": "US hits 3 Iranian oil tankers after saying its warships were targeted",
+   "url": "https://www.bbc.co.uk/news/articles/cj64rrne643o?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T06:40:53.000Z",
+   "sourceId": 7
+  },
+  "884160": {
+   "title": "US military hits 3 Iranian oil tankers after saying Navy warships were targeted with missiles",
+   "url": "https://abcnews.com/International/wireStory/us-military-hits-3-iranian-oil-tankers-after-136225526",
+   "publishDate": "2026-09-05T06:21:23.000Z",
+   "sourceId": 12
+  },
+  "884185": {
+   "title": "US hits 3 Iran oil tankers after warships targeted",
+   "url": "https://www.scmp.com/news/world/middle-east/article/3366498/us-disables-or-destroys-3-iran-oil-tankers-after-warships-targeted",
+   "publishDate": "2026-09-05T06:59:57.000Z",
+   "sourceId": 15
+  },
+  "884186": {
+   "title": "Hong Kong’s first astronaut Lai Ka-ying to give live lecture from space",
+   "url": "https://www.scmp.com/news/hong-kong/education/article/3366497/hong-kongs-first-astronaut-lai-ka-ying-give-live-lecture-space",
+   "publishDate": "2026-09-05T06:31:36.000Z",
+   "sourceId": 15
+  },
+  "884235": {
+   "title": "US strikes three Iranian oil tankers after two Navy warships targeted with missiles",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/us-iran-war-oil-tanker-attack-kharg-island-b3045256.html",
+   "publishDate": "2026-09-05T06:57:21.000Z",
+   "sourceId": 16
+  },
+  "884236": {
+   "title": "Iranian death row prisoner issues desperate plea to the world: Do not forget about us",
+   "url": "https://www.independent.co.uk/news/world/middle-east/iran-political-prisoner-executions-death-row-plea-b3044243.html",
+   "publishDate": "2026-09-05T06:53:42.000Z",
+   "sourceId": 16
+  },
+  "884237": {
+   "title": "Meet the young Iranian protestors facing execution",
+   "url": "https://www.independent.co.uk/news/world/middle-east/iran-death-row-young-protestors-shandiz-isfahan-b3043618.html",
+   "publishDate": "2026-09-05T06:50:30.000Z",
+   "sourceId": 16
+  },
+  "884238": {
+   "title": "Illinois mom murdered her toddler son after becoming ‘very invested’ in Lindsay Clancy case, cops say",
+   "url": "https://www.independent.co.uk/news/world/americas/crime/illinois-murder-lindsay-clancy-trial-mother-b3045240.html",
+   "publishDate": "2026-09-05T06:25:18.000Z",
+   "sourceId": 16
+  },
+  "884239": {
+   "title": "More Americans are identifying as Democrats in latest troubling sign for Trump and the midterms",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/democrats-trump-midterms-gallup-poll-b3045224.html",
+   "publishDate": "2026-09-05T06:16:00.000Z",
+   "sourceId": 16
+  },
+  "884240": {
+   "title": "Greek air force jet crash starts huge fire at flying show near Athens",
+   "url": "https://www.independent.co.uk/news/world/europe/greek-air-force-jet-crash-fire-athens-b3045246.html",
+   "publishDate": "2026-09-05T06:08:56.000Z",
+   "sourceId": 16
+  },
+  "884284": {
+   "title": "Watch: US strikes 3 Iranian oil tankers after Iran targets 2 navy warships",
+   "url": "https://timesofindia.indiatimes.com/defence/international/watch-us-strikes-3-iranian-oil-tankers-after-iran-targets-2-navy-warships/articleshow/133805095.cms",
+   "publishDate": "2026-09-05T06:39:53.000Z",
+   "sourceId": 14
+  },
+  "884286": {
+   "title": "India vs Pakistan: ‘No handshake’ again — Harmanpreet Kaur, Fatima Sana avoid customary gesture at Asia Cup toss",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/news/india-vs-pakistan-no-handshake-again-harmanpreet-kaur-fatima-sana-avoid-customary-gesture-at-asia-cup-toss/articleshow/133805089.cms",
+   "publishDate": "2026-09-05T06:44:34.000Z",
+   "sourceId": 14
+  },
+  "884288": {
+   "title": "As data center costs escalate, Meta is using robots from Watney Robotics, Kinova and ABB to …",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/as-data-center-costs-escalate-meta-is-using-robots-from-watney-robotics-kinova-and-abb-to-/articleshow/133801447.cms",
+   "publishDate": "2026-09-05T05:51:58.000Z",
+   "sourceId": 14
+  },
+  "884289": {
+   "title": "At least 22 killed in fire at wedding party in Congo’s Kinshasa",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/at-least-22-killed-in-fire-at-wedding-party-in-congos-kinshasa/articleshow/133805605.cms",
+   "publishDate": "2026-09-05T07:06:04.000Z",
+   "sourceId": 14
+  },
+  "884290": {
+   "title": "Suresh Raina’s bold blueprint for India: Backs Abhishek Sharma for Test leap, calls Rishabh Pant white-ball 'X-factor'",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/suresh-rainas-bold-blueprint-for-india-backs-abhishek-sharma-for-test-leap-calls-rishabh-pant-white-ball-x-factor/articleshow/133803154.cms",
+   "publishDate": "2026-09-05T05:40:47.000Z",
+   "sourceId": 14
+  },
+  "884332": {
+   "title": "Luxury brands' labor practices under scrutiny",
+   "url": "https://www.cbsnews.com/video/luxury-brands-labor-practices-under-scrutiny/",
+   "publishDate": "2026-09-05T06:51:00.000Z",
+   "sourceId": 17
+  },
+  "884385": {
+   "title": "Raise the Colours leader given access to Reform UK conference while on bail",
+   "url": "https://www.theguardian.com/uk-news/2026/sep/05/raise-the-colours-leader-given-access-to-reform-uk-conference-while-on-bail",
+   "publishDate": "2026-09-05T06:45:48.000Z",
+   "sourceId": 8
+  },
+  "884405": {
+   "title": "Multipolarity gives middle powers more choices, but fewer guarantees",
+   "url": "https://www.aljazeera.com/opinions/2026/9/5/multipolarity-gives-middle-powers-more-choices-but-fewer-guarantees?traffic_source=rss",
+   "publishDate": "2026-09-05T06:51:08.000Z",
+   "sourceId": 9
+  },
+  "884406": {
+   "title": "US says it hit Iran oil tankers helping finance ‘regional proxies’",
+   "url": "https://www.aljazeera.com/news/2026/9/5/us-says-it-hit-iran-oil-tankers-helping-finance-regional-proxies?traffic_source=rss",
+   "publishDate": "2026-09-05T06:49:36.000Z",
+   "sourceId": 9
+  },
+  "884407": {
+   "title": "Relatives hold cremations without bodies for Nepal’s missing flood victims",
+   "url": "https://www.aljazeera.com/features/2026/9/5/relatives-hold-cremations-without-bodies-for-nepals-missing-flood-victims?traffic_source=rss",
+   "publishDate": "2026-09-05T06:40:38.000Z",
+   "sourceId": 9
+  },
+  "884436": {
+   "title": "A week in France - Presidential campaigning kicks off in France ahead of 2027 elections",
+   "url": "https://www.france24.com/en/tv-shows/a-week-in-france/20260905-presidential-campaigning-kicks-off-in-france-ahead-of-2027-elections",
+   "publishDate": "2026-09-05T06:32:10.000Z",
+   "sourceId": 11
+  },
+  "884453": {
+   "title": "US military hits 3 Iranian oil tankers after saying Navy warships were targeted",
+   "url": "https://www.npr.org/2026/09/05/nx-s1-5959159/us-iran-warships-targeted",
+   "publishDate": "2026-09-05T07:05:08.000Z",
+   "sourceId": 10
+  },
+  "884791": {
+   "title": "Tetris owner lashes out at Trump team over ‘Build the Wall’ arcade game on new White House site",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-white-house-arcade-tetris-maga-b3045254.html",
+   "publishDate": "2026-09-05T07:35:54.000Z",
+   "sourceId": 16
+  },
+  "884792": {
+   "title": "Suspected guerrilla drone attack kills at least three soldiers in Colombia",
+   "url": "https://www.independent.co.uk/news/world/americas/colombia-drone-attack-president-b3045269.html",
+   "publishDate": "2026-09-05T07:33:15.000Z",
+   "sourceId": 16
+  },
+  "884796": {
+   "title": "Congo wedding party horror as major fire kills at least 22 people",
+   "url": "https://www.independent.co.uk/news/world/africa/congo-wedding-party-fire-kinshasa-b3045271.html",
+   "publishDate": "2026-09-05T07:21:51.000Z",
+   "sourceId": 16
+  },
+  "884838": {
+   "title": "'Jhooth ki goonj': PM Modi takes swipe at Rahul, attacks 'mai-baap' culture",
+   "url": "https://timesofindia.indiatimes.com/india/jhooth-ki-goonj-pm-modi-takes-swipe-at-rahul-attacks-mai-baap-culture/articleshow/133805599.cms",
+   "publishDate": "2026-09-05T07:15:24.000Z",
+   "sourceId": 14
+  },
+  "884839": {
+   "title": "Congress replaces  Bhupesh Baghel with Sachin Pilot as Punjab general secretary",
+   "url": "https://timesofindia.indiatimes.com/india/congress-replaces-bhupesh-baghel-with-sachin-pilot-as-punjab-general-secretary/articleshow/133806065.cms",
+   "publishDate": "2026-09-05T07:19:38.000Z",
+   "sourceId": 14
+  },
+  "884841": {
+   "title": "Harmanpreet Kaur creates history, becomes first cricketer ever to captain in 150 T20Is",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/news/harmanpreet-kaur-creates-history-becomes-first-cricketer-ever-to-captain-in-150-t20is/articleshow/133804547.cms",
+   "publishDate": "2026-09-05T06:28:04.000Z",
+   "sourceId": 14
+  },
+  "884843": {
+   "title": "Thousands of OpenAI's AI agents hacked a German website and the reason may scare many",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/thousands-of-openais-ai-agents-hacked-a-german-website-and-the-reason-may-scare-many/articleshow/133805281.cms",
+   "publishDate": "2026-09-05T06:47:39.000Z",
+   "sourceId": 14
+  },
+  "884847": {
+   "title": "A home run for workers? Daman & Diu’s SPARSH 2.0 opens more rental space",
+   "url": "https://timesofindia.indiatimes.com/real-estate/news/a-home-run-for-workers-daman-dius-sparsh-2-0-opens-more-rental-space/articleshow/133805980.cms",
+   "publishDate": "2026-09-05T07:42:32.000Z",
+   "sourceId": 14
+  },
+  "884851": {
+   "title": "'Second chance': Chimps used in hepatitis B experiments get comprehensive health checks in Liberia",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/second-chance-chimps-used-in-hepatitis-b-experiments-get-comprehensive-health-checks-in-liberia/articleshow/133806950.cms",
+   "publishDate": "2026-09-05T07:48:58.000Z",
+   "sourceId": 14
+  },
+  "884853": {
+   "title": "Watch: PM Modi takes metro ride to Delhi's SRCC, interacts with students",
+   "url": "https://timesofindia.indiatimes.com/india/watch-pm-modi-takes-delhi-metro-to-srcc-interacts-with-students/articleshow/133803663.cms",
+   "publishDate": "2026-09-05T05:54:14.000Z",
+   "sourceId": 14
+  },
+  "884885": {
+   "title": "Colombia drone attack by suspected guerrillas kills at least 3 soldiers, army says",
+   "url": "https://www.cbsnews.com/news/colombia-drone-attack-suspected-guerrillas/",
+   "publishDate": "2026-09-05T08:13:16.000Z",
+   "sourceId": 17
+  },
+  "884933": {
+   "title": "US military says it struck three Iranian tankers after American warships came under missile attack",
+   "url": "https://www.theguardian.com/world/2026/sep/05/us-military-iran-tankers",
+   "publishDate": "2026-09-05T07:41:22.000Z",
+   "sourceId": 8
+  },
+  "884960": {
+   "title": "Gaza teams recover remains of 55 people nearly 3 years after Israeli strike",
+   "url": "https://www.aljazeera.com/news/2026/9/5/gaza-teams-recover-remains-of-55-people-nearly-3-years-after-israeli-strike?traffic_source=rss",
+   "publishDate": "2026-09-05T08:17:47.000Z",
+   "sourceId": 9
+  },
+  "884961": {
+   "title": "Israel claims control of Lebanon’s key Ali al-Taher ridge: What that means",
+   "url": "https://www.aljazeera.com/news/2026/9/5/israel-claims-control-of-lebanons-key-ali-al-taher-ridge-what-that-means?traffic_source=rss",
+   "publishDate": "2026-09-05T08:04:01.000Z",
+   "sourceId": 9
+  },
+  "884962": {
+   "title": "US says it hit three Iranian oil tankers after attacks on warships",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/us-says-it-hit-three-iranian-oil-tankers-after-attacks-on-warships?traffic_source=rss",
+   "publishDate": "2026-09-05T07:49:44.000Z",
+   "sourceId": 9
+  },
+  "884963": {
+   "title": "Israeli campaign of West Bank destruction moves on to region’s food basket",
+   "url": "https://www.aljazeera.com/features/2026/9/5/israeli-campaign-of-west-bank-destruction-moves-on-to-regions-food-basket?traffic_source=rss",
+   "publishDate": "2026-09-05T07:37:12.000Z",
+   "sourceId": 9
+  },
+  "884964": {
+   "title": "Rescuers pull Chinese worker, Nepali woman from flood wreckage alive",
+   "url": "https://www.aljazeera.com/news/2026/9/5/rescuers-pull-chinese-worker-nepali-woman-from-flood-wreckage-alive?traffic_source=rss",
+   "publishDate": "2026-09-05T07:33:02.000Z",
+   "sourceId": 9
+  },
+  "884986": {
+   "title": "‘Rain man’ to the rescue? France’s ex-president Hollande plots unlikely comeback",
+   "url": "https://www.france24.com/en/france/20260905-rain-man-france-ex-president-francois-hollande-unlikely-comeback-presidential-election",
+   "publishDate": "2026-09-05T08:22:05.000Z",
+   "sourceId": 11
+  },
+  "885296": {
+   "title": "2 pilots killed after Greek air force plane crashes at annual air show",
+   "url": "https://www.scmp.com/news/world/europe/article/3366502/2-pilots-killed-after-greek-air-force-plane-crashes-annual-air-show",
+   "publishDate": "2026-09-05T09:07:27.000Z",
+   "sourceId": 15
+  },
+  "885297": {
+   "title": "US ambassador calls violent Israeli settlers ‘terrorists’ after West Bank unrest",
+   "url": "https://www.scmp.com/news/world/middle-east/article/3366501/us-ambassador-calls-violent-israeli-settlers-terrorists-after-weeks-west-bank-unrest",
+   "publishDate": "2026-09-05T08:50:54.000Z",
+   "sourceId": 15
+  },
+  "885346": {
+   "title": "‘Dead fish’ smell in Massachusetts town is so bad they are taking property owner to court",
+   "url": "https://www.independent.co.uk/news/world/americas/dead-fish-smell-massachusetts-court-b3045296.html",
+   "publishDate": "2026-09-05T08:49:05.000Z",
+   "sourceId": 16
+  },
+  "885347": {
+   "title": "Georgia cop reveals why he shot dead a family’s pet donkey",
+   "url": "https://www.independent.co.uk/news/world/americas/crime/georgia-donkey-police-shooting-b3045287.html",
+   "publishDate": "2026-09-05T08:28:25.000Z",
+   "sourceId": 16
+  },
+  "885394": {
+   "title": "'Outraged my feelings': Complaint against Jantar Mantar protester over 'insulting' post on Hindu gods",
+   "url": "https://timesofindia.indiatimes.com/india/outraged-my-feelings-complaint-againt-jantar-mantar-protester-over-insulting-post-on-hindu-gods/articleshow/133808730.cms",
+   "publishDate": "2026-09-05T08:50:27.000Z",
+   "sourceId": 14
+  },
+  "885395": {
+   "title": "‘We’ve got to be careful’: Ex-CDS Anil Chauhan flags Pakistan's 'overconfidence' after Mecca Pact",
+   "url": "https://timesofindia.indiatimes.com/defence/news/weve-got-to-be-careful-ex-cds-anil-chauhan-flags-pakistans-overconfidence-after-mecca-pact/articleshow/133808232.cms",
+   "publishDate": "2026-09-05T08:51:18.000Z",
+   "sourceId": 14
+  },
+  "885396": {
+   "title": "Harmanpreet Kaur's India turn Pakistan clash into a rout, seal 7-wicket win after bowling them out for 55",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/news/harmanpreet-kaurs-india-turn-pakistan-clash-into-a-rout-seal-7-wicket-win-after-bowling-them-out-for-55/articleshow/133808870.cms",
+   "publishDate": "2026-09-05T09:03:02.000Z",
+   "sourceId": 14
+  },
+  "885399": {
+   "title": "India’s spin chokehold leaves Pakistan in tatters: 55 all out is their lowest-ever T20I total",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/news/indias-spin-chokehold-leaves-pakistan-in-tatters-55-all-out-is-their-lowest-ever-t20i-total/articleshow/133807750.cms",
+   "publishDate": "2026-09-05T08:13:17.000Z",
+   "sourceId": 14
+  },
+  "885403": {
+   "title": "‘This isn’t politics’: Brian Lara backs Imran Khan, calls for dignity and proper medical care for Pakistan legend",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/this-isnt-politics-brian-lara-backs-imran-khan-calls-for-dignity-and-proper-medical-care-for-pakistan-legend/articleshow/133804181.cms",
+   "publishDate": "2026-09-05T06:15:01.000Z",
+   "sourceId": 14
+  },
+  "885404": {
+   "title": "Benton Heights residents began asking for a playground in 2012; $1 million later, the community has opened its first park, and local children helped design it",
+   "url": "https://timesofindia.indiatimes.com/world/us/benton-heights-residents-began-asking-for-a-playground-in-2012-1-million-later-the-community-has-opened-its-first-park-and-local-children-helped-design-it/articleshow/133758217.cms",
+   "publishDate": "2026-09-05T08:48:43.000Z",
+   "sourceId": 14
+  },
+  "885405": {
+   "title": "Built in 1897, Santa Monica's last intact shotgun house was nearly demolished in 1997; after multiple moves and restoration, it now serves as a preservation centre",
+   "url": "https://timesofindia.indiatimes.com/world/us/built-in-1897-santa-monicas-last-intact-shotgun-house-was-nearly-demolished-in-1997-after-multiple-moves-and-restoration-it-now-serves-as-a-preservation-centre/articleshow/133759131.cms",
+   "publishDate": "2026-09-05T08:48:49.000Z",
+   "sourceId": 14
+  },
+  "885412": {
+   "title": "Naomi Osaka vs Coco Gauff net worth in 2026: Career prize money, endorsements, business ventures, investments, lifestyle and financial comparison",
+   "url": "https://timesofindia.indiatimes.com/sports/international-sports/naomi-osaka-vs-coco-gauff-net-worth-in-2026-career-prize-money-endorsements-business-ventures-investments-lifestyle-and-financial-comparison/articleshow/133797577.cms",
+   "publishDate": "2026-09-05T06:30:00.000Z",
+   "sourceId": 14
+  },
+  "885496": {
+   "title": "‘I wasn’t even listening,’ Farage says of donations scandal meeting",
+   "url": "https://www.theguardian.com/politics/2026/sep/05/i-wasnt-even-listening-farage-says-of-donations-scandal-meeting",
+   "publishDate": "2026-09-05T08:26:13.000Z",
+   "sourceId": 8
+  },
+  "885516": {
+   "title": "Haaland heads Man City to the top of Premier League with win over Coventry",
+   "url": "https://www.aljazeera.com/sports/2026/9/5/haaland-head-man-city-to-the-top-of-premier-league-with-win-over-coventry?traffic_source=rss",
+   "publishDate": "2026-09-05T08:47:17.000Z",
+   "sourceId": 9
+  },
+  "885852": {
+   "title": "Egypt sentences TV presenter, 11 others to death in drugs case",
+   "url": "https://www.scmp.com/news/world/africa/article/3366504/egypt-sentences-tv-presenter-11-others-death-drugs-case",
+   "publishDate": "2026-09-05T09:38:14.000Z",
+   "sourceId": 15
+  },
+  "885902": {
+   "title": "Kennedy Center renews call for Trump-backed shutdown after part of a ceiling collapses",
+   "url": "https://www.independent.co.uk/news/world/americas/kennedy-center-trump-washington-president-america-b3045322.html",
+   "publishDate": "2026-09-05T09:54:41.000Z",
+   "sourceId": 16
+  },
+  "885903": {
+   "title": "Argentine couple to return Nazi-looted portrait to Jewish collector’s family after 80 years",
+   "url": "https://www.independent.co.uk/news/world/americas/portrait-of-a-lady-argentina-nazi-kadgien-b3045309.html",
+   "publishDate": "2026-09-05T09:32:37.000Z",
+   "sourceId": 16
+  },
+  "885954": {
+   "title": "Nepal floods show the risk; China's mega-dam raises bigger questions for India",
+   "url": "https://timesofindia.indiatimes.com/india/nepal-floods-show-the-risk-chinas-mega-dam-raises-bigger-questions-for-india/articleshow/133803260.cms",
+   "publishDate": "2026-09-05T06:18:11.000Z",
+   "sourceId": 14
+  },
+  "885957": {
+   "title": "In 2004, she started teaching for ₹60 a day while paying for her own college; 22 years later, Delhi teacher Suman Goel is getting a national award",
+   "url": "https://timesofindia.indiatimes.com/education/news/in-2004-she-started-teaching-for-60-a-day-while-paying-for-her-own-college-22-years-later-delhi-teacher-suman-goel-is-getting-a-national-award/articleshow/133794272.cms",
+   "publishDate": "2026-09-05T09:44:01.000Z",
+   "sourceId": 14
+  },
+  "885958": {
+   "title": "Shafali Varma scripts history, becomes fastest and youngest to reach 3,000 T20I runs in women’s cricket",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/news/shafali-varma-scripts-history-becomes-fastest-and-youngest-to-3000-t20i-runs-in-womens-cricket/articleshow/133809520.cms",
+   "publishDate": "2026-09-05T09:20:57.000Z",
+   "sourceId": 14
+  },
+  "885961": {
+   "title": "Meet Harvey Uyeyama, the 16-year-old from Davis, California who learned coffee roasting from his father and built a subscription business after his death",
+   "url": "https://timesofindia.indiatimes.com/world/us/meet-harvey-uyeyama-the-16-year-old-from-davis-california-who-learned-coffee-roasting-from-his-father-and-built-a-subscription-business-after-his-death/articleshow/133761495.cms",
+   "publishDate": "2026-09-05T09:47:36.000Z",
+   "sourceId": 14
+  },
+  "885999": {
+   "title": "U.S. ambassador to Israel says \"act of terror\" cannot continue after weeks of West Bank unrest",
+   "url": "https://www.cbsnews.com/news/mike-huckabee-west-bank-settler-violence/",
+   "publishDate": "2026-09-05T09:54:05.000Z",
+   "sourceId": 17
+  },
+  "886028": {
+   "title": "Egyptian TV presenter among 12 sentenced to death for drug crime",
+   "url": "https://www.theguardian.com/world/2026/sep/05/egyptian-tv-presenter-among-12-sentenced-to-death-for-drug",
+   "publishDate": "2026-09-05T10:00:15.000Z",
+   "sourceId": 8
+  },
+  "886053": {
+   "title": "London Paddington fire causes rail chaos as Heathrow trains cancelled",
+   "url": "https://www.theguardian.com/uk-news/2026/sep/05/london-paddington-fire-causes-rail-chaos-heathrow-trains-cancelled",
+   "publishDate": "2026-09-05T10:10:25.000Z",
+   "sourceId": 8
+  },
+  "886058": {
+   "title": "Robin Morgan, child star who became feminist, poet and editor, dies aged 85",
+   "url": "https://www.theguardian.com/us-news/2026/sep/05/robin-morgan-feminist-poet-editor-dies-aged-85",
+   "publishDate": "2026-09-05T10:16:41.000Z",
+   "sourceId": 8
+  },
+  "886073": {
+   "title": "Russia’s Putin meets US envoys to discuss Trump proposal to end Ukraine war",
+   "url": "https://www.aljazeera.com/news/2026/9/5/russias-putin-meets-us-envoys-to-discuss-trump-proposal-to-end-ukraine-war?traffic_source=rss",
+   "publishDate": "2026-09-05T10:12:52.000Z",
+   "sourceId": 9
+  },
+  "886074": {
+   "title": "India crush Pakistan at T20 Asia Cup with record-breaking bowling display",
+   "url": "https://www.aljazeera.com/sports/2026/9/5/india-crush-pakistan-at-t20-asia-cup-with-record-breaking-bowling-display?traffic_source=rss",
+   "publishDate": "2026-09-05T10:10:50.000Z",
+   "sourceId": 9
+  },
+  "886075": {
+   "title": "Germany’s far-right AfD eyes historic first in state election",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/09-05-germany-afd-state-elections-sv?traffic_source=rss",
+   "publishDate": "2026-09-05T10:07:43.000Z",
+   "sourceId": 9
+  },
+  "886098": {
+   "title": "Spotlight - Witkoff: Putin’s Messenger?",
+   "url": "https://www.france24.com/en/tv-shows/spotlight/20260905-witkoff-putin-s-messenger",
+   "publishDate": "2026-09-05T10:02:24.000Z",
+   "sourceId": 11
+  },
+  "886459": {
+   "title": "Trump team must give 48 hours notice before starting construction on DC arch, judge rules",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-arch-construction-washington-dc-b3045326.html",
+   "publishDate": "2026-09-05T10:42:35.000Z",
+   "sourceId": 16
+  },
+  "886502": {
+   "title": "'Trump sends his best wishes': US envoys Witkoff, Kushner meet Putin in Kremlin",
+   "url": "https://timesofindia.indiatimes.com/world/europe/trump-sends-his-best-wishes-us-envoys-witkoff-kushner-meet-putin-in-kremlin/articleshow/133813118.cms",
+   "publishDate": "2026-09-05T11:01:49.000Z",
+   "sourceId": 14
+  },
+  "886508": {
+   "title": "Panun Kashmir stages hunger strike, demands genocide law",
+   "url": "https://timesofindia.indiatimes.com/india/panun-kashmir-stages-hunger-strike-demands-genocide-law/articleshow/133811752.cms",
+   "publishDate": "2026-09-05T10:12:52.000Z",
+   "sourceId": 14
+  },
+  "886511": {
+   "title": "Meet Claire Wang, the Texas high-schooler whose free tutoring network has reached 10,000 girls and recruited 2,000 volunteer tutors",
+   "url": "https://timesofindia.indiatimes.com/education/news/meet-claire-wang-the-texas-high-schooler-whose-free-tutoring-network-has-reached-10000-girls-and-recruited-2000-volunteer-tutors/articleshow/133762130.cms",
+   "publishDate": "2026-09-05T10:25:00.000Z",
+   "sourceId": 14
+  },
+  "886550": {
+   "title": "Guyana becomes latest \"third country\" to accept migrants deported from U.S.",
+   "url": "https://www.cbsnews.com/news/guyana-third-country-us-deportees/",
+   "publishDate": "2026-09-05T10:35:46.000Z",
+   "sourceId": 17
+  },
+  "886624": {
+   "title": "Woman beaten to death as bystanders watch in India’s Gujarat",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/5-09-sv-woman-beaten-to-death-in-gujarat-in?traffic_source=rss",
+   "publishDate": "2026-09-05T11:13:29.000Z",
+   "sourceId": 9
+  },
+  "886625": {
+   "title": "Shoppers interact with Hong Kong’s first robot shopkeeper",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/shoppers-interact-with-hong-kongs-first-robot-shopkeeper?traffic_source=rss",
+   "publishDate": "2026-09-05T10:57:56.000Z",
+   "sourceId": 9
+  },
+  "886626": {
+   "title": "Two pilots killed after Greek fighter jet crashes during an air show",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/two-pilots-killed-after-greek-fighter-jet-crashes-during-an-air-show?traffic_source=rss",
+   "publishDate": "2026-09-05T10:44:41.000Z",
+   "sourceId": 9
+  },
+  "886627": {
+   "title": "Thousands protest in Croatia to demand government clean up toxic waste",
+   "url": "https://www.aljazeera.com/news/2026/9/5/thousands-protest-in-croatia-to-demand-government-clean-up-toxic-waste?traffic_source=rss",
+   "publishDate": "2026-09-05T10:42:08.000Z",
+   "sourceId": 9
+  },
+  "886960": {
+   "title": "Commemoration held for late Serb war criminal Ratko Mladic",
+   "url": "https://www.scmp.com/news/world/europe/article/3366507/commemoration-held-late-serb-war-criminal-ratko-mladic",
+   "publishDate": "2026-09-05T11:57:58.000Z",
+   "sourceId": 15
+  },
+  "886961": {
+   "title": "Competitors dig deep at Hungarian gravedigging contest",
+   "url": "https://www.scmp.com/news/world/europe/article/3366506/competitors-dig-deep-hungarian-gravedigging-contest",
+   "publishDate": "2026-09-05T11:27:47.000Z",
+   "sourceId": 15
+  },
+  "887010": {
+   "title": "Prankster built GOP midterm convention lookalike website - that just sends people to the Epstein files",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/republican-convention-epstein-files-prankster-b3045331.html",
+   "publishDate": "2026-09-05T11:17:06.000Z",
+   "sourceId": 16
+  },
+  "887011": {
+   "title": "RFK Jr finally admits that measles was the cause of infant’s death in Pennsylvania",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/rfk-jr-measles-death-pennsylvania-b3045323.html",
+   "publishDate": "2026-09-05T11:15:54.000Z",
+   "sourceId": 16
+  },
+  "887052": {
+   "title": "CIL offers extra fuel, 57 plants now report critically low stock",
+   "url": "https://timesofindia.indiatimes.com/india/cil-offers-extra-fuel-57-plants-now-report-critically-low-stock/articleshow/133814003.cms",
+   "publishDate": "2026-09-05T11:30:03.000Z",
+   "sourceId": 14
+  },
+  "887053": {
+   "title": "Vaibhav Sooryavanshi has already conquered IPL records and international cricket — now he faces another big test: his first five-day game",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/vaibhav-sooryavanshi-has-already-conquered-ipl-records-and-international-cricket-now-he-faces-another-big-test-his-first-five-day-game/articleshow/133802834.cms",
+   "publishDate": "2026-09-05T05:22:50.000Z",
+   "sourceId": 14
+  },
+  "887054": {
+   "title": "US immigration authority says it denied and revoked visa petitions from a major IT consulting company after ...",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/us-immigration-authority-says-it-denied-and-revoked-visa-petitions-from-a-major-it-consulting-company-after-/articleshow/133807905.cms",
+   "publishDate": "2026-09-05T08:17:19.000Z",
+   "sourceId": 14
+  },
+  "887055": {
+   "title": "Census 2027 enumeration advanced in four poll-bound states",
+   "url": "https://timesofindia.indiatimes.com/india/census-2027-enumeration-advanced-in-four-poll-bound-states/articleshow/133814645.cms",
+   "publishDate": "2026-09-05T12:06:24.000Z",
+   "sourceId": 14
+  },
+  "887056": {
+   "title": "Centre finds no single cause for Balaghat child deaths",
+   "url": "https://timesofindia.indiatimes.com/india/centre-finds-no-single-cause-for-balaghat-child-deaths/articleshow/133806765.cms",
+   "publishDate": "2026-09-05T07:44:12.000Z",
+   "sourceId": 14
+  },
+  "887060": {
+   "title": "In 2001, a 266-acre Texas golf ranch opened beside a 600-acre lake; 25 years later the city traded it to Texas A&M for 138 undeveloped acres worth about the same $2.5 million",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-2001-a-266-acre-texas-golf-ranch-opened-beside-a-600-acre-lake-25-years-later-the-city-traded-it-to-texas-am-for-138-undeveloped-acres-worth-about-the-same-2-5-million/articleshow/133762543.cms",
+   "publishDate": "2026-09-05T11:20:00.000Z",
+   "sourceId": 14
+  },
+  "887064": {
+   "title": "‘Remarkable achievement’: Sourav Ganguly’s special message for Mohammed Shami ahead of 100th first-class game",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/remarkable-achievement-sourav-gangulys-special-message-for-mohammed-shami-ahead-of-100th-first-class-game/articleshow/133806213.cms",
+   "publishDate": "2026-09-05T07:28:58.000Z",
+   "sourceId": 14
+  },
+  "887136": {
+   "title": "Possums in the roof, koalas in bed: study shows how animals resort to Australian homes after habitat loss",
+   "url": "https://www.theguardian.com/environment/2026/sep/06/possums-in-the-roof-koalas-in-bed-study-shows-how-animals-resort-to-australian-homes-after-habitat-loss",
+   "publishDate": "2026-09-05T12:00:47.000Z",
+   "sourceId": 8
+  },
+  "887137": {
+   "title": "Alarming AI ads are flooding social media in the lead-up to Victoria’s election. But who is behind them?",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/fix-victoria-ai-ads-flooding-social-media-election-who-is-behind-them",
+   "publishDate": "2026-09-05T12:00:46.000Z",
+   "sourceId": 8
+  },
+  "887172": {
+   "title": "Why is Argentina reigniting the Falklands dispute?",
+   "url": "https://www.aljazeera.com/video/inside-story/2026/9/5/why-is-argentina-reigniting-the-falklands-dispute?traffic_source=rss",
+   "publishDate": "2026-09-05T12:14:55.000Z",
+   "sourceId": 9
+  },
+  "887173": {
+   "title": "Everton vs Manchester United: Premier League – prediction, teams, lineups",
+   "url": "https://www.aljazeera.com/sports/2026/9/5/everton-vs-manchester-united-premier-league-prediction-teams-lineups?traffic_source=rss",
+   "publishDate": "2026-09-05T12:04:30.000Z",
+   "sourceId": 9
+  },
+  "887174": {
+   "title": "Colombian government reports three killed in rebel attack on military post",
+   "url": "https://www.aljazeera.com/news/2026/9/5/colombian-government-reports-three-killed-in-rebel-attack-on-military-post?traffic_source=rss",
+   "publishDate": "2026-09-05T12:03:29.000Z",
+   "sourceId": 9
+  },
+  "887175": {
+   "title": "Al Jazeera reporter challenges Huckabee over Israeli settler pogroms",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/al-jazeera-reporter-challenges-huckabee-over-israeli-settler-pogroms?traffic_source=rss",
+   "publishDate": "2026-09-05T12:00:05.000Z",
+   "sourceId": 9
+  },
+  "887176": {
+   "title": "France denies inciting failed Niger mutiny, calls accusation ‘pure fantasy’",
+   "url": "https://www.aljazeera.com/news/2026/9/5/france-denies-inciting-failed-niger-mutiny-calls-accusation-pure-fantasy?traffic_source=rss",
+   "publishDate": "2026-09-05T11:45:39.000Z",
+   "sourceId": 9
+  },
+  "887177": {
+   "title": "Jerusalem Daily: raids, settlers & sieges",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/jerusalem-daily-raids-settlers-sieges?traffic_source=rss",
+   "publishDate": "2026-09-05T11:37:10.000Z",
+   "sourceId": 9
+  },
+  "887178": {
+   "title": "Cuban and Afghan immigrants deported from US under Trump arrive in Guyana",
+   "url": "https://www.aljazeera.com/news/2026/9/5/cuban-and-afghan-immigrants-deported-from-us-under-trump-arrive-in-guyana?traffic_source=rss",
+   "publishDate": "2026-09-05T11:19:52.000Z",
+   "sourceId": 9
+  },
+  "887508": {
+   "title": "At least 22 dead, several injured, in fire at DR Congo wedding reception",
+   "url": "https://www.scmp.com/news/world/africa/article/3366508/least-22-dead-several-injured-fire-dr-congo-wedding-party",
+   "publishDate": "2026-09-05T12:49:01.000Z",
+   "sourceId": 15
+  },
+  "887558": {
+   "title": "New Mexico man killed his cousin during argument over heat of their enchiladas: cops",
+   "url": "https://www.independent.co.uk/news/world/americas/crime/new-mexico-man-killed-cousin-enchiladas-b3045352.html",
+   "publishDate": "2026-09-05T12:45:04.000Z",
+   "sourceId": 16
+  },
+  "887559": {
+   "title": "Part of the Kennedy Center’s ceiling collapses – sparking calls to allow Trump’s renovations",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/kennedy-center-ceiling-collapse-trump-b3045344.html",
+   "publishDate": "2026-09-05T12:43:10.000Z",
+   "sourceId": 16
+  },
+  "887560": {
+   "title": "Two killed as Greek air force jet crashes at annual air show near Athens",
+   "url": "https://www.independent.co.uk/news/world/europe/hellenic-air-force-phantom-crash-greece-b3045353.html",
+   "publishDate": "2026-09-05T12:32:41.000Z",
+   "sourceId": 16
+  },
+  "887603": {
+   "title": "At least 22 killed in wedding party fire in Congo’s Kinshasa",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/at-least-22-killed-in-wedding-party-fire-in-congos-kinshasa/articleshow/133815165.cms",
+   "publishDate": "2026-09-05T12:38:14.000Z",
+   "sourceId": 14
+  },
+  "887605": {
+   "title": "From oratory to screen time, PM & teachers exchange notes",
+   "url": "https://timesofindia.indiatimes.com/india/from-oratory-to-screen-time-pm-teachers-exchange-notes/articleshow/133814948.cms",
+   "publishDate": "2026-09-05T12:25:16.000Z",
+   "sourceId": 14
+  },
+  "887606": {
+   "title": "Meet Andy Barrett, the 13-year-old Ohio student who turned a school 3D printer into a small business, selling 150 fidget toys and raising money for epilepsy awareness",
+   "url": "https://timesofindia.indiatimes.com/world/us/meet-andy-barrett-the-13-year-old-ohio-student-who-turned-a-school-3d-printer-into-a-small-business-selling-150-fidget-toys-and-raising-money-for-epilepsy-awareness/articleshow/133762709.cms",
+   "publishDate": "2026-09-05T12:20:00.000Z",
+   "sourceId": 14
+  },
+  "887766": {
+   "title": "U.S. strikes three Iranian oil tankers in renewal of hostilities",
+   "url": "https://www.npr.org/2026/09/05/nx-s1-5959181/u-s-strikes-three-iranian-oil-tankers-in-renewal-of-hostilities",
+   "publishDate": "2026-09-05T13:01:12.000Z",
+   "sourceId": 10
+  },
+  "887767": {
+   "title": "This is the work of our lifetime: Ayana Elizabeth Johnson urges action after new UN climate report",
+   "url": "https://www.npr.org/2026/09/05/nx-s1-5954264/this-is-the-work-of-our-lifetime-ayana-elizabeth-johnson-urges-action-after-new-un-climate-report",
+   "publishDate": "2026-09-05T13:01:08.000Z",
+   "sourceId": 10
+  },
+  "887855": {
+   "title": "Prince William to attend King Harald's funeral in Norway",
+   "url": "https://www.bbc.co.uk/news/articles/cp301rw6kvro?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T13:00:02.000Z",
+   "sourceId": 7
+  },
+  "887856": {
+   "title": "TV presenter Sarah Khalifa sentenced to death in Egypt drugs case",
+   "url": "https://www.bbc.co.uk/news/articles/c5y7gk9knnlo?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T13:29:38.000Z",
+   "sourceId": 7
+  },
+  "888031": {
+   "title": "Greeks promised tax relief, wage hikes as protesters take to the streets over cost of living crunch",
+   "url": "https://abcnews.com/International/wireStory/greeks-promised-tax-relief-wage-hikes-protesters-streets-136230685",
+   "publishDate": "2026-09-05T11:36:11.000Z",
+   "sourceId": 12
+  },
+  "888032": {
+   "title": "Competitors dig deep in Hungarian grave-digging contest",
+   "url": "https://abcnews.com/International/wireStory/competitors-dig-deep-hungarian-grave-digging-contest-136229816",
+   "publishDate": "2026-09-05T11:21:43.000Z",
+   "sourceId": 12
+  },
+  "888056": {
+   "title": "German rocket reaches space as Europe enters satellite launch race",
+   "url": "https://www.scmp.com/news/world/europe/article/3366509/german-rocket-reaches-space-europe-enters-satellite-launch-race",
+   "publishDate": "2026-09-05T14:06:47.000Z",
+   "sourceId": 15
+  },
+  "888057": {
+   "title": "Opinion | Gen Z is turning filial piety into a career path",
+   "url": "https://www.scmp.com/opinion/hong-kong-opinion/article/3365271/gen-z-turning-filial-piety-career-path",
+   "publishDate": "2026-09-05T13:30:06.000Z",
+   "sourceId": 15
+  },
+  "888106": {
+   "title": "Robin Morgan, poet and feminist whose allies included Jane Fonda and Gloria Steinem, dies at 85",
+   "url": "https://www.independent.co.uk/news/world/americas/robin-morgan-feminist-gloria-steinem-b3045364.html",
+   "publishDate": "2026-09-05T13:33:48.000Z",
+   "sourceId": 16
+  },
+  "888145": {
+   "title": "With bare hands, lone warrior cleans up dumpyard of a river",
+   "url": "https://timesofindia.indiatimes.com/india/with-bare-hands-lone-warrior-cleans-up-dumpyard-of-a-river/articleshow/133816109.cms",
+   "publishDate": "2026-09-05T13:45:40.000Z",
+   "sourceId": 14
+  },
+  "888147": {
+   "title": "10 days after Nepal flash floods, woman, Chinese man rescued",
+   "url": "https://timesofindia.indiatimes.com/world/south-asia/10-days-after-nepal-flash-floods-woman-chinese-man-rescued/articleshow/133815989.cms",
+   "publishDate": "2026-09-05T13:34:22.000Z",
+   "sourceId": 14
+  },
+  "888148": {
+   "title": "Aadhaar for rest, but babus resist link for CGHS",
+   "url": "https://timesofindia.indiatimes.com/india/aadhaar-for-rest-but-babus-resist-link-for-cghs/articleshow/133815535.cms",
+   "publishDate": "2026-09-05T13:15:22.000Z",
+   "sourceId": 14
+  },
+  "888150": {
+   "title": "35 years apart, SIR reunites brothers in Jind",
+   "url": "https://timesofindia.indiatimes.com/city/chandigarh/35-years-apart-sir-reunites-brothers-in-jind/articleshow/133808883.cms",
+   "publishDate": "2026-09-05T08:51:46.000Z",
+   "sourceId": 14
+  },
+  "888151": {
+   "title": "In 2002, Lundy began its rat-eradication project; puffins later rose from 13 in 2000 to 1,335, and more than 40,000 seabirds now nest on the island",
+   "url": "https://timesofindia.indiatimes.com/science/in-2002-lundy-began-its-rat-eradication-project-puffins-later-rose-from-13-in-2000-to-1335-and-more-than-40000-seabirds-now-nest-on-the-island/articleshow/133763422.cms",
+   "publishDate": "2026-09-05T13:20:00.000Z",
+   "sourceId": 14
+  },
+  "888156": {
+   "title": "CBI FIR against Subhash Chandra in alleged Rs 1,322cr LIC Housing Finance fraud",
+   "url": "https://timesofindia.indiatimes.com/india/cbi-fir-against-chandra-in-alleged-1322cr-lic-housing-finance-fraud/articleshow/133815745.cms",
+   "publishDate": "2026-09-05T13:23:35.000Z",
+   "sourceId": 14
+  },
+  "888221": {
+   "title": "Drone attack blamed on guerrillas kills at least three soldiers in Colombia",
+   "url": "https://www.theguardian.com/world/2026/sep/05/drone-attack-guerrillas-kills-soldiers-colombia",
+   "publishDate": "2026-09-05T14:16:55.000Z",
+   "sourceId": 8
+  },
+  "888233": {
+   "title": "Prince William to represent King Charles at funeral of Norway’s King Harald V",
+   "url": "https://www.theguardian.com/uk-news/2026/sep/05/prince-william-to-represent-king-charles-at-funeral-of-norways-king-harald-v",
+   "publishDate": "2026-09-05T14:11:21.000Z",
+   "sourceId": 8
+  },
+  "888248": {
+   "title": "More voters identifying as Democrats and not calling themselves Republican",
+   "url": "https://www.theguardian.com/us-news/2026/sep/05/us-voters-democrats-republicans",
+   "publishDate": "2026-09-05T13:44:19.000Z",
+   "sourceId": 8
+  },
+  "888263": {
+   "title": "US envoys Witkoff, Kushner meet Putin for talks on Ukraine war",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/us-envoys-witkoff-kushner-meet-putin-for-talks-on-ukraine-war?traffic_source=rss",
+   "publishDate": "2026-09-05T13:23:06.000Z",
+   "sourceId": 9
+  },
+  "888264": {
+   "title": "Building collapses after heavy rain in northern India",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/5/09-05-sv-india-building-collapse-mp4?traffic_source=rss",
+   "publishDate": "2026-09-05T13:11:25.000Z",
+   "sourceId": 9
+  },
+  "888601": {
+   "title": "UK’s Prince William to represent King Charles at funeral of Norway’s King Harald",
+   "url": "https://www.scmp.com/news/world/europe/article/3366510/uks-prince-william-represent-king-charles-funeral-norways-king-harald",
+   "publishDate": "2026-09-05T14:41:41.000Z",
+   "sourceId": 15
+  },
+  "888695": {
+   "title": "Need good working ties with India: Bangladesh",
+   "url": "https://timesofindia.indiatimes.com/world/south-asia/need-good-working-ties-with-india-bangladesh/articleshow/133818655.cms",
+   "publishDate": "2026-09-05T14:27:18.000Z",
+   "sourceId": 14
+  },
+  "888771": {
+   "title": "Australia news live: Taylor proposes laws against flag burning and to lock in 26 January as Australia Day",
+   "url": "https://www.theguardian.com/australia-news/live/2026/sep/06/australia-news-live-albanese-labor-party-coaltion-liberal-party-nepal-floods-ntwnfb",
+   "publishDate": "2026-09-05T15:18:58.000Z",
+   "sourceId": 8
+  },
+  "888865": {
+   "title": "Pink Dot 總監梁兆輝專訪：希望所有人最終都能完成自我接納",
+   "url": "https://theinitium.com/20260906-hongkong-brian-leung-profile-lgbtq/",
+   "publishDate": "2026-09-05T15:00:38.000Z",
+   "sourceId": 6
+  },
+  "888866": {
+   "title": "陰蒂3D神經網首次破解：比陰莖研究晚了28年，「同源不同命」的陰蒂研究史",
+   "url": "https://theinitium.com/20260906-neuroanatomy-of-the-clitoris/",
+   "publishDate": "2026-09-05T14:59:57.000Z",
+   "sourceId": 6
+  },
+  "888958": {
+   "title": "Majority Russian-speaking city in Ukraine considers language ban in the arts",
+   "url": "https://www.bbc.co.uk/news/articles/c33kzvgn8pyo?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T15:54:07.000Z",
+   "sourceId": 7
+  },
+  "888959": {
+   "title": "Flyers might have to face more disruption with hotter skies",
+   "url": "https://www.bbc.co.uk/news/articles/cm274p8m88lo?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T15:20:00.000Z",
+   "sourceId": 7
+  },
+  "889145": {
+   "title": "What a viral Jennie clip reveals about South Korea’s deepfake struggles",
+   "url": "https://www.scmp.com/week-asia/people/article/3366411/viral-jennie-clip-tests-limits-south-koreas-ai-deepfake-laws",
+   "publishDate": "2026-09-05T16:00:10.000Z",
+   "sourceId": 15
+  },
+  "889146": {
+   "title": "Argentina threatens to sanction oil projects around Falkland Islands",
+   "url": "https://www.scmp.com/news/world/americas/article/3366511/argentina-threatens-sanction-oil-projects-around-falkland-islands",
+   "publishDate": "2026-09-05T15:46:54.000Z",
+   "sourceId": 15
+  },
+  "889195": {
+   "title": "Inside the Trump FBI push to investigate Fauci and find evidence Covid came from a Chinese lab",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-fbi-covid-fauci-chinese-lab-leak-b3045365.html",
+   "publishDate": "2026-09-05T15:13:40.000Z",
+   "sourceId": 16
+  },
+  "889226": {
+   "title": "PM: Those who put India in Fragile 5 doubting GDP",
+   "url": "https://timesofindia.indiatimes.com/india/pm-those-who-put-india-in-fragile-5-doubting-gdp/articleshow/133819396.cms",
+   "publishDate": "2026-09-05T15:18:06.000Z",
+   "sourceId": 14
+  },
+  "889313": {
+   "title": "Manhunt after alleged axe attack in Victoria leaves three people with serious injuries",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/manhunt-after-alleged-axe-attack-in-victoria-leaves-three-people-with-life-threatening-injuries-ntwnfb",
+   "publishDate": "2026-09-05T16:15:36.000Z",
+   "sourceId": 8
+  },
+  "889333": {
+   "title": "Falling ceiling debris at Kennedy Center may mire debate over renovations",
+   "url": "https://www.theguardian.com/us-news/2026/sep/05/kennedy-center-ceiling-debris-renovations",
+   "publishDate": "2026-09-05T15:21:22.000Z",
+   "sourceId": 8
+  },
+  "889348": {
+   "title": "Iran war live: IRGC claims new attacks on US warships over naval blockade",
+   "url": "https://www.aljazeera.com/news/liveblog/2026/9/6/iran-war-live-irgc-claims-new-attacks-on-us-warships-over-naval-blockade?traffic_source=rss",
+   "publishDate": "2026-09-05T16:00:00.000Z",
+   "sourceId": 9
+  },
+  "889349": {
+   "title": "Fuel tanker blast in western Iran kills at least 10",
+   "url": "https://www.aljazeera.com/news/2026/9/5/fuel-tanker-blast-in-western-iran-kills-at-least-10?traffic_source=rss",
+   "publishDate": "2026-09-05T15:07:48.000Z",
+   "sourceId": 9
+  },
+  "889350": {
+   "title": "Trump-backed group announces $10m ad spend for midterm Senate race in Texas",
+   "url": "https://www.aljazeera.com/news/2026/9/5/trump-backed-group-announces-10m-ad-spend-for-midterm-senate-race-in-texas?traffic_source=rss",
+   "publishDate": "2026-09-05T14:58:33.000Z",
+   "sourceId": 9
+  },
+  "889499": {
+   "title": "Families lose 'lifeline' after Haitian caregivers let go as TPS status ends",
+   "url": "https://www.bbc.co.uk/news/articles/cg491zp13qqo?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T16:17:05.000Z",
+   "sourceId": 7
+  },
+  "889686": {
+   "title": "Why Chelsea football shirts are making Hong Kong fans nervous about crypto laws",
+   "url": "https://www.scmp.com/news/hong-kong/law-and-crime/article/3366500/why-chelsea-football-shirts-are-making-hong-kong-fans-nervous-about-crypto-laws",
+   "publishDate": "2026-09-05T17:00:13.000Z",
+   "sourceId": 15
+  },
+  "889770": {
+   "title": "‘Aaj Sunday hai kya?’: Irfan Pathan trolls Pakistan after India’s crushing Asia Cup win",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/aaj-sunday-hai-kya-irfan-pathan-trolls-pakistan-after-indias-crushing-asia-cup-win/articleshow/133821467.cms",
+   "publishDate": "2026-09-05T17:11:36.000Z",
+   "sourceId": 14
+  },
+  "889816": {
+   "title": "U.S. military attacks 3 Iranian oil tankers in retaliation for American warship strikes",
+   "url": "https://www.cbsnews.com/video/us-military-attacks-3-iranian-oil-tankers-in-retaliation-for-american-warship-strikes/",
+   "publishDate": "2026-09-05T16:53:11.000Z",
+   "sourceId": 17
+  },
+  "889888": {
+   "title": "Netanyahu boasts about bombing Qatar, says Gaza funds used for aid",
+   "url": "https://www.aljazeera.com/news/2026/9/6/netanyahu-boasts-about-bombing-qatar-says-gaza-funds-used-for-aid?traffic_source=rss",
+   "publishDate": "2026-09-05T17:02:08.000Z",
+   "sourceId": 9
+  },
+  "889889": {
+   "title": "German company launches rocket as Europe enters satellite race",
+   "url": "https://www.aljazeera.com/news/2026/9/6/german-company-launches-rocket-as-europe-enters-satellite-race?traffic_source=rss",
+   "publishDate": "2026-09-05T16:53:23.000Z",
+   "sourceId": 9
+  },
+  "890206": {
+   "title": "Prince Hisahito turns 20 as Japan's government reinforces male-only succession rules",
+   "url": "https://abcnews.com/International/wireStory/prince-hisahito-turns-20-japans-government-reinforces-male-136233775",
+   "publishDate": "2026-09-05T17:59:21.000Z",
+   "sourceId": 12
+  },
+  "890215": {
+   "title": "Africa’s mother tongues are finding new life as youth connect with roots and relatives",
+   "url": "https://abcnews.com/International/wireStory/africas-mother-tongues-finding-new-life-youth-connect-136233683",
+   "publishDate": "2026-09-05T17:57:55.000Z",
+   "sourceId": 12
+  },
+  "890217": {
+   "title": "Indonesia cancels flights at Jakarta airport as Anak Krakatau volcano erupts",
+   "url": "https://abcnews.com/International/wireStory/indonesia-cancels-flights-jakarta-airport-anak-krakatau-volcano-136233965",
+   "publishDate": "2026-09-05T18:00:10.000Z",
+   "sourceId": 12
+  },
+  "890226": {
+   "title": "‘All I want is a fair chance’: Malaysia’s deaf workers look to lead",
+   "url": "https://www.scmp.com/week-asia/people/article/3366408/hired-then-what-malaysias-deaf-workers-push-past-entry-level-jobs",
+   "publishDate": "2026-09-05T18:00:09.000Z",
+   "sourceId": 15
+  },
+  "890227": {
+   "title": "New York City subway attacks by ‘crazy people’ hit elderly riders hardest",
+   "url": "https://www.scmp.com/news/world/united-states-canada/article/3366512/elderly-riders-bear-brunt-rising-new-york-city-subway-attacks",
+   "publishDate": "2026-09-05T17:59:00.000Z",
+   "sourceId": 15
+  },
+  "890228": {
+   "title": "Opinion | In an era of extreme summers, it’s time to look beyond air conditioning",
+   "url": "https://www.scmp.com/opinion/hong-kong-opinion/article/3365989/era-extreme-summers-its-time-look-beyond-air-conditioning",
+   "publishDate": "2026-09-05T17:30:07.000Z",
+   "sourceId": 15
+  },
+  "890276": {
+   "title": "Hegseth promises to protect military members who deliver religious greetings at Air Force base",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/hegseth-air-force-base-religious-greetings-b3045381.html",
+   "publishDate": "2026-09-05T17:12:48.000Z",
+   "sourceId": 16
+  },
+  "890308": {
+   "title": "Jharkhand tourism minister Sudivya Kumar dies of heart attack",
+   "url": "https://timesofindia.indiatimes.com/city/ranchi/jharkhand-tourism-minister-sudivya-kumar-dies-of-heart-attack/articleshow/133822198.cms",
+   "publishDate": "2026-09-05T17:45:53.000Z",
+   "sourceId": 14
+  },
+  "890312": {
+   "title": "8 months, Moscow-to-Munich flights, but now he is 'fed up': Behind Russia No. 1 Ian Nepomniachtchi's tattoos",
+   "url": "https://timesofindia.indiatimes.com/sports/chess/8-months-moscow-to-munich-flights-but-now-he-is-fed-up-behind-russia-no-1-ian-nepomniachtchis-tattoos/articleshow/133821671.cms",
+   "publishDate": "2026-09-05T17:21:40.000Z",
+   "sourceId": 14
+  },
+  "890313": {
+   "title": "Two dead, two critical after small plane crashes in California",
+   "url": "https://timesofindia.indiatimes.com/world/us/two-dead-two-critical-after-small-plane-crashes-in-us-california/articleshow/133821519.cms",
+   "publishDate": "2026-09-05T17:16:08.000Z",
+   "sourceId": 14
+  },
+  "890353": {
+   "title": "Uber robotaxis hit London's streets, but with humans still behind the wheel",
+   "url": "https://www.cbsnews.com/news/uber-robotaxis-london-wayve-autonomous/",
+   "publishDate": "2026-09-05T18:00:00.000Z",
+   "sourceId": 17
+  },
+  "890359": {
+   "title": "9/5: CBS Weekend News",
+   "url": "https://www.cbsnews.com/video/090526-cbs-weekend-news/",
+   "publishDate": "2026-09-05T14:30:00.000Z",
+   "sourceId": 17
+  },
+  "890393": {
+   "title": "Labor plans crackdown on social media algorithms as Taylor says he’s ‘deeply sceptical’",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/labor-plans-crackdown-on-social-media-algorithms-as-taylor-says-hes-deeply-sceptical",
+   "publishDate": "2026-09-05T17:32:38.000Z",
+   "sourceId": 8
+  },
+  "890428": {
+   "title": "‘People laughed at me’: Indian youth cleans up a trash-filled river",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/people-laughed-at-me-indian-youth-cleans-up-a-trash-filled-river?traffic_source=rss",
+   "publishDate": "2026-09-05T17:38:52.000Z",
+   "sourceId": 9
+  },
+  "890561": {
+   "title": "Russia-Ukraine war: US envoys set for Ukraine talks after Putin meeting",
+   "url": "https://www.bbc.co.uk/news/articles/c6248nvqy8po?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T18:24:16.000Z",
+   "sourceId": 7
+  },
+  "890564": {
+   "title": "Watch: Moment 64-year-old Nepali woman is found alive in mud-buried home",
+   "url": "https://www.bbc.co.uk/news/videos/c4gd24d1d0do?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T17:54:29.000Z",
+   "sourceId": 7
+  },
+  "890763": {
+   "title": "Red tape, high cost: can Hong Kong’s new yacht scheme chart a smoother course?",
+   "url": "https://www.scmp.com/news/hong-kong/hong-kong-economy/article/3366503/red-tape-high-cost-can-hong-kongs-new-yacht-scheme-chart-smoother-course",
+   "publishDate": "2026-09-05T19:00:12.000Z",
+   "sourceId": 15
+  },
+  "890764": {
+   "title": "China mines iron from tailings and low-grade ore to cut Australia, Brazil supply",
+   "url": "https://www.scmp.com/news/china/science/article/3366315/china-begins-mining-iron-tailings-low-grade-ore-can-meet-its-demand-decades",
+   "publishDate": "2026-09-05T19:00:09.000Z",
+   "sourceId": 15
+  },
+  "890765": {
+   "title": "Signalling fault disrupts Hong Kong high-speed rail service, delaying 15 trains",
+   "url": "https://www.scmp.com/news/hong-kong/transport/article/3366514/signalling-fault-disrupts-hong-kong-high-speed-rail-service-delaying-15-trains",
+   "publishDate": "2026-09-05T18:35:28.000Z",
+   "sourceId": 15
+  },
+  "890766": {
+   "title": "Junior Chinese customs officer killed in mudslide 4 days into job deeply moves public",
+   "url": "https://www.scmp.com/news/people-culture/environment/article/3366513/junior-chinese-customs-officer-killed-mudslide-just-4-days-job-deeply-moves-public",
+   "publishDate": "2026-09-05T18:14:35.000Z",
+   "sourceId": 15
+  },
+  "890813": {
+   "title": "‘What’s going on with Trump’s hair?’ Internet puzzled over president’s new brunette coiffure",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-hair-brunette-brown-b3045388.html",
+   "publishDate": "2026-09-05T18:33:33.000Z",
+   "sourceId": 16
+  },
+  "890845": {
+   "title": "'Permanently disabled': US shares video of strike on Iranian tanker, issues warning",
+   "url": "https://timesofindia.indiatimes.com/world/middle-east/three-of-yours-us-shares-video-of-strike-on-iranian-tanker-issues-warning-to-tehran/articleshow/133822785.cms",
+   "publishDate": "2026-09-05T18:14:57.000Z",
+   "sourceId": 14
+  },
+  "890846": {
+   "title": "‘Your alumni are the OGs’: PM Modi’s Gen Z shoutout at SRCC centenary celebrations",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/your-alumni-are-the-ogs-modis-gen-z-shoutout-at-srcc-centenary-celebrations/articleshow/133811780.cms",
+   "publishDate": "2026-09-05T10:11:17.000Z",
+   "sourceId": 14
+  },
+  "890850": {
+   "title": "Krakatau volcano erupts in Indonesia: 209 flights hit, schools shut as ash plume soars 50,000 feet",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/krakatau-volcano-erupts-in-indonesia-209-flights-hit-schools-shut-as-ash-plume-soars-50000-feet/articleshow/133823771.cms",
+   "publishDate": "2026-09-05T19:05:15.000Z",
+   "sourceId": 14
+  },
+  "890858": {
+   "title": "In 2013, Angelina Jolie’s search for inspiration for her work led her to a WWII veteran who had been her next-door neighbour for the past 10 years",
+   "url": "https://timesofindia.indiatimes.com/entertainment/english/hollywood/news/in-2013-angelina-jolies-search-for-inspiration-for-her-work-led-her-to-a-wwii-veteran-who-had-been-her-next-door-neighbour-for-the-past-10-years/articleshow/133800357.cms",
+   "publishDate": "2026-09-05T09:30:00.000Z",
+   "sourceId": 14
+  },
+  "890920": {
+   "title": "Nearly 9,000 killed in Israeli attacks on Lebanon since 2023",
+   "url": "https://www.aljazeera.com/news/2026/9/6/nearly-9000-killed-in-israeli-attacks-on-lebanon-since-2023?traffic_source=rss",
+   "publishDate": "2026-09-05T18:56:31.000Z",
+   "sourceId": 9
+  },
+  "891300": {
+   "title": "Tesla to exhibit Cybercab robotaxi in China: can it spark buzz amid slow sales?",
+   "url": "https://www.scmp.com/business/china-evs/article/3366461/tesla-exhibit-cybercab-robotaxi-china-can-it-spark-buzz-amid-slow-sales",
+   "publishDate": "2026-09-05T20:00:09.000Z",
+   "sourceId": 15
+  },
+  "891301": {
+   "title": "Cockroaches gain ‘foothold’ in Japan’s Hokkaido as weather warms",
+   "url": "https://www.scmp.com/week-asia/lifestyle-culture/article/3366338/cold-comfort-japans-hokkaido-battles-cockroach-surge-amid-global-warming",
+   "publishDate": "2026-09-05T20:00:07.000Z",
+   "sourceId": 15
+  },
+  "891383": {
+   "title": "Trump planning 'something much bigger' as post-Iran war strategy for Middle East: Report",
+   "url": "https://timesofindia.indiatimes.com/world/us/trump-planning-something-much-bigger-as-post-iran-war-strategy-for-middle-east-report/articleshow/133825281.cms",
+   "publishDate": "2026-09-05T20:13:27.000Z",
+   "sourceId": 14
+  },
+  "891384": {
+   "title": "'Trust shattered': Rahul backs students protesting against MPSC paper leak in Maharashtra",
+   "url": "https://timesofindia.indiatimes.com/india/trust-shattered-rahul-backs-students-protesting-against-mpsc-paper-leak-in-maharashtra/articleshow/133825029.cms",
+   "publishDate": "2026-09-05T19:58:32.000Z",
+   "sourceId": 14
+  },
+  "891385": {
+   "title": "Match fixing concerns? PCB takes Pakistan players’ phones into custody before final England Test",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/match-fixing-concerns-pcb-takes-pakistan-players-phones-into-custody-before-final-england-test/articleshow/133823611.cms",
+   "publishDate": "2026-09-05T18:57:13.000Z",
+   "sourceId": 14
+  },
+  "891386": {
+   "title": "'Highly useful' but no breakthrough: What was discussed in Putin-US talks on Ukraine",
+   "url": "https://timesofindia.indiatimes.com/world/us/highly-useful-but-no-breakthrough-what-was-discussed-in-putin-us-talks-on-ukraine/articleshow/133824711.cms",
+   "publishDate": "2026-09-05T19:46:38.000Z",
+   "sourceId": 14
+  },
+  "891387": {
+   "title": "Mayor Zohran Mamdani 'summoned' by New York City Council for his administration using an encrypted messaging app; created a 'secret group' chat named ...",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/mayor-zohran-mamdani-summoned-by-new-york-city-council-for-his-administration-using-an-encrypted-messaging-app-created-a-secret-group-chat-named-/articleshow/133823928.cms",
+   "publishDate": "2026-09-05T19:43:20.000Z",
+   "sourceId": 14
+  },
+  "891391": {
+   "title": "‘There was no proper mobile network near our home’: These two Odisha sisters climbed hilltops to study, cleared NEET 2026 together without coaching",
+   "url": "https://timesofindia.indiatimes.com/life-style/people/there-was-no-proper-mobile-network-near-our-home-these-two-odisha-sisters-climbed-hilltops-to-study-cleared-neet-2026-together-without-coaching/articleshow/133823520.cms",
+   "publishDate": "2026-09-05T18:53:04.000Z",
+   "sourceId": 14
+  },
+  "891395": {
+   "title": "Influencer Igho Ubiribo passes away at 43 in Thailand: What happened to the wealthy influencer?",
+   "url": "https://timesofindia.indiatimes.com/entertainment/english/hollywood/news/influencer-igho-ubiribo-passes-away-at-43-in-thailand-what-happened-to-the-wealthy-influencer/articleshow/133824491.cms",
+   "publishDate": "2026-09-05T19:36:57.000Z",
+   "sourceId": 14
+  },
+  "891396": {
+   "title": "Egyptian TV presenter Sarah Khalifa among 12 sentenced to death in drugs case",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/egyptian-tv-presenter-sarah-khalifa-among-12-sentenced-to-death-in-drugs-case/articleshow/133822368.cms",
+   "publishDate": "2026-09-05T18:14:01.000Z",
+   "sourceId": 14
+  },
+  "891401": {
+   "title": "'I may have to': Joe Biden's son Hunter hints at running for 2028 US presidential elections",
+   "url": "https://timesofindia.indiatimes.com/world/us/i-may-have-to-joe-bidens-son-hunter-hints-at-running-for-2028-us-presidential-elections/articleshow/133823287.cms",
+   "publishDate": "2026-09-05T18:41:12.000Z",
+   "sourceId": 14
+  },
+  "891403": {
+   "title": "China mudslide: One missing person found dead as death toll rises to two; 10 remain missing",
+   "url": "https://timesofindia.indiatimes.com/world/china/china-mudslide-one-missing-person-found-dead-as-death-toll-rises-to-two-10-remain-missing/articleshow/133824054.cms",
+   "publishDate": "2026-09-05T19:23:58.000Z",
+   "sourceId": 14
+  },
+  "891469": {
+   "title": "‘Nobody will win’: Zelenskyy adviser warns of mutual destruction if war with Russia continues",
+   "url": "https://www.theguardian.com/world/2026/sep/06/zelenskyy-advisor-warns-mutual-destruction-war-russia",
+   "publishDate": "2026-09-05T20:00:55.000Z",
+   "sourceId": 8
+  },
+  "891500": {
+   "title": "Indonesia’s main airport suspends flights due to Anak Krakatau eruption",
+   "url": "https://www.aljazeera.com/news/2026/9/6/indonesias-main-airport-suspends-flights-due-to-anak-krakatoa-eruption?traffic_source=rss",
+   "publishDate": "2026-09-05T19:38:23.000Z",
+   "sourceId": 9
+  },
+  "891826": {
+   "title": "Sudan’s war-driven blackouts push residents toward solar power but high costs shut many out",
+   "url": "https://abcnews.com/International/wireStory/sudans-war-driven-blackouts-push-residents-solar-power-136235978",
+   "publishDate": "2026-09-05T20:25:33.000Z",
+   "sourceId": 12
+  },
+  "891835": {
+   "title": "Calls for Hong Kong anti-stalking law after man acquitted of following teen girl",
+   "url": "https://www.scmp.com/news/hong-kong/law-and-crime/article/3366505/calls-hong-kong-anti-stalking-law-after-man-acquitted-following-teen-girl",
+   "publishDate": "2026-09-05T21:00:14.000Z",
+   "sourceId": 15
+  },
+  "891836": {
+   "title": "Young Malaysians brew goal for traditional tuak drink to become national success",
+   "url": "https://www.scmp.com/week-asia/lifestyle-culture/article/3366427/young-malaysians-brew-goal-traditional-tuak-drink-become-national-success",
+   "publishDate": "2026-09-05T21:00:10.000Z",
+   "sourceId": 15
+  },
+  "891837": {
+   "title": "Filipino-Americans rattled by Trump’s anti-migrant ‘xenophobia’ games",
+   "url": "https://www.scmp.com/week-asia/politics/article/3366520/filipino-americans-rattled-trumps-migrant-chasing-xenophobia-games",
+   "publishDate": "2026-09-05T20:46:55.000Z",
+   "sourceId": 15
+  },
+  "891838": {
+   "title": "Elderly hiker airlifted to hospital after collapsing at scenic spot in Hong Kong",
+   "url": "https://www.scmp.com/news/hong-kong/society/article/3366519/elderly-hiker-airlifted-hospital-after-collapsing-scenic-spot-hong-kong",
+   "publishDate": "2026-09-05T20:46:00.000Z",
+   "sourceId": 15
+  },
+  "891917": {
+   "title": "Climate justice tops agenda as Nepal PM Balen flies to UN office",
+   "url": "https://timesofindia.indiatimes.com/world/south-asia/climate-justice-tops-agenda-as-nepal-pm-balen-flies-to-un-office/articleshow/133818800.cms",
+   "publishDate": "2026-09-05T14:35:13.000Z",
+   "sourceId": 14
+  },
+  "891918": {
+   "title": "8 die after suspected toxic liquor consumption in MP's Sagar, 3 critical",
+   "url": "https://timesofindia.indiatimes.com/city/bhopal/8-die-after-suspected-toxic-liquor-consumption-in-mps-sagar-3-critical/articleshow/133826333.cms",
+   "publishDate": "2026-09-05T20:59:32.000Z",
+   "sourceId": 14
+  },
+  "891919": {
+   "title": "India thrash Pakistan for 55, Wahab Riaz still calls them ‘best side’ in Asia Cup",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/india-thrash-pakistan-for-55-wahab-riaz-still-calls-them-best-side-in-asia-cup/articleshow/133826248.cms",
+   "publishDate": "2026-09-05T20:58:02.000Z",
+   "sourceId": 14
+  },
+  "891921": {
+   "title": "Mark Zuckerberg's real estate portfolio: 'Doomsday bunker' in Hawaii, waterfront mansion in Miami, 200-year-old castle in Ireland and more",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/mark-zuckerbergs-real-estate-portfolio-doomsday-bunker-in-hawaii-waterfront-mansion-in-miami-200-year-old-castle-in-ireland-and-more/articleshow/133826177.cms",
+   "publishDate": "2026-09-05T20:50:45.000Z",
+   "sourceId": 14
+  },
+  "891922": {
+   "title": "‘Something much bigger’: Trump planning major Middle East 'reset' after Iran war",
+   "url": "https://timesofindia.indiatimes.com/world/us/something-much-bigger-trump-planning-major-middle-east-reset-after-iran-war/articleshow/133825281.cms",
+   "publishDate": "2026-09-05T20:13:27.000Z",
+   "sourceId": 14
+  },
+  "891923": {
+   "title": "'Don't stoop so low': CJP activist reacts to complaint over 'objectionable' remarks on Hindu deities",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/dont-stoop-so-low-cjp-activist-reacts-to-complaint-over-objectionable-remarks-on-hindu-deities/articleshow/133822632.cms",
+   "publishDate": "2026-09-05T18:22:02.000Z",
+   "sourceId": 14
+  },
+  "891925": {
+   "title": "In 1879, Edwin Hall discovered an electrical effect thought to need a perpendicular magnetic field; 147 years later, scientists have shown it can work with the field in-plane",
+   "url": "https://timesofindia.indiatimes.com/science/in-1879-edwin-hall-discovered-an-electrical-effect-thought-to-need-a-perpendicular-magnetic-field-147-years-later-scientists-have-shown-it-can-work-with-the-field-in-plane/articleshow/133826353.cms",
+   "publishDate": "2026-09-05T21:06:12.000Z",
+   "sourceId": 14
+  },
+  "891926": {
+   "title": "Scientists altered the air around a Wisconsin forest for 11 years; extra CO₂ drove 39% more productivity, but ozone reversed part of the gain",
+   "url": "https://timesofindia.indiatimes.com/science/scientists-altered-the-air-around-a-wisconsin-forest-for-11-years-extra-co2-drove-39-more-productivity-but-ozone-reversed-part-of-the-gain/articleshow/133796967.cms",
+   "publishDate": "2026-09-05T21:06:05.000Z",
+   "sourceId": 14
+  },
+  "891929": {
+   "title": "'Really like his chess, not his personality': Russia No. 1 Nepo on Hans Niemann's 'FIDE must punish' remarks | Exclusive",
+   "url": "https://timesofindia.indiatimes.com/sports/chess/really-like-his-chess-not-his-personality-russia-no-1-nepo-on-hans-niemanns-fide-must-punish-remarks-exclusive/articleshow/133824104.cms",
+   "publishDate": "2026-09-05T19:31:59.000Z",
+   "sourceId": 14
+  },
+  "891930": {
+   "title": "Frozen like Pompeii, Ujjain’s 42 twisted skeletons await answers",
+   "url": "https://timesofindia.indiatimes.com/city/bhopal/frozen-like-pompeii-ujjains-42-twisted-skeletons-await-answers/articleshow/133824334.cms",
+   "publishDate": "2026-09-05T19:32:30.000Z",
+   "sourceId": 14
+  },
+  "891931": {
+   "title": "Europe is moving its gold out of America; where is it headed",
+   "url": "https://timesofindia.indiatimes.com/business/international-business/europe-is-moving-its-gold-out-of-america-where-is-it-headed/articleshow/133824849.cms",
+   "publishDate": "2026-09-05T20:02:21.000Z",
+   "sourceId": 14
+  },
+  "891932": {
+   "title": "FPIs turn sellers again, pull out Rs 7,443 crore from Indian equities in first week of September",
+   "url": "https://timesofindia.indiatimes.com/business/india-business/fpis-turn-sellers-again-pull-out-rs-7443-crore-from-indian-equities-in-first-week-of-september/articleshow/133826044.cms",
+   "publishDate": "2026-09-05T20:43:27.000Z",
+   "sourceId": 14
+  },
+  "891934": {
+   "title": "Delhi master plan 2047: Older colonies to get a new look; what could change for residents",
+   "url": "https://timesofindia.indiatimes.com/real-estate/news/delhi-master-plan-2047-older-colonies-to-get-a-new-look-what-could-change-for-residents/articleshow/133825476.cms",
+   "publishDate": "2026-09-05T20:22:40.000Z",
+   "sourceId": 14
+  },
+  "891935": {
+   "title": "‘Jana Nayagan’ actor and CM Vijay’s look-alike takes Udupi by storm during Krishna Janmashtami, Viral video wins attention",
+   "url": "https://timesofindia.indiatimes.com/entertainment/tamil/movies/news/jana-nayagan-actor-and-cm-vijays-look-alike-takes-udupi-by-storm-during-krishna-janmashtami-viral-video-wins-attention/articleshow/133825539.cms",
+   "publishDate": "2026-09-05T20:16:49.000Z",
+   "sourceId": 14
+  },
+  "892003": {
+   "title": "Travellers to EU face renewed queues as border-check flexibility rules expire",
+   "url": "https://www.theguardian.com/business/2026/sep/06/travellers-eu-queues-border-check-flexibility-rules-expire-entry-exit-system-ees",
+   "publishDate": "2026-09-05T21:00:56.000Z",
+   "sourceId": 8
+  },
+  "892019": {
+   "title": "Tupac trial spotlights decades of US police failures in solving the case",
+   "url": "https://www.theguardian.com/news/ng-interactive/2026/sep/06/tupac-shakur-murder-investigation",
+   "publishDate": "2026-09-05T21:00:56.000Z",
+   "sourceId": 8
+  },
+  "892034": {
+   "title": "Flames burst from Qantas plane engine after New Zealand takeoff",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/flames-burst-from-qantas-plane-engine-after-new-zealand-takeoff?traffic_source=rss",
+   "publishDate": "2026-09-05T21:02:23.000Z",
+   "sourceId": 9
+  },
+  "892035": {
+   "title": "Yemeni forces claim strategic district amid intensified Houthi clashes",
+   "url": "https://www.aljazeera.com/news/2026/9/6/yemeni-forces-claim-strategic-district-amid-intensified-houthi-clashes?traffic_source=rss",
+   "publishDate": "2026-09-05T21:02:17.000Z",
+   "sourceId": 9
+  },
+  "892036": {
+   "title": "Israeli Prime Minister Netanyahu says ‘Qatar is a hostile state’",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/israeli-prime-minister-netanyahu-says-qatar-is-a-hostile?traffic_source=rss",
+   "publishDate": "2026-09-05T20:59:28.000Z",
+   "sourceId": 9
+  },
+  "892037": {
+   "title": "More than 20 killed in fire at wedding party in DR Congo",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/more-than-20-killed-in-fire-at-wedding-party-in-dr-congo?traffic_source=rss",
+   "publishDate": "2026-09-05T20:47:55.000Z",
+   "sourceId": 9
+  },
+  "892038": {
+   "title": "South Africa’s chrome riches fuel a deadly underground economy",
+   "url": "https://www.aljazeera.com/news/2026/9/6/south-africas-chrome-riches-fuel-a-deadly-underground-economy?traffic_source=rss",
+   "publishDate": "2026-09-05T20:31:45.000Z",
+   "sourceId": 9
+  },
+  "892039": {
+   "title": "German voters head to polls as far-right AfD party eyes historic state win",
+   "url": "https://www.aljazeera.com/news/2026/9/6/german-voters-head-to-polls-as-far-right-afd-party-eyes-historic-state-win?traffic_source=rss",
+   "publishDate": "2026-09-05T20:12:18.000Z",
+   "sourceId": 9
+  },
+  "892059": {
+   "title": "Live: Trump's envoys head to Ukraine after 'substantive' talks with Putin",
+   "url": "https://www.france24.com/en/europe/20260906-live-trump-s-envoys-head-to-ukraine-after-substantive-talks-with-putin",
+   "publishDate": "2026-09-05T20:57:43.000Z",
+   "sourceId": 11
+  },
+  "892170": {
+   "title": "Volcano eruption triggers flight suspensions at Indonesia's main airport",
+   "url": "https://www.bbc.co.uk/news/articles/cvgy5k4n07ko?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T21:12:44.000Z",
+   "sourceId": 7
+  },
+  "892294": {
+   "title": "Video. Latest news bulletin | September 6th, 2026 – Morning",
+   "url": "http://www.euronews.com/video/2026/09/06/latest-news-bulletin-september-6th-2026-morning",
+   "publishDate": "2026-09-05T16:00:00.000Z",
+   "sourceId": 13
+  },
+  "892369": {
+   "title": "Fatal cycling accidents in Hong Kong more than double in first half of 2026",
+   "url": "https://www.scmp.com/news/hong-kong/law-and-crime/article/3366524/fatal-cycling-accidents-hong-kong-more-double-first-half-2026",
+   "publishDate": "2026-09-05T22:09:08.000Z",
+   "sourceId": 15
+  },
+  "892370": {
+   "title": "Revise Chinese military university’s AI course to ‘educate for war’: researchers",
+   "url": "https://www.scmp.com/news/china/military/article/3366490/chinese-military-university-urged-revise-ai-course-educate-war",
+   "publishDate": "2026-09-05T22:00:16.000Z",
+   "sourceId": 15
+  },
+  "892371": {
+   "title": "US denies it tried to influence Malaysia’s political leadership",
+   "url": "https://www.scmp.com/news/asia/southeast-asia/article/3366522/us-denies-it-tried-influence-malaysias-political-leadership-2014",
+   "publishDate": "2026-09-05T21:40:38.000Z",
+   "sourceId": 15
+  },
+  "892419": {
+   "title": "Ukraine-Russia war latest: No sign of breakthrough in Putin’s ‘highly useful’ peace talks as Trump envoys head to Kyiv",
+   "url": "https://www.independent.co.uk/news/world/europe/ukraine-russia-war-live-trump-putin-zelensky-talks-witkoff-kushner-b3045408.html",
+   "publishDate": "2026-09-05T21:42:51.000Z",
+   "sourceId": 16
+  },
+  "892451": {
+   "title": "Iran planning ‘multi-front’ attack on Israel with Hezbollah, Hamas, Houthis: Report",
+   "url": "https://timesofindia.indiatimes.com/world/middle-east/iran-planning-multi-front-attack-on-israel-with-hezbollah-hamas-houthis-report/articleshow/133826373.cms",
+   "publishDate": "2026-09-05T20:59:46.000Z",
+   "sourceId": 14
+  },
+  "892456": {
+   "title": "'Zero control of its border': Trump tears into Spain over Ceuta migrant crisis",
+   "url": "https://timesofindia.indiatimes.com/world/us/zero-control-of-its-border-trump-tears-into-spain-over-ceuta-migrant-crisis/articleshow/133827493.cms",
+   "publishDate": "2026-09-05T21:54:24.000Z",
+   "sourceId": 14
+  },
+  "892494": {
+   "title": "U.K.'s Nigel Farage said he \"wasn't listening\" during donation scandal conversation filmed covertly",
+   "url": "https://www.cbsnews.com/news/nigel-farage-reform-donation-scandal-investigation-undercover/",
+   "publishDate": "2026-09-05T22:04:43.000Z",
+   "sourceId": 17
+  },
+  "892525": {
+   "title": "Falklands row shows urgent need to commit to 3% target, says Labour defence committee chair",
+   "url": "https://www.theguardian.com/politics/2026/sep/06/falklands-row-raise-defence-spending-tan-dhesi-labour",
+   "publishDate": "2026-09-05T22:00:58.000Z",
+   "sourceId": 8
+  },
+  "892532": {
+   "title": "Brisbane expected to swelter under hottest September day in years as east coast faces unseasonably warm weather",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/brisbane-queensland-hottest-september-day-in-years-east-coast-unseasonably-warm-weather",
+   "publishDate": "2026-09-05T21:49:55.000Z",
+   "sourceId": 8
+  },
+  "892536": {
+   "title": "Coalition denies flag-burning ban an attempt to undercut One Nation as Labor says push has ‘element of desperation’",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/coalition-proposal-flag-burning-ban-angus-taylor-one-nation-ntwnfb",
+   "publishDate": "2026-09-05T19:11:18.000Z",
+   "sourceId": 8
+  },
+  "892542": {
+   "title": "Broken feet, ripped-out hair and now a death sentence: the fate of twin sisters jailed over Iran protests",
+   "url": "https://www.theguardian.com/world/2026/sep/06/taraneh-romina-rahimi-twin-sisters-jailed-over-iran-protests",
+   "publishDate": "2026-09-05T22:00:58.000Z",
+   "sourceId": 8
+  },
+  "892594": {
+   "title": "Germany's far-right AfD eyes historic state victory in Saxony-Anhalt election",
+   "url": "https://www.france24.com/en/europe/20260906-germany-s-far-right-afd-eyes-historic-state-victory-in-saxony-anhalt-election",
+   "publishDate": "2026-09-05T21:52:06.000Z",
+   "sourceId": 11
+  },
+  "892726": {
+   "title": "Why a famous Montreal sandwich shop has been forced to swap its soda",
+   "url": "https://www.bbc.co.uk/news/videos/c99dpd083v9o?at_medium=RSS&at_campaign=rss",
+   "publishDate": "2026-09-05T22:04:51.000Z",
+   "sourceId": 7
+  },
+  "892888": {
+   "title": "Nepal flood survivor's family in China relieved after days of anxious waiting",
+   "url": "https://abcnews.com/International/wireStory/nepal-flood-survivors-family-china-relieved-after-days-136236638",
+   "publishDate": "2026-09-05T23:02:59.000Z",
+   "sourceId": 12
+  },
+  "892889": {
+   "title": "German region votes in election that could bring first far-right state governor to power",
+   "url": "https://abcnews.com/International/wireStory/german-region-votes-election-bring-state-governor-power-136236455",
+   "publishDate": "2026-09-05T23:03:06.000Z",
+   "sourceId": 12
+  },
+  "892894": {
+   "title": "Mudslide death toll in China rises to 3 after heavy rain from Typhoon Saudel",
+   "url": "https://abcnews.com/International/wireStory/mudslide-death-toll-china-rises-3-after-heavy-136236639",
+   "publishDate": "2026-09-05T23:02:57.000Z",
+   "sourceId": 12
+  },
+  "892895": {
+   "title": "A fuel tanker explosion in west Iran kills 11 and injures 7",
+   "url": "https://abcnews.com/International/wireStory/fuel-tanker-explosion-west-iran-kills-11-injures-136236457",
+   "publishDate": "2026-09-05T23:03:05.000Z",
+   "sourceId": 12
+  },
+  "892902": {
+   "title": "Hong Kong open to classifying heatstroke as an occupational disease: labour chief",
+   "url": "https://www.scmp.com/news/hong-kong/society/article/3366525/hong-kong-open-classifying-heatstroke-occupational-disease-labour-chief",
+   "publishDate": "2026-09-05T22:58:23.000Z",
+   "sourceId": 15
+  },
+  "892903": {
+   "title": "Iran attacks naval drone near Hormuz after US strikes 3 oil tankers",
+   "url": "https://www.scmp.com/news/world/middle-east/article/3366526/iran-attacks-naval-drone-near-hormuz-after-us-strikes-3-oil-tankers",
+   "publishDate": "2026-09-05T22:45:50.000Z",
+   "sourceId": 15
+  },
+  "892983": {
+   "title": "'Why CT scan?': Doctors 'abused', staffer slapped at Palghar hospital; Shiv Sena district chief booked",
+   "url": "https://timesofindia.indiatimes.com/city/mumbai/why-ct-scan-doctors-abused-staffer-slapped-at-palghar-hospital-shiv-sena-district-chief-booked/articleshow/133827962.cms",
+   "publishDate": "2026-09-05T22:15:56.000Z",
+   "sourceId": 14
+  },
+  "892984": {
+   "title": "India backs UN world map resolution but calls out inaccurate J&K depiction",
+   "url": "https://timesofindia.indiatimes.com/india/india-backs-un-world-map-resolution-calls-inaccurate-jk-depiction-unacceptable/articleshow/133829116.cms",
+   "publishDate": "2026-09-05T23:05:58.000Z",
+   "sourceId": 14
+  },
+  "892985": {
+   "title": "‘Adjectives keep changing’: Kharge attacks PM Modi over ‘Naraz Fufa’ jibe at Congress",
+   "url": "https://timesofindia.indiatimes.com/india/adjectives-keep-changing-kharge-attacks-pm-modi-over-naraz-fufa-jibe-at-congress/articleshow/133828125.cms",
+   "publishDate": "2026-09-05T22:20:43.000Z",
+   "sourceId": 14
+  },
+  "892986": {
+   "title": "4, 6, 4! Vaibhav Sooryavanshi takes on Mohammed Siraj, lights up Chepauk in Duleep Trophy final - Watch",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/4-6-4-vaibhav-sooryavanshi-takes-on-mohammed-siraj-lights-up-chepauk-in-duleep-trophy-final-watch/articleshow/133827899.cms",
+   "publishDate": "2026-09-05T22:18:52.000Z",
+   "sourceId": 14
+  },
+  "892987": {
+   "title": "Several students accuse JNU professor of sexual harassment",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/several-students-accuse-jnu-professor-of-sexual-harassment/articleshow/133822211.cms",
+   "publishDate": "2026-09-05T17:52:02.000Z",
+   "sourceId": 14
+  },
+  "892988": {
+   "title": "Zoho founder Sridhar Vembu: All of us in software need to figure out how to stay relevant; the point is …",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/zoho-founder-sridhar-vembu-all-of-us-in-software-need-to-figure-out-how-to-stay-relevant-the-point-is-/articleshow/133828430.cms",
+   "publishDate": "2026-09-05T22:33:27.000Z",
+   "sourceId": 14
+  },
+  "892990": {
+   "title": "‘Shouldn’t have closed door on Mohammed Shami’: Ex-India coach questions Ajit Agarkar-led selectors",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/shouldnt-have-closed-door-on-mohammed-shami-ex-india-coach-questions-ajit-agarkar-led-selectors/articleshow/133827609.cms",
+   "publishDate": "2026-09-05T22:01:34.000Z",
+   "sourceId": 14
+  },
+  "892992": {
+   "title": "In 2013, a UK beach began planting discarded Christmas trees to trap blowing sand; by 2026, the project had created 90 metres of new dunes that help defend homes from flooding",
+   "url": "https://timesofindia.indiatimes.com/world/uk/in-2013-a-uk-beach-began-planting-discarded-christmas-trees-to-trap-blowing-sand-by-2026-the-project-had-created-90-metres-of-new-dunes-that-help-defend-homes-from-flooding/articleshow/133826930.cms",
+   "publishDate": "2026-09-05T22:28:54.000Z",
+   "sourceId": 14
+  },
+  "892993": {
+   "title": "Four private Michigan islands spanning 520 acres hit the market for $2.3 million; the deal includes a home, two boats and land protected by a conservation easement",
+   "url": "https://timesofindia.indiatimes.com/world/us/four-private-michigan-islands-spanning-520-acres-hit-the-market-for-2-3-million-the-deal-includes-a-home-two-boats-and-land-protected-by-a-conservation-easement/articleshow/133772820.cms",
+   "publishDate": "2026-09-05T22:28:47.000Z",
+   "sourceId": 14
+  },
+  "893051": {
+   "title": "England losing tennis courts as number of padel facilities rises exponentially",
+   "url": "https://www.theguardian.com/sport/2026/sep/06/england-losing-tennis-courts-as-number-of-padel-facilities-rises-exponentially",
+   "publishDate": "2026-09-05T23:00:01.000Z",
+   "sourceId": 8
+  },
+  "893052": {
+   "title": "Online bookies accused of UK privacy breaches with use of cookie banners",
+   "url": "https://www.theguardian.com/technology/2026/sep/06/online-bookies-privacy-breaches-cookies-tracking",
+   "publishDate": "2026-09-05T23:00:01.000Z",
+   "sourceId": 8
+  },
+  "893071": {
+   "title": "FIFA’s Infantino avoids questions on his future amid growing uncertainty",
+   "url": "https://www.aljazeera.com/sports/2026/9/6/fifas-infantino-avoids-questions-on-his-future-amid-growing-uncertainty?traffic_source=rss",
+   "publishDate": "2026-09-05T23:10:33.000Z",
+   "sourceId": 9
+  },
+  "893072": {
+   "title": "UK has billions in contracts with firms tied to illegal Israeli settlements",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/uk-has-billions-in-contracts-with-firms-tied-to-illegal-israeli-settlements-4?traffic_source=rss",
+   "publishDate": "2026-09-05T22:52:23.000Z",
+   "sourceId": 9
+  },
+  "893330": {
+   "title": "Flights suspended at Indonesia's main airport due to volcanic eruption",
+   "url": "http://www.euronews.com/2026/09/06/flights-suspended-at-indonesias-main-airport-due-to-volcanic-eruption",
+   "publishDate": "2026-09-05T23:12:11.000Z",
+   "sourceId": 13
+  },
+  "893405": {
+   "title": "Which property markets will be the winners and losers if Fed raises US rates?",
+   "url": "https://www.scmp.com/business/article/3366386/which-overseas-property-markets-will-be-winners-and-losers-if-fed-raises-us-rates",
+   "publishDate": "2026-09-06T00:00:08.000Z",
+   "sourceId": 15
+  },
+  "893406": {
+   "title": "Travellers in Indonesia scramble for new flights after volcano eruption",
+   "url": "https://www.scmp.com/news/asia/southeast-asia/article/3366530/indonesias-anak-krakatoa-volcano-erupts-disrupting-flights-6-airports",
+   "publishDate": "2026-09-05T23:54:34.000Z",
+   "sourceId": 15
+  },
+  "893407": {
+   "title": "5-year plan to boost livelihoods, concrete measures in policy address: John Lee",
+   "url": "https://www.scmp.com/news/hong-kong/politics/article/3366528/5-year-plan-boost-livelihoods-policy-address-set-out-concrete-measures-john-lee",
+   "publishDate": "2026-09-05T23:15:09.000Z",
+   "sourceId": 15
+  },
+  "893456": {
+   "title": "US envoys Witkoff and Kushner set for talks in Kyiv after meeting with Putin in Moscow",
+   "url": "https://www.independent.co.uk/news/world/americas/vladimir-putin-ukraine-russia-jared-kushner-donald-trump-b3045435.html",
+   "publishDate": "2026-09-05T23:53:57.000Z",
+   "sourceId": 16
+  },
+  "893457": {
+   "title": "Iran-US war latest: Tehran retaliates after US strikes three Iranian oil tankers as conflict intensifies",
+   "url": "https://www.independent.co.uk/news/world/middle-east/iran-us-war-live-trump-strikes-oil-tankers-hormuz-b3045426.html",
+   "publishDate": "2026-09-05T23:28:03.000Z",
+   "sourceId": 16
+  },
+  "893490": {
+   "title": "Landslide hits Sikkim’s Mangan, partially blocks Teesta River flow",
+   "url": "https://timesofindia.indiatimes.com/india/landslide-hits-sikkims-mangan-partially-blocks-teesta-river-flow/articleshow/133827912.cms",
+   "publishDate": "2026-09-05T23:38:45.000Z",
+   "sourceId": 14
+  },
+  "893491": {
+   "title": "Fatima Sana’s fiery Shafali Verma send-off draws savage response: ‘Your entire team just scored 55’",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/womens-asia-cup/fatima-sanas-fiery-shafali-verma-send-off-draws-savage-response-your-entire-team-just-scored-55/articleshow/133829162.cms",
+   "publishDate": "2026-09-05T23:10:34.000Z",
+   "sourceId": 14
+  },
+  "893496": {
+   "title": "A 674-acre Colorado ranch was listed for $5.9 million as a development site; conservationists bought it instead, permanently protecting land that links to more than 100,000 acres of public space",
+   "url": "https://timesofindia.indiatimes.com/world/us/a-674-acre-colorado-ranch-was-listed-for-5-9-million-as-a-development-site-conservationists-bought-it-instead-permanently-protecting-land-that-links-to-more-than-100000-acres-of-public-space/articleshow/133827621.cms",
+   "publishDate": "2026-09-05T23:30:00.000Z",
+   "sourceId": 14
+  },
+  "893497": {
+   "title": "In 2021, a landslide cut Denali National Park’s only road in two; five years later a $230 million, 475-foot bridge has been built directly above the still-moving slope",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-2021-a-landslide-cut-denali-national-parks-only-road-in-two-five-years-later-a-230-million-475-foot-bridge-has-been-built-directly-above-the-still-moving-slope/articleshow/133797517.cms",
+   "publishDate": "2026-09-05T23:32:28.000Z",
+   "sourceId": 14
+  },
+  "893501": {
+   "title": "India's eye in the sky that never blinks: Inside GISAT-1A",
+   "url": "https://timesofindia.indiatimes.com/defence/news/indias-eye-in-the-sky-that-never-blinks-inside-gisat-1a/articleshow/133829415.cms",
+   "publishDate": "2026-09-05T23:47:25.000Z",
+   "sourceId": 14
+  },
+  "893502": {
+   "title": "'Toxic' box office collection Day 10 [LIVE]: Can Yash and Kiara Advani film close in on Rs 250 crore milestone today?",
+   "url": "https://timesofindia.indiatimes.com/entertainment/kannada/movies/news/toxic-box-office-collection-day-10-live-yash-nayanthara-kiara-advani-film-inches-closer-to-rs-250-crore-india-net-as-worldwide-gross-nears-rs-335-crore-amid-massive-slowdown-and-stiff-competition-from-mirzapur-and-hanuman-ansh/articleshow/133829190.cms",
+   "publishDate": "2026-09-05T23:12:39.000Z",
+   "sourceId": 14
+  },
+  "893533": {
+   "title": "UN votes to endorse new map projection that shows Africa's size more accurately",
+   "url": "https://www.cbsnews.com/news/united-nations-map-vote-change-africa-size/",
+   "publishDate": "2026-09-05T23:29:22.000Z",
+   "sourceId": 17
+  },
+  "893570": {
+   "title": "‘The engine’s on fire’: Qantas flight from Queenstown to Sydney reroutes after flames seen by passengers",
+   "url": "https://www.theguardian.com/australia-news/2026/sep/06/qantas-flight-queenstown-to-sydney-rerouted-flames-seen-by-passengers",
+   "publishDate": "2026-09-05T23:32:58.000Z",
+   "sourceId": 8
+  },
+  "893586": {
+   "title": "Nigel Farage to be quizzed as he battles to contain growing donations scandal – UK politics live",
+   "url": "https://www.theguardian.com/politics/live/2026/sep/06/nigel-farage-reform-uk-donations-undercover-investigation-latest-news-updates",
+   "publishDate": "2026-09-06T00:18:40.000Z",
+   "sourceId": 8
+  },
+  "893607": {
+   "title": "Zverev and Gauff ease into US Open last 16 but Alex Eala falls to Jovic",
+   "url": "https://www.aljazeera.com/sports/2026/9/6/zverev-and-gauff-ease-into-us-open-last-16-but-alex-eala-falls-to-jovic?traffic_source=rss",
+   "publishDate": "2026-09-05T23:59:04.000Z",
+   "sourceId": 9
+  },
+  "893608": {
+   "title": "How do you arrest 50,000 people quietly?",
+   "url": "https://www.aljazeera.com/video/by-the-numbers-3/2026/9/6/how-do-you-arrest-50000-people-quietly?traffic_source=rss",
+   "publishDate": "2026-09-05T23:45:08.000Z",
+   "sourceId": 9
+  },
+  "893609": {
+   "title": "Ireland’s boxing great Katie Taylor bows out as undisputed champion",
+   "url": "https://www.aljazeera.com/sports/2026/9/6/irelands-boxing-great-katie-taylor-bows-out-as-undisputed-champion?traffic_source=rss",
+   "publishDate": "2026-09-05T23:37:00.000Z",
+   "sourceId": 9
+  },
+  "893610": {
+   "title": "Egyptian TV presenter Sarah Khalifa sentenced to death in drugs case",
+   "url": "https://www.aljazeera.com/news/2026/9/6/egyptian-tv-presenter-sentenced-to-death-in-major-drug-case?traffic_source=rss",
+   "publishDate": "2026-09-05T23:20:37.000Z",
+   "sourceId": 9
+  },
+  "893941": {
+   "title": "Study saying China’s solar policy hurt birds may have miscounted 2 billion egrets",
+   "url": "https://www.scmp.com/news/china/science/article/3366286/study-argued-chinas-solar-policy-hurt-birds-may-have-miscounted-2-billion-egrets",
+   "publishDate": "2026-09-06T01:00:06.000Z",
+   "sourceId": 15
+  },
+  "893942": {
+   "title": "World’s most powerful lightning-chasing satellite joins China-Nepal flood relief",
+   "url": "https://www.scmp.com/news/china/science/article/3366535/worlds-most-powerful-lightning-chasing-satellite-joins-china-nepal-flood-relief-efforts",
+   "publishDate": "2026-09-06T00:47:12.000Z",
+   "sourceId": 15
+  },
+  "893943": {
+   "title": "My Take | Why China’s shrinking population may be a blessing, not a curse",
+   "url": "https://www.scmp.com/opinion/china-opinion/article/3366015/why-chinas-shrinking-population-may-be-blessing-not-curse",
+   "publishDate": "2026-09-06T00:30:07.000Z",
+   "sourceId": 15
+  },
+  "893991": {
+   "title": "Egyptian TV host Sarah Khalifa among 12 sentenced to death in drugs case",
+   "url": "https://www.independent.co.uk/news/world/middle-east/sarah-khalifa-egypt-sentenced-death-drugs-case-b3045441.html",
+   "publishDate": "2026-09-06T00:36:38.000Z",
+   "sourceId": 16
+  },
+  "893992": {
+   "title": "Germany braced for political earthquake as far-right AfD eyes first taste of power",
+   "url": "https://www.independent.co.uk/news/world/europe/germany-afd-election-saxony-parliament-b3044830.html",
+   "publishDate": "2026-09-06T00:21:26.000Z",
+   "sourceId": 16
+  },
+  "894026": {
+   "title": "Building collapses near Delhi's Satya Niketan, several feared trapped",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/building-collapses-near-delhis-satya-niketan-several-feared-trapped/articleshow/133831307.cms",
+   "publishDate": "2026-09-06T00:47:35.000Z",
+   "sourceId": 14
+  },
+  "894027": {
+   "title": "‘Shameful, nasty’: Singapore minister hits out at anti-India racism after Nepal floods",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/shameful-nasty-singapore-minister-hits-out-at-anti-india-racism-after-nepal-floods/articleshow/133830970.cms",
+   "publishDate": "2026-09-06T00:33:00.000Z",
+   "sourceId": 14
+  },
+  "894028": {
+   "title": "CJP activist alleges stone pelting at home hours after 'influencer' Swatantra Bhardwaj's arrest",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/cjp-activist-alleges-stone-pelting-at-home-hours-after-influencer-swatantra-bhardwajs-arrest/articleshow/133827852.cms",
+   "publishDate": "2026-09-05T22:24:07.000Z",
+   "sourceId": 14
+  },
+  "894030": {
+   "title": "‘Bye-bye, Papa’: What 21-year-old told father before jumping into Chenab",
+   "url": "https://timesofindia.indiatimes.com/india/bye-bye-papa-what-21-year-old-told-father-before-jumping-into-chenab/articleshow/133831583.cms",
+   "publishDate": "2026-09-06T01:04:52.000Z",
+   "sourceId": 14
+  },
+  "894031": {
+   "title": "Apple iPhone 18 Pro, foldable iPhone prices leaked on multiple websites: Here is what to expect",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/apple-iphone-18-pro-foldable-iphone-prices-leaked-on-multiple-websites-here-is-what-to-expect/articleshow/133828870.cms",
+   "publishDate": "2026-09-05T22:57:17.000Z",
+   "sourceId": 14
+  },
+  "894032": {
+   "title": "The rocket problem India cannot launch away",
+   "url": "https://timesofindia.indiatimes.com/science/the-rocket-problem-india-cannot-launch-away/articleshow/133830071.cms",
+   "publishDate": "2026-09-05T23:54:45.000Z",
+   "sourceId": 14
+  },
+  "894035": {
+   "title": "Eight runs from one ball: Andrew Symonds produced one of Test cricket’s strangest feats, but it still wasn’t the highest ever",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/eight-runs-from-one-ball-andrew-symonds-produced-one-of-test-crickets-strangest-feats-but-it-still-wasnt-the-highest-ever/articleshow/133829611.cms",
+   "publishDate": "2026-09-05T23:48:01.000Z",
+   "sourceId": 14
+  },
+  "894036": {
+   "title": "In 1984, Lou Dobbs acquired a New Jersey farm and expanded it over four decades; now the 283-acre estate with an 11-acre pond and development potential is listed for $6 million",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-1984-lou-dobbs-acquired-a-new-jersey-farm-and-expanded-it-over-four-decades-now-the-283-acre-estate-with-an-11-acre-pond-and-development-potential-is-listed-for-6-million/articleshow/133773210.cms",
+   "publishDate": "2026-09-06T00:37:24.000Z",
+   "sourceId": 14
+  },
+  "894037": {
+   "title": "MIT researchers drilled a 2-by-3-foot hole through 3.6 feet of Arctic sea ice and sent a robot below; the prototype transmitted data through the ice at 1.2 kilobytes per second",
+   "url": "https://timesofindia.indiatimes.com/science/mit-researchers-drilled-a-2-by-3-foot-hole-through-3-6-feet-of-arctic-sea-ice-and-sent-a-robot-below-the-prototype-transmitted-data-through-the-ice-at-1-2-kilobytes-per-second/articleshow/133830839.cms",
+   "publishDate": "2026-09-06T00:26:16.000Z",
+   "sourceId": 14
+  },
+  "894039": {
+   "title": "India supplied 60% of diesel to Europe in August as Russian, US supplies plunge: Report",
+   "url": "https://timesofindia.indiatimes.com/india/india-supplied-60-of-diesel-to-europe-in-august-as-russian-us-supplies-plunge-report/articleshow/133830611.cms",
+   "publishDate": "2026-09-06T00:15:09.000Z",
+   "sourceId": 14
+  },
+  "894040": {
+   "title": "Own a piece of Venice: Private island with Napoleonic fort up for $7.5M",
+   "url": "https://timesofindia.indiatimes.com/real-estate/own-a-piece-of-venice-private-island-with-napoleonic-fort-up-for-7-5m/articleshow/133829506.cms",
+   "publishDate": "2026-09-05T23:40:23.000Z",
+   "sourceId": 14
+  },
+  "894041": {
+   "title": "Gold bond bought at Rs 4,682 now worth Rs 15,334: SGB gives 228% return, Rs 1 lakh becomes Rs 3.28 lakh, plus 2.5% annual interest; premature redemption due September 7",
+   "url": "https://timesofindia.indiatimes.com/business/india-business/gold-bond-bought-at-rs-4682-now-worth-rs-15334-sgb-gives-228-return-rs-1-lakh-becomes-rs-3-28-lakh-plus-2-5-annual-interest-premature-redemption-due-september-7/articleshow/133827872.cms",
+   "publishDate": "2026-09-05T23:55:41.000Z",
+   "sourceId": 14
+  },
+  "894044": {
+   "title": "Delhi Metro warns content creators over 'phone-sticking' reel trend",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/delhi-metro-warns-content-creators-over-phone-sticking-reel-trend/articleshow/133830004.cms",
+   "publishDate": "2026-09-06T00:09:44.000Z",
+   "sourceId": 14
+  },
+  "894046": {
+   "title": "Quote of the day by Bob Marley: 'None but ourselves can free our minds,' powerful life lesson explaining that the biggest battle can be within, from 'Redemption song' artist",
+   "url": "https://timesofindia.indiatimes.com/entertainment/english/hollywood/news/quote-of-the-day-by-bob-marley-none-but-ourselves-can-free-our-minds-powerful-life-lesson-explaining-that-the-biggest-battle-can-be-within-from-redemption-song-artist/articleshow/133829171.cms",
+   "publishDate": "2026-09-05T23:30:00.000Z",
+   "sourceId": 14
+  },
+  "894114": {
+   "title": "Far-right AfD predicted to win big in crucial German state election",
+   "url": "https://www.theguardian.com/world/2026/sep/06/far-right-afd-saxony-anhalt-state-election-germany",
+   "publishDate": "2026-09-06T01:00:02.000Z",
+   "sourceId": 8
+  },
+  "894126": {
+   "title": "Councils in England and Wales accused of excessive fees to run outdoor classes",
+   "url": "https://www.theguardian.com/society/2026/sep/06/councils-england-wales-licence-scheme-fees-outdoor-exercise-classes",
+   "publishDate": "2026-09-06T01:00:01.000Z",
+   "sourceId": 8
+  },
+  "894146": {
+   "title": "Israel bombards several towns in southern Lebanon",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/israel-bombards-several-towns-in-southern-lebanon?traffic_source=rss",
+   "publishDate": "2026-09-06T00:44:03.000Z",
+   "sourceId": 9
+  },
+  "894405": {
+   "title": "Iranian forces target US naval drone attempting to enter Strait of Hormuz",
+   "url": "http://www.euronews.com/2026/09/06/iranian-forces-target-us-naval-drone-attempting-to-enter-strait-of-hormuz",
+   "publishDate": "2026-09-06T01:16:36.000Z",
+   "sourceId": 13
+  },
+  "894480": {
+   "title": "Hong Kong to propel belt and road market expansion, finance chief says",
+   "url": "https://www.scmp.com/news/hong-kong/hong-kong-economy/article/3366538/hong-kong-propel-belt-and-road-market-expansion-finance-chief-says",
+   "publishDate": "2026-09-06T02:06:52.000Z",
+   "sourceId": 15
+  },
+  "894481": {
+   "title": "China vendor sparks ‘camera bullying’ debate after vloggers portray her as ‘evil’",
+   "url": "https://www.scmp.com/news/people-culture/trending-china/article/3366515/chinese-food-vendor-sparks-camera-bullying-debate-after-vloggers-portray-her-evil-granny",
+   "publishDate": "2026-09-06T02:00:16.000Z",
+   "sourceId": 15
+  },
+  "894565": {
+   "title": "‘Adjacent building also caved in’: Eyewitnesses recall Delhi collapse horror in Satya Niketan",
+   "url": "https://timesofindia.indiatimes.com/india/adjacent-building-also-caved-in-eyewitnesses-recall-delhi-collapse-horror/articleshow/133832818.cms",
+   "publishDate": "2026-09-06T01:59:39.000Z",
+   "sourceId": 14
+  },
+  "894567": {
+   "title": "Indian spinner takes five-for in England, seals 213-run win  in County Championship",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/indian-spinner-takes-five-for-in-england-seals-213-run-win-in-county-championship/articleshow/133826931.cms",
+   "publishDate": "2026-09-05T21:37:44.000Z",
+   "sourceId": 14
+  },
+  "894569": {
+   "title": "Tech CEO added to FBI's Most Wanted Fraudsters list after fleeing from United States",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/tech-ceo-added-to-fbis-most-wanted-fraudsters-list-after-fleeing-from-united-states/articleshow/133829681.cms",
+   "publishDate": "2026-09-05T23:33:40.000Z",
+   "sourceId": 14
+  },
+  "894570": {
+   "title": "In 2024, a Pennsylvania couple bought 101 acres near their hometown; before the sale was even final they began planning to protect it, and in 2026 all 101 acres were permanently preserved",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-2024-a-pennsylvania-couple-bought-101-acres-near-their-hometown-before-the-sale-was-even-final-they-began-planning-to-protect-it-and-in-2026-all-101-acres-were-permanently-preserved/articleshow/133829776.cms",
+   "publishDate": "2026-09-06T00:51:38.000Z",
+   "sourceId": 14
+  },
+  "894572": {
+   "title": "‘Save us, save us’: Eyewitness recalls cries from rubble after building collapses near Delhi’s Satya Niketan",
+   "url": "https://timesofindia.indiatimes.com/city/delhi/save-us-eyewitness-hears-cries-from-rubble-after-building-collapses-near-delhis-satya-niketan/articleshow/133832532.cms",
+   "publishDate": "2026-09-06T01:41:11.000Z",
+   "sourceId": 14
+  },
+  "894573": {
+   "title": "In 2020, smoke grounded civilian aircraft as 242 people were trapped by California’s Creek Fire; National Guard crews rescued all 242 in 7 hours, the largest helicopter rescue in Guard history",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-2020-smoke-forced-civilian-aircraft-out-of-the-sky-with-242-people-trapped-by-californias-creek-fire-calguard-crews-flew-into-the-flames-at-night-in-the-largest-helicopter-rescue-in-national-guard-history-and-saved-all-of-them-in-seven-hours/articleshow/133832449.cms",
+   "publishDate": "2026-09-06T01:45:12.000Z",
+   "sourceId": 14
+  },
+  "894574": {
+   "title": "A five-year Illinois project will restore 421 acres of wetlands, prairie and woodland while helping hold stormwater, part of an $11 million effort along 67 miles of river",
+   "url": "https://timesofindia.indiatimes.com/science/a-five-year-illinois-project-will-restore-421-acres-of-wetlands-prairie-and-woodland-while-helping-hold-stormwater-part-of-an-11-million-effort-along-67-miles-of-river/articleshow/133831522.cms",
+   "publishDate": "2026-09-06T01:27:55.000Z",
+   "sourceId": 14
+  },
+  "894578": {
+   "title": "11 killed, seven injured as fuel tanker crashes, explodes in western Iran",
+   "url": "https://timesofindia.indiatimes.com/world/middle-east/11-killed-seven-injured-as-fuel-tanker-crashes-explodes-in-western-iran/articleshow/133832382.cms",
+   "publishDate": "2026-09-06T01:58:56.000Z",
+   "sourceId": 14
+  },
+  "894579": {
+   "title": "‘Can no longer be stopped’: AfD races towards historic win in Germany state vote",
+   "url": "https://timesofindia.indiatimes.com/world/europe/can-no-longer-be-stopped-afd-races-towards-historic-win-in-germany-state-vote/articleshow/133832682.cms",
+   "publishDate": "2026-09-06T01:46:03.000Z",
+   "sourceId": 14
+  },
+  "894581": {
+   "title": "Onion prices still make eyes water despite Centre's Rs 35/kg buffer sale",
+   "url": "https://timesofindia.indiatimes.com/business/india-business/onion-prices-still-make-eyes-water-despite-centres-rs-35/kg-buffer-sale/articleshow/133831552.cms",
+   "publishDate": "2026-09-06T01:20:32.000Z",
+   "sourceId": 14
+  },
+  "894582": {
+   "title": "Balochistan’s Zehri under curfew: Civilian killings, detentions and disappearances; what we know",
+   "url": "https://timesofindia.indiatimes.com/world/pakistan/balochistans-zehri-under-curfew-civilian-killings-detentions-and-disappearances-what-we-know/articleshow/133831957.cms",
+   "publishDate": "2026-09-06T01:14:12.000Z",
+   "sourceId": 14
+  },
+  "894610": {
+   "title": "Indonesia volcano eruption cancels hundreds of flights in major airport hub",
+   "url": "https://www.cbsnews.com/news/indonesia-volcano-eruption-flights-airport/",
+   "publishDate": "2026-09-06T01:36:00.000Z",
+   "sourceId": 17
+  },
+  "894664": {
+   "title": "Zia Yusuf’s post about Camden council leader is ‘straightforward racism’, says minister",
+   "url": "https://www.theguardian.com/politics/2026/sep/06/zia-yusuf-reform-uk-post-camden-council-leader-sagal-abdi-wali",
+   "publishDate": "2026-09-06T02:02:01.000Z",
+   "sourceId": 8
+  },
+  "894684": {
+   "title": "LIVE: Everton vs Manchester United – Premier League",
+   "url": "https://www.aljazeera.com/sports/liveblog/2026/9/6/live-everton-vs-manchester-united-premier-league-fernandes-rashford-live-coverage-stream?traffic_source=rss",
+   "publishDate": "2026-09-06T01:47:31.000Z",
+   "sourceId": 9
+  },
+  "894685": {
+   "title": "Israeli flags become the latest weapon of settlers in West Bank domination",
+   "url": "https://www.aljazeera.com/features/2026/9/6/israeli-flags-become-the-latest-weapon-of-settlers-in-west-bank-domination?traffic_source=rss",
+   "publishDate": "2026-09-06T01:40:06.000Z",
+   "sourceId": 9
+  },
+  "894686": {
+   "title": "Israeli air attacks on Lebanon kill at least four",
+   "url": "https://www.aljazeera.com/news/2026/9/6/israeli-air-attacks-on-lebanon-kill-at-least-four?traffic_source=rss",
+   "publishDate": "2026-09-06T01:15:20.000Z",
+   "sourceId": 9
+  },
+  "894733": {
+   "title": "U.S. envoys Witkoff and Kushner set for talks in Kyiv after meeting Putin in Moscow",
+   "url": "https://www.npr.org/2026/09/06/nx-s1-5959657/us-envoys-witkoff-kushner-talks-in-kyiv-putin-moscow",
+   "publishDate": "2026-09-06T01:51:04.000Z",
+   "sourceId": 10
+  },
+  "894946": {
+   "title": "Video. Latest news bulletin | September 6th, 2026 – Midday",
+   "url": "http://www.euronews.com/video/2026/09/06/latest-news-bulletin-september-6th-2026-midday",
+   "publishDate": "2026-09-05T16:00:00.000Z",
+   "sourceId": 13
+  },
+  "894993": {
+   "title": "At least 25 dead in bus crash in Cape Verde's Fogo Island, officials and media say",
+   "url": "https://abcnews.com/International/wireStory/25-people-dead-bus-crash-cape-verdes-fogo-136237357",
+   "publishDate": "2026-09-06T02:32:29.000Z",
+   "sourceId": 12
+  },
+  "895018": {
+   "title": "US envoys Witkoff, Kushner arrive in Kyiv after Moscow talks with Putin",
+   "url": "https://www.scmp.com/news/world/europe/article/3366544/us-envoys-witkoff-kushner-arrive-kyiv-after-talks-putin-moscow",
+   "publishDate": "2026-09-06T03:02:00.000Z",
+   "sourceId": 15
+  },
+  "895019": {
+   "title": "China will never allow any country to achieve AI dominance: Victor Gao",
+   "url": "https://www.scmp.com/news/china/science/article/3366540/china-will-never-allow-any-country-world-achieve-ai-dominance-victor-gao",
+   "publishDate": "2026-09-06T03:00:09.000Z",
+   "sourceId": 15
+  },
+  "895020": {
+   "title": "‘There are trade-offs’: how Hong Kong patients can use telemedicine wisely",
+   "url": "https://www.scmp.com/news/hong-kong/health-environment/article/3366499/there-are-trade-offs-how-hong-kong-patients-can-use-telemedicine-wisely",
+   "publishDate": "2026-09-06T03:00:07.000Z",
+   "sourceId": 15
+  },
+  "895068": {
+   "title": "Iran fuel tanker explosion leaves 11 dead and seven injured",
+   "url": "https://www.independent.co.uk/news/world/middle-east/iran-fuel-tanker-explosion-deaths-b3045463.html",
+   "publishDate": "2026-09-06T02:18:18.000Z",
+   "sourceId": 16
+  },
+  "895069": {
+   "title": "Iran-US war latest: Tehran attacks ships in Strait of Hormuz after US strikes Iranian oil tankers",
+   "url": "https://www.independent.co.uk/news/world/middle-east/iran-us-war-live-trump-hormuz-strikes-ships-oil-tankers-b3045459.html",
+   "publishDate": "2026-09-06T02:03:21.000Z",
+   "sourceId": 16
+  },
+  "895104": {
+   "title": "Banking on the dollar: How Iran keeps $9bn flowing through US banks despite sanctions",
+   "url": "https://timesofindia.indiatimes.com/world/middle-east/banking-on-the-dollar-how-iran-keeps-9bn-flowing-through-us-banks-despite-sanctions/articleshow/133834388.cms",
+   "publishDate": "2026-09-06T03:12:08.000Z",
+   "sourceId": 14
+  },
+  "895106": {
+   "title": "'Pakistan cricket in shambles, all-time low': Ex-cricketer tears into PCB amid England turmoil",
+   "url": "https://timesofindia.indiatimes.com/sports/cricket/news/pakistan-cricket-in-shambles-all-time-low-ex-cricketer-tears-into-pcb-amid-england-turmoil/articleshow/133834107.cms",
+   "publishDate": "2026-09-06T02:46:18.000Z",
+   "sourceId": 14
+  },
+  "895109": {
+   "title": "Crude prices, Fed bets and more: What’s in store for markets this week",
+   "url": "https://timesofindia.indiatimes.com/business/india-business/crude-prices-fed-bets-and-more-whats-in-store-for-markets-this-week/articleshow/133833323.cms",
+   "publishDate": "2026-09-06T02:47:52.000Z",
+   "sourceId": 14
+  },
+  "895111": {
+   "title": "A Cleveland bridge opened in 1933 and was being designed for a 2028 rehabilitation; new analysis found deeper floor-beam deterioration, forcing officials to close the 93-year-old bridge immediately",
+   "url": "https://timesofindia.indiatimes.com/world/us/a-cleveland-bridge-opened-in-1933-and-was-being-designed-for-a-2028-rehabilitation-new-analysis-found-deeper-floor-beam-deterioration-forcing-officials-to-close-the-93-year-old-bridge-immediately/articleshow/133831650.cms",
+   "publishDate": "2026-09-06T01:56:45.000Z",
+   "sourceId": 14
+  },
+  "895112": {
+   "title": "In 1964, Ken Kesey drove the psychedelic Furthur bus across America and helped ignite the counterculture; 60 years later, the dilapidated icon is back in San Francisco for a restoration campaign",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-1964-ken-kesey-drove-the-psychedelic-furthur-bus-across-america-and-helped-ignite-the-counterculture-60-years-later-the-dilapidated-icon-is-back-in-san-francisco-for-a-restoration-campaign/articleshow/133833038.cms",
+   "publishDate": "2026-09-06T03:00:00.000Z",
+   "sourceId": 14
+  },
+  "895113": {
+   "title": "In 2017, a 14-year-old Virginia girl dug a backyard pond for a school project; 9 years later, it has become a thriving wildlife ecosystem",
+   "url": "https://timesofindia.indiatimes.com/world/rest-of-world/in-2017-a-14-year-old-virginia-girl-dug-a-backyard-pond-for-a-school-project-9-years-later-it-has-become-a-thriving-wildlife-ecosystem/articleshow/133834489.cms",
+   "publishDate": "2026-09-06T03:07:39.000Z",
+   "sourceId": 14
+  },
+  "895114": {
+   "title": "America’s biggest investor Michael Burry issues '$100 billion warning' on America's biggest defence tech company: Says will fall below ...",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/americas-biggest-investor-michael-burry-issues-100-billion-warning-on-americas-biggest-defence-tech-company-says-will-fall-below-/articleshow/133827810.cms",
+   "publishDate": "2026-09-05T22:02:57.000Z",
+   "sourceId": 14
+  },
+  "895115": {
+   "title": "Psychology says the people who check their phones constantly  not actually be bored but may be trying to escape their own thoughts and fears",
+   "url": "https://timesofindia.indiatimes.com/life-style/spotlight/psychology-says-the-people-who-check-their-phones-constantly-not-actually-be-bored-but-may-be-trying-to-escape-their-own-thoughts-and-fears/articleshow/133829649.cms",
+   "publishDate": "2026-09-06T02:30:00.000Z",
+   "sourceId": 14
+  },
+  "895117": {
+   "title": "From 105mm firepower to battlefield networking: What makes China’s Type 100 tank different",
+   "url": "https://timesofindia.indiatimes.com/defence/international/from-105mm-firepower-to-battlefield-networking-what-makes-chinas-type-100-tank-different/articleshow/133833715.cms",
+   "publishDate": "2026-09-06T02:43:55.000Z",
+   "sourceId": 14
+  },
+  "895118": {
+   "title": "19 lakh lives impacted as Ganga breaches flood mark in Patna",
+   "url": "https://timesofindia.indiatimes.com/india/19-lakh-lives-impacted-as-ganga-breaches-flood-mark-in-patna/articleshow/133833513.cms",
+   "publishDate": "2026-09-06T02:29:53.000Z",
+   "sourceId": 14
+  },
+  "895119": {
+   "title": "Max Verstappen rewrote F1 history at Monza with a 1:18.792 lap and set the fastest average speed ever, now he starts from P5 at Italian GP 2026",
+   "url": "https://timesofindia.indiatimes.com/sports/racing/top-stories/max-verstappen-rewrote-f1-history-at-monza-with-a-118-792-lap-and-set-the-fastest-average-speed-ever-now-he-starts-from-p5-at-italian-gp-2026/articleshow/133832708.cms",
+   "publishDate": "2026-09-06T02:00:16.000Z",
+   "sourceId": 14
+  },
+  "895121": {
+   "title": "Seattle opened light rail across the I-90 floating bridge in March; five months later about 2,000 fish have died near electrical equipment hanging into Lake Washington",
+   "url": "https://timesofindia.indiatimes.com/world/us/seattle-opened-light-rail-across-the-i-90-floating-bridge-in-march-five-months-later-about-2000-fish-have-died-near-electrical-equipment-hanging-into-lake-washington/articleshow/133798363.cms",
+   "publishDate": "2026-09-06T01:58:54.000Z",
+   "sourceId": 14
+  },
+  "895123": {
+   "title": "Handshake goes wrong twice: Magnus Carlsen and Maxime Vachier-Lagrave share hilarious moment at GCL - WATCH",
+   "url": "https://timesofindia.indiatimes.com/sports/chess/handshake-goes-wrong-twice-magnus-carlsen-and-maxime-vachier-lagrave-share-hilarious-moment-on-gcl-opening-day/articleshow/133832346.cms",
+   "publishDate": "2026-09-06T01:49:11.000Z",
+   "sourceId": 14
+  },
+  "895148": {
+   "title": "Trump envoys Witkoff and Kushner arrive in Ukraine after Putin talks in new push to end war",
+   "url": "https://www.cbsnews.com/news/ukraine-russia-us-talks-peace-war-witkoff-kushner/",
+   "publishDate": "2026-09-06T02:55:35.000Z",
+   "sourceId": 17
+  },
+  "895203": {
+   "title": "Farage says overseas donation row ‘looks bad’ but denies Reform breached electoral law",
+   "url": "https://www.theguardian.com/politics/2026/sep/06/farage-says-overseas-donation-row-looks-bad-but-denies-reform-breached-electoral-law",
+   "publishDate": "2026-09-06T03:12:09.000Z",
+   "sourceId": 8
+  },
+  "895204": {
+   "title": "Black-clad Dover protesters condemned for ‘dressing up in costumes’ by minister",
+   "url": "https://www.theguardian.com/politics/2026/sep/06/black-clad-dover-protesters-condemned-for-dressing-up-in-costumes-by-minister",
+   "publishDate": "2026-09-06T02:47:25.000Z",
+   "sourceId": 8
+  },
+  "895223": {
+   "title": "Can you guess the real size of each country on the new world map?",
+   "url": "https://www.aljazeera.com/news/2026/9/6/can-you-guess-the-real-size-of-each-country-on-the-new-world-map?traffic_source=rss",
+   "publishDate": "2026-09-06T03:15:09.000Z",
+   "sourceId": 9
+  },
+  "895224": {
+   "title": "Photos: Gaza holds funeral for 100 Palestinians recovered from rubble",
+   "url": "https://www.aljazeera.com/gallery/2026/9/6/photos-gaza-holds-funeral-for-100-palestinians-recovered-from-rubble?traffic_source=rss",
+   "publishDate": "2026-09-06T03:13:50.000Z",
+   "sourceId": 9
+  },
+  "895225": {
+   "title": "US, Iran engaged in tanker war: Where is the months-long conflict headed?",
+   "url": "https://www.aljazeera.com/news/2026/9/6/us-iran-engaged-in-tanker-war-where-is-the-months-long-conflict-headed?traffic_source=rss",
+   "publishDate": "2026-09-06T02:49:22.000Z",
+   "sourceId": 9
+  },
+  "895226": {
+   "title": "Palestinians in Gaza bury remains of 100 people recovered from rubble",
+   "url": "https://www.aljazeera.com/news/2026/9/6/palestinians-in-gaza-bury-remains-of-100-people-recovered-from-rubble?traffic_source=rss",
+   "publishDate": "2026-09-06T02:42:14.000Z",
+   "sourceId": 9
+  },
+  "895482": {
+   "title": "Netanyahu calls Qatar ‘hostile state’ as Doha pushes back against Iran",
+   "url": "http://www.euronews.com/2026/09/06/netanyahu-calls-qatar-hostile-state-as-doha-pushes-back-against-iran",
+   "publishDate": "2026-09-06T03:15:23.000Z",
+   "sourceId": 13
+  },
+  "895538": {
+   "title": "US envoys Witkoff and Kushner arrive in Kyiv after talks with Putin in Moscow",
+   "url": "https://abcnews.com/International/wireStory/us-envoys-witkoff-kushner-arrive-kyiv-after-talks-136236924",
+   "publishDate": "2026-09-06T03:47:13.000Z",
+   "sourceId": 12
+  },
+  "895546": {
+   "title": "Months after Venezuela earthquakes, a family refuses to give up search for their missing relative",
+   "url": "https://abcnews.com/International/wireStory/months-after-venezuela-earthquakes-family-refuses-give-search-136237654",
+   "publishDate": "2026-09-06T03:48:43.000Z",
+   "sourceId": 12
+  },
+  "895557": {
+   "title": "Germany plans anti-sabotage shield after airport drone attack",
+   "url": "https://www.scmp.com/news/world/europe/article/3366553/germany-plans-anti-sabotage-shield-after-airport-drone-attack",
+   "publishDate": "2026-09-06T04:09:28.000Z",
+   "sourceId": 15
+  },
+  "895558": {
+   "title": "Why China is being urged to study Ukraine’s wartime PR blitz in the AI age",
+   "url": "https://www.scmp.com/news/china/military/article/3366516/why-china-being-urged-study-ukraines-wartime-pr-blitz-ai-age",
+   "publishDate": "2026-09-06T04:00:05.000Z",
+   "sourceId": 15
+  },
+  "895559": {
+   "title": "Man arrested over fake flag-day scam targeting animal charity donations",
+   "url": "https://www.scmp.com/news/hong-kong/law-and-crime/article/3366550/man-arrested-over-fake-flag-day-scam-targeting-animal-charity-donations",
+   "publishDate": "2026-09-06T03:58:45.000Z",
+   "sourceId": 15
+  },
+  "895560": {
+   "title": "Curiosity beats perfect statements, UK elite universities tell Hong Kong students",
+   "url": "https://www.scmp.com/news/hong-kong/education/article/3366547/curiosity-beats-perfect-statements-uk-elite-universities-tell-hong-kong-students",
+   "publishDate": "2026-09-06T03:31:00.000Z",
+   "sourceId": 15
+  },
+  "895608": {
+   "title": "US tourism groups want to win Canadian visitors back. A testy trade war isn't helping",
+   "url": "https://www.independent.co.uk/news/world/americas/donald-trump-mark-carney-las-vegas-vancouver-white-house-b3045487.html",
+   "publishDate": "2026-09-06T03:42:13.000Z",
+   "sourceId": 16
+  },
+  "895609": {
+   "title": "Trump approval rating drops to record low in new poll",
+   "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-polls-approval-rating-economy-b3045462.html",
+   "publishDate": "2026-09-06T03:11:02.000Z",
+   "sourceId": 16
+  },
+  "895644": {
+   "title": "Can the US really make Hormuz safe? The dangerous battle against Iran’s sea mines",
+   "url": "https://timesofindia.indiatimes.com/world/middle-east/can-the-us-really-make-hormuz-safe-the-dangerous-battle-against-irans-sea-mines/articleshow/133833524.cms",
+   "publishDate": "2026-09-06T02:38:07.000Z",
+   "sourceId": 14
+  },
+  "895648": {
+   "title": "‘Regulates food safety, not festivals’: FDA chief Tukaram Mundhe clarifies new order",
+   "url": "https://timesofindia.indiatimes.com/city/mumbai/regulates-food-safety-not-festivals-fda-chief-tukaram-mundhe-clarifies-new-order/articleshow/133834065.cms",
+   "publishDate": "2026-09-06T02:53:18.000Z",
+   "sourceId": 14
+  },
+  "895730": {
+   "title": "Canadian skyrunner goes missing during training session for Matterhorn record attempt",
+   "url": "https://www.theguardian.com/sport/2026/sep/06/canadian-skyrunner-kalie-mccrystal-missing-matterhorn-alps",
+   "publishDate": "2026-09-06T04:05:29.000Z",
+   "sourceId": 8
+  },
+  "895746": {
+   "title": "US envoys Kushner and Witkoff arrive in Kyiv to hold talks on ending war",
+   "url": "https://www.theguardian.com/world/2026/sep/06/us-envoys-jared-kushner-steve-witkoff-arrive-kyiv-talks-on-ending-war",
+   "publishDate": "2026-09-06T03:37:36.000Z",
+   "sourceId": 8
+  },
+  "895762": {
+   "title": "Jovic moved to tears after beating ‘incredible’ friend Eala in US Open epic",
+   "url": "https://www.aljazeera.com/sports/2026/9/6/jovic-moved-to-tears-after-beating-incredible-friend-eala-in-us-open-epic?traffic_source=rss",
+   "publishDate": "2026-09-06T03:28:40.000Z",
+   "sourceId": 9
+  },
+  "896021": {
+   "title": "Video. AfD’s Ulrich Siegmund casts vote in key German state election",
+   "url": "http://www.euronews.com/video/2026/09/06/afds-ulrich-siegmund-casts-vote-in-key-german-state-election",
+   "publishDate": "2026-09-06T04:26:35.000Z",
+   "sourceId": 13
+  },
+  "896098": {
+   "title": "‘A victim’: American Bully dies in surgery, owners question fighting dog rules",
+   "url": "https://www.scmp.com/news/hong-kong/society/article/3366557/victim-american-bully-dies-surgery-owners-question-fighting-dog-rules",
+   "publishDate": "2026-09-06T04:55:49.000Z",
+   "sourceId": 15
+  },
+  "896099": {
+   "title": "Dangling airport display back on after extra cables added, motion disabled",
+   "url": "https://www.scmp.com/news/hong-kong/society/article/3366556/dangling-airport-display-back-after-extra-cables-added-motion-disabled",
+   "publishDate": "2026-09-06T04:41:04.000Z",
+   "sourceId": 15
+  },
+  "896180": {
+   "title": "'We eradicated Naxalism, will eliminate narcotics': Amit Shah on drug-free India by 2029",
+   "url": "https://timesofindia.indiatimes.com/india/we-eradicated-naxalism-will-eliminate-narcotics-amit-shah-on-drug-free-india-by-2029/articleshow/133837940.cms",
+   "publishDate": "2026-09-06T04:56:08.000Z",
+   "sourceId": 14
+  },
+  "896187": {
+   "title": "New Zealand home values hit three-year low as buyers remain cautious",
+   "url": "https://timesofindia.indiatimes.com/real-estate/news/new-zealand-home-values-hit-three-year-low-as-buyers-remain-cautious/articleshow/133835173.cms",
+   "publishDate": "2026-09-06T04:39:47.000Z",
+   "sourceId": 14
+  },
+  "896188": {
+   "title": "Kentucky hunters were stuck with an agreement that landowners could cancel in 30 days; a 54,560-acre easement now permanently keeps a huge elk landscape open in a state where 95% of land is private",
+   "url": "https://timesofindia.indiatimes.com/world/us/kentucky-hunters-were-stuck-with-an-agreement-that-landowners-could-cancel-in-30-days-a-54560-acre-easement-now-permanently-keeps-a-huge-elk-landscape-open-in-a-state-where-95-of-land-is-private/articleshow/133835968.cms",
+   "publishDate": "2026-09-06T03:47:56.000Z",
+   "sourceId": 14
+  },
+  "896189": {
+   "title": "In 1888, Wisconsin publisher and women’s-rights pioneer Lisle Lester died penniless in New York; her ashes went unclaimed for 138 years and are finally returning home to Fond du Lac",
+   "url": "https://timesofindia.indiatimes.com/world/us/in-1888-wisconsin-publisher-and-womens-rights-pioneer-lisle-lester-died-penniless-in-new-york-her-ashes-went-unclaimed-for-138-years-and-are-finally-returning-home-to-fond-du-lac/articleshow/133833661.cms",
+   "publishDate": "2026-09-06T04:00:00.000Z",
+   "sourceId": 14
+  },
+  "896192": {
+   "title": "What does the law say about inheritance? Know your rights",
+   "url": "https://timesofindia.indiatimes.com/india/what-does-the-law-say-about-inheritance-know-your-rights/articleshow/133835002.cms",
+   "publishDate": "2026-09-06T04:08:42.000Z",
+   "sourceId": 14
+  },
+  "896303": {
+   "title": "Algeria civil defence recovers body of 10-year-old boy from well",
+   "url": "https://www.aljazeera.com/news/2026/9/6/algeria-civil-defence-recovers-body-of-10-year-old-boy-from-well?traffic_source=rss",
+   "publishDate": "2026-09-06T04:55:06.000Z",
+   "sourceId": 9
+  },
+  "896304": {
+   "title": "Bangladesh protesters demand action over rising costs",
+   "url": "https://www.aljazeera.com/video/newsfeed/2026/9/6/bangladesh-protesters-demand-action-over-rising-costs?traffic_source=rss",
+   "publishDate": "2026-09-06T04:45:36.000Z",
+   "sourceId": 9
+  },
+  "896305": {
+   "title": "LIVE: Arsenal vs Chelsea – Premier League",
+   "url": "https://www.aljazeera.com/sports/liveblog/2026/9/6/live-arsenal-vs-chelsea-premier-league-2?traffic_source=rss",
+   "publishDate": "2026-09-06T04:30:49.000Z",
+   "sourceId": 9
+  },
+  "897273": {
+   "title": "Here's the industry that does not agree with the rest of America that is upset with AI data centers",
+   "url": "https://timesofindia.indiatimes.com/technology/tech-news/heres-the-industry-that-does-not-agree-with-the-rest-of-america-that-is-upset-with-ai-data-centers/articleshow/133836847.cms",
+   "publishDate": "2026-09-06T04:31:11.000Z",
+   "sourceId": 14
+  },
+  "897516": {
+   "title": "Free and Open Indo-Pacific: A Pillar of Deeper Regional Cooperation",
+   "url": "https://thediplomat.com/2026/09/free-and-open-indo-pacific-a-pillar-of-deeper-regional-cooperation/",
+   "publishDate": "2026-09-06T02:49:00.000Z",
+   "sourceId": 3
+  },
+  "897826": {
+   "title": "9/6: Sunday Morning",
+   "url": "https://www.cbsnews.com/video/090626-sunday-morning/",
+   "publishDate": "2026-09-06T05:00:00.000Z",
+   "sourceId": 17
+  },
+  "898155": {
+   "title": "Video. Latest news bulletin | September 6th, 2026 – Evening",
+   "url": "http://www.euronews.com/video/2026/09/06/latest-news-bulletin-september-6th-2026-evening",
+   "publishDate": "2026-09-05T16:00:00.000Z",
+   "sourceId": 13
+  },
+  "898276": {
+   "title": "UN votes to approve new world map which will show true size of Africa",
+   "url": "https://www.independent.co.uk/news/world/new-world-map-un-africa-mercator-b3045558.html",
+   "publishDate": "2026-09-05T08:49:00.000Z",
+   "sourceId": 16
+  },
+  "905874": {
+   "title": "After triple talaq ban, men use qazis’ ‘services’ to end nikah",
+   "url": "https://timesofindia.indiatimes.com/city/mumbai/after-triple-talaq-ban-men-use-qazis-services-to-end-nikah/articleshow/133813258.cms",
+   "publishDate": "2026-09-05T10:58:49.000Z",
+   "sourceId": 14
+  }
+ },
+ "clusters": {
+  "1": {
+   "articleIds": [
+    895225,
+    895069,
+    894405,
+    893457,
+    892903,
+    890845,
+    889816,
+    889348,
+    890359,
+    887766,
+    884962,
+    884933,
+    884453,
+    884185,
+    884235,
+    884406,
+    883982,
+    884284,
+    884160
+   ],
+   "metadata": {
+    "articles": 19
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "2": {
+   "articleIds": [
+    892542,
+    884236,
+    884237
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "5": {
+   "articleIds": [
+    894686,
+    890920,
+    884961
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "6": {
+   "articleIds": [
+    893491,
+    889770,
+    886074,
+    885958,
+    885396,
+    885399,
+    884286,
+    884841
+   ],
+   "metadata": {
+    "articles": 8
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "8": {
+   "articleIds": [
+    892888,
+    888147,
+    884964
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "12": {
+   "articleIds": [
+    896021,
+    894579,
+    894114,
+    893992,
+    892889,
+    892594,
+    892039,
+    886075
+   ],
+   "metadata": {
+    "articles": 8
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "13": {
+   "articleIds": [
+    895538,
+    895746,
+    895018,
+    895148,
+    894733,
+    893456,
+    892419,
+    892059,
+    891386,
+    890561,
+    888263,
+    886502,
+    886073,
+    886098,
+    883818
+   ],
+   "metadata": {
+    "articles": 15
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "17": {
+   "articleIds": [
+    894565,
+    894572,
+    894026
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "19": {
+   "articleIds": [
+    895204,
+    883851,
+    883632,
+    883853
+   ],
+   "metadata": {
+    "articles": 4
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "21": {
+   "articleIds": [
+    889333,
+    887559,
+    885902
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "22": {
+   "articleIds": [
+    895224,
+    895226,
+    884960
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "25": {
+   "articleIds": [
+    891383,
+    891922,
+    883556
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "27": {
+   "articleIds": [
+    895482,
+    892036,
+    889888
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "28": {
+   "articleIds": [
+    888601,
+    888233,
+    887855
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "37": {
+   "articleIds": [
+    898155,
+    894946,
+    892294
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "39": {
+   "articleIds": [
+    887560,
+    886626,
+    885296,
+    884240,
+    883610
+   ],
+   "metadata": {
+    "articles": 5
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "41": {
+   "articleIds": [
+    895203,
+    893586,
+    892494,
+    885496
+   ],
+   "metadata": {
+    "articles": 4
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "42": {
+   "articleIds": [
+    892037,
+    887508,
+    887603,
+    884796,
+    884289
+   ],
+   "metadata": {
+    "articles": 5
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "46": {
+   "articleIds": [
+    888221,
+    887174,
+    884885,
+    884792
+   ],
+   "metadata": {
+    "articles": 4
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "55": {
+   "articleIds": [
+    894610,
+    893406,
+    893330,
+    892170,
+    891500,
+    890850,
+    890217
+   ],
+   "metadata": {
+    "articles": 7
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "57": {
+   "articleIds": [
+    895223,
+    893533,
+    898276
+   ],
+   "metadata": {
+    "articles": 3
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "58": {
+   "articleIds": [
+    895068,
+    894578,
+    892895,
+    889349
+   ],
+   "metadata": {
+    "articles": 4
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  },
+  "117": {
+   "articleIds": [
+    893991,
+    893610,
+    891396,
+    887856,
+    886028,
+    885852
+   ],
+   "metadata": {
+    "articles": 6
+   },
+   "labels": {
+    "impurities": [],
+    "eventGroups": {}
+   }
+  }
+ },
+ "dropped": {
+  "noise": [
+   897826,
+   896180,
+   896098,
+   896303,
+   896304,
+   896099,
+   896187,
+   897273,
+   896305,
+   895557,
+   896192,
+   895730,
+   895558,
+   896189,
+   895559,
+   895546,
+   896188,
+   895608,
+   895560,
+   895762,
+   895104,
+   895609,
+   895113,
+   895019,
+   895020,
+   895112,
+   895648,
+   897516,
+   895109,
+   895106,
+   895117,
+   895644,
+   894993,
+   895115,
+   895118,
+   894480,
+   894664,
+   894481,
+   895119,
+   895121,
+   895111,
+   895123,
+   894684,
+   894573,
+   894685,
+   894574,
+   894581,
+   894582,
+   894030,
+   893941,
+   894126,
+   894570,
+   893942,
+   894146,
+   894036,
+   894027,
+   893943,
+   894037,
+   894039,
+   894044,
+   893405,
+   893607,
+   894041,
+   894032,
+   894035,
+   893501,
+   893608,
+   894040,
+   893490,
+   893609,
+   894569,
+   893570,
+   893497,
+   893496,
+   894046,
+   893407,
+   893502,
+   893071,
+   892984,
+   892894,
+   893052,
+   893051,
+   892902,
+   894031,
+   893072,
+   892988,
+   892992,
+   892993,
+   894028,
+   892985,
+   892986,
+   892983,
+   892369,
+   892726,
+   895114,
+   892990,
+   892525,
+   892370,
+   892456,
+   892532,
+   892371,
+   894567,
+   891925,
+   891926,
+   892034,
+   892035,
+   892003,
+   892019,
+   891835,
+   891836,
+   892451,
+   891918,
+   891919,
+   891921,
+   891837,
+   891838,
+   891932,
+   892038,
+   891826,
+   891934,
+   891935,
+   891931,
+   891469,
+   891300,
+   891301,
+   891384,
+   891387,
+   891395,
+   891930,
+   891929,
+   891403,
+   892536,
+   890763,
+   890764,
+   891385,
+   891391,
+   891401,
+   890765,
+   890813,
+   891923,
+   890766,
+   890226,
+   890353,
+   890206,
+   890227,
+   890215,
+   890564,
+   892987,
+   890308,
+   890428,
+   890393,
+   890228,
+   890312,
+   890313,
+   890276,
+   889686,
+   889889,
+   889499,
+   889313,
+   889145,
+   888958,
+   889146,
+   888959,
+   888771,
+   889226,
+   889195,
+   888865,
+   888866,
+   889350,
+   891917,
+   888695,
+   888056,
+   888145,
+   888248,
+   888106,
+   888057,
+   888156,
+   888151,
+   888148,
+   888264,
+   887767,
+   887558,
+   887605,
+   887606,
+   887172,
+   887055,
+   887173,
+   887136,
+   887137,
+   887175,
+   886960,
+   887176,
+   887177,
+   888031,
+   887052,
+   886961,
+   888032,
+   887060,
+   887178,
+   887010,
+   887011,
+   886624,
+   905874,
+   886625,
+   886459,
+   886627,
+   886550,
+   886511,
+   886058,
+   886508,
+   890846,
+   886053,
+   885999,
+   885961,
+   885957,
+   885903,
+   890858,
+   888150,
+   885395,
+   885297,
+   885394,
+   885346,
+   885405,
+   885404,
+   885516,
+   885347,
+   884986,
+   887054,
+   884851,
+   887056,
+   884847,
+   884963,
+   884791,
+   887064,
+   884839,
+   884838,
+   884405,
+   884332,
+   884843,
+   884385,
+   884407,
+   884436,
+   884186,
+   885412,
+   884238,
+   885954,
+   884239,
+   885403,
+   883734,
+   883849,
+   883830,
+   883834,
+   883631,
+   883775,
+   883850,
+   884853,
+   884288,
+   883823,
+   883433,
+   883730,
+   884290,
+   883681,
+   883738,
+   883747,
+   883617,
+   883740,
+   887053,
+   883852,
+   883736,
+   883854,
+   883074
+  ],
+  "notSelected": {}
+ },
+ "consumed": []
+}

@@ -18,11 +18,11 @@ import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
 import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
-import { createAIServices } from '../lib/services/ai-services';
+import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
 import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
-import { assignTiers, renderBriefV3 } from '../lib/core/brief-v3';
+import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 
 // ============================================================================
@@ -510,6 +510,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                id: $articles.id,
                title: $articles.title,
                url: $articles.url,
+               // 同源模板页去重要按「同一家媒体」分组，见 bodyFingerprint
+               sourceId: $articles.sourceId,
                contentFileKey: $articles.contentFileKey,
                publish_date: $articles.publishDate,
                embedding: $articles.embedding,
@@ -560,8 +562,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
 
           // 从 R2 获取文章内容并进行严格质量控制 (并行化版本)
-          const articles = [];
-          const embeddings = [];
+          // 显式标注：下面的同源去重会在 push 之后读这两个数组，evolving any[] 推不出类型
+          const articles: LightweightArticleDataset['articles'] = [];
+          const embeddings: LightweightArticleDataset['embeddings'] = [];
           
           // 内容质量验证函数
           const validateContentQuality = (content: string, article: ArticleRecord): { isValid: boolean; reason?: string } => {
@@ -598,7 +601,34 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             
             return { isValid: true };
           };
-          
+
+          /**
+           * 同源模板页指纹：正文折叠空白、小写后取 sha1。**多行正文先去掉第一行**
+           * （常是 "Updated: 19/09/2026 - 7:00 GMT+2" 这类每篇都不同的时间戳）。
+           *
+           * 治的是 Euronews 日播栏目那种：Morning / Midday / Evening 三篇都是视频页，抓到的
+           * "正文" 只有 575 字符的栏目宣传语、除首行时间戳外一字不差 → 必然聚成一簇 → 下游
+           * 当真事写进简报（2026-09-19 实测）。`looksLikeExtractionFailure` 的六条签名一条都
+           * 不命中（不是 YouTube 提示词、不算极短、文案是正经英文句子），属于它已知会漏的那 7%。
+           *
+           * 分组键必须带 sourceId：通讯社转载会让**不同媒体**正文高度相似（当天 Pakistan 那条
+           * 就是 SCMP + AP 两版），那是合法的多源佐证，这条规则不该碰它。
+           *
+           * **单行正文用全文、不去首行**：整篇只有一行时「去掉第一行」会把正文删光，同一家的
+           * 所有单行文章共用一个空指纹、彼此互判重复。2026-09-19 那天 458 篇里 414 篇是单行，
+           * 无条件去首行 + 不挡空串 = 丢 407 篇。改成按行数分支后这 414 篇照常参与比对，
+           * 当天读数：命中 2 组、丢 3 篇（Euronews bulletin ×3、The Independent 同一篇被抓两次
+           * ×2），误杀方向为零。仍保留空串返回 null 的兜底——正文为空本就不该进去重。
+           */
+          const bodyFingerprint = async (content: string): Promise<string | null> => {
+            const lines = content.split('\n');
+            const body = lines.length > 1 ? lines.slice(1).join('\n') : content;
+            const normalized = body.replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!normalized) return null;
+            const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(normalized));
+            return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+          };
+
           // 并行处理文章内容获取的函数
           const processArticleContent = async (article: typeof validArticles[0], index: number) => {
             let content = '';
@@ -667,9 +697,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               };
             }
 
-            // 只有通过所有质量检查的文章才会被返回
+            // 只有通过所有质量检查的文章才会被返回。
+            // 指纹在这里算掉（正文在手），**正文本身不带出循环**——整天几百篇正文没必要占内存。
+            const dedupKey = await (async () => {
+              const fp = await bodyFingerprint(content);
+              return fp ? `${article.sourceId ?? 'null'}:${fp}` : null;
+            })();
             return {
               success: true,
+              dedupKey,
               article: {
                 id: article.id,
                 title: article.title,
@@ -699,11 +735,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 处理结果并构建最终数据集
           let successCount = 0;
           let failuresByReason: Record<string, number> = {};
-          
+          // 与 articles 同下标的同源指纹（null = 不参与去重）
+          const dedupKeys: Array<string | null> = [];
+
           for (const result of processResults) {
             if (result.success && result.article && result.embedding) {
               articles.push(result.article);
               embeddings.push(result.embedding);
+              dedupKeys.push(result.dedupKey ?? null);
               successCount++;
             } else {
               const reason = result.reason || 'UNKNOWN_ERROR';
@@ -724,6 +763,52 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             }
           }
           
+          // 同源模板页去重：同一个 source 下、正文去掉首行后完全相同的，只留 id 最小的一篇。
+          // 2026-09-19 全天 458 篇上实测：命中 1 组 3 篇（Euronews bulletin），丢弃 2 篇，
+          // 误杀方向为零（只有这 1 组命中，所以谈不上统计意义上的精度）。
+          {
+            const keeperByKey = new Map<string, number>();
+            const dropIdx = new Set<number>();
+            for (let i = 0; i < articles.length; i++) {
+              const key = dedupKeys[i];
+              if (!key) continue;
+              const keeper = keeperByKey.get(key);
+              if (keeper === undefined) {
+                keeperByKey.set(key, i);
+                continue;
+              }
+              // 保留 id 最小的那篇：结果不依赖 R2 并行返回的先后
+              if (articles[keeper].id <= articles[i].id) {
+                dropIdx.add(i);
+              } else {
+                dropIdx.add(keeper);
+                keeperByKey.set(key, i);
+              }
+            }
+            if (dropIdx.size > 0) {
+              const dropped = Array.from(dropIdx).sort((a, b) => a - b);
+              console.warn(
+                `[AutoBrief] 同源重复正文丢弃 ${dropped.length} 篇 (DUPLICATE_BODY_SAME_SOURCE): ` +
+                dropped.map(i => `${articles[i].id} "${articles[i].title}"`).join(' | ')
+              );
+              // 倒序删，免得前面的 splice 挪动后面的下标
+              for (const i of [...dropped].reverse()) {
+                articles.splice(i, 1);
+                embeddings.splice(i, 1);
+                dedupKeys.splice(i, 1);
+              }
+              failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] =
+                (failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] || 0) + dropped.length;
+              successCount -= dropped.length;
+            }
+            // articles 与 embeddings 按下标一一对应，只删一个会让 embedding 错位**且不报错**
+            if (articles.length !== embeddings.length || articles.some((a, i) => a.id !== embeddings[i].articleId)) {
+              throw new Error(
+                `同源去重后 articles/embeddings 错位: ${articles.length} vs ${embeddings.length}`
+              );
+            }
+          }
+
           console.log(`[AutoBrief] 📊 并行内容获取统计:`);
           console.log(`  - 成功处理: ${successCount} 篇`);
           console.log(`  - 失败分布: ${JSON.stringify(failuresByReason, null, 2)}`);
@@ -1341,10 +1426,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       await observability.logStorySelection(storySelectionMetrics);
 
       // =====================================================================
-      // 步骤 4: 情报深度分析 (AI Worker)
+      // 步骤 4: 简报块生成 (AI Worker)
+      // 报告层与写作层合成一步后，观测只剩 brief_blocks 一条（在下面块生成完成处记），
+      // 旧的 intelligence_analysis 随报告层一并退役。
       // =====================================================================
-      await observability.logStep('intelligence_analysis', 'started');
-      
+
+      // ⚠️ 已无引用：报告层退役后没有调用点。留着不删（回滚旧链路时要用）。
       // 情报分析按「每故事一个 step」拆开，所以这份配置是**单个故事**的量级，不再是整批。
       // timeout 10 分钟：实测单次 ai-worker 调用 p95 约 2.7 分钟、最慢 6.5 分钟(2026-08-26 生产数据)，留一倍余量。
       // retries 提到 2：拆开后重试只重跑一个故事、一次 LLM 调用，不再是整批 25 个重来，
@@ -1479,40 +1566,82 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      // 【报告层 v3 · 每故事一个 step】簇原文 → 带出处的事实 / 当事方 / 分歧（ai-worker /meridian/report-v3）。
-      // fan-out 必须留在 backend：CF 侧约 2% 的 invocation 会被平台 canceled，N 次调用挤进一个 step
-      // 就是"一次抖动丢整期"。报告全文卸 R2、step 只回 key（避开单 step ~1MB 输出上限）。
-      console.log(`[AutoBrief] 开始生成簇报告（report-v3）：从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
+      // 【简报块 v6 · 每故事一个 step】簇原文 → 一块 3–5 句、逐句带出处的高管简报
+      // （ai-worker /meridian/brief-block-v6）。2026-09-21 取代「报告层 v3 + 写作层 v3」两步：
+      // 标重点 → 写作 → 补出处全在端点内部完成，backend 侧只剩这一个 step。
+      //
+      // fan-out 必须留在 backend：CF 侧约 2% 的 invocation 会被平台 canceled，N 次调用挤进
+      // 一个 step 就是「一次抖动丢整期」。
+      //
+      // ⚠️ step 返回值里**不许**带端点响应的 `sentences`（切句表 = 整簇原文，一个簇几百句）：
+      // CF Workflow 单 step 输出约 1MB 上限，十几个块就是几 MB。只带写出来的那 3–5 句。
+      console.log(`[AutoBrief] 开始生成简报块（brief-block-v6）：从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
-      // 4 而不是 6：报告层每簇内部还有 3 路并发，6×3=18 路时 Workers AI 开始回
-      // `3046: Request timeout`（2026-09-12 整链实测）。
-      const REPORT_CONCURRENCY = 4;
-      const perStoryReportStepConfig: WorkflowStepConfig = {
+      // 与旧报告层同档（不是与旧写作层同档）：v6 一个簇 4 个窗口实测约 70 秒，大簇更久。
+      const briefBlockStepConfig: WorkflowStepConfig = {
         retries: { limit: 2, delay: '15 seconds', backoff: 'exponential' },
         timeout: '15 minutes',
       };
+      // 不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
+      const BRIEF_BLOCK_CONCURRENCY = 6;
+
       // 独立源数按 story 对象取：sourceCoverage 的键是 validatedStories.stories 的下标，
       // 而 storiesForIntelligence 是排序 + 配额之后的子集，下标对不上。
       const sourcesOf = new Map<any, number>(
         validatedStories.stories.map((s: any, i: number) => [s, sourceCoverage[i] ?? 0])
       );
 
-      type ReportOutcome =
-        | {
-            r2Key: string;
-            idx: number;
-            clusterId: number | null;
-            blockTitle: string;
-            articles: number;
-            sources: number;
-            facts: number;
-            skeleton: number;
-            llmCalls: number;
-            neurons: number;
-          }
-        | { failure: { idx: number; title: string; reason: string } };
+      // 分层必须在**写作之前**：tier 决定篇幅（brief 档只写 1–2 句），端点要先知道这块是哪一档。
+      // 分层规则（纯函数，见 lib/core/brief-v3.ts）：按「独立源数 × 篇数」降序，
+      // 前 4 头条 / 接着 10 要闻 / 其余简讯。
+      //
+      // ⚠️ 篇数口径与旧代码不同：旧代码用 withBody.length（R2 里真取到正文的篇数），那要等到
+      // 块 step 内部才知道，写作前拿不到。这里改用 story.articleIds.length。
+      // articleIds.length ≥ withBody.length，所以个别簇的分数会略高、可能跨过档位边界。
+      // **这是本轮有意接受的偏差**（契约 §修改二）。源数的钳位同理改用 articleIds.length。
+      const tierPlan = assignTiers(
+        (storiesForIntelligence as any[]).map((s: any, i: number) => {
+          const articles = Math.max(1, Array.isArray(s.articleIds) ? s.articleIds.length : 0);
+          return { idx: i, articles, sources: Math.max(1, Math.min(sourcesOf.get(s) ?? 1, articles)) };
+        })
+      );
+      const planOf = new Map<number, (typeof tierPlan)[number]>(tierPlan.map((p) => [p.idx, p]));
+      console.log(
+        `[AutoBrief] 分层（写作前）：头条 ${tierPlan.filter((x) => x.tier === 'lead').length} / ` +
+          `要闻 ${tierPlan.filter((x) => x.tier === 'more').length} / ` +
+          `简讯 ${tierPlan.filter((x) => x.tier === 'brief').length}` +
+          `（分 = 源数 × 篇数，篇数取 articleIds：${tierPlan.slice(0, 5).map((x) => `${x.score}`).join(',')}…）`
+      );
 
-      const buildOneReport = async (story: any, idx: number): Promise<ReportOutcome> => {
+      type WrittenBlock = {
+        idx: number;
+        clusterId: number | null;
+        /** 渲染用标题：继续用 story.title，与管理页/验收的对账口径不变 */
+        blockTitle: string;
+        /** v6 自己起的块标题，只进观测，不进正文 */
+        v6Title: string;
+        /** 真正喂进端点的篇数（R2 取到正文的那些） */
+        articles: number;
+        /** 分层用的三元组：篇数取 articleIds.length，故与上面的 articles 可能差一两篇 */
+        tierArticles: number;
+        sources: number;
+        tier: Tier;
+        score: number;
+        text: string;
+        /** 写出来的 3–5 句，每句带出处。小，可以跨 step 传 */
+        sentences: BriefBlockV6Sentence[];
+        anchors: number;
+        windows: number;
+        windowFailures: number;
+        citationsRepaired: number;
+        /** 写作步被确定性校验拒收的原因（`#尝试次 原因码…`）。空数组 = 一次过。 */
+        writeRejects: string[];
+        llmCalls: number;
+        neurons: number;
+      };
+      type BlockOutcome = { block: WrittenBlock } | { failure: { idx: number; title: string; reason: string } };
+
+      const writeOneBlock = async (story: any, idx: number): Promise<BlockOutcome> => {
         try {
           const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
           const withBody = clusterArticles.filter((a) => String(a.content ?? '').trim().length > 0);
@@ -1520,211 +1649,146 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             return { failure: { idx, title: story.title, reason: '簇内没有一篇文章取到正文' } };
           }
           if (withBody.length < clusterArticles.length) {
-            // 取不到正文的被丢掉，而报告只能从剩下的里抽。不留痕就只剩"这块怎么少了半件事"。
+            // 取不到正文的被丢掉，而块只能从剩下的里写。不留痕就只剩"这块怎么少了半件事"。
             console.warn(
-              `[AutoBrief] 报告材料不全 (idx=${idx}, "${story.title}"): ` +
+              `[AutoBrief] 块材料不全 (idx=${idx}, "${story.title}"): ` +
               `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文`
             );
           }
           const aiw = createAIServices(this.env, workflowId).aiWorker;
-          const res = await aiw.buildReportV3(
+          const plan = planOf.get(idx);
+          if (!plan) {
+            // 分层表按 storiesForIntelligence 的下标建，取不到说明两处口径对不上。宁可失败也不猜档位。
+            return { failure: { idx, title: story.title, reason: `分层表里没有 idx=${idx}` } };
+          }
+          const res = await aiw.briefBlockV6(
             String(story.title ?? ''),
             withBody.map((a) => ({ id: a.id, title: a.title, url: a.url, publishDate: a.publishDate, content: a.content })),
+            plan.tier,
             idx
           );
           if (!res.ok) {
-            console.error(`[AutoBrief] 报告生成失败 (idx=${idx}, "${story.title}"): ${res.error}`);
+            console.error(`[AutoBrief] 简报块生成失败 (idx=${idx}, "${story.title}"): ${res.error}`);
             return { failure: { idx, title: story.title, reason: res.error } };
           }
-          const r2Key = `reports-v3/${workflowId}/${idx}.json`;
-          await this.env.ARTICLES_BUCKET.put(r2Key, JSON.stringify(res.value.report));
-
-          // R2 key 记到 brief_stories（观测；落库失败不致命）。**不能按 cluster_id**：
-          // 一个簇会产出多条 story、共享同一个 cluster_id，按它更新会把整簇的行写上同一个 key。
-          try {
-            const rowIds: number[] = Array.isArray(story.__briefStoryRowIds)
-              ? story.__briefStoryRowIds.filter((id: any) => typeof id === 'number')
-              : [];
-            if (rowIds.length === 0) {
-              console.warn(`[AutoBrief] report_r2_key 跳过落库：story 无 brief_stories 主键 (idx=${idx})`);
-            } else {
-              const db = getDb(this.env.HYPERDRIVE);
-              await db
-                .update($brief_stories)
-                .set({ intel_report_r2_key: r2Key })
-                .where(and(eq($brief_stories.workflow_id, workflowId), inArray($brief_stories.id, rowIds)));
-            }
-          } catch (persistErr) {
-            console.warn(`[AutoBrief] report_r2_key 落库失败 (workflow=${workflowId}, idx=${idx}):`, persistErr);
+          const v = res.value;
+          // verdict=not_a_single_event：端点判这一簇不是一件事、不出块。按**块失败**处置
+          // （不进正文、进失败清单），与块写作失败同一条路。
+          if (v.verdict !== 'written' || !v.block) {
+            const reason = `not_a_single_event: ${v.reason ?? '（端点未给原因）'}`;
+            console.warn(`[AutoBrief] 简报块未出块 (idx=${idx}, "${story.title}"): ${reason}`);
+            return { failure: { idx, title: story.title, reason } };
           }
-
-          const t = res.value.trace;
+          // renderBriefV3 要一段 text，而端点给的是结构化句子数组。exec 档本来就是一段话，直接拼。
+          const text = v.block.sentences.map((s) => s.text).join(' ').trim();
+          if (!text) {
+            return { failure: { idx, title: story.title, reason: '端点回了 written 但正文为空' } };
+          }
+          const t = v.trace;
           return {
-            r2Key,
-            idx,
-            clusterId: typeof story.clusterId === 'number' ? story.clusterId : null,
-            blockTitle: String(story.title ?? ''),
-            articles: withBody.length,
-            // 源数不能超过篇数（取不到正文的文章不进报告，也不该继续算它的源）
-            sources: Math.max(1, Math.min(sourcesOf.get(story) ?? 1, withBody.length)),
-            facts: t.facts,
-            skeleton: t.skeleton,
-            llmCalls: t.llmCalls,
-            neurons: t.neurons,
+            block: {
+              idx,
+              clusterId: typeof story.clusterId === 'number' ? story.clusterId : null,
+              blockTitle: String(story.title ?? ''),
+              v6Title: String(v.block.title ?? ''),
+              articles: withBody.length,
+              // 分层（写作前）算出来的三元组，原样带下来——不要再按 withBody 重算，
+              // 否则记录里的 score 与真正决定篇幅的那个分数对不上。
+              tierArticles: plan.articles,
+              sources: plan.sources,
+              tier: plan.tier,
+              score: plan.score,
+              text,
+              sentences: v.block.sentences,
+              anchors: t.anchors,
+              windows: t.windows,
+              windowFailures: t.windowFailures,
+              citationsRepaired: t.citationsRepaired,
+              writeRejects: Array.isArray(t.writeRejects) ? t.writeRejects : [],
+              llmCalls: t.llmCalls,
+              neurons: t.neurons,
+            },
           };
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
-          console.warn(`[AutoBrief] 报告生成异常 (idx=${idx}): ${reason}`);
+          console.warn(`[AutoBrief] 简报块生成异常 (idx=${idx}): ${reason}`);
           return { failure: { idx, title: story.title, reason } };
         }
       };
 
-      const reportResults = await this.batchProcessParallel(
+      const blockOutcomes = await this.batchProcessParallel(
         storiesForIntelligence,
-        REPORT_CONCURRENCY,
-        (story: any, idx: number): Promise<ReportOutcome> =>
+        BRIEF_BLOCK_CONCURRENCY,
+        (story: any, idx: number): Promise<BlockOutcome> =>
           step
-            .do(`报告:故事${idx}`, perStoryReportStepConfig, () => buildOneReport(story, idx))
+            .do(`简报块:${idx}`, briefBlockStepConfig, () => writeOneBlock(story, idx))
             // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
             // ——不接住的话这个故事会静默消失。
-            .catch((e: unknown): ReportOutcome => {
-              const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[AutoBrief] 报告 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
-              return { failure: { idx, title: story.title, reason } };
-            })
-      );
-
-      type ReportOk = Extract<ReportOutcome, { r2Key: string }>;
-      const intelligenceReports = reportResults.filter((r): r is ReportOk => 'r2Key' in r);
-      const intelFailures = reportResults
-        .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
-        .map((r) => r.failure);
-
-      if (intelligenceReports.length === 0) {
-        throw new Error(`全部 ${storiesForIntelligence.length} 个故事的报告生成都失败（详见上方各故事错误日志）`);
-      }
-      console.log(
-        `[AutoBrief] 簇报告完成: ${intelligenceReports.length}/${storiesForIntelligence.length}` +
-          (intelFailures.length ? `，${intelFailures.length} 个失败` : '') +
-          `，事实合计 ${intelligenceReports.reduce((n, r) => n + r.facts, 0)}`
-      );
-      await observability.logStep(
-        'intelligence_analysis',
-        intelFailures.length > 0 ? 'degraded' : 'completed',
-        {
-          path: 'report-v3',
-          storiesSelected: storiesForIntelligence.length,
-          reportsGenerated: intelligenceReports.length,
-          failedCount: intelFailures.length,
-          failures: intelFailures,
-          llmCalls: intelligenceReports.reduce((n, r) => n + r.llmCalls, 0),
-          neurons: Math.round(intelligenceReports.reduce((n, r) => n + r.neurons, 0)),
-        }
-      );
-
-      // =====================================================================
-      // 步骤 5: 分层 → 逐块写作 → 拼装（v3）
-      // =====================================================================
-      await observability.logStep('brief_generation', 'started');
-
-      // 分层（纯函数，见 lib/core/brief-v3.ts）：按「独立源数 × 篇数」降序，
-      // 前 4 头条 / 接着 10 要闻 / 其余简讯。不用 LLM 的 importance——那是一行定义的主观分，
-      // 源数 × 篇数是聚类后天然已知的客观量。
-      const tiered = assignTiers(intelligenceReports);
-      const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
-      console.log(
-        `[AutoBrief] 分层：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}` +
-          `（分 = 源数 × 篇数：${tiered.slice(0, 5).map((x) => `${x.score}`).join(',')}…）`
-      );
-
-      const briefBlockStepConfig: WorkflowStepConfig = {
-        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
-        timeout: '10 minutes',
-      };
-      // 与报告同档：不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
-      const BRIEF_BLOCK_CONCURRENCY = 6;
-
-      type WrittenBlock = ReportOk & {
-        tier: 'lead' | 'more' | 'brief';
-        score: number;
-        pos: number;
-        text: string;
-        marks: Array<{ sentence: string; reasons: Array<Record<string, any>> }>;
-        markStats: { sentences: number; checked: number; abstained: number; marked: number };
-        blockLlmCalls: number;
-        blockNeurons: number;
-      };
-      type BlockOutcome = { block: WrittenBlock } | { failure: { idx: number; title: string; reason: string } };
-
-      const blockOutcomes = await this.batchProcessParallel(
-        tiered,
-        BRIEF_BLOCK_CONCURRENCY,
-        (job: (typeof tiered)[number], pos: number): Promise<BlockOutcome> =>
-          step
-            .do(`简报块:${job.idx}`, briefBlockStepConfig, async (): Promise<BlockOutcome> => {
-              // 报告从 R2 读回再内联转发：它是上一步的产物，不让 ai-worker 再读一次 R2
-              const obj = await this.env.ARTICLES_BUCKET.get(job.r2Key);
-              if (!obj) throw new Error(`报告不在 R2: ${job.r2Key}`);
-              const report = JSON.parse(await obj.text());
-              const aiw = createAIServices(this.env, workflowId).aiWorker;
-              const res = await aiw.writeBlockV3(report, job.tier, job.idx);
-              if (!res.ok) throw new Error(res.error);
-              const v = res.value;
-              return {
-                block: {
-                  ...job,
-                  pos,
-                  text: v.text,
-                  // 代码检查器的标记：只进内部观测与管理页，**不进正文**
-                  marks: v.marks ?? [],
-                  markStats: v.trace.marks,
-                  blockLlmCalls: v.trace.llmCalls,
-                  blockNeurons: v.trace.neurons,
-                },
-              };
-            })
             .catch((e: unknown): BlockOutcome => {
               const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[AutoBrief] 简报块 step 最终失败 (idx=${job.idx}, "${job.blockTitle}"): ${reason}`);
-              return { failure: { idx: job.idx, title: job.blockTitle, reason } };
+              console.error(`[AutoBrief] 简报块 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
+              return { failure: { idx, title: story.title, reason } };
             })
       );
 
       const writtenBlocks = blockOutcomes
         .filter((r): r is { block: WrittenBlock } => 'block' in r)
-        .map((r) => r.block)
-        .sort((a, b) => a.pos - b.pos);
+        .map((r) => r.block);
       const blockFailures = blockOutcomes
         .filter((r): r is { failure: { idx: number; title: string; reason: string } } => 'failure' in r)
         .map((r) => r.failure);
 
       if (writtenBlocks.length === 0) {
-        throw new Error(`简报块写作对全部 ${tiered.length} 个块均失败，无可拼装内容（详见上方各块错误日志）`);
+        throw new Error(`全部 ${storiesForIntelligence.length} 个故事的简报块生成都失败（详见上方各块错误日志）`);
       }
-      const markTotal = writtenBlocks.reduce((n, b) => n + b.marks.length, 0);
+
+      // =====================================================================
+      // 步骤 5: 分层 → 拼装（v3 渲染）
+      // =====================================================================
+      await observability.logStep('brief_generation', 'started');
+
+      // 分层已经在写作之前算好（tier 决定篇幅），这里只按分层顺序把**出了块的**挑出来。
+      // 不要再对写完的块跑一次 assignTiers——那会用另一套输入重新分档，与实际写作用的档位脱节。
+      // 代价：若排在前面的故事写块失败，头条那一节会少于 4 条（旧写法是从成功的块里补满）。
+      const blockByIdx = new Map<number, WrittenBlock>(writtenBlocks.map((b) => [b.idx, b]));
+      const tiered = tierPlan
+        .map((p) => blockByIdx.get(p.idx))
+        .filter((b): b is WrittenBlock => b !== undefined);
+      const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
       console.log(
-        `[AutoBrief] 简报块写作完成: ${writtenBlocks.length}/${tiered.length}` +
-          (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
-          `，检查器标记 ${markTotal} 条（只进观测，不进正文）`
+        `[AutoBrief] 分层（出块后实际入节）：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}`
       );
+      console.log(
+        `[AutoBrief] 简报块完成: ${writtenBlocks.length}/${storiesForIntelligence.length}` +
+          (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
+          `，重点合计 ${writtenBlocks.reduce((n, b) => n + b.anchors, 0)}` +
+          `，窗口失败合计 ${writtenBlocks.reduce((n, b) => n + b.windowFailures, 0)}` +
+          `，补出处 ${writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0)} 处`
+      );
+      // 报告层与写作层合并成一步后，观测也合并成这一条（旧的 intelligence_analysis 随报告层退役）。
       await observability.logStep('brief_blocks', blockFailures.length > 0 ? 'degraded' : 'completed', {
-        path: 'writer-v3',
-        expected: tiered.length,
+        path: 'brief-block-v6',
+        expected: storiesForIntelligence.length,
         written: writtenBlocks.length,
         failedCount: blockFailures.length,
         failures: blockFailures,
         tiers: { lead: tierCount('lead'), more: tierCount('more'), brief: tierCount('brief') },
-        marks: markTotal,
+        anchors: writtenBlocks.reduce((n, b) => n + b.anchors, 0),
+        windows: writtenBlocks.reduce((n, b) => n + b.windows, 0),
+        windowFailures: writtenBlocks.reduce((n, b) => n + b.windowFailures, 0),
+        citationsRepaired: writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0),
+        writeRejects: writtenBlocks.reduce((n, b) => n + b.writeRejects.length, 0),
+        llmCalls: writtenBlocks.reduce((n, b) => n + b.llmCalls, 0),
+        neurons: Math.round(writtenBlocks.reduce((n, b) => n + b.neurons, 0)),
       });
 
-      // 第 4 关 written：一块 = 一份报告 = 一个被选中的 story，三者用同一个 idx
-      // （storiesForIntelligence 的下标）串起来。走到这里还没被拦下的文章，去向只有三种：
-      // 报告生成失败、块写作重试耗尽、进了某一块。
-      // blockIdx 取它在 writtenBlocks（已按 pos 排序）里的位置——renderBriefV3 就是按这个
-      // 顺序渲染的，所以它就是读者看到的块序。
+      // 第 4 关 written：一块 = 一个被选中的 story，两者用同一个 idx（storiesForIntelligence
+      // 的下标）串起来。走到这里还没被拦下的文章，去向只有两种：块生成失败、进了某一块。
+      // （报告层退役后不再有 report_generation_failed 这条去向，统一记 block_write_failed。）
+      // blockIdx 取它在 tiered 里的位置——renderBriefV3 就是按这个顺序渲染的，
+      // 所以它就是读者看到的块序。
       const blockIdxByStoryIdx = new Map<number, number>();
-      writtenBlocks.forEach((b, k) => blockIdxByStoryIdx.set(b.idx, k));
-      const reportFailedStoryIdx = new Set<number>(intelFailures.map((f) => f.idx));
+      tiered.forEach((b, k) => blockIdxByStoryIdx.set(b.idx, k));
       const storyIdxByArticle = new Map<number, number>();
       (storiesForIntelligence as any[]).forEach((s: any, i: number) => {
         const ids: number[] = Array.isArray(s.articleIds) ? s.articleIds : [];
@@ -1742,7 +1806,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         const blockIdx = blockIdxByStoryIdx.get(storyIdx);
         if (blockIdx === undefined) {
           entry.droppedAt = 'written';
-          entry.dropReason = reportFailedStoryIdx.has(storyIdx) ? 'report_generation_failed' : 'block_write_failed';
+          entry.dropReason = 'block_write_failed';
           continue;
         }
         entry.reachedStage = 'written';
@@ -1760,7 +1824,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 否则管理页/验收拿记录去对正文会对不上（2026-09-12 M3 就挂在这里）。
       const displayTitle = (t: string) => t.trim().toLowerCase();
       const rendered = renderBriefV3(
-        writtenBlocks.map((b) => ({ title: displayTitle(b.blockTitle), text: b.text, tier: b.tier }))
+        tiered.map((b) => ({ title: displayTitle(b.blockTitle), text: b.text, tier: b.tier }))
       );
       const titled = await step.do('简报标题', briefAssembleStepConfig, async () => {
         const aiw = createAIServices(this.env, workflowId).aiWorker;
@@ -1771,14 +1835,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const assembled = {
         title: titled.title,
         content: rendered.content,
-        model_used: 'glm-4.7-flash (report-v3 + writer-v3)',
+        model_used: 'glm-4.7-flash (brief-block-v6)',
       };
 
-      // 每期一份 v3 记录：分层、每块的标记与成本。管理页读它，验收（accept.ts M3）也读它。
-      // 失败的块以 ok:false 留在记录里——不写进正文，但绝不静默消失。
+      // 每期一份 v3 记录：分层、每块的正文/出处与成本。管理页读它，验收（accept.ts M3）也读它。
+      // 失败的块以 ok:false 留在记录里——不写进正文，但绝不静默消失。失败的块没有正文，
+      // 故单列在成功块之后（它其实有 tier/score，只是没写出东西来）。
       try {
-        const byIdx = new Map(writtenBlocks.map((b) => [b.idx, b]));
-        const failedIdxSet = new Map(blockFailures.map((f) => [f.idx, f]));
         await this.env.ARTICLES_BUCKET.put(
           `observability/brief-v3/${workflowId}.json`,
           JSON.stringify(
@@ -1787,29 +1850,38 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               createdAt: new Date().toISOString(),
               title: assembled.title,
               sections: rendered.sections,
-              blocks: tiered.map((job) => {
-                const b = byIdx.get(job.idx);
-                const f = failedIdxSet.get(job.idx);
-                return {
-                  clusterId: job.clusterId,
-                  storyIdx: job.idx,
-                  title: displayTitle(job.blockTitle),
-                  tier: job.tier,
-                  articles: job.articles,
-                  sources: job.sources,
-                  score: job.score,
-                  ok: !!b,
-                  ...(f ? { error: f.reason } : {}),
-                  text: b?.text ?? '',
-                  marks: b?.marks ?? [],
-                  markStats: b?.markStats ?? null,
-                  llmCalls: b?.blockLlmCalls ?? 0,
-                  neurons: b?.blockNeurons ?? 0,
-                  reportLlmCalls: job.llmCalls,
-                  reportNeurons: job.neurons,
-                  reportKey: job.r2Key,
-                };
-              }),
+              blocks: [
+                ...tiered.map((b) => ({
+                  clusterId: b.clusterId,
+                  storyIdx: b.idx,
+                  title: displayTitle(b.blockTitle),
+                  /** v6 自己起的标题，与上面那个渲染用标题并排存，便于回看两者差多少 */
+                  v6Title: b.v6Title,
+                  tier: b.tier,
+                  articles: b.articles,
+                  /** 分层用的篇数（articleIds.length），score = tierArticles × sources */
+                  tierArticles: b.tierArticles,
+                  sources: b.sources,
+                  score: b.score,
+                  ok: true,
+                  text: b.text,
+                  /** 逐句出处：句子 → [{articleId, sentence}]，出处校验读它 */
+                  sentences: b.sentences,
+                  anchors: b.anchors,
+                  windows: b.windows,
+                  windowFailures: b.windowFailures,
+                  citationsRepaired: b.citationsRepaired,
+                  writeRejects: b.writeRejects,
+                  llmCalls: b.llmCalls,
+                  neurons: b.neurons,
+                })),
+                ...blockFailures.map((f) => ({
+                  storyIdx: f.idx,
+                  title: displayTitle(String(f.title ?? '')),
+                  ok: false,
+                  error: f.reason,
+                })),
+              ],
             },
             null,
             1
@@ -1844,11 +1916,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         return { tldr: tldr.value.tldr, tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null };
       });
 
-      // used_articles 是真正喂进简报的去重文章数 = 拿到情报报告的那些 story 的 articleIds 并集
-      // （失败的 story 不算，它的报告没进简报）。failures[].idx 是 storiesForIntelligence 的
+      // used_articles 是真正喂进简报的去重文章数 = 出了块的那些 story 的 articleIds 并集
+      // （失败的 story 不算，它没进简报）。failures[].idx 是 storiesForIntelligence 的
       // 全局下标（batchProcessParallel 传的是 i + batchIndex）。
       // ⚠️ 语义变更：reports 表 51-59 期存的仍是旧值（故事数），跨期比较需注意。
-      const failedIdx = new Set(intelFailures.map(f => f.idx));
+      const failedIdx = new Set(blockFailures.map(f => f.idx));
       const usedArticleIds = new Set<number>(
         storiesForIntelligence
           .filter((_: any, i: number) => !failedIdx.has(i))
@@ -1866,7 +1938,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           used_articles: usedArticleIds.size,
           clusters_found: clusteringResult.statistics.totalClusters,
           stories_identified: validatedStories.stories.length,
-          intelligence_analyses: intelligenceReports.length,
+          // 字段名沿用（reports 表与管理页读它）：报告层退役后它的口径是"出了块的故事数"
+          intelligence_analyses: writtenBlocks.length,
           content_length: assembled.content.length,
           model_used: assembled.model_used,
         },
@@ -1883,90 +1956,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // intel-grounding-judge-validated。路径 B（发布前删句）与 enforce 拦截均已关闭
       // 且方向上永不重开。
       // =====================================================================
-      // 测试迭代可按 run 跳过门(省本次 code_only 检查耗时);
-      // 生产 cron 不传此参=默认跑门攒观测数据。见 memory: faithfulness-runtime-gate。
-      // v3 链路不跑忠实度门：检测改用零成本的代码检查器（标记已随块写进 observability/brief-v3/）。
-      // 这个门要把整份旧格式情报报告喂给模型，而线上强判官的召回/成本账不划算（ADR 0004「检测上限」）。
-      // 门的代码与端点都留着，旧链路仍可用。
-      const RUN_FAITHFULNESS_GATE = false;
-      if (skipFaithfulnessGate || !RUN_FAITHFULNESS_GATE) {
-        const why = skipFaithfulnessGate ? 'skip_param' : 'v3_path';
-        console.log(`[AutoBrief] 忠实度门：跳过（${why}）`);
-        await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: why });
-      } else {
-        await observability.logStep('faithfulness_gate', 'started');
-        // code_only 传感器耗时远低于 defaultStepConfig 的 2min，但仍留足余量防偶发慢调用；
-        // retries=1 避免一次慢调用被重试放大成多轮超时。
-        const faithfulnessStepConfig: WorkflowStepConfig = {
-          retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
-          timeout: '10 minutes',
-        };
-        // fail-open 兜底：门(检查员)自身任何失败——超时/重试耗尽/异常——都不得连坐已生成的 brief。
-        // step.do 的超时由引擎在回调外层抛 WorkflowTimeoutError，回调内的放行逻辑接不到，
-        // 必须在这里 catch → verdict=null → 后续按"门不可用"放行。
-        let faithfulnessVerdict: any = null;
-        try {
-          faithfulnessVerdict = await step.do('忠实度门检查', faithfulnessStepConfig, async () => {
-            // per-story sources：每份情报报告独立传入，避免合并后 ~141K chars 撞 qwen-max 30720 token 上限。
-            // 各故事源 ~7.5K chars，faithfulness-check 逐源短路判定后聚合 verdict。
-            const sources = (await Promise.all(
-              intelligenceReports.map(async ({ r2Key }: { r2Key: string }, idx: number) => {
-                const obj = await this.env.ARTICLES_BUCKET.get(r2Key);
-                if (!obj) return null;
-                const content = await obj.text();
-                let storyId = `story-${idx}`;
-                try { const p = JSON.parse(content); if (p.storyId) storyId = p.storyId; } catch {}
-                return { storyId, content };
-              })
-            )).filter((s): s is { storyId: string; content: string } => s !== null);
-
-            // 接缝返回 domain result；仪式/dispose 收进 ai-services。门本身故障不连坐 brief
-            // (fail-open on infra error)：记一条、放行(返 null)。
-            const aiServices = createAIServices(this.env, workflowId);
-            const check = await aiServices.aiWorker.faithfulnessCheck(sources, briefResult.content);
-            if (!check.ok) {
-              console.error(`[AutoBrief] 忠实度门调用失败: ${check.error}，放行 brief`);
-              return null;
-            }
-            return check.value;
-          });
-        } catch (gateError) {
-          // 超时/重试耗尽/任何异常 → fail-open：检查员挂掉，绝不丢弃已生成的 brief
-          console.error(`[AutoBrief] 忠实度门检查步骤失败(${gateError instanceof Error ? gateError.message : String(gateError)})，fail-open 放行 brief`);
-          faithfulnessVerdict = null;
-        }
-
-        if (faithfulnessVerdict) {
-          const v = faithfulnessVerdict;
-          console.log(`[AutoBrief] 忠实度门: block=${v.block} mode=mark-only ` +
-            `reasons=[${(v.block_reasons || []).join(' | ')}] unsupported=${v.genuine_unsupported}/${v.factual_claims} ` +
-            `contradicted=${v.contradicted} ana_contra=${v.analytical_contradicting}`);
-          // 观测性：verdict 全量落 R2（含 all_claims 抽取全集）。step 日志只存 flagged，
-          // 但离线全量审计的「待判对象」是 claim 全集——不落盘就得重拆，非确定性对不齐
-          // 生产编号。best-effort，不拖垮发布。
-          try {
-            await this.env.ARTICLES_BUCKET.put(
-              `observability/faithfulness/${workflowId}.json`,
-              JSON.stringify({ workflowId, createdAt: new Date().toISOString(), verdict: v }, null, 2)
-            );
-          } catch (persistErr) {
-            console.warn(`[AutoBrief] 忠实度 verdict 落盘失败 (workflow=${workflowId}):`, persistErr);
-          }
-          await observability.logStep('faithfulness_gate', 'completed', {
-            block: v.block,
-            block_reasons: v.block_reasons,
-            genuine_unsupported: v.genuine_unsupported,
-            factual_claims: v.factual_claims,
-            unsupported_rate: v.unsupported_rate,
-            contradicted: v.contradicted,
-            analytical_contradicting: v.analytical_contradicting,
-            flagged_factual: v.flagged_factual,
-            flagged_analytical: v.flagged_analytical,
-          });
-        } else {
-          await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: 'check_unavailable' });
-        }
-      }
+      // v3/v6 链路不跑忠实度门。这个门的输入是**整份旧格式情报报告**，而报告层 v3 随
+      // brief-block-v6 上线一并退役、不再产生任何报告，门在这条链路上已无输入可喂。
+      // （召回/成本账本来也不划算，见 ADR 0004「检测上限」。）门的代码与 ai-worker 端点
+      // 都留着，旧链路仍可用；skipFaithfulnessGate 参数保留，只影响记录里的 reason。
+      const why = skipFaithfulnessGate ? 'skip_param' : 'v6_path_no_report';
+      console.log(`[AutoBrief] 忠实度门：跳过（${why}）`);
+      await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: why });
 
       // =====================================================================
       // 步骤 6: 保存简报到数据库
@@ -2064,14 +2060,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       // 观测性：标记 brief_runs 完成状态并填充全部统计。
-      // 有可对账的局部失败（intel 步选中 N 只产出 M<N）→ DEGRADED 而非 COMPLETED，
+      // 有可对账的局部失败（块生成选中 N 只产出 M<N）→ DEGRADED 而非 COMPLETED，
       // 使"头条静默消失"这类在 DB status 层就可见（不只在 R2 step metrics），便于监控/巡检。
       await step.do('persist:brief_run_complete', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
         await db
           .update($brief_runs)
           .set({
-            status: intelFailures.length > 0 ? 'DEGRADED' : 'COMPLETED',
+            status: blockFailures.length > 0 ? 'DEGRADED' : 'COMPLETED',
             finished_at: new Date(),
             report_id: reportId,
             total_articles: briefResult.stats.total_articles,

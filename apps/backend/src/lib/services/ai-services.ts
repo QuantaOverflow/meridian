@@ -86,6 +86,40 @@ export interface BlockV3Data {
   };
 }
 
+/**
+ * 简报块 v6 的一块。与 ai-worker `src/services/brief-block-v6.ts` 的 `BriefBlockV6Result`
+ * 对齐（跨 package 不能直接 import，这里是镜像；那份 TS 类型是唯一真源）。
+ */
+export interface BriefBlockV6Sentence {
+  text: string;
+  sources: Array<{ articleId: number; sentence: number }>;
+}
+export interface BriefBlockV6Data {
+  verdict: 'written' | 'not_a_single_event';
+  reason?: string;
+  block: null | { title: string; sentences: BriefBlockV6Sentence[] };
+  /** articleId → 切句表（**整簇原文**，很大）。见 briefBlockV6 上的告警。 */
+  sentences: Record<string, string[]>;
+  trace: {
+    articles: number;
+    windows: number;
+    anchors: number;
+    citationsRepaired: number;
+    /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
+    windowFailures: number;
+    repetitionRetries: number;
+    /** 写作步每次被确定性校验拒收的原因。空数组 = 一次过。 */
+    writeRejects: string[];
+    llmCalls: number;
+    neurons: number;
+    model: string;
+    windowChars: number;
+    /** 这一块实际用的篇幅档（lead/more = exec 档，brief = 1–2 句短档） */
+    tier: string;
+    [k: string]: any;
+  };
+}
+
 export interface BriefTitleData {
   title: string;
   neurons: number;
@@ -364,6 +398,35 @@ export class AIWorkerService {
     });
 
     return await this.callJson<ReportV3Data>(request);
+  }
+
+  /**
+   * 简报块 v6：一个簇的原文 → 一块逐句带出处的高管简报（报告层 + 写作层合成一步）。
+   * 请求体与 /meridian/report-v3 逐字同构（多一个 tier），故同一份材料可直接复用。
+   *
+   * `tier` 决定篇幅：'lead' = 5–7 句，'more' = 3–5 句，'brief' = 一句。
+   * 句数由 ai-worker 侧写作 schema 的 `sentences.maxItems` 硬约束，字数只写在 prompt 里
+   * 不强制（2026-09-21 实测：句数一个不差，字数三档全超标，故不拿字数当判据）。
+   * 因此分层必须发生在调用之前。
+   *
+   * ⚠️ 响应里的 `sentences`（切句表）是**整簇原文**，一个大簇几千句。调用方拿到后只能就地用，
+   * **不许**把它放进 CF Workflow 的 step 返回值（单 step 输出约 1MB 上限）。
+   *
+   * @param callIndex 故事序号，进 x-call-index 让同一 trace 下的 R2 观测记录不互相覆盖
+   */
+  async briefBlockV6(
+    title: string,
+    articles: Array<{ id: number; title: string; url?: string; publishDate?: string; content: string }>,
+    tier: 'lead' | 'more' | 'brief',
+    callIndex?: number
+  ): Promise<ServiceResult<BriefBlockV6Data>> {
+    const request = new Request(`${this.baseUrl}/meridian/brief-block-v6`, {
+      method: 'POST',
+      headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
+      body: JSON.stringify({ title, articles, tier, skipCache: true }),
+    });
+
+    return await this.callJson<BriefBlockV6Data>(request);
   }
 
   /**

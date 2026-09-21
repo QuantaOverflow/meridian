@@ -11,6 +11,8 @@
  *   · 原型走不到的那一套（selection / grounding / route gate / 文件缓存）一律不移植。
  */
 
+import { splitSentences } from './report-v3';
+
 /** 切句表：articleId（字符串键）→ 句子数组，下标 +1 = `sources[].sentence`。 */
 export type SentenceTable = Record<string, string[]>;
 
@@ -56,6 +58,23 @@ export const ANCHOR_SOURCES = 4;
 /** 写作步：exec 档 3–5 句、每句出处上限 8。 */
 export const WRITE_MAX_SENTENCES = 5;
 export const WRITE_MAX_SOURCES = 8;
+
+/**
+ * 篇幅档。`lead` / `more` 走现有 exec 档（逐字不变，那是唯一有实测读数的配置），
+ * `brief` 走 1–2 句的短档。不传 / 非法值 = `lead`（向后兼容，不报 400——篇幅是写作风格，
+ * 不是正确性约束）。
+ */
+export type V6Tier = 'lead' | 'more' | 'brief';
+export const V6_TIERS: V6Tier[] = ['lead', 'more', 'brief'];
+/**
+ * 不传 / 非法值 → `more`，与 `writeLenOf` 的默认档一致。
+ *
+ * 两处必须同一个默认值：`writeLenOf` 决定实际写多长，这里决定 `trace.tier` 报什么。
+ * 一度是 `lead` / `more` 分叉的——不传 tier 的请求按 `more` 档写、却在 trace 里报
+ * `lead`，排查时读到的档位和实际行为对不上。生产的 backend 永远显式传 tier，所以
+ * 咬不到，但会说谎的读数不留。
+ */
+export const normalizeTier = (t: unknown): V6Tier => (V6_TIERS.includes(t as V6Tier) ? (t as V6Tier) : 'more');
 /** 必写档的放宽量。MUST_SLACK 在这条路径下的推导值是 0（原型 60–64 行：试过 1，已撤回）。 */
 export const MUST_SLACK = 0;
 
@@ -149,20 +168,94 @@ export function cleanWrite(x: any): any {
   };
 }
 
-export function writeOk(raw: any, cited: Set<string>): boolean {
+/**
+ * 句末标点。2026-09-19 生产那三句坏句全是断在半句上（`assured the incident ` /
+ * `abetment of [` / `transferred,`），收尾字符就是它们与其余 105 句的分界。
+ */
+export const TERMINAL_PUNCT = /[.!?"”’)]\s*$/;
+
+/**
+ * 写作步的确定性校验。返回**失败原因列表**，空数组 = 通过。
+ *
+ * 返回原因而不是 boolean，是因为 chatJson 的自救重试要把原因写进下一次的 prompt。
+ * 因此每条原因只含**原因码 + 第几句**，绝不含模型写出来的文本——坏文本不回喂
+ * （glm-4.7-flash 的退化史见 services/brief-block-v6.ts 的 chatJson 注释）。
+ *
+ * 除原有的 verdict / marker / 出处三类外多两条（2026-09-19 生产实测：24 块 108 句里
+ * 3 句坏、全在 storyIdx=17；这两条在那 108 句上精确命中那 3 句、误伤 0 句）：
+ *   · multi_sentence     一个 text 只能是一句（splitSentences 切出来正好 1 条）
+ *   · no_terminal_punct  必须以句末标点结尾
+ */
+export function writeOk(raw: any, cited: Set<string>): string[] {
   const x = cleanWrite(raw);
-  if (!['written', 'not_a_single_event'].includes(x?.verdict) || typeof x?.reason !== 'string' || !Array.isArray(x.sentences)) return false;
-  if (x.verdict === 'not_a_single_event') return x.reason.trim().length > 0 && x.sentences.length === 0;
-  if (!x.title?.trim() || MARKER.test(x.title) || !x.sentences.length) return false;
-  return x.sentences.every(
-    (s: any) =>
-      typeof s?.text === 'string' &&
-      s.text.trim() &&
-      !MARKER.test(s.text) &&
-      Array.isArray(s.sources) &&
-      s.sources.length > 0 &&
-      s.sources.every((r: any) => cited.has(`${r.articleId}:${r.sentence}`))
-  );
+  const bad: string[] = [];
+  if (!['written', 'not_a_single_event'].includes(x?.verdict)) bad.push('bad_verdict');
+  if (typeof x?.reason !== 'string') bad.push('missing_reason');
+  if (!Array.isArray(x?.sentences)) bad.push('bad_sentences');
+  if (bad.length) return bad;
+
+  if (x.verdict === 'not_a_single_event') {
+    if (!x.reason.trim()) bad.push('missing_reason');
+    if (x.sentences.length) bad.push('unexpected_sentences');
+    return bad;
+  }
+
+  if (!x.title?.trim()) bad.push('missing_title');
+  else if (MARKER.test(x.title)) bad.push('marker_leak_title');
+  if (!x.sentences.length) bad.push('no_sentences');
+
+  x.sentences.forEach((s: any, i: number) => {
+    const at = `sentence ${i + 1}`;
+    if (typeof s?.text !== 'string' || !s.text.trim()) {
+      bad.push(`${at}: empty_text`);
+    } else {
+      if (MARKER.test(s.text)) bad.push(`${at}: marker_leak`);
+      if (splitSentences(s.text).length !== 1) bad.push(`${at}: multi_sentence`);
+      if (!TERMINAL_PUNCT.test(s.text)) bad.push(`${at}: no_terminal_punct`);
+    }
+    if (!Array.isArray(s?.sources) || s.sources.length === 0) bad.push(`${at}: no_sources`);
+    else if (!s.sources.every((r: any) => cited.has(`${r?.articleId}:${r?.sentence}`))) bad.push(`${at}: bad_source`);
+  });
+  return bad;
+}
+
+/** 原因码 → 给模型看的一句英文说明（与 prompt 其余部分同语言）。 */
+const REASON_HINTS: Record<string, string> = {
+  bad_verdict: 'verdict must be exactly "written" or "not_a_single_event".',
+  missing_reason: 'the reason field was missing or empty.',
+  bad_sentences: 'sentences must be an array.',
+  unexpected_sentences: 'verdict not_a_single_event must come with an empty sentences array.',
+  missing_title: 'title was missing or empty; give the story a short headline.',
+  marker_leak_title: 'the title contained an [articleId:sentence] label; labels are for the sources field only.',
+  no_sentences: 'verdict written must come with 3-5 sentences.',
+  empty_text: 'the text field was missing or empty.',
+  marker_leak: 'the text contained an [articleId:sentence] label; never write labels inside text.',
+  multi_sentence: 'the text field contained more than one sentence; each text must be exactly one sentence.',
+  no_terminal_punct:
+    'the text ended without terminal punctuation; every sentence must be complete and end with a full stop.',
+  no_sources: 'the sources array was empty; cite the source sentences that support this sentence.',
+  bad_source: 'a cited [articleId:sentence] coordinate is not in the material above; cite only sentences shown there.',
+};
+
+/**
+ * 由失败原因生成追加到 prompt 末尾的自救说明。
+ * **只回传诊断，不回传模型上一次的输出**：让 glm-4.7-flash 接着自己的退化文本往下写有
+ * 加剧风险（本仓复读事故已四次，memory `repetition-guard-always-on`）。入参是原因码，
+ * 所以这个函数在结构上就拿不到坏文本。
+ */
+export function retryInstruction(reasons: string[]): string {
+  if (!reasons.length) return '';
+  const lines = [...new Set(reasons)].map(r => {
+    const m = /^(sentence \d+): (.+)$/.exec(r);
+    const where = m ? `${m[1]}: ` : '';
+    const code = m ? m[2] : r;
+    return `- ${where}${REASON_HINTS[code] ?? `it failed the ${code} check.`}`;
+  });
+  return [
+    'Your previous answer was rejected by a mechanical check. Fix these and answer again in full:',
+    ...lines,
+    'Do not repeat the rejected wording; write the item again from the material above.',
+  ].join('\n');
 }
 
 // ── 写作材料 ────────────────────────────────────────────────────────────
@@ -194,9 +287,15 @@ export function writeMaterial(
   anchors: V6Anchor[],
   sentences: SentenceTable,
   withSupport = false,
-  withContext = false
+  withContext = false,
+  /**
+   * 是否给达到必写档的重点打 ` — MUST COVER`。默认跟随 withSupport（老口径，金标据此冻结）。
+   * brief 档单独关掉：那一档只准写 2 句，而一个簇常有 5–12 条 MUST COVER，
+   * 「每条都要写进去」与「最多 2 句」是自相矛盾的指令。排序照旧保留。
+   */
+  withMustCover = withSupport
 ): string {
-  const must = withSupport ? mustCover(anchors, MUST_SLACK) : new Set<string>();
+  const must = withMustCover ? mustCover(anchors, MUST_SLACK) : new Set<string>();
   const list = withSupport ? [...anchors].sort((a, b) => supportOf(b) - supportOf(a)) : anchors;
   const line = (s: V6Source) => `[${s.articleId}:${s.sentence}] ${sentenceOf(sentences, s.articleId, s.sentence)}`;
   return list

@@ -1,0 +1,91 @@
+{
+ "note": "同样 6 篇输入重跑一次的干净产出,作反向对照",
+ "title": "IIT Bombay student dies by suicide after AI exam use",
+ "sentences": [
+  {
+   "text": "A second-year student at IIT Bombay died by suicide Friday evening after allegedly using a mobile phone to upload an exam question paper to an AI platform to seek answers, triggering campus protests.",
+   "sources": [
+    {
+     "articleId": 1056843,
+     "sentence": 1
+    },
+    {
+     "articleId": 1056843,
+     "sentence": 2
+    },
+    {
+     "articleId": 1056843,
+     "sentence": 3
+    },
+    {
+     "articleId": 1056843,
+     "sentence": 4
+    }
+   ]
+  },
+  {
+   "text": "Instructors counseled the student and assured him the incident would not affect his academic career, but his parents have lodged an FIR for abetment of suicide and named a professor as the invigilator.",
+   "sources": [
+    {
+     "articleId": 1056843,
+     "sentence": 7
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 4
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 8
+    }
+   ]
+  },
+  {
+   "text": "The probe has been transferred to the Mumbai Police crime branch, and police have invoked the Prevention of Atrocities Act after the parents alleged casteist harassment.",
+   "sources": [
+    {
+     "articleId": 1064218,
+     "sentence": 1
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 2
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 5
+    }
+   ]
+  },
+  {
+   "text": "The student's father, Ravindra Wakode, has refused to claim his son's body and demanded the arrest of those responsible, while the mother alleged her son was tortured.",
+   "sources": [
+    {
+     "articleId": 1061117,
+     "sentence": 1
+    },
+    {
+     "articleId": 1061117,
+     "sentence": 2
+    },
+    {
+     "articleId": 1062667,
+     "sentence": 5
+    },
+    {
+     "articleId": 1062667,
+     "sentence": 6
+    }
+   ]
+  },
+  {
+   "text": "This is the third reported suicide on the campus this year.",
+   "sources": [
+    {
+     "articleId": 1067747,
+     "sentence": 4
+    }
+   ]
+  }
+ ]
+}

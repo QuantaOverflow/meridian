@@ -922,8 +922,10 @@ app.post('/meridian/report-v3', async (c) => {
   }
 })
 
-// 简报块 v6：一个簇的原文 → 一块 3–5 句的高管简报（services/brief-block-v6.ts）。
-// 请求体与 /meridian/report-v3 逐字同构，backend 可复用同一份文章材料。旧端点一个不动。
+// 简报块 v6：一个簇的原文 → 一块高管简报（services/brief-block-v6.ts）。
+// 请求体与 /meridian/report-v3 逐字同构（多一个可选的 tier），backend 可复用同一份文章材料。
+// tier 决定篇幅：'lead' = 5–7 句，'more' / 不传 = 原 exec 档（3–5 句），'brief' = 1 句。
+// 非法值按不传处理，不报 400——篇幅是写作风格，不是正确性约束。旧端点一个不动。
 app.post('/meridian/brief-block-v6', async (c) => {
   try {
     const body = await c.req.json()
@@ -939,7 +941,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
     }
     const service = new BriefBlockV6Service(c.env, readTraceContext(c.req.raw))
     const data = await service.generate(
-      { title: typeof body?.title === 'string' ? body.title : '', articles },
+      { title: typeof body?.title === 'string' ? body.title : '', articles, tier: body?.tier },
       body?.skipCache === true
     )
     return c.json<APIResponse<typeof data>>({ success: true, data })

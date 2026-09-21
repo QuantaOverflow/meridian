@@ -4,7 +4,8 @@
  *   1 切句     每篇正文切句，1 起编号（utils/report-v3.ts 的 splitSentences）        代码
  *   2 切窗     30,000 字符预算、相邻窗口重叠 1 篇，覆盖不变量断言                    代码
  *   3 标重点   每个窗口一次调用，只标 topic + 原文句编号，不写散文（约束式解码）     LLM × 窗口数
- *   4 写作     全部重点 + 它们指向的原句 → 一块 3–5 句的 exec 简报                   LLM × 1
+ *   4 写作     全部重点 + 它们指向的原句 → 一块简报（tier=lead/more 走 3–5 句的 exec   LLM × 1
+ *              档，tier=brief 走 1–2 句的短档）
  *   5 补出处   句中数字/引语不在所引原句里 → 在材料池里找字面包含它的原句补上        代码
  *
  * 移植自原型 `scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
@@ -24,20 +25,23 @@ import type { TraceContext } from './llm-call-logger';
 import type { ChatResponse, CloudflareEnv } from '../types';
 import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
-import { ANCHOR_SCHEMA, WRITE_SCHEMA, getAnchorPrompt, getWritePrompt } from '../prompts/briefBlockV6';
+import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt } from '../prompts/briefBlockV6';
 import {
   WINDOW_CHARS,
   anchorOk,
   cleanWrite,
   contextOf,
   makeWindows,
+  normalizeTier,
   repairCitations,
+  retryInstruction,
   writeOk,
   type SentenceTable,
   type V6Anchor,
   type V6Article,
   type V6Sentence,
   type V6Source,
+  type V6Tier,
 } from '../utils/brief-block-v6';
 
 const MODEL = '@cf/zai-org/glm-4.7-flash';
@@ -48,6 +52,18 @@ const TEMPERATURES = [0.1, 0.3, 0.3];
 const BACKOFF_MS = [3000, 8000];
 /** callIndex 起点：与写作层（700）、整篇标题（690）、报告层（900）错开，免得同一 trace 下 R2 key 互相覆盖。 */
 const CALL_INDEX_BASE = 600;
+/**
+ * 每块（story）占的 callIndex 槽位数。
+ *
+ * 一块一个 service 实例、`this.llmCalls` 从 0 起，所以只靠它算 callIndex 的话 24 个块全写
+ * `brief_block_v6-600`，后写的覆盖先写的（2026-09-19 实测：storyIdx=17 的原始输出查不到）。
+ * 用 backend 传进来的 story 序号乘上这个步长把块彼此隔开。
+ *
+ * 100 是够用的上界：一块最多 = 窗口数 × 3 次尝试 + 写作 3 次尝试，最大的簇也只有 3 个窗口。
+ * 日志 key 里带 phase 段（`brief_block_v6`），与 report_v3(900)/brief_generation(700)/标题(690)
+ * 天然分开，所以这里只需要块间唯一，基数取多少都不会跨 phase 撞车。
+ */
+const CALL_INDEX_PER_STORY = 100;
 
 export interface BriefBlockV6ArticleInput {
   id: number;
@@ -61,6 +77,11 @@ export interface BriefBlockV6ArticleInput {
 export interface BriefBlockV6Input {
   title?: string;
   articles: BriefBlockV6ArticleInput[];
+  /**
+   * 篇幅档。`lead` / `more` / 不传 = 现有 exec 档（3–5 句），`brief` = 1–2 句短档。
+   * 非法值按不传处理（篇幅是写作风格，不是正确性约束，不值得 400）。
+   */
+  tier?: V6Tier | string;
 }
 
 export interface BriefBlockV6Trace {
@@ -71,11 +92,18 @@ export interface BriefBlockV6Trace {
   /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
   windowFailures: number;
   repetitionRetries: number;
+  /**
+   * 写作步每次被确定性校验拒收的原因（`#尝试次 原因码…`）。空数组 = 一次过。
+   * 不记的话「一次过」和「第三次才过」在观测里分不开。
+   */
+  writeRejects: string[];
   llmCalls: number;
   /** 全部 LLM 调用的 neurons 合计（成本验收读它）。 */
   neurons: number;
   model: string;
   windowChars: number;
+  /** 这一块实际用的篇幅档。不记的话观测里分不出「写短了」是档位生效还是模型偷懒。 */
+  tier: V6Tier;
 }
 
 export interface BriefBlockV6Result {
@@ -108,6 +136,7 @@ export class BriefBlockV6Service {
   private neurons = 0;
   private repetitionRetries = 0;
   private windowFailures = 0;
+  private writeRejects: string[] = [];
   /** dev-only：模型 spike 用；不传就是 PHASE_DEFAULTS 里的 glm-4.7-flash。 */
   private readonly model: string;
 
@@ -120,22 +149,32 @@ export class BriefBlockV6Service {
    * 原型 `chatJson` 的移植：最多三次，温度 [0.1, 0.3, 0.3]，退避 [3s, 8s]。
    * 「这次算成功」= 调用没抛 + finish_reason 不是 length + JSON 解得出 + 过 ok() + 不复读。
    * 三次都不过就抛错，由调用方决定是跳过这个窗口还是整块失败。
+   *
+   * 自救重试：`ok()` 返回失败原因列表（空 = 通过），第 2、3 次尝试把上一次的**诊断**
+   * 追加在 prompt 末尾。**只回传诊断，不回传模型上一次的输出原文**——让 glm-4.7-flash
+   * 接着自己的退化文本往下写有加剧风险（复读事故已四次，memory repetition-guard-always-on）。
+   * 复读那层保持原样：检出就直接重试，不附加诊断。
    */
   private async chatJson(
     tag: string,
     prompt: string,
     schema: Record<string, unknown>,
-    ok: (x: any) => boolean,
-    repetitionTextOf: (x: any) => string
+    ok: (x: any) => string[],
+    repetitionTextOf: (x: any) => string,
+    rejects?: string[]
   ): Promise<any> {
+    let lastReasons: string[] = [];
     for (let attempt = 0; attempt < TEMPERATURES.length; attempt++) {
-      const callIndex = CALL_INDEX_BASE + this.llmCalls;
+      // 块间唯一：见 CALL_INDEX_PER_STORY。traceContext.callIndex 是 backend 传的 story 序号。
+      const storyIdx = this.traceContext.callIndex ?? 0;
+      const callIndex = CALL_INDEX_BASE + storyIdx * CALL_INDEX_PER_STORY + this.llmCalls;
+      const attemptPrompt = lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons)}` : prompt;
       this.llmCalls++;
       let content = '';
       let truncated = false;
       let err: unknown = null;
       try {
-        const res = await callLLM(this.ai, this.env, this.traceContext, 'brief_block_v6', [{ role: 'user', content: prompt }], {
+        const res = await callLLM(this.ai, this.env, this.traceContext, 'brief_block_v6', [{ role: 'user', content: attemptPrompt }], {
           model: this.model,
           temperature: TEMPERATURES[attempt],
           callIndex,
@@ -156,15 +195,18 @@ export class BriefBlockV6Service {
       } catch {
         /* retry */
       }
-      const good = !err && !truncated && parsed && ok(parsed);
-      if (good) {
+      // reasons === null：连 ok() 都没跑到（调用抛了 / 截断 / JSON 解不出），没有可回传的诊断
+      const reasons = !err && !truncated && parsed ? ok(parsed) : null;
+      lastReasons = reasons ?? [];
+      if (reasons && reasons.length === 0) {
         if (!detectRepetition(repetitionTextOf(parsed))) return parsed;
         this.repetitionRetries++;
         console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
       } else {
+        if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
         console.warn(
           `[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
-            `${err ? `err=${err instanceof Error ? err.message : String(err)}` : truncated ? 'finish_reason=length' : parsed ? 'schema 校验不过' : 'JSON 解不出'}`
+            `${err ? `err=${err instanceof Error ? err.message : String(err)}` : truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`
         );
       }
       if (attempt < BACKOFF_MS.length) await new Promise(r => setTimeout(r, BACKOFF_MS[attempt]));
@@ -187,6 +229,7 @@ export class BriefBlockV6Service {
     const sentences: SentenceTable = {};
     for (const a of articles) sentences[String(a.id)] = a.sentences;
 
+    const tier = normalizeTier(input.tier);
     const windows = makeWindows(articles);
 
     const batches = await pool(windows, CONCURRENCY, async w => {
@@ -196,7 +239,8 @@ export class BriefBlockV6Service {
           `w${w.index + 1}`,
           getAnchorPrompt(w, windows.length),
           ANCHOR_SCHEMA as unknown as Record<string, unknown>,
-          x => anchorOk(x, sentences, allowed),
+          // 窗口步的失败是窗口级的（已有跳过机制），不做逐条诊断：anchorOk 保持 boolean
+          x => (anchorOk(x, sentences, allowed) ? [] : ['bad_anchors']),
           // 复读检测读 topic 文本；用 ". " 拼接让 detectRepetition 的句级那条腿切得开
           x => (x.anchors as Array<{ topic: string }>).map(a => a.topic).join('. ')
         );
@@ -228,10 +272,11 @@ export class BriefBlockV6Service {
     const written = cleanWrite(
       await this.chatJson(
         'write',
-        getWritePrompt(anchors, sentences),
-        WRITE_SCHEMA as unknown as Record<string, unknown>,
+        getWritePrompt(anchors, sentences, tier),
+        getWriteSchema(tier) as unknown as Record<string, unknown>,
         x => writeOk(x, cited),
-        x => (Array.isArray(x.sentences) ? (x.sentences as Array<{ text: string }>).map(s => String(s?.text ?? '')).join(' ') : '')
+        x => (Array.isArray(x.sentences) ? (x.sentences as Array<{ text: string }>).map(s => String(s?.text ?? '')).join(' ') : ''),
+        this.writeRejects
       )
     );
 
@@ -255,10 +300,12 @@ export class BriefBlockV6Service {
         citationsRepaired,
         windowFailures: this.windowFailures,
         repetitionRetries: this.repetitionRetries,
+        writeRejects: this.writeRejects,
         llmCalls: this.llmCalls,
         neurons: this.neurons,
         model: this.model,
         windowChars: WINDOW_CHARS,
+        tier,
       },
     };
   }

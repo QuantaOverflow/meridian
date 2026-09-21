@@ -1,0 +1,28 @@
+{
+  "sentences": {
+    "100001": [
+      "Rescuers reached the site on Friday.",
+      "The operator reported 12 injuries.",
+      "He added that work continues."
+    ],
+    "100002": [
+      "Rescuers reached the site on Friday.",
+      "Costs were put at 40 million euros."
+    ]
+  },
+  "anchors": [
+    {
+      "id": "w1a1",
+      "topic": "rescue reached site",
+      "sources": [
+        { "articleId": 100001, "sentence": 1 },
+        { "articleId": 100002, "sentence": 1 }
+      ]
+    },
+    {
+      "id": "w1a2",
+      "topic": "repair cost estimate",
+      "sources": [{ "articleId": 100002, "sentence": 2 }]
+    }
+  ]
+}

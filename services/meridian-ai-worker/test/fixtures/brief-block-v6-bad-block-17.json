@@ -1,0 +1,116 @@
+{
+ "note": "2026-09-19 生产运行 admin-brief-1789945067921 的 storyIdx=17,三句全坏",
+ "sentences": [
+  {
+   "text": "A second-year student at IIT Bombay died by suicide Friday evening after being caught using a mobile phone during an exam, according to the institute. The student had allegedly uploaded the exam question paper to an AI platform to seek answers. The institute stated no disciplinary action was initiated and that the student was counseled and assured the incident ",
+   "sources": [
+    {
+     "articleId": 1056843,
+     "sentence": 1
+    },
+    {
+     "articleId": 1056843,
+     "sentence": 2
+    },
+    {
+     "articleId": 1056843,
+     "sentence": 3
+    },
+    {
+     "articleId": 1058994,
+     "sentence": 4
+    },
+    {
+     "articleId": 1062667,
+     "sentence": 4
+    },
+    {
+     "articleId": 1062667,
+     "sentence": 8
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 5
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 7
+    }
+   ]
+  },
+  {
+   "text": "The student's father, Ravindra Wakode, refused to claim the body until officials responsible for his death are arrested. The parents alleged the professor harassed their son with casteist remarks and that he was taken out of the exam hall and threatened with suspension. An FIR was filed against a senior professor and other officials for abetment of [",
+   "sources": [
+    {
+     "articleId": 1061117,
+     "sentence": 2
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 9
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 5
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 13
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 4
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 6
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 8
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 10
+    }
+   ]
+  },
+  {
+   "text": "The probe was transferred to the Mumbai Police's crime branch late Saturday, and the institute postponed mid-semester exams scheduled for Saturday amid student protests. The death is the third reported suicide on the campus this year. The couple eventually claimed the body late at night after police assured them the investigation had been transferred,",
+   "sources": [
+    {
+     "articleId": 1064218,
+     "sentence": 1
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 39
+    },
+    {
+     "articleId": 1064218,
+     "sentence": 7
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 4
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 23
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 3
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 24
+    },
+    {
+     "articleId": 1067747,
+     "sentence": 19
+    }
+   ]
+  }
+ ]
+}

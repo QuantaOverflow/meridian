@@ -3,11 +3,24 @@ import type { BriefDetail } from '~/shared/types';
 
 const props = defineProps<{ brief: BriefDetail }>();
 
-/** 目录只列事件条目；noteworthy 那类没有条目的板块不进目录 */
-const outlineItems = computed(() =>
-  props.brief.sections.flatMap(section => section.stories.map(story => ({ id: story.id, title: story.title })))
+/**
+ * 目录按板块分组——分组信息正文里本来就有（`## top stories` / `## more news` / `## in brief`
+ * 三节是按重要性分的，正文也是分节渲染的），此前目录把它拍平了，25 条挤成一列没有主次。
+ * 不另起主题分类：那是个不存在的新维度，要额外的分类步，还会盖掉「源数 × 篇数」的排序。
+ *
+ * noteworthy 那类没有事件条目的板块不进目录。
+ */
+const outlineGroups = computed(() =>
+  props.brief.sections
+    .map(section => ({
+      id: section.id,
+      heading: section.heading,
+      items: section.stories.map(story => ({ id: story.id, title: story.title })),
+    }))
+    .filter(group => group.items.length > 0)
 );
-const outlineIds = computed(() => outlineItems.value.map(item => item.id));
+/** 滚动高亮要的是**扁平**的条目序——观察器按文档顺序挑「最靠上的可见项」 */
+const outlineIds = computed(() => outlineGroups.value.flatMap(group => group.items.map(item => item.id)));
 const { activeId, goTo } = useBriefOutline(outlineIds);
 
 const VISIBLE_SOURCE_COUNT = 8;
@@ -22,7 +35,7 @@ const showAllArticles = ref(false);
          定位的，不给下边界它的高度就只等于目录本身，滚过一屏目录就跟着消失了 -->
     <aside class="toc:block absolute top-[74px] bottom-0 left-0 hidden w-[186px]">
       <div class="sticky top-[106px]">
-        <BriefOutline :items="outlineItems" :active-id="activeId" @navigate="goTo" />
+        <BriefOutline :groups="outlineGroups" :active-id="activeId" @navigate="goTo" />
       </div>
     </aside>
 

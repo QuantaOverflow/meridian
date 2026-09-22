@@ -16,7 +16,6 @@ import {
 } from '../lib/core/storyline';
 import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
-import { createDataFlowObserver } from '../lib/observability/dataflow';
 import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
@@ -103,7 +102,6 @@ export interface BriefGenerationParams {
   // 业务控制参数
   maxStoriesToGenerate?: number;
   storyMinImportance?: number;
-  skipFaithfulnessGate?: boolean; // 测试迭代跳过忠实度门(省 ~3min);生产 cron 省略=默认跑门
 }
 
 // 简报生成结果接口
@@ -335,8 +333,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       timeRangeDays = 2,
       clusteringOptions,
       maxStoriesToGenerate = 25,
-      storyMinImportance = 0.1,
-      skipFaithfulnessGate = false
+      storyMinImportance = 0.1
     } = event.payload;
 
     // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
@@ -2069,23 +2066,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
 
       await observability.logStep('brief_generation', 'completed', briefResult.stats);
-
-      // =====================================================================
-      // 步骤 5.5: 忠实度门（线上只标记、离线审阅）
-      // 逐句把 brief 对情报报告取证，生产默认 code_only 纯传感器（只跑拆 claim + 代码
-      // 比对，~10 秒量级）；full 判官（~qwen-max judge）只在离线预筛显式传 mode='full'
-      // 时运行。线上只记录 verdict 到 observability，永不拦截、不改稿——判定结果离线
-      // 审阅、成果回流生成端。方向定案见 memory: faithfulness-runtime-gate /
-      // intel-grounding-judge-validated。路径 B（发布前删句）与 enforce 拦截均已关闭
-      // 且方向上永不重开。
-      // =====================================================================
-      // v3/v6 链路不跑忠实度门。这个门的输入是**整份旧格式情报报告**，而报告层 v3 随
-      // brief-block-v6 上线一并退役、不再产生任何报告，门在这条链路上已无输入可喂。
-      // （召回/成本账本来也不划算，见 ADR 0004「检测上限」。）门的代码与 ai-worker 端点
-      // 都留着，旧链路仍可用；skipFaithfulnessGate 参数保留，只影响记录里的 reason。
-      const why = skipFaithfulnessGate ? 'skip_param' : 'v6_path_no_report';
-      console.log(`[AutoBrief] 忠实度门：跳过（${why}）`);
-      await observability.logStep('faithfulness_gate', 'completed', { skipped: true, reason: why });
 
       // =====================================================================
       // 步骤 6: 保存简报到数据库

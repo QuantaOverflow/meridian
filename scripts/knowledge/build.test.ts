@@ -83,6 +83,12 @@ test('proposal cannot masquerade as tested; replacement cannot cross entity type
   assert.throws(() => validateGraph(ns), /同类实体/);
 });
 
+test('supersedes target must carry status superseded', () => {
+  const ns = clone();
+  get(ns, 'claim-output-bound-cost').status = 'recorded';
+  assert.throws(() => validateGraph(ns), /被取代节点 status 应为 superseded/);
+});
+
 test('JSON metadata preserves punctuation in conditions and rejects malformed frontmatter', () => {
   const n = get(nodes, 'falsified-one-source-per-sentence');
   assert.ok(n.conditions.includes('头条目标 1,200–2,000 字符'));

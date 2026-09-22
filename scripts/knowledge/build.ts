@@ -104,6 +104,8 @@ export function validateGraph(nodes: Entity[]): void {
       if (!rule.from.includes(n.type) || !rule.to.includes(target.type))
         errors.push(`${prefix}: 不合法的实体类型组合 ${n.type}/${target.type}`);
       if (rule.same_type && n.type !== target.type) errors.push(`${prefix}: 取代必须发生在同类实体之间`);
+      if (r.type === 'supersedes' && target.status !== 'superseded')
+        errors.push(`${prefix}: 被取代节点 status 应为 superseded，实际为 ${target.status}`);
       if (r.attributes !== undefined && (!object(r.attributes) || Object.values(r.attributes).some(v => !nonempty(v))))
         errors.push(`${prefix}: attributes 必须为非空字符串值对象`);
       for (const k of rule.required_attributes ?? [])

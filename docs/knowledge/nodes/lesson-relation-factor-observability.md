@@ -4,7 +4,7 @@
   "type": "lesson",
   "title": "核验因素诊断需区分断言覆盖、关系配对与解释忠实性",
   "date": "2026-09-17",
-  "status": "recorded",
+  "status": "superseded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "practice-v1 已知错误输出的回顾；不是对模型内部过程或通用能力的结论",
   "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",

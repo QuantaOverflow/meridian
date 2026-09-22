@@ -1,0 +1,52 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/knowledge/*.ts"],
+      "project": ["scripts/knowledge/**/*.ts"]
+    },
+
+    "apps/backend": {
+      "entry": ["src/index.ts", "src/workflows/*.ts", "src/durable_objects/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+
+    "apps/frontend": {
+      "entry": [
+        "src/app.vue",
+        "src/error.vue",
+        "src/pages/**/*.vue",
+        "src/layouts/*.vue",
+        "src/server/**/*.ts",
+        "nuxt.config.ts"
+      ],
+      "project": ["src/**/*.{ts,vue}", "nuxt.config.ts"]
+    },
+
+    "services/meridian-ai-worker": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+
+    "packages/database": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["drizzle/**"]
+    },
+
+    "scripts/eval/*": {
+      "entry": ["**/*.{ts,mjs}"],
+      "project": ["**/*.{ts,mjs}"],
+      "ignore": ["out/**", "scratch/**", "fixtures/**", "datasets/**"]
+    }
+  },
+
+  "ignoreWorkspaces": [
+    "apps/*/prototypes/*",
+    "services/*/prototypes/*",
+    "services/meridian-ml-service/cf-worker"
+  ],
+
+  "ignore": ["**/prototypes/**", "**/out/**", "**/scratch/**"]
+}

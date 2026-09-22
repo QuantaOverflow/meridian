@@ -8,8 +8,7 @@
 
 ### 主要测试文件
 
-- `example.test.ts` - 综合测试文件，包含所有核心功能测试
-- `parseRss.spec.ts` - RSS 解析专项测试，使用 fixtures 模块
+- `lib/cluster-blocks.spec.ts` - 聚类分块测试
 
 ### Fixtures 系统
 
@@ -98,8 +97,7 @@ npm test
 
 ### 运行单个测试文件
 ```bash
-npm test -- test/example.test.ts
-npm test -- test/parseRss.spec.ts
+npm test -- test/lib/cluster-blocks.spec.ts
 ```
 
 ### 重新生成 Fixtures

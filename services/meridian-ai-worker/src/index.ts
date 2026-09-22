@@ -2,13 +2,10 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { AIGatewayService } from './services/ai-gateway'
-import { runFaithfulnessCheck } from './services/faithfulness-check'
-import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
-import { BriefGenerationService, normalizeAnalysisToReport } from './services/brief-generation'
+import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
-import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
 import { RANK_TOP_N, type RankCandidate } from './prompts/story-rank'
 import { rankStories } from './services/story-rank'
@@ -17,8 +14,7 @@ import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
 import { CloudflareEnv, ChatResponse } from './types'
-import { APIResponse, ArticleItem, BriefContent } from './types/api'
-import { ValidatedStories } from './types/story-validation'
+import { APIResponse, ArticleItem } from './types/api'
 import { StorySchema } from './types/intelligence-types'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
@@ -256,73 +252,6 @@ app.post('/meridian/article/analyze', async (c) => {
   }
 })
 
-// ============================================================================
-// Story Validation - 使用重构后的服务
-// ============================================================================
-
-app.post('/meridian/story/validate', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // 验证输入数据结构
-    if (!body.clusteringResult?.clusters || !Array.isArray(body.clusteringResult.clusters)) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'clusteringResult.clusters array is required'
-      }, 400)
-    }
-
-    // 验证文章数据数组
-    if (!body.articlesData || !Array.isArray(body.articlesData)) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'articlesData array is required'
-      }, 400)
-    }
-
-    // 候选组由 backend 在 story-validation 步内算好传入（几何见 lib/core/candidate-grouping.ts）。
-    // 2026-08-21 起它是判定单位；缺失即无法工作，显式 400 而不是静默按空处理。
-    if (!body.candidateGroups || !Array.isArray(body.candidateGroups)) {
-      return c.json<APIResponse<null>>({
-        success: false,
-        error: 'candidateGroups array is required'
-      }, 400)
-    }
-
-    console.log(`[Story Validation] 验证 ${body.clusteringResult.clusters.length} 个聚类 / ${body.candidateGroups.length} 个候选组，包含 ${body.articlesData.length} 个文章数据`)
-
-    // 验证空聚类情况 - 保持原有的400错误响应
-    if (!body.clusteringResult.clusters.length) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'No clusters to validate'
-      }, 400)
-    }
-
-    // 使用重构后的故事验证服务（注入 trace 上下文以便 LLM I/O 落 R2）
-    const storyValidationService = new StoryValidationService(c.env, readTraceContext(c.req.raw))
-    const result = await storyValidationService.validateStories({
-      clusteringResult: body.clusteringResult,
-      candidateGroups: body.candidateGroups,
-      articlesData: body.articlesData,
-      options: body.options
-    })
-    
-    return c.json<APIResponse<ValidatedStories>>({
-      success: true,
-      data: result,
-      metadata: result.metadata
-    })
-    
-  } catch (error: any) {
-    console.error('Story validation error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to validate stories',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
 
 // ============================================================================
 // Intelligence Analysis - 符合 intelligence-pipeline.test.ts 契约
@@ -386,148 +315,6 @@ app.post('/meridian/intelligence/analyze-single-story', async (c) => {
       error: 'Failed to analyze single story',
       metadata: { details: error.message }
     }, 500)
-  }
-})
-
-// ============================================================================
-// Brief Generation - 基于数据契约的完整实现
-// ============================================================================
-
-app.post('/meridian/generate-final-brief', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    if (!body.analysisData || !Array.isArray(body.analysisData)) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'analysisData array is required'
-      }, 400)
-    }
-
-    console.log(`[Brief Generation] 生成简报，输入 ${body.analysisData.length} 个分析`)
-
-    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-
-    // analysisData 实际就是上游 intel 端点产出的 IntelligenceReport（backend 原样卸 R2 再回灌）。
-    // 归一逻辑抽在 brief-generation.ts 的 normalizeAnalysisToReport（b′ 的端点直接从 R2
-    // 读报告，必须共用同一套，否则两份实现漂了就是"简报里的人名开始张冠李戴"）。
-    // 历史 bug：本段曾假设输入是 legacy 形状去拆装，把已经正确的 IntelligenceReport 全搅成占位符 → 空 brief。
-    const intelligenceReports = {
-      reports: body.analysisData.map((analysis: any) => normalizeAnalysisToReport(analysis)),
-      processingStatus: {
-        totalStories: body.analysisData.length,
-        completedAnalyses: body.analysisData.length,
-        failedAnalyses: 0,
-      },
-    }
-
-    const previousContext = body.previousBrief ? {
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      title: body.previousBrief.title || 'Previous Brief',
-      summary: body.previousBrief.tldr || body.previousBrief.summary || '无上下文',
-      coveredTopics: [],
-    } : undefined
-
-    // 调用新的简报生成服务。selfCorrect = RARR 接地校验-改正（默认开，选项2）；
-    // eval baseline 臂传 selfCorrect:false 关掉做对照。
-    const result = await briefService.generateBrief(intelligenceReports, previousContext, {
-      selfCorrect: body.selfCorrect,
-      reconcileCoverage: body.reconcileCoverage,
-      // 两遍法覆盖补录（默认开）；eval 对照臂传 false 关掉
-      coverageRepair: body.coverageRepair,
-    })
-
-    if (!result.success) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'Failed to generate brief',
-        metadata: { details: result.error }
-      }, 500)
-    }
-
-    console.log(`[Brief Generation] 生成完成，标题: "${result.data!.metadata.title}"`)
-
-    // 返回向后兼容的格式
-    const briefContent = result.data!.content.sections.map(s => s.content).join('\n\n');
-    
-    return c.json<APIResponse<BriefContent>>({
-      success: true,
-      data: {
-        title: result.data!.metadata.title,
-        content: briefContent,
-      },
-      metadata: {
-        sections_processed: body.analysisData.length,
-        content_length: briefContent.length,
-        has_previous_context: !!body.previousBrief,
-        // 额外的契约数据
-        model_used: result.data!.metadata.model,
-        total_articles: result.data!.statistics.totalArticlesProcessed,
-        sources_used: result.data!.statistics.totalSourcesUsed,
-        // 覆盖对账清单（洞3 方案B）：每条候选 story 的去向 headline/noteworthy/dropped。
-        // backend 可存入 observability 使合成层漏报可追踪。
-        coverage: result.coverage ?? [],
-        // 补录前的去向汇总：落盘的 coverage 已被补录推成 dropped=0，合成层的原始漏报率
-        // 在持久化数据里本来完全不可见（只剩一行日志）。这是唯一能跨 run 比较生成质量的信号。
-        coverage_before_repair: result.coverageBeforeRepair ?? null,
-      }
-    })
-
-  } catch (error: any) {
-    console.error('Brief generation error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to generate brief',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
-
-// ============================================================================
-// 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题
-//
-// 上游 backend 已用 story centroid 余弦（0.94，全链凝聚）聚出候选组，这里只补代码做不了的两件事。
-// 两条一组才确认（单边支撑，余弦分不开真假）；≥3 条的组多条边互相印证，只起标题。
-// 判据与失败反例见 prompts/storyMerge.ts。
-// ============================================================================
-app.post('/meridian/story/merge-check', async (c) => {
-  try {
-    const body = await c.req.json()
-    const candidates = body?.candidates as MergeCandidate[] | undefined
-    if (!Array.isArray(candidates) || candidates.length < 2) {
-      return c.json<APIResponse<null>>({ success: false, error: 'candidates must be an array of >= 2 stories' }, 400)
-    }
-
-    const confirm = candidates.length === 2
-    const prompt = confirm ? getStoryMergeConfirmPrompt(candidates) : getStoryMergeTitlePrompt(candidates)
-    const aiGateway = new AIGatewayService(c.env)
-    const res = await callLLM(aiGateway, c.env, readTraceContext(c.req.raw), 'story_merge',
-      [{ role: 'user', content: prompt }])
-    const content = ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
-    const parsed = parseJSONFromResponse(content) as { same_occurrence?: boolean; title?: string; reason?: string } | null
-
-    // 解析失败不静默降级成"合并"——合错的代价是两件事被写成一件，读者看不出来。
-    // 失败一律回 same_occurrence:false，上游据此放弃这次合并、保持原状。
-    if (!parsed || typeof parsed.title !== 'string') {
-      console.warn(`[StoryMerge] 响应解析失败，放弃本组合并。原始响应: ${content.slice(0, 200)}`)
-      return c.json<APIResponse<{ same_occurrence: boolean; title: string; reason: string }>>({
-        success: true,
-        data: { same_occurrence: false, title: '', reason: 'unparseable model response' },
-        metadata: { parse_failed: true, candidates: candidates.length },
-      })
-    }
-
-    // ≥3 条的组不做确认，视为已确认（组的成立由上游多条边支撑）
-    const same = confirm ? parsed.same_occurrence === true : true
-    const title = (parsed.title || '').trim()
-    return c.json<APIResponse<{ same_occurrence: boolean; title: string; reason: string }>>({
-      success: true,
-      data: { same_occurrence: same && title.length > 0, title, reason: parsed.reason || '' },
-      metadata: { confirmed: confirm, candidates: candidates.length },
-    })
-  } catch (error: any) {
-    console.error('Story merge check error:', error)
-    return c.json<APIResponse<null>>({ success: false, error: 'Failed to check story merge', metadata: { details: error.message } }, 500)
   }
 })
 
@@ -829,52 +616,6 @@ app.post('/meridian/generate-brief-summary', async (c) => {
     return c.json<APIResponse<null>>({
       success: false,
       error: 'Failed to generate brief summary',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
-
-// ============================================================================
-// Faithfulness Check - 忠实度传感器（mark-only）
-// 逐句把 brief 对 source 取证 → 套门 F 判据 → 出 verdict（block 字段实为 would_block，
-// 只记录不拦截）。判据标定见 memory: faithfulness-runtime-gate。
-// ============================================================================
-
-const FaithfulnessCheckSchema = z.object({
-  // sources = 按故事拆分的情报报告数组；brief = 待检的简报正文。
-  // per-story 拆分避免合并 source 撞 qwen-max 30720 token context 上限（旧合并 ~141K 字符 → 400）。
-  sources: z.array(z.object({ storyId: z.string(), content: z.string().min(1) })).min(1),
-  brief: z.string().min(1),
-  // mode: code_only(默认)=只跑拆claim+代码比对通道(线上传感器形态,LLM判官旁路);
-  //       full=全量LLM判官(离线批跑/预筛用)。方向定案见 memory: intel-grounding-judge-validated。
-  options: z.object({ model: z.string().optional(), mode: z.enum(['code_only', 'full']).optional() }).optional(),
-})
-
-app.post('/meridian/faithfulness-check', async (c) => {
-  try {
-    // 跨 service 边界必做运行时校验：c.req.json() 是 any，TS 类型不随 JSON 过网线
-    const parsed = FaithfulnessCheckSchema.safeParse(await c.req.json())
-    if (!parsed.success) {
-      const detail = parsed.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
-      return c.json<APIResponse<null>>({ success: false, error: `Invalid payload: ${detail}` }, 400)
-    }
-    const { sources, brief, options } = parsed.data
-    const totalSourceChars = sources.reduce((s, r) => s + r.content.length, 0)
-
-    console.log(`[Faithfulness] 检查 brief(${brief.length} chars) vs ${sources.length} 个故事源(合计 ${totalSourceChars} chars)`)
-    // 观测性：把 workflow trace 传入 in-process faithfulness LLM 调用，避免绕过 loggedChat。
-    // 不传 model 时交给 phase 默认（call-llm 单一入口），别在边界处再垫一个硬编码默认
-    const verdict = await runFaithfulnessCheck(c.env, sources, brief, options?.model, readTraceContext(c.req.raw), options?.mode)
-    console.log(`[Faithfulness] block=${verdict.block} reasons=[${verdict.block_reasons.join(' | ')}] ` +
-      `unsupported=${verdict.genuine_unsupported}/${verdict.factual_claims}(${(verdict.unsupported_rate * 100).toFixed(1)}%) ` +
-      `contradicted=${verdict.contradicted} ana_contra=${verdict.analytical_contradicting}`)
-
-    return c.json<APIResponse<typeof verdict>>({ success: true, data: verdict })
-  } catch (error: any) {
-    console.error('Faithfulness check error:', error)
-    return c.json<APIResponse<null>>({
-      success: false,
-      error: 'Failed to run faithfulness check',
       metadata: { details: error.message }
     }, 500)
   }

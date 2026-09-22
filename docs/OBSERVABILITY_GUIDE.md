@@ -213,7 +213,7 @@ curl http://localhost:8787/observability/workflows/observability%2Fworkflow_fail
 
 ### 5. AI决策透明度分析
 **目的**：理解AI（LLM）在故事识别和重要性评估中的决策过程。
-**操作**：通过 `/observability/workflows/:key` 获取工作流详细指标后，检查 `detailedMetrics` 中 `stepName` 为 `importance_evaluation_detail` 和 `story_selection` 的数据。
+**操作**：通过 `/observability/workflows/:key` 获取工作流详细指标后，检查 `detailedMetrics` 中 `stepName` 为 `importance_evaluation_detail`、`story_selection` 以及 `story_rank`（故事重要性排序：三轮洗牌 + Borda 聚合，见 `auto-brief-generation.ts`）的数据。
 **关注点**：`data.importanceAnalysis.stories` 中每个故事的 `importance`、`importanceFactors`、`reasoningExplanation` 和 `confidenceScore`。这些数据由 `ObservabilityAnalyzer` 类的 `analyzeImportanceEvaluation` 方法进行分析和报告。
 
 ### 6. 数据质量评估

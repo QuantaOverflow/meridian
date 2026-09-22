@@ -1,0 +1,4 @@
+interface:
+  display_name: "Record Knowledge"
+  short_description: "记录 Meridian 探索证据、实验与决定，保留历史和边界并重建校验"
+  default_prompt: "使用 $record-knowledge 将本轮已有探索证据写入 Meridian 知识库，并报告校验结果与未验证边界。"

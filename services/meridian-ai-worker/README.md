@@ -102,6 +102,7 @@ Meridian AI Worker adopts a clear layered architecture with well-defined respons
 - **Key Responsibilities**: Improves system reliability, reduces transient failure impact
 
 #### Business Logic Services
+> ⚠️ **Retired pipeline notice**: `brief-generation.ts`, `intelligence.ts`, and `story-validation.ts` (and the endpoints they back — `/meridian/story/validate`, `/meridian/intelligence/analyze-stories`, `/meridian/generate-final-brief`) are still present in code but are **no longer called by the production workflow**. The backend replaced this "cluster → intelligence report → writer" chain with "cluster → brief-block-v6" (commit `961aeca`, 2026-09-21). Current endpoints the workflow actually calls: `/meridian/cluster/judge`, `/meridian/stories/rank`, `/meridian/brief-block-v6`, `/meridian/brief-title`. See ADR 0003 / ADR 0004 in the main repo's `docs/adr/`.
 - **`brief-generation.ts`**: Generates final intelligence briefs and summaries from intelligence analysis reports
 - **`intelligence.ts`**: Performs deep intelligence analysis on validated stories
 - **`story-validation.ts`**: Validates whether article clusters constitute meaningful "stories"
@@ -135,6 +136,8 @@ Meridian AI Worker adopts a clear layered architecture with well-defined respons
 
 The core business logic revolves around the "Intelligence Brief Generation Workflow":
 
+> ⚠️ Steps 5-7 below describe the **retired** report-layer pipeline (still reachable via HTTP but not called by production). See the retired pipeline notice above.
+
 1. **Initial Data Preparation**: External systems provide `ArticleDataset` containing raw article content and embeddings
 2. **Article Analysis** (`POST /meridian/article/analyze`): Structured analysis of articles using AI
 3. **Embedding Generation** (`POST /meridian/embeddings/generate`): Generate vector embeddings for text
@@ -145,16 +148,36 @@ The core business logic revolves around the "Intelligence Brief Generation Workf
 8. **TLDR Generation** (`POST /meridian/generate-brief-tldr`): Generate concise summaries of briefs
 9. **General Chat** (`POST /meridian/chat`): General-purpose AI conversation
 
+**Current production flow** (replaces steps 5-7 above, since commit `961aeca`, 2026-09-21):
+
+5. **Cluster Judging** (`POST /meridian/cluster/judge`): One call per cluster decides EVENT/NO_EVENT and names the story
+6. **Story Importance Ranking** (`POST /meridian/stories/rank`): Three-round LLM shuffle + Borda aggregation, replacing plain popularity sorting (commits `86633c5`, `0ae2592`)
+7. **Brief Block Generation** (`POST /meridian/brief-block-v6`): One judged cluster becomes one brief block directly, no intermediate intelligence-report stage
+8. **Brief Title** (`POST /meridian/brief-title`): Generates the brief's title from assembled content
+
 ## API Endpoints
 
 ### Core Endpoints
-- `POST /meridian/article/analyze` - Analyze individual articles
+
+Called by the `AutoBriefGeneration` workflow (current brief pipeline):
+- `POST /meridian/cluster/judge` - Judge a cluster (EVENT/NO_EVENT) and name the story
+- `POST /meridian/stories/rank` - Story importance ranking (three-round shuffle + Borda)
+- `POST /meridian/brief-block-v6` - Generate one brief block from a judged cluster
+- `POST /meridian/brief-title` - Generate the brief's title
+- `POST /meridian/generate-brief-tldr` - Generate brief TLDR
+- `POST /meridian/generate-brief-summary` - Generate brief summary (prose, for next-day continuity context)
+
+Called by other production workflows (article ingestion, not the brief pipeline):
+- `POST /meridian/article/analyze` - Analyze individual articles (`ProcessArticles` workflow)
 - `POST /meridian/embeddings/generate` - Generate text embeddings
+
+Still present in code but **not called by any production workflow** (retired report-layer pipeline; see notice above):
 - `POST /meridian/story/validate` - Validate article clusters as stories
 - `POST /meridian/intelligence/analyze-stories` - Analyze multiple stories
 - `POST /meridian/intelligence/analyze-single-story` - Analyze single story
 - `POST /meridian/generate-final-brief` - Generate comprehensive brief
-- `POST /meridian/generate-brief-tldr` - Generate brief summary
+
+Utility:
 - `POST /meridian/chat` - General AI chat
 
 ### Utility Endpoints

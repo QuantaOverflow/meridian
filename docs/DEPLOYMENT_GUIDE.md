@@ -123,8 +123,8 @@ const result = await env.AI_WORKER.analyzeArticle({
   title: "Article Title",
   content: "Article Content",
   options: {
-    provider: "google-ai-studio",
-    model: "gemini-1.5-flash-8b-001"
+    provider: "workers-ai",
+    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
   }
 })
 
@@ -148,7 +148,7 @@ curl -X POST https://meridian-ai-worker.your-subdomain.workers.dev/meridian/arti
     "title": "Article Title",
     "content": "Article Content",
     "options": {
-      "provider": "google-ai-studio"
+      "provider": "workers-ai"
     }
   }'
 
@@ -174,7 +174,9 @@ CLOUDFLARE_GATEWAY_ID=your-gateway-id
 CLOUDFLARE_API_TOKEN=your-api-token
 
 # AI提供商API密钥
-GOOGLE_AI_API_KEY=your-google-ai-key
+# 生产链路全量走 Workers AI（binding，无需 key）；DashScope 是唯一的必需 key，
+# 作为 `other` 兜底阶段使用（见 services/meridian-ai-worker/src/services/call-llm.ts 的 DEFAULT_MODELS）
+DASHSCOPE_API_KEY=your-dashscope-key
 ```
 
 ### 可选变量

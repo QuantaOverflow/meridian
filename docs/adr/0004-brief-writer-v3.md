@@ -1,6 +1,6 @@
 # ADR 0004：写作层 v3（一个簇的报告 → 一块正文）与关系级事实错的检测上限
 
-- 状态：已采纳（原型验证完成，未接 backend、未上生产）
+- 状态：已采纳，已上线（2026-09-15 部署，2026-09-21 并入 brief-block-v6，见 commit `961aeca`；详见 `docs/ROADMAP.md`）
 - 日期：2026-09-12
 - 原型与调研笔记只在作者本地（不入 git），下面引用的路径以本 ADR 的结论为准
 - 相关：ADR 0003（一簇即一条）、`apps/backend/prototypes/brief-writer-v3/`、`apps/backend/prototypes/local-grounding/`、

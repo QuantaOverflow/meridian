@@ -262,6 +262,7 @@ corr(报告时间线条目数, 输入篇数) = −0.015
 - 容器成本：进稿逐篇 embedding 改为简报聚类前批量补算
 - 跨 provider 兜底（DashScope key 401 致文章管线静默停摆 12 天之后加的）
 - LLM 边界重构（ADR 记录在 memory `architecture-llm-boundary-review`）
+- cron 窗口收窄：`TIME_RANGE_DAYS` 2→1、`ARTICLE_LIMIT` 1500→1000，窗口截短做成告警（commit `464b5bc`）
 
 ---
 

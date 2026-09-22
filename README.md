@@ -99,9 +99,12 @@ Meridian employs a sophisticated microservices architecture built on Cloudflare'
 - **Multi-Source Ingestion**: Automated scraping of 100+ diverse RSS sources
 - **Intelligent Content Extraction**: Handles paywalls, JavaScript rendering, and complex layouts
 - **AI-Powered Analysis**: Multi-stage LLM processing using Google Gemini for deep content understanding
-- **Advanced Clustering**: Semantic grouping using multilingual embeddings, UMAP, and HDBSCAN
-- **Story Validation**: AI-driven filtering to identify coherent, newsworthy stories
-- **Intelligence Synthesis**: Structured analysis with executive summaries, stakeholder mapping, and impact assessment
+- **Advanced Clustering**: Semantic grouping using multilingual embeddings, currently agglomerative cosine-distance clustering (UMAP + HDBSCAN retired to a rollback path — see ADR 0003)
+- **Cluster Judging**: One LLM call per cluster decides EVENT/NO_EVENT and names the story, replacing the retired story-validation stage (see ADR 0003)
+- **Story Importance Ranking**: Three-round LLM shuffle + Borda aggregation (`/meridian/stories/rank`) orders candidates before selection, replacing plain popularity sorting
+- **Intelligence Synthesis**: ~~Structured analysis with executive summaries, stakeholder mapping, and impact assessment~~ — this stage (report layer) is retired; see below
+
+> ⚠️ **Retired pipeline notice**: several bullets and the step list below describe the pre-2026-09 "cluster → intelligence report → writer" architecture, which no longer runs in production. It was replaced by "cluster → brief-block-v6" (commit `961aeca`, 2026-09-21). See ADR 0003 (`docs/adr/0003-cluster-as-brief-block.md`) and ADR 0004 (`docs/adr/0004-brief-writer-v3.md`) for the current design and the falsified alternatives.
 
 ### Technical Excellence
 - **Edge Computing**: Global distribution via Cloudflare Workers for low latency
@@ -137,6 +140,8 @@ Meridian employs a sophisticated microservices architecture built on Cloudflare'
 
 ### **3. Intelligence Brief Generation Workflow** (`AutoBriefGeneration`)
 
+> ⚠️ Steps 3-5 below (Story Validation, Intelligence Analysis, Brief Generation) describe the **retired** pipeline; Step 2's algorithm description (UMAP + HDBSCAN) is also outdated — see the Advanced Clustering note above. Current step sequence is summarized after this list, sourced from `apps/backend/src/workflows/auto-brief-generation.ts`.
+
 #### **Step 1: Dataset Preparation**
 - Retrieves processed articles from PostgreSQL (with embeddings)
 - Loads full content from R2 storage in parallel batches
@@ -167,6 +172,12 @@ Meridian employs a sophisticated microservices architecture built on Cloudflare'
 - Structured briefing generation with contextual continuity
 - TLDR generation for quick consumption
 - Final brief saved to PostgreSQL
+
+#### **Current pipeline (as of 2026-09-22, see ADR 0003 / ADR 0004)**
+1. Clustering analysis (via **ML Service**) — agglomerative cosine-distance clustering, production default
+2. Cluster judging (`/meridian/cluster/judge`) — one call per cluster decides EVENT/NO_EVENT and names the story
+3. Story importance ranking (`/meridian/stories/rank`) — three-round LLM shuffle + Borda aggregation, replacing plain popularity sorting (commits `86633c5`, `0ae2592`)
+4. Brief block generation (`/meridian/brief-block-v6`) — one cluster's judged articles become one brief block directly, no intermediate intelligence-report stage
 
 ### **4. Delivery & Presentation**
 - **Web Interface**: Clean Nuxt 3 frontend with interactive navigation

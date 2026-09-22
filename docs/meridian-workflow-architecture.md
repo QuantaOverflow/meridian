@@ -190,7 +190,18 @@ ArticleDataset -> ClusteringResult {
 }
 ```
 
-#### 阶段2: 故事验证 (Story Validation)
+#### 阶段1.5: 故事重要性排序 (Story Importance Ranking)
+**行为描述**: 簇判定之后、选材之前，对全部候选跑一次重要性排序，取代原来的机械热度排序（commit `86633c5` / `0ae2592`）
+- 端点：`POST /meridian/stories/rank`
+- 机制：三轮洗牌 + Borda 聚合，一次请求返回前 12 名
+
+> ⚠️ **以下「阶段2 故事验证」「阶段3 情报深度分析」「阶段4 简报生成」已退役**，与本文档
+> 阶段1 末尾「2026-09-05 起簇的切分层已整层删除」的说明一致：现行链路是簇判定
+> （`/meridian/cluster/judge`）直接产出简报块（`/meridian/brief-block-v6`），
+> 不再有独立的故事验证、情报深度分析、报告层简报生成步骤。以下内容仅作历史记录，
+> 现行设计见 `docs/adr/0003-cluster-as-brief-block.md` 与 `docs/adr/0004-brief-writer-v3.md`。
+
+#### 阶段2: 故事验证 (Story Validation) —— 已退役，见上方标注
 **行为描述**: 系统验证聚类是否构成有效新闻故事
 
 **依赖服务**:
@@ -218,7 +229,7 @@ ClusteringResult -> ValidatedStories {
 }
 ```
 
-#### 阶段3: 情报深度分析 (Intelligence Analysis)
+#### 阶段3: 情报深度分析 (Intelligence Analysis) —— 已退役，见阶段2 前标注
 **行为描述**: 系统对验证的故事进行深度情报分析
 
 **依赖服务**:
@@ -259,7 +270,7 @@ ValidatedStories + ArticleDataset -> IntelligenceReports {
 }
 ```
 
-#### 阶段4: 简报生成 (Brief Generation)
+#### 阶段4: 简报生成 (Brief Generation) —— 已退役，见阶段2 前标注
 **行为描述**: 系统将情报分析结果合成为结构化简报
 
 **依赖服务**:

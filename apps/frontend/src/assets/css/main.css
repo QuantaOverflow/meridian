@@ -1,14 +1,21 @@
 @import 'tailwindcss';
 
-/* ⚠️ Tailwind v4 在本项目里扫不到 src/pages/ —— dev 与生产构建都一样，只有
- * components/ 和 layouts/ 里的类会被生成。@source（相对路径、目录形式、绝对路径）
- * 和 @config 的 content globs 三种写法全试过，都无法把 pages/ 纳进来。
+/* 这里曾写着「Tailwind v4 扫不到 src/pages/，页面里的类一个都不生成」（2026-08-26），
+ * 并据此定下「页面只写路由与取数、带 class 的标记一律放 components/」的约定。
+ * 2026-09-22 实测证伪：pages/ 里的类现在正常生成。没查清是哪次改动让它开始工作的。
  *
- * 所以约定：**页面文件只写路由与取数，所有带 class 的标记放 components/**。
- * 违反这条的后果是整页没有样式，且构建不报错——很难当场看出来。
- * 核对办法见 scripts 里的 csscheck 思路：查生产 CSS 里有没有对应的方括号工具类。
+ * 证据（全新 nuxt build，产物须晚于被查页面的 mtime，否则是在验旧产物）：
+ * 只在 pages/admin/** 出现、components/ 与 layouts/ 零命中的 col-span-4、
+ * divide-gray-200、text-amber-600、divide-y、disabled:opacity-50 全部生成。
+ * 反向对照 col-span-7、text-lime-700、divide-fuchsia-300（源码里不存在）确实查不到。
  *
- * 另注：根目录 tailwind.config.ts 是死配置，main.css 没有 @config 指令，v4 不读它。 */
+ * 所以 components/ 那条约定现在是风格选择，不是限制——新页面（含 /ops）不必为它拆组件。
+ *
+ * 核对办法：CSS 嵌在 dist/_worker.js/chunks/build/entry-styles.*.mjs 的 JS 字符串里，
+ * 转义被双写——disabled:opacity-50 编译成 disabled\\:opacity-50:disabled，方括号类的
+ * \[ 成 \\[。直接 grep 原始类名，带变体或方括号的一定查不到，会误报「缺失」。
+ *
+ * 另注：根目录 tailwind.config.ts 仍是死配置（本文件无 @config 指令，v4 不读它）。 */
 
 /* ---------------------------------------------------------------------------
  * 设计令牌（Meridian 读者端重设计 v3）

@@ -32,6 +32,17 @@ export interface RankOptions {
    * 生产传的是块内文章标题的主导专有名词（见 lib/core/storyline.ts 的 dominantEntity）。
    */
   eventKeyOf?: (story: unknown, index: number) => string;
+  /**
+   * LLM 排序给出的优先序（stories 的下标，最重要的在前）。不传 = 全按选择分（旧行为）。
+   *
+   * 传了的话，这些下标**整体排在选择分之前**，内部保持给定顺序；其余候选仍按选择分接在
+   * 后面。同事件配额对两段一视同仁——LLM 侧已做过 eventKey 去重，机械配额留着兜底。
+   *
+   * 为什么不是「把 LLM 序当一个分数加权进选择分」：那需要一个把序号换算成分的标度，而
+   * 这个标度没有任何读数支撑，调它等于凭感觉。直接分段则只依赖「前 N 条该在最前面」
+   * 这一个已验过的判断。
+   */
+  llmOrder?: number[];
 }
 
 /**
@@ -43,12 +54,27 @@ export function rankStoriesForIntelligence<S extends { importance?: number }>(
   sourceCoverage: Record<number, number>,
   opts: RankOptions
 ): { ranked: RankedStory<S>[]; selected: S[]; capped: RankedStory<S>[] } {
-  const ranked: RankedStory<S>[] = stories
-    .map((story, i) => {
-      const srcs = sourceCoverage[i] ?? 0;
-      return { story, srcs, score: (story.importance ?? 0) + opts.coverageWeight * Math.log2(1 + srcs) };
+  const scored = stories.map((story, i) => {
+    const srcs = sourceCoverage[i] ?? 0;
+    return { story, srcs, score: (story.importance ?? 0) + opts.coverageWeight * Math.log2(1 + srcs), idx: i };
+  });
+
+  // LLM 序在前、选择分在后。两段内部各自有序，拼接后再走配额与 top-N。
+  const llmRank = new Map<number, number>();
+  (opts.llmOrder ?? []).forEach((idx, pos) => {
+    if (idx >= 0 && idx < stories.length && !llmRank.has(idx)) llmRank.set(idx, pos);
+  });
+  const ranked: RankedStory<S>[] = scored
+    .slice()
+    .sort((a, b) => {
+      const ra = llmRank.get(a.idx);
+      const rb = llmRank.get(b.idx);
+      if (ra != null && rb != null) return ra - rb;
+      if (ra != null) return -1;
+      if (rb != null) return 1;
+      return b.score - a.score;
     })
-    .sort((a, b) => b.score - a.score);
+    .map(({ story, srcs, score }) => ({ story, srcs, score }));
 
   // 按选择分降序取 top-N，避免把全部候选送进 LLM 深度分析（成本/时间爆炸）。
   // 有事件配额时边走边数：同一事件超额的**跳过**而不是截断，让位给后面的其他事件。

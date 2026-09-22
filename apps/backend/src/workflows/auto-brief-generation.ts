@@ -1483,6 +1483,54 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 同事件配额：分块层按簇独立工作，同一个事件被聚类分到多个簇时会各占多格
       // （2026-09-04 实测尼泊尔洪灾 7 格），超过验收目标 ①「一件大事不刷屏」的 4 格。
       // 超额的**跳过**而不是截断，位置让给后面的其他事件。
+      // LLM 重要性排序。**对全部候选跑，不是对选材后的子集**：机械选择分量的是报道热度，
+      // 2026-09-20 那期实测最终前 12 里有两条（美批 27 亿乌防空、沙特断供原油）落在机械
+      // top-25 之外，接在选材后面就永远看不到它们。
+      //
+      // 失败不静默降级：拿不到排序就照旧走机械序，但要在日志和观测里响亮地记一笔
+      // ——否则「排序没生效」和「排序生效了但结果一样」分不开。
+      const llmOrder = await step.do('故事重要性排序', { retries: { limit: 1, delay: '10 seconds', backoff: 'constant' }, timeout: '5 minutes' }, async (): Promise<{
+        order: number[];
+        roundsOk: number;
+        intersectionSize: number;
+        picks: Array<{ id: number; eventKey: string; category: string; why: string; borda: number; timesSelected: number }>;
+        failed?: string;
+      }> => {
+        const candidates = validatedStories.stories.map((s: any, i: number) => ({
+          id: i,
+          title: String(s.title ?? '').trim(),
+          articles: Array.isArray(s.articleIds) ? s.articleIds.length : 0,
+        })).filter(c => c.title.length > 0);
+        if (candidates.length < 12) {
+          return { order: [], roundsOk: 0, intersectionSize: 0, picks: [], failed: `候选只有 ${candidates.length} 条，不足 12，跳过 LLM 排序` };
+        }
+        const res = await createAIServices(this.env, workflowId).aiWorker.rankStories(candidates);
+        if (!res.ok) {
+          return { order: [], roundsOk: 0, intersectionSize: 0, picks: [], failed: res.error };
+        }
+        return {
+          order: res.value.picks.map((p: { id: number }) => p.id),
+          roundsOk: res.value.roundsOk,
+          intersectionSize: res.value.intersectionSize,
+          picks: res.value.picks,
+        };
+      });
+      if (llmOrder.failed) {
+        console.warn(`[AutoBrief] ⚠️ LLM 重要性排序未生效，本期退回机械序：${llmOrder.failed}`);
+      } else {
+        console.log(
+          `[AutoBrief] LLM 重要性排序：${llmOrder.order.length} 条进前列（三轮成功 ${llmOrder.roundsOk}/3，三轮交集 ${llmOrder.intersectionSize}）：` +
+            llmOrder.picks.slice(0, 5).map(p => `${validatedStories.stories[p.id]?.title}(x${p.timesSelected})`).join('，')
+        );
+      }
+      await observability.logStep('story_rank', llmOrder.failed ? 'failed' : 'completed', {
+        candidates: validatedStories.stories.length,
+        ranked: llmOrder.order.length,
+        roundsOk: llmOrder.roundsOk,
+        intersectionSize: llmOrder.intersectionSize,
+        error: llmOrder.failed,
+      });
+
       const { ranked, selected: storiesForIntelligence, capped } = rankStoriesForIntelligence(
         validatedStories.stories,
         sourceCoverage,
@@ -1491,6 +1539,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           maxStories: maxStoriesToGenerate,
           perEventCap: PER_EVENT_BLOCK_CAP,
           eventKeyOf: (story) => String((story as { eventKey?: string }).eventKey ?? ''),
+          llmOrder: llmOrder.order,
         }
       );
       if (capped.length > 0) {
@@ -1599,11 +1648,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 块 step 内部才知道，写作前拿不到。这里改用 story.articleIds.length。
       // articleIds.length ≥ withBody.length，所以个别簇的分数会略高、可能跨过档位边界。
       // **这是本轮有意接受的偏差**（契约 §修改二）。源数的钳位同理改用 articleIds.length。
+      //
+      // LLM 排序生效时 preserveOrder=true：选择层已经把 LLM 序（前 12）与机械序（其余）
+      // 拼好，这里再按「源数 × 篇数」重排会把它整个盖掉。排序未生效（三轮全败）时退回
+      // 旧的重排行为，保持与老链路一致。
       const tierPlan = assignTiers(
         (storiesForIntelligence as any[]).map((s: any, i: number) => {
           const articles = Math.max(1, Array.isArray(s.articleIds) ? s.articleIds.length : 0);
           return { idx: i, articles, sources: Math.max(1, Math.min(sourcesOf.get(s) ?? 1, articles)) };
-        })
+        }),
+        { preserveOrder: llmOrder.order.length > 0 }
       );
       const planOf = new Map<number, (typeof tierPlan)[number]>(tierPlan.map((p) => [p.idx, p]));
       console.log(

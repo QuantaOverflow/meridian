@@ -27,10 +27,19 @@ export interface TierCandidate {
   sources: number;
 }
 
-/** 分层顺序：分数降序，同分保持传入顺序（传入序已是选择层排好的）。 */
-export function assignTiers<T extends TierCandidate>(items: T[]): Array<T & { tier: Tier; score: number }> {
+/**
+ * 分层顺序：分数降序，同分保持传入顺序（传入序已是选择层排好的）。
+ *
+ * `preserveOrder` 为真时**完全不重排**，直接按传入顺序切三档，score 仍算出来只进观测。
+ * 接 LLM 排序之后走的是这条：选择层已经把 LLM 序（前 12）与机械序（其余）拼好了，
+ * 这里再按 `篇数 × 源数` 重排一次会把它整个盖掉——那正是老链路两处排序口径不同的来源。
+ */
+export function assignTiers<T extends TierCandidate>(
+  items: T[],
+  opts?: { preserveOrder?: boolean }
+): Array<T & { tier: Tier; score: number }> {
   const scored = items.map((x, i) => ({ ...x, score: x.articles * x.sources, order: i }));
-  scored.sort((a, b) => b.score - a.score || a.order - b.order);
+  if (!opts?.preserveOrder) scored.sort((a, b) => b.score - a.score || a.order - b.order);
   const nLead = Math.min(TIER_SIZES.lead, scored.length);
   const nMore = Math.min(TIER_SIZES.more, scored.length - nLead);
   return scored.map(({ order, ...rest }, i) => ({

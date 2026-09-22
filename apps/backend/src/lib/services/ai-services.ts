@@ -293,6 +293,37 @@ export class AIWorkerService {
   }
 
   /**
+   * 故事重要性排序：一次请求里跑三轮洗牌 + Borda，返回前 12。
+   *
+   * **必须对当期全部候选调用，不能只喂选材后的子集**：选材层用的是机械热度分，
+   * 2026-09-20 那期实测，最终前 12 里有两条（美批 27 亿乌防空、沙特断供原油）落在
+   * 机械 top-25 之外，接在选材后面就永远看不到它们。
+   *
+   * `articles` 是必填字段，缺了端点回 400。理由见 ai-worker 侧 RankCandidate 的注释。
+   *
+   * 三轮全败才回 ok:false，**不会**退化成机械序——那会让「排序没生效」和「排序生效了
+   * 但结果一样」无法分辨。部分轮次失败时 roundsOk < 3，调用方据此决定信不信。
+   */
+  async rankStories(
+    candidates: Array<{ id: number; title: string; articles: number }>
+  ): Promise<
+    ServiceResult<{
+      picks: Array<{ id: number; eventKey: string; category: string; why: string; borda: number; timesSelected: number }>;
+      nearMisses: Array<{ id: number; why: string; times: number }>;
+      rounds: Array<{ round: number; ok: boolean; error?: string; selectedIds: number[]; duplicates: number; outOfRange: number; eventKeyDupes: number; retried: boolean }>;
+      roundsOk: number;
+      intersectionSize: number;
+    }>
+  > {
+    const request = new Request(`${this.baseUrl}/meridian/stories/rank`, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+      body: JSON.stringify({ candidates }),
+    });
+    return await this.callJson(request);
+  }
+
+  /**
    * 簇判定：一个聚类簇 = 简报里的一条。一次调用同时判「是不是一件事」与起名。
    *
    * 失败（含解析失败）回 ok:false，**不会**伪装成 NO_EVENT——调用方据此走退化路径

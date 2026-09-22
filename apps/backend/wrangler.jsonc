@@ -92,10 +92,6 @@
       "class_name": "AutoBriefGenerationWorkflow",
     },
   ],
-  "ai": {
-    "binding": "AI"
-
-  },
   // 移除生产环境的自定义域名路由配置，避免本地开发冲突
   // "routes": [
   //   {

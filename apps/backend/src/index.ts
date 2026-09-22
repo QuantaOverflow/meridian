@@ -5,7 +5,6 @@ import { startProcessArticleWorkflow } from './workflows/processArticles.workflo
 import { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';
 import { Logger } from './lib/core/logger';
 import { runDailyBriefCron } from './lib/scheduled/daily-brief';
-import { Ai } from '@cloudflare/ai';
 
 type ArticleQueueMessage = { articles_id: number[] };
 
@@ -17,7 +16,6 @@ export type Env = {
   PROCESS_ARTICLES: Workflow;
   MY_WORKFLOW: Workflow; // 简报生成工作流
   HYPERDRIVE: Hyperdrive;
-  AI: Ai;
   
   // AI Worker Service Binding - connects to meridian-ai-worker
   AI_WORKER: {

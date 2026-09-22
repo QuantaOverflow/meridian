@@ -17,7 +17,6 @@ declare namespace Cloudflare {
 		AI_WORKER: Fetcher /* meridian-ai-worker */;
 		ARTICLE_PROCESSING_QUEUE: Queue;
 		HYPERDRIVE: Hyperdrive;
-		AI: Ai;
 		PROCESS_ARTICLES: Workflow;
 		MY_WORKFLOW: Workflow;
 	}

@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.13",
-    "@cloudflare/ai": "^1.2.2",
     "@cloudflare/puppeteer": "^1.0.2",
     "@hono/zod-validator": "^0.4.3",
     "@meridian/database": "workspace:*",

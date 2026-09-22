@@ -30,9 +30,6 @@ importers:
       '@ai-sdk/google':
         specifier: ^1.2.13
         version: 1.2.13(zod@3.24.3)
-      '@cloudflare/ai':
-        specifier: ^1.2.2
-        version: 1.2.2
       '@cloudflare/puppeteer':
         specifier: ^1.0.2
         version: 1.0.2
@@ -701,10 +698,6 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
-
-  '@cloudflare/ai@1.2.2':
-    resolution: {integrity: sha512-dT4gUPKWUERoTHHrbUrhJBIP8P9k6qybw5fK4bnqSAyTL9AvU98D7z6SOT/BwvmOhYA8hzBGNRbQsXyvxniGyA==}
-    deprecated: 'Thanks for using @cloudflare/ai: This package has been deprecated in favor of the native binding, learn more here https://developers.cloudflare.com/workers-ai/configuration/bindings/ '
 
   '@cloudflare/containers@0.0.30':
     resolution: {integrity: sha512-i148xBgmyn/pje82ZIyuTr/Ae0BT/YWwa1/GTJcw6DxEjUHAzZLaBCiX446U9OeuJ2rBh/L/9FIzxX5iYNt1AQ==}
@@ -7212,8 +7205,6 @@ snapshots:
 
   '@biomejs/cli-win32-x64@1.7.2':
     optional: true
-
-  '@cloudflare/ai@1.2.2': {}
 
   '@cloudflare/containers@0.0.30': {}
 

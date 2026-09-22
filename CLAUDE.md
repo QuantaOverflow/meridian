@@ -30,46 +30,6 @@
 - 完成前跑 `pnpm typecheck`；项目暂无单元测试，"完成"以 typecheck + 手动验证为准
 - 报错先 `wrangler tail`，再加 console.log
 
-## 本地验证方法（不需要部署）
-
-**验证 ai-worker 单个端点**（最常用，覆盖 90% 场景）：
-```bash
-# Terminal 1：启动 ai-worker（secrets 从 .dev.vars 读，LLM 走真实 DashScope 会计费）
-cd services/meridian-ai-worker && pnpm wrangler dev --port 8787
-
-# Terminal 2：curl 打端点
-curl -s -X POST http://localhost:8787/meridian/<endpoint> \
-  -H "Content-Type: application/json" \
-  -d '{ ... }' | jq .
-```
-- 不需要 backend，可以单独测 ai-worker 任何端点
-- 启动时 wrangler 会打印 `Your worker has access to the following bindings`，确认 bindings 已连接
-
-**backend + ai-worker 联调**（测 service binding 调用链）：
-```bash
-# 必须用单命令多 -c，两个分开的 wrangler dev 进程不会自动互连
-# 第一个 config = primary（暴露 HTTP），后续 = auxiliary（只通过 service binding 被调用）
-pnpm wrangler dev \
-  -c apps/backend/wrangler.toml \
-  -c services/meridian-ai-worker/wrangler.toml
-# backend 监听 8787（默认），ai-worker 作为 service binding 在内部解析
-```
-
-**R2 注意事项**：
-- 本地 `wrangler dev` 默认用**本地模拟 R2**（非真实 bucket），写入的对象只在本次进程存在
-- 如需读取生产 R2 里的真实 intel report，在 wrangler.toml 的 r2_buckets 加 `remote = true`
-- Workflow 测试通常需要真实 R2（因为 intel report 由上一 step 写入），建议用 `--remote` 模式或 `remote = true`
-
-**Workflow 本地触发**：
-```bash
-# wrangler dev 跑起来后，通过 HTTP 触发 workflow（见 backend admin 路由）
-curl -X POST http://localhost:8787/admin/trigger-brief ...
-# 或用 wrangler workflows 命令查看实例
-wrangler workflows instances list <WORKFLOW_NAME>
-```
-
-**原则：typecheck 通过 + 本地 curl 验证 = 可以 commit；部署只在功能确认后做。**
-
 ## 已知坑
 - **CF Workflow 单 step 输出 ~1MB 上限**——曾因情报 step 内联返回全部 story 报告而触发 `WorkflowInternalError`（当时靠 `maxStoriesToGenerate=3` 规避）。**已解决（2026-06）**：情报报告卸载 R2、step 只回传 keys（`auto-brief-generation.ts`），现 `maxStoriesToGenerate=15` 安全。新增 step 若要传大对象，沿用"卸 R2 + 传 key"模式
 - `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
@@ -85,7 +45,7 @@ wrangler workflows instances list <WORKFLOW_NAME>
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
-- 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md` 与 `scripts/eval/cluster-to-brief/CONTRACTS.md`（四层契约、判据不得带架构假设、判官要先对齐）
+- 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `scripts/eval/cluster-to-brief/CONTRACTS.md`）
 - 架构决策记录 → `docs/adr/`
 
 ## 知识蒸馏（每个 spike / goal 结束时做）
@@ -133,42 +93,19 @@ wrangler workflows instances list <WORKFLOW_NAME>
 **判据一句话**：能让别人**复现或验证**的（代码/测试/金标/说明书/输入 fixtures）→ 入 git；
 某次运行的**产物**或某次交接的**流水账**（dump/report/handoff/临时脚本）→ 不入。
 
-**原型目录的三个子目录**（2026-09-05 定，新建原型照此摆）：
+原型与 eval harness 都是 pnpm workspace 成员，各目录只留 `package.json`，
+根目录 `pnpm install` 一次装完。原型的目录结构、`.gitignore` 模板与「毕业」约定见
+`.claude/rules/prototypes.md`（改原型时自动载入）。
 
-```
-<prototype>/
-  *.ts *.py          实验源码，选择性入库
-  fixtures/          输入 fixture（可复现依赖）
-  out/               全部运行产物：labels、dump、summary、日志
-  scratch/           一次性探测脚本
-```
+## 路径触发的规则（`.claude/rules/`）
 
-**产物和一次性脚本必须写进 out/ 与 scratch/，不许往原型根目录写。**
+按路径自动载入，不占常驻上下文。改到对应目录时才进来：
 
-原型与 eval harness 都是 pnpm workspace 成员（`pnpm-workspace.yaml` 里的
-`apps/*/prototypes/*` / `services/*/prototypes/*` / `scripts/eval/*`），各目录只留 `package.json`，
-根目录 `pnpm install` 一次装完，**不要**再单独 `pnpm install --ignore-workspace`——
-2026-09-05 之前它们不在任何 glob 里，16 个目录各装一份依赖、各维护一份 lock。
-
-`.gitignore` 标准模板（照抄）：
-```
-node_modules/
-__pycache__/
-.cache/
-out/
-scratch/
-```
-
-按目录挡而不是按文件名模式挡，是 2026-09-05 的教训：旧模板挡的是 `*-result.json`
-这类模式，而脚本都往根目录写，于是每轮都有新文件名漏网——已删的 `dedup-band` 原型里
-`armB-*` / `armC-*` / `armFa-*` 等 70 个产物从来没被挡住，每次提交前都要手工补规则补一次漏一次。
-按目录挡只需两行，且新脚本天然合规。
-
-fixtures 若含 embedding 会很大（聚类 fixture 两个窗口 11MB，现放 `prototypes/_data/`），这种在 README 里写重建方式、
-`.gitignore` 里单独挡掉；小的输入 fixture 照常入库。
-
-**原型"毕业"约定**：验证完 → 核心源码精简入库（样板 `prototypes/article-prompt-slim/`：
-README + 核心 `.ts` + fixtures），结果产物与一次性 TUI 清掉，别把整轮实验的滚动残渣长期堆着。
+| 文件 | 触发路径 | 内容 |
+|---|---|---|
+| `eval.md` | `eval/**`、`scripts/eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
+| `local-verification.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | wrangler dev 单端点与联调、R2 注意事项、typecheck 的两个坑 |
+| `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
 ## 禁区（未明确要求不要碰）
 - `packages/database/drizzle/` — 历史 migration 不可变

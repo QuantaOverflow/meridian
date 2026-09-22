@@ -19,6 +19,8 @@
   "clusterSnapshot": "observability/clustering/<workflowId>.json",
   "selection": "selected_for_intel",
   "split": "dev",
+  "targetOf": "product",
+  "labelBalance": { "eventGroups": 41, "impurities": 12 },
   "articles": { "<articleId>": { "title": "...", "url": "...", "publishDate": "...", "sourceId": 12 } },
   "clusters": {
     "<clusterId>": {
@@ -65,6 +67,41 @@
 **簇级 `metadata.split` 已废弃**（`prod-0919` 里全是 `"fresh"`，`fixtures-r94` 里是 `dev`/`heldout`）：
 分层是整份的属性，簇级打标记是它之前的错误形状。既有值**保留不删**、`datasetClusters(ds, {split})`
 的行为也不改（还有调用方在用）；但**新 dataset 不再写它，新代码不要依赖它**。
+
+### 1.0.1 `targetOf` 与 `labelBalance`：这份考谁、正负怎么分（可选键，2026-09-22 加）
+
+#### `targetOf`：solver 槽里坐的是谁
+
+| 取值 | 含义 |
+|---|---|
+| `product` | 考被测系统。target 是**输入的性质**（「这两篇是同一事件」），换架构不失效 |
+| `judge` | 考判官本身。target 是人工判定，用来量判官的 TPR / TNR |
+
+两者的 `{input, target}` 形状一样，差别只在 solver 槽里插的是产品链路还是判官。
+分不出来的代价已经付过：一份判官金标里的 claim 是旧架构写出来的句子，**不管接到哪个 task 上**
+都不代表当前系统会产出什么；而这件事只能靠翻文件、数证据覆盖率才看得出来
+（2026-09-22 清理时就是这么判的 `intel-grounding` 与 `faithfulness` 的去留）。
+
+- 整个键**可缺**，老清单照常合法。
+- 存在则必须是 `product` / `judge` 之一，`validateManifest` 当场拒绝。
+- 缺失时没有任何东西拦得住你把判官成绩当产品成绩报——这正是加它的理由。
+
+Inspect 那边没有对应位置：`Sample` 有 `metadata`，但 `Dataset` 集合只有 `name` / `location` /
+`shuffled`，没有数据集级别的自由字段。它表达数据集级别的事实靠的是「你载入了哪个文件」。
+所以这不是偏离 Inspect，是填它留给 harness 的空位——与顶层 `split` 同一个论证。
+
+#### `labelBalance`：让 κ 可解释
+
+记 target 各取值的条数，例如 `{"supported": 78, "unsupported": 22}`。
+
+依据是 Hamel Husain 对 LLM-as-judge 的警告：**agreement / κ 是陷阱指标**——样本不平衡时，
+判官把少数类全判错也能拿到高一致率，而少数类恰恰是你在乎的那些失败。
+所以单独一个 κ 数字无法解释，必须能看出正负比例，并优先看少数类那一侧的 TNR。
+
+- 整个键**可缺**。
+- 存在则必须是对象、每个值是非负整数，`validateManifest` 当场拒绝。
+- **由产出这份 dataset 的脚本数出来写入，不靠人手填。** 校验只管形状，不与 `labels` 对账——
+  对账要遍历全部标注，那是产出侧的责任。
 
 ### 1.1 `dropped`：丢弃池（可选键，2026-09-20 加）
 

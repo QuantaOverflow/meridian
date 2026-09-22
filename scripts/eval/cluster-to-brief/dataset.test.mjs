@@ -97,6 +97,15 @@ rejects(ds => { ds.dropped = { noise: [], notSelected: { '-1': [301] } }; }, /�
 rejects(ds => { ds.split = 'bogus'; }, /split 只能是/);
 rejects(ds => { ds.split = 'Test'; }, /split 只能是/);
 rejects(ds => { ds.split = null; }, /split 只能是/);
+// 顶层 targetOf 同理:拼错不报错,只会让「这个分数说的是产品还是判官」永远答错
+rejects(ds => { ds.targetOf = 'scorer'; }, /targetOf 只能是/);
+rejects(ds => { ds.targetOf = 'Judge'; }, /targetOf 只能是/);
+rejects(ds => { ds.targetOf = null; }, /targetOf 只能是/);
+// labelBalance 只校验形状:坏形状当场拒,不是等到算 κ 时才发现分母是字符串
+rejects(ds => { ds.labelBalance = []; }, /labelBalance 不是对象/);
+rejects(ds => { ds.labelBalance = { supported: '78' }; }, /labelBalance\.supported 要是非负整数/);
+rejects(ds => { ds.labelBalance = { supported: -1 }; }, /labelBalance\.supported 要是非负整数/);
+rejects(ds => { ds.labelBalance = { supported: 1.5 }; }, /labelBalance\.supported 要是非负整数/);
 // id 与文件名不一致 = 悄悄用错数据集
 rejects(ds => { ds.id = 'other'; }, /id 与文件名不一致/);
 writeFileSync(`${DS_DIR}broken.json`, '{not json');
@@ -115,6 +124,17 @@ withSplit.id = 'synth-split';
 withSplit.split = 'validation';
 write('synth-split', withSplit);
 assert.equal(loadDataset('synth-split').split, 'validation');
+// targetOf / labelBalance 同样两个方向:缺键合法,写对了照常载入
+assert.equal(ds.targetOf, undefined, '缺 targetOf 的清单照常合法');
+assert.equal(ds.labelBalance, undefined, '缺 labelBalance 的清单照常合法');
+const withTarget = good();
+withTarget.id = 'synth-target';
+withTarget.targetOf = 'judge';
+withTarget.labelBalance = { supported: 78, unsupported: 22 };
+write('synth-target', withTarget);
+const loadedTarget = loadDataset('synth-target');
+assert.equal(loadedTarget.targetOf, 'judge');
+assert.deepEqual(loadedTarget.labelBalance, { supported: 78, unsupported: 22 });
 
 // ── 缺正文:报错必须点名重建命令,否则调用方不知道下一步做什么 ──────────
 assert.throws(() => loadClusterArticles(ds, 10), /fetch-dataset\.mjs --dataset=synth/);

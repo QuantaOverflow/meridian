@@ -23,6 +23,18 @@
  * 对齐 Inspect 的口径：split 是「载入哪一份数据集」，不是样本的属性。
  * 簇级 `metadata.split` 是它之前的错误形状，已废弃（保留不删，见 datasetClusters）。
  *
+ * 顶层 `targetOf`（可选，2026-09-22 加）标这份 dataset 是**考谁的**：`product` 考被测系统，
+ * `judge` 考判官本身。同一个 `{input, target}` 形状，solver 槽里坐的是谁决定了读数的含义。
+ * 加这个键是因为它分不出来的代价已经付过：一份判官金标的 claim 是旧架构写的句子，
+ * 拿它跑出来的分数永远不代表当前产品，而这件事只能靠翻文件、数证据覆盖率才看得出来。
+ * 缺失合法（老清单向后兼容），但缺失时谁也拦不住你把判官成绩当产品成绩报。
+ *
+ * 顶层 `labelBalance`（可选，2026-09-22 加）记 target 各取值的条数。
+ * 依据是 Hamel Husain 对 LLM-as-judge 的警告：agreement / κ 是**陷阱指标**——
+ * 样本不平衡时，判官把少数类全判错也能拿高一致率，而少数类恰恰是你在乎的失败。
+ * 所以光记 κ 无法解释，必须能看出正负比例。应由产出这份 dataset 的脚本数出来写入，不靠人手填；
+ * 这里只校验形状，不与 labels 对账——对账要遍历全部标注，属于产出侧的责任。
+ *
  * 目录可换（测试用，也方便另置一份数据）：
  *   CTB_DATASET_DIR=<dir>   清单目录，默认 ./datasets/
  *   CTB_DATA_ROOT=<dir>     正文根目录，默认 <CTB_WORKSPACE>out/_data/
@@ -57,6 +69,9 @@ const INDENT = 1;
 /** 顶层 split 的取值（Inspect 的口径：split 是「载入哪一份数据集」，整份一个值）。 */
 const SPLITS = ['dev', 'validation', 'test'];
 
+/** 顶层 targetOf 的取值：这份 dataset 考的是被测系统，还是判官本身。 */
+const TARGET_OF = ['product', 'judge'];
+
 // ── 清单校验 ────────────────────────────────────────────────────────────
 /**
  * 清单不合法要**当场炸**并说清是哪一处：清单是判定的地基，
@@ -82,6 +97,24 @@ export function validateManifest(ds, expectedId, where = 'inline') {
   // 只会让「这份是不是 holdout」这个问题永远答错。
   if (ds.split !== undefined && !SPLITS.includes(ds.split)) {
     fail(`split 只能是 ${SPLITS.join(' / ')}（缺这个键也合法），收到 ${JSON.stringify(ds.split)}`);
+  }
+
+  // 顶层 targetOf（可选，2026-09-22 加）：这份考产品还是考判官。同 split，拼错不会让任何
+  // 下游报错，只会让「这个分数说的是什么」永远答错。
+  if (ds.targetOf !== undefined && !TARGET_OF.includes(ds.targetOf)) {
+    fail(`targetOf 只能是 ${TARGET_OF.join(' / ')}（缺这个键也合法），收到 ${JSON.stringify(ds.targetOf)}`);
+  }
+
+  // 顶层 labelBalance（可选，2026-09-22 加）：target 各取值的条数，用来解释 κ / agreement。
+  // 只校验形状（对象、值是非负整数），不校验它与 labels 对不对得上——对账要遍历全部标注，
+  // 那是 countLabelBalance() 的事；这里拦的是手填出来的坏形状。
+  if (ds.labelBalance !== undefined) {
+    if (!isObj(ds.labelBalance)) fail('labelBalance 不是对象');
+    for (const [k, v] of Object.entries(ds.labelBalance)) {
+      if (!Number.isInteger(v) || v < 0) {
+        fail(`labelBalance.${k} 要是非负整数，收到 ${JSON.stringify(v)}`);
+      }
+    }
   }
 
   if (!isObj(ds.articles)) fail('缺 articles 映射');

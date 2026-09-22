@@ -1,5 +1,5 @@
 import { sql, $articles, $sources, and, lte, gte } from '@meridian/database';
-import { getDB } from '~/server/lib/utils';
+import { formatScrapeFrequency, getDB } from '~/server/lib/utils';
 
 export default defineEventHandler(async event => {
   await requireUserSession(event); // require auth
@@ -55,14 +55,7 @@ export default defineEventHandler(async event => {
       url: source.url,
       category: source.category,
       paywall: source.paywall,
-      frequency:
-        source.scrape_frequency === 1
-          ? 'Hourly'
-          : source.scrape_frequency === 2
-            ? '4 Hours'
-            : source.scrape_frequency === 3
-              ? '6 Hours'
-              : 'Daily',
+      frequency: formatScrapeFrequency(source.scrape_frequency),
       lastChecked: source.lastChecked?.toISOString(),
 
       // article counts

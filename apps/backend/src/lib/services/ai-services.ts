@@ -210,6 +210,7 @@ export class AIWorkerService {
   /**
    * 分析文章内容（文章管线用，非 brief 接缝——返回 Response 不变）
    */
+  // options 当前被端点忽略（/meridian/article/analyze 只解构 { title, content }）；保留参数与默认值不改动。
   async analyzeArticle(title: string, content: string, options?: any, callIndex?: number): Promise<Response> {
     // 观测性：同一 workflow 会并行分析多篇文章，用 call index 避免 R2 LLM 日志 key 互相覆盖。
     const extra: Record<string, string> = {};
@@ -249,47 +250,6 @@ export class AIWorkerService {
     });
 
     return await this.callJson<ValidatedStoriesData>(request);
-  }
-
-  /**
-   * 分析故事情报 (第二阶段深度分析)
-   *
-   * @param callIndex 在同一个 workflow 内的调用序号，用于 R2 中 LLM 调用日志的去重 key
-   */
-  async analyzeStoryIntelligence(story: any, articles: any[], options?: any, callIndex?: number): Promise<ServiceResult<IntelligenceReportData>> {
-    const extra: Record<string, string> = {};
-    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
-    const request = new Request(`${this.baseUrl}/meridian/intelligence/analyze-single-story`, {
-      method: 'POST',
-      headers: this.buildHeaders(extra),
-      body: JSON.stringify({
-        story,
-        articleData: articles,
-        options: options || { analysis_depth: 'detailed' }
-      })
-    });
-
-    return await this.callJson<IntelligenceReportData>(request);
-  }
-
-  /**
-   * 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题。
-   * 两条一组时 ai-worker 会做确认；≥3 条只起标题（组的成立由上游多条边支撑）。
-   */
-  async checkStoryMerge(
-    candidates: Array<{ title: string; articleTitles: string[] }>,
-    callIndex?: number
-  ): Promise<ServiceResult<{ same_occurrence: boolean; title: string; reason: string }>> {
-    // 观测性：一次 workflow 有 10+ 个合并组，不带序号则 R2 日志 key 恒为 story_merge-000.json，
-    // 只留得下最后一组。这一层的判决（两条是不是同一个发生）恰恰是最需要人工回看的。
-    const extra: Record<string, string> = {};
-    if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
-    const request = new Request(`${this.baseUrl}/meridian/story/merge-check`, {
-      method: 'POST',
-      headers: this.buildHeaders(extra),
-      body: JSON.stringify({ candidates }),
-    });
-    return await this.callJson<{ same_occurrence: boolean; title: string; reason: string }>(request);
   }
 
   /**
@@ -344,94 +304,6 @@ export class AIWorkerService {
   }
 
   /**
-   * 生成最终简报
-   */
-  async generateFinalBrief(analysisData: any[], previousBrief: any, options?: any): Promise<ServiceResult<FinalBriefData>> {
-    const request = new Request(`${this.baseUrl}/meridian/generate-final-brief`, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({
-        analysisData,
-        previousBrief,
-        options // 同上：不垫 provider/model 默认
-      })
-    });
-
-    return await this.callJson<FinalBriefData>(request);
-  }
-
-  /**
-   * b′ 步骤 1：规划简报骨架（因果主线章节 + 块标题）。
-   *
-   * 三个 b′ 端点都只收 `reportKeys`：情报报告全文已卸在 R2，ai-worker 自己读回。
-   * 不内联传是因为 RARR 校验必须看全量源，逐块内联 = 每份简报把 ~158KB 的报告
-   * 在 service binding 上搬 25 遍。
-   */
-  async planBriefSkeleton(reportKeys: string[]): Promise<ServiceResult<BriefSkeletonData>> {
-    const request = new Request(`${this.baseUrl}/meridian/plan-brief-skeleton`, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({ reportKeys })
-    });
-
-    return await this.callJson<BriefSkeletonData>(request);
-  }
-
-  /**
-   * b′ 步骤 2：写一个简报块（写作 + RARR 接地校验 + 四条确定性守卫）。
-   * 由 workflow 侧 fan-out 成 N 个 step —— 不能挤在一个 step 里跑（CF 约 2% invocation
-   * 会被平台 canceled，一次抖动丢整期简报）。
-   *
-   * @param index 0 基，这个块对应 reportKeys 里的第几份
-   */
-  async writeBriefBlock(
-    reportKeys: string[],
-    index: number,
-    title: string,
-    section?: { heading: string; causalLink: string; siblingTitles: string[] },
-    /**
-     * 该块簇内文章的正文引用（`{id, key}`，key 就是 $articles.contentFileKey）。
-     * 传了 ai-worker 才走证据链（声明判断→检索→写→自检找漏→检索→重写）；不传是此前行为。
-     * 传引用不传正文：81 篇的簇正文约 30 万字符，会撞 CF Workflow 单 step 约 1MB 输出上限。
-     */
-    articleKeys?: Array<{ id: number; key: string }>,
-    /**
-     * 这条 story 原本有多少篇文章。**必须单独传**：articleKeys 是过滤掉没有
-     * contentFileKey 的之后剩下的，ai-worker 拿不到原始篇数，span 里就分不清
-     * 「材料本来就少」和「材料在路上丢了」。
-     */
-    articlesExpected?: number
-  ): Promise<ServiceResult<BriefBlockData>> {
-    const request = new Request(`${this.baseUrl}/meridian/write-brief-block`, {
-      method: 'POST',
-      headers: this.buildHeaders({ 'x-call-index': String(index) }),
-      body: JSON.stringify({ reportKeys, index, title, section, articleKeys, articlesExpected })
-    });
-
-    return await this.callJson<BriefBlockData>(request);
-  }
-
-  /**
-   * v3 步骤 1：一个簇的原文 → report-v3。正文必须内联传（ai-worker 侧要逐句切、逐批抽取），
-   * 由 workflow 侧 fan-out 成 N 个 step。产出由调用方卸 R2，step 只回 key。
-   *
-   * @param callIndex 故事序号，进 x-call-index 让同一 trace 下的 R2 观测记录不互相覆盖
-   */
-  async buildReportV3(
-    title: string,
-    articles: Array<{ id: number; title: string; url?: string; publishDate?: string; content: string }>,
-    callIndex?: number
-  ): Promise<ServiceResult<ReportV3Data>> {
-    const request = new Request(`${this.baseUrl}/meridian/report-v3`, {
-      method: 'POST',
-      headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
-      body: JSON.stringify({ title, articles, skipCache: true }),
-    });
-
-    return await this.callJson<ReportV3Data>(request);
-  }
-
-  /**
    * 简报块 v6：一个簇的原文 → 一块逐句带出处的高管简报（报告层 + 写作层合成一步）。
    * 请求体与 /meridian/report-v3 逐字同构（多一个 tier），故同一份材料可直接复用。
    *
@@ -460,24 +332,6 @@ export class AIWorkerService {
     return await this.callJson<BriefBlockV6Data>(request);
   }
 
-  /**
-   * v3 步骤 2：一份 report-v3 → 一块正文（写 + 接地 + 代码检查器标记）。
-   * 报告内联传：它是上一步的产物，backend 从 R2 读回后直接转发，ai-worker 不再读一次 R2。
-   */
-  async writeBlockV3(
-    report: unknown,
-    tier: 'lead' | 'more' | 'brief',
-    callIndex?: number
-  ): Promise<ServiceResult<BlockV3Data>> {
-    const request = new Request(`${this.baseUrl}/meridian/write-block-v3`, {
-      method: 'POST',
-      headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
-      body: JSON.stringify({ report, tier, skipCache: true }),
-    });
-
-    return await this.callJson<BlockV3Data>(request);
-  }
-
   /** v3 步骤 3：给整篇简报起标题（v3 的拼装在 backend 用代码做，只剩这一次调用）。 */
   async briefTitle(content: string): Promise<ServiceResult<BriefTitleData>> {
     const request = new Request(`${this.baseUrl}/meridian/brief-title`, {
@@ -490,33 +344,15 @@ export class AIWorkerService {
   }
 
   /**
-   * b′ 步骤 3：拼装成品简报（结构零 LLM，唯一调用是起整篇标题）+ 跑传感器。
-   */
-  async assembleBrief(
-    reportKeys: string[],
-    skeleton: BriefSkeletonData,
-    blocks: Array<{ index: number; title: string; text: string }>
-  ): Promise<ServiceResult<FinalBriefData>> {
-    const request = new Request(`${this.baseUrl}/meridian/assemble-brief`, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({ reportKeys, skeleton, blocks })
-    });
-
-    return await this.callJson<FinalBriefData>(request);
-  }
-
-  /**
    * 生成简报 TLDR
    */
-  async generateBriefTldr(briefTitle: string, briefContent: string, options?: any): Promise<ServiceResult<BriefTldrData>> {
+  async generateBriefTldr(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefTldrData>> {
     const request = new Request(`${this.baseUrl}/meridian/generate-brief-tldr`, {
       method: 'POST',
       headers: this.buildHeaders(),
       body: JSON.stringify({
         briefTitle,
-        briefContent,
-        options // 同上：不垫 provider/model 默认
+        briefContent
       })
     });
 
@@ -529,35 +365,14 @@ export class AIWorkerService {
    * 与 generateBriefTldr 是两件事：那个产出给次日模型读的机器格式记忆状态，
    * 这个产出读者端展示的 2-3 句导语。
    */
-  async generateBriefSummary(briefTitle: string, briefContent: string, options?: any): Promise<ServiceResult<BriefSummaryData>> {
+  async generateBriefSummary(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefSummaryData>> {
     const request = new Request(`${this.baseUrl}/meridian/generate-brief-summary`, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: JSON.stringify({ briefTitle, briefContent, options })
+      body: JSON.stringify({ briefTitle, briefContent })
     });
 
     return await this.callJson<BriefSummaryData>(request);
-  }
-
-  /**
-   * 忠实度门检查（线上只标记）
-   */
-  async faithfulnessCheck(sources: any[], brief: string): Promise<ServiceResult<FaithfulnessVerdict>> {
-    const request = new Request(`${this.baseUrl}/meridian/faithfulness-check`, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({ sources, brief })
-    });
-
-    return await this.callJson<FaithfulnessVerdict>(request);
-  }
-
-  /**
-   * 健康检查
-   */
-  async healthCheck(): Promise<Response> {
-    const request = new Request(`${this.baseUrl}/health`);
-    return await this.env.AI_WORKER.fetch(request);
   }
 }
 

@@ -128,28 +128,3 @@ export function validateDateRange(dateFrom?: string, dateTo?: string) {
   
   return { from, to };
 }
-
-// 通用的中间件：统一错误处理
-export function withErrorHandling(
-  handler: (c: Context) => Promise<Response>
-) {
-  return async (c: Context) => {
-    try {
-      return await handler(c);
-    } catch (error) {
-      const logger = new Logger({ route: c.req.path });
-      const { error: errorMsg, statusCode } = handleDatabaseError(
-        error,
-        'Request processing',
-        logger,
-        { 
-          method: c.req.method,
-          path: c.req.path,
-          query: c.req.query()
-        }
-      );
-      
-      return c.json(createErrorResponse(errorMsg), statusCode as any);
-    }
-  };
-} 

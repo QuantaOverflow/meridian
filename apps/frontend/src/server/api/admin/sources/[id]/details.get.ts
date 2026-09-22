@@ -8,7 +8,7 @@ import {
   articleStatusEnum,
   articleContentQualityEnum,
 } from '@meridian/database';
-import { getDB } from '~/server/lib/utils';
+import { formatScrapeFrequency, getDB } from '~/server/lib/utils';
 
 // to access the enums
 type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];
@@ -83,14 +83,7 @@ export default defineEventHandler(async event => {
     name: source.name,
     url: source.url,
     initialized: source.do_initialized_at !== null,
-    frequency:
-      source.scrape_frequency === 1
-        ? 'Hourly'
-        : source.scrape_frequency === 2
-          ? '4 Hours'
-          : source.scrape_frequency === 3
-            ? '6 Hours'
-            : 'Daily',
+    frequency: formatScrapeFrequency(source.scrape_frequency),
     lastFetched: source.lastChecked?.toISOString(),
     articles: articles.map(article => ({
       id: article.id,

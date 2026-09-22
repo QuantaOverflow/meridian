@@ -19,12 +19,6 @@ function toggleTheme() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
 }
 
-// 订阅入口下线期间闲置，恢复订阅时一并放开
-// function goToSubscribe() {
-//   scrollToAnchor('subscribe', 40);
-//   // 滚动动画期间就聚焦会被浏览器打断滚动，等落位后再聚焦
-//   window.setTimeout(() => document.getElementById('subscribe-email')?.focus(), 600);
-// }
 </script>
 
 <template>
@@ -90,11 +84,6 @@ function toggleTheme() {
             <MoonIcon v-else class="h-[17px] w-[17px]" :stroke-width="1.5" />
           </button>
         </ClientOnly>
-
-        <!-- 订阅入口暂时下线：runtimeConfig.mailerlite 没有真实 key，
-             会落回 nuxt.config.ts 里的占位符 'your_mailerlite_key'，
-             读者点了只会静默失败。拿到 MailerLite key 后连同
-             BriefArticle.vue 里的 <SubscriptionForm /> 一起放开。 -->
       </div>
 
       <div class="absolute right-0 bottom-0 left-0 h-[2px]">

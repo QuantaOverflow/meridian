@@ -131,49 +131,6 @@ export class WorkflowObservability {
     await this.persistMetrics();
   }
 
-  // 记录数据流变化
-  async logDataFlow(stage: string, metrics: DataFlowMetrics) {
-    const enrichedMetrics = {
-      ...metrics,
-      workflowId: this.workflowId,
-      timestamp: new Date().toISOString()
-    };
-
-    console.log(`[数据流-${stage}]`, {
-      工作流ID: this.workflowId,
-      阶段: stage,
-      文章数: metrics.articleCount,
-      聚类数: metrics.clusterCount || 'N/A',
-      故事数: metrics.storyCount || 'N/A',
-      过滤条件: metrics.filterCriteria,
-      移除数量: metrics.removedCount || 0,
-      新增数量: metrics.addedCount || 0,
-      转换类型: metrics.transformationType || '无',
-      质量指标: metrics.qualityMetrics
-    });
-
-    await this.logStep(`dataflow_${stage}`, 'completed', enrichedMetrics);
-  }
-
-  // 记录聚类指标
-  async logClustering(metrics: ClusteringMetrics) {
-    const clusteringData = {
-      工作流ID: this.workflowId,
-      输入文章: metrics.inputArticles,
-      聚类配置: metrics.clusterConfig,
-      输出聚类: metrics.outputClusters,
-      噪声点: metrics.noisePoints,
-      平均聚类大小: metrics.avgClusterSize,
-      平均一致性得分: metrics.avgCoherenceScore,
-      最大聚类: metrics.largestClusterSize,
-      最小聚类: metrics.smallestClusterSize,
-      嵌入质量: metrics.embeddingQuality
-    };
-
-    console.log(`[聚类分析]`, clusteringData);
-    await this.logStep('clustering_analysis', 'completed', metrics);
-  }
-
   // 记录故事选择过程
   async logStorySelection(metrics: StorySelectionMetrics) {
     const selectionData = {
@@ -197,41 +154,6 @@ export class WorkflowObservability {
     });
 
     await this.logStep('story_selection', 'completed', metrics);
-  }
-
-  // 记录简报生成指标
-  async logBriefGeneration(metrics: BriefGenerationMetrics) {
-    const generationData = {
-      工作流ID: this.workflowId,
-      总分析时间: `${metrics.totalAnalysisTime}ms`,
-      AI模型: metrics.aiModelUsed,
-      使用令牌: metrics.tokensUsed || '未统计',
-      成本估算: metrics.costEstimate ? `$${metrics.costEstimate.toFixed(4)}` : '未统计',
-      内容长度: `${metrics.contentLength}字符`,
-      处理故事数: metrics.storiesProcessed,
-      R2内容访问: {
-        尝试: metrics.r2ContentAccess.attempted,
-        成功: metrics.r2ContentAccess.successful,
-        失败: metrics.r2ContentAccess.failed,
-        成功率: `${((metrics.r2ContentAccess.successful / metrics.r2ContentAccess.attempted) * 100).toFixed(1)}%`,
-        平均内容长度: `${metrics.r2ContentAccess.avgContentLength}字符`
-      }
-    };
-
-    console.log(`[简报生成]`, generationData);
-    await this.logStep('brief_generation', 'completed', metrics);
-  }
-
-  // 记录质量评估
-  async logQualityAssessment(assessment: any) {
-    const qualityData = {
-      工作流ID: this.workflowId,
-      时间戳: new Date().toISOString(),
-      评估结果: assessment
-    };
-
-    console.log(`[质量评估]`, qualityData);
-    await this.logStep('quality_assessment', 'completed', assessment);
   }
 
   // 生成工作流摘要报告
@@ -310,11 +232,6 @@ export class WorkflowObservability {
     }
     
     return typeof data;
-  }
-
-  // 获取当前指标
-  getMetrics(): WorkflowMetrics[] {
-    return [...this.metrics];
   }
 
   // 完成工作流
@@ -419,26 +336,4 @@ export class DataQualityAssessor {
     };
   }
 
-  static assessClusterQuality(clusters: any[]): any {
-    const clusterSizes = clusters.map(c => c.articles.length);
-    const coherenceScores = clusters.map(c => c.coherence_score || c.similarity_score || 0);
-    
-    return {
-      totalClusters: clusters.length,
-      avgClusterSize: clusterSizes.reduce((a, b) => a + b, 0) / clusterSizes.length,
-      minClusterSize: Math.min(...clusterSizes),
-      maxClusterSize: Math.max(...clusterSizes),
-      avgCoherence: coherenceScores.reduce((a, b) => a + b, 0) / coherenceScores.length,
-      singletonClusters: clusters.filter(c => c.articles.length === 1).length,
-      largeClusters: clusters.filter(c => c.articles.length >= 5).length,
-      qualityDistribution: {
-        high: clusters.filter(c => (c.coherence_score || c.similarity_score || 0) >= 0.7).length,
-        medium: clusters.filter(c => {
-          const score = c.coherence_score || c.similarity_score || 0;
-          return score >= 0.4 && score < 0.7;
-        }).length,
-        low: clusters.filter(c => (c.coherence_score || c.similarity_score || 0) < 0.4).length
-      }
-    };
-  }
-} 
+}

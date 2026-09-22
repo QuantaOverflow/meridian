@@ -15,7 +15,6 @@
   "devDependencies": {
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
-    "@mailerlite/mailerlite-nodejs": "^1.4.0",
     "@meridian/database": "workspace:*",
     "@nuxtjs/color-mode": "3.5.2",
     "@radix-ui/colors": "^3.0.0",

@@ -4,17 +4,31 @@
 export class QuotaHandler {
   
   /**
-   * 检查是否为配额限制错误
+   * 这次失败值不值得重试。
+   *
+   * ⚠️ 名字窄于实际语义：除配额/限流，还覆盖两类会自愈的传输层失败（见下）。没改名是因为
+   * 四个调用点分布在两条链路上，改名的收益（名字准）不值当把改动面扩到调用方。
+   *
+   * 2026-09-22 补进后两条。来历：`brief-generation.ts` 原有一个私有的 `BriefErrorHandler`，
+   * 与本类逐字节几乎相同（只改日志前缀），合并时才发现它**多认三个模式**：
+   * `no response received` / `ai gateway` / `invalid api key`。前两类是上游抖动、重试就好；
+   * 第三类永不自愈，重试只是把失败拖长——这个仓库为它付过代价（一次 key 失效让整条管线
+   * 静默停摆 12 天）。所以只补前两条，`invalid api key` 有意不加：让它立刻失败、立刻可见。
+   *
+   * 后果要知道：本类还服务 `services/intelligence.ts`，补这两条等于同时放宽那边的重试面。
+   * 那是合理的——同一类传输抖动在情报分析上同样该重试，不是副作用。
    */
   static isQuotaLimitError(error: any): boolean {
     const errorMessage = error?.message?.toLowerCase() || '';
     const errorString = JSON.stringify(error).toLowerCase();
-    
+
     return (
       errorMessage.includes('quota') ||
       errorMessage.includes('rate limit') ||
       errorMessage.includes('resource exhausted') ||
       errorMessage.includes('too many requests') ||
+      errorMessage.includes('no response received') ||
+      errorMessage.includes('ai gateway') ||
       errorString.includes('quota') ||
       errorString.includes('rate_limit') ||
       errorString.includes('429')

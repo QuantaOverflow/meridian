@@ -5,24 +5,14 @@ import { AIGatewayService } from './services/ai-gateway'
 import { runFaithfulnessCheck } from './services/faithfulness-check'
 import { StoryValidationService } from './services/story-validation'
 import { IntelligenceService } from './services/intelligence'
-import {
-  BriefGenerationService,
-  normalizeAnalysisToReport,
-  type BriefSkeleton,
-  type IntelligenceReport
-} from './services/brief-generation'
-import { loadR2Batched, type MinimalBucket } from './services/brief-skeleton'
-import { BriefWriterV3Service } from './services/brief-writer-v3'
-import { ReportV3Service } from './services/report-v3'
+import { BriefGenerationService, normalizeAnalysisToReport } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
 import { RANK_TOP_N, type RankCandidate } from './prompts/story-rank'
 import { rankStories } from './services/story-rank'
-import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
-import { recordSpan } from './services/span-log'
 import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
@@ -104,62 +94,6 @@ app.get('/health', (c) => {
     timestamp: new Date().toISOString(),
     service: 'meridian-ai-worker'
   })
-})
-
-// ============================================================================  
-// Embedding Generation
-// ============================================================================
-
-app.post('/meridian/embeddings/generate', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    if (!body.text || (typeof body.text !== 'string' && !Array.isArray(body.text))) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'text field is required (string or array)'
-      }, 400)
-    }
-
-    const aiGatewayService = new AIGatewayService(c.env)
-    
-    const embeddingRequest = {
-      capability: 'embedding' as const,
-      provider: body.options?.provider || 'workers-ai',
-      model: body.options?.model || '@cf/baai/bge-small-en-v1.5',
-      input: body.text,
-      metadata: createRequestMetadata(c)
-    }
-
-    const result = await aiGatewayService.embed(embeddingRequest)
-    
-    if (result.capability !== 'embedding') {
-      throw new Error('Unexpected response type from embedding service')
-    }
-    
-    const dimensions = result.data?.[0]?.embedding?.length || 0
-    
-    return c.json<APIResponse<any>>({
-      success: true,
-      data: {
-        embeddings: result.data,
-        dimensions,
-        model: result.model
-      },
-      metadata: {
-        provider: result.provider,
-        processingTime: result.processingTime,
-        cached: result.cached
-      }
-    })
-  } catch (error: any) {
-    console.error('Embedding generation error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to generate embedding',
-      metadata: { details: error.message }
-    }, 500)
-  }
 })
 
 // ============================================================================
@@ -394,50 +328,6 @@ app.post('/meridian/story/validate', async (c) => {
 // Intelligence Analysis - 符合 intelligence-pipeline.test.ts 契约
 // ============================================================================
 
-app.post('/meridian/intelligence/analyze-stories', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // 验证输入格式：支持新的 ValidatedStories + ArticleDataset 格式
-    if (!body.stories || !body.dataset) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'stories (ValidatedStories) and dataset (ArticleDataset) are required'
-      }, 400)
-    }
-
-    console.log(`[Intelligence] 分析 ${body.stories.stories?.length || 0} 个故事`)
-
-    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw))
-    const result = await intelligenceService.analyzeStories(body.stories, body.dataset)
-    
-    if (result.success) {
-      return c.json<APIResponse<any>>({
-        success: true,
-        data: result.data,
-        metadata: {
-          total_stories: result.data?.processingStatus.totalStories,
-          completed_analyses: result.data?.processingStatus.completedAnalyses,
-          failed_analyses: result.data?.processingStatus.failedAnalyses,
-          analysis_method: 'intelligence_service_v2'
-        }
-      })
-    } else {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: result.error || 'Intelligence analysis failed'
-      }, 500)
-    }
-    
-  } catch (error: any) {
-    console.error('Intelligence batch analysis error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to analyze stories',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
 
 app.post('/meridian/intelligence/analyze-single-story', async (c) => {
   try {
@@ -592,81 +482,6 @@ app.post('/meridian/generate-final-brief', async (c) => {
     }, 500)
   }
 })
-
-// ============================================================================
-// b′ 分段写简报：规划 → 逐块写 → 拼装
-//
-// 三个端点共用同一个输入契约 `reportKeys`：情报报告全文已由 backend 卸在 R2
-// （`intel-reports/{workflowId}/{idx}.json`），这里只收 key、自己读回。
-// 不内联传报告是因为 RARR 校验必须看全量源（25 份 ≈ 158KB JSON），逐块内联就是
-// 每份简报 25 × 158KB 在 service binding 上来回搬；ai-worker 与 backend 本就共用
-// 同一个 bucket（llm-calls / sensors 都写在那），读 key 是既有能力。
-// ============================================================================
-
-/** 按 R2 key 读回情报报告并归一。任何一个 key 读不到都硬失败——静默少一份报告会让
- *  oracle 悄悄变窄（RARR 把跨报告的正确内容判成无据删掉），而指标上完全看不出来。 */
-export async function loadReportsFromR2(env: any, keys: unknown): Promise<{ ok: true; reports: IntelligenceReport[] } | { ok: false; error: string }> {
-  if (!Array.isArray(keys) || keys.length === 0) return { ok: false, error: 'reportKeys must be a non-empty array' }
-  const bucket = env?.ARTICLES_BUCKET as R2Bucket | undefined
-  if (!bucket) return { ok: false, error: 'ARTICLES_BUCKET binding 不可用' }
-  // 限并发 + 「取对象与读 body 成对完成」的理由见 loadR2Batched 的注释
-  // （2026-08-29 b′ 首次真实 cron 因 25 条并发撞 Workers 6 连接上限整期失败）。
-  const { values, missing, broken } = await loadR2Batched(
-    keys.map((k: unknown) => String(k)),
-    bucket as unknown as MinimalBucket,
-    (text: string) => normalizeAnalysisToReport(JSON.parse(text))
-  )
-  if (missing.length) return { ok: false, error: `R2 缺 ${missing.length} 份情报报告: ${missing.slice(0, 5).join(', ')}` }
-  if (broken.length) return { ok: false, error: `情报报告读取失败 ${broken.length} 份: ${broken.slice(0, 3).join('; ')}` }
-  return { ok: true, reports: values as IntelligenceReport[] }
-}
-
-/**
- * 写作层要的簇内原文。**可缺省**——不给就完全走此前的写作路径，
- * 上游没同步部署时不会半路坏掉。
- *
- * 走 R2 而不是内联传：CF Workflow 单 step 输出约 1MB 上限，而一个 81 篇的簇正文
- * 约 30 万字符——此前情报 step 内联返回全部报告就触发过 WorkflowInternalError，
- * 已用「卸 R2 + 传 key」收口，这里沿用同一模式。
- *
- * 与 loadReportsFromR2 的差别：缺失/损坏**不算失败**。原文只是补充材料，
- * 拿不到就退回「只给报告」的老路径，不该让整个块写不出来。
- */
-export async function loadArticlesFromR2(
-  env: any,
-  refs: unknown
-): Promise<Array<{ id: number; body: string }>> {
-  if (!Array.isArray(refs) || refs.length === 0) return []
-  const bucket = env?.ARTICLES_BUCKET as R2Bucket | undefined
-  if (!bucket) {
-    console.warn('[BriefBlock] 传了 articleKeys 但 ARTICLES_BUCKET binding 不可用 → 退回只给报告')
-    return []
-  }
-  // R2 里存的是**纯正文文本**（backend 的 contentFileKey，`await obj.text()`），不是 JSON，
-  // 所以 id 必须由上游随 key 一起传——正文本身不带 id。
-  const pairs = refs
-    .map((r: any) => ({ id: Number(r?.id), key: String(r?.key ?? '') }))
-    .filter(r => Number.isFinite(r.id) && r.key.length > 0)
-  if (!pairs.length) return []
-  const idOfKey = new Map(pairs.map(p => [p.key, p.id]))
-  const { values, missing, broken } = await loadR2Batched(
-    pairs.map(p => p.key),
-    bucket as unknown as MinimalBucket,
-    (text: string) => text
-  )
-  if (missing.length || broken.length) {
-    console.warn(`[BriefBlock] 原文 R2 缺 ${missing.length} 份、坏 ${broken.length} 份（共 ${pairs.length}）→ 用剩下的继续`)
-  }
-  // loadR2Batched 用 `values[i] = parse(...)` 按入参下标写回，缺失的位置留空洞，
-  // forEach 跳过空洞——所以下标与 pairs 严格对齐，可以据此还原 id。
-  const out: Array<{ id: number; body: string }> = []
-  values.forEach((text, i) => {
-    const key = pairs[i]?.key
-    const id = key != null ? idOfKey.get(key) : undefined
-    if (id != null && typeof text === 'string' && text.trim().length > 200) out.push({ id, body: text })
-  })
-  return out
-}
 
 // ============================================================================
 // 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题
@@ -868,147 +683,6 @@ app.post('/meridian/stories/rank', async (c) => {
   }
 })
 
-app.post('/meridian/plan-brief-skeleton', async (c) => {
-  try {
-    const body = await c.req.json()
-    const loaded = await loadReportsFromR2(c.env, body?.reportKeys)
-    if (!loaded.ok) return c.json<APIResponse<null>>({ success: false, error: loaded.error }, 400)
-
-    const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    const result = await service.planBriefSkeleton(loaded.reports)
-    if (!result.success) {
-      return c.json<APIResponse<null>>({ success: false, error: 'Failed to plan brief skeleton', metadata: { details: result.error } }, 500)
-    }
-    return c.json<APIResponse<BriefSkeleton>>({
-      success: true,
-      data: result.data!,
-      metadata: {
-        report_count: loaded.reports.length,
-        main_sections: result.data!.main.length,
-        isolated_count: result.data!.isolated.length,
-        repaired: result.data!.repaired,
-      },
-    })
-  } catch (error: any) {
-    console.error('Brief skeleton planning error:', error)
-    return c.json<APIResponse<null>>({ success: false, error: 'Failed to plan brief skeleton', metadata: { details: error.message } }, 500)
-  }
-})
-
-app.post('/meridian/write-brief-block', async (c) => {
-  try {
-    const body = await c.req.json()
-    const loaded = await loadReportsFromR2(c.env, body?.reportKeys)
-    if (!loaded.ok) return c.json<APIResponse<null>>({ success: false, error: loaded.error }, 400)
-
-    const index = Number(body?.index)
-    if (!Number.isInteger(index) || index < 0 || index >= loaded.reports.length) {
-      return c.json<APIResponse<null>>({ success: false, error: `index must be an integer in [0, ${loaded.reports.length - 1}]` }, 400)
-    }
-    const title = String(body?.title ?? '').trim()
-    if (!title) return c.json<APIResponse<null>>({ success: false, error: 'title is required（块标题由规划步产出，写作调用不自己写标题）' }, 400)
-
-    // 章节上下文可缺省：缺省即「独立事态」，prompt 会换成 standalone 的措辞。
-    //
-    // 兄弟块传的是**标题**，由 backend 从骨架里取。此前传的是下标、这边按下标去 R2 报告里
-    // 取 executiveSummary——那条路自身没错（报告全文本来就在这边），但传的东西错了：
-    // 摘要全文会被模型当成"要写的材料"照抄（见 briefSkeleton.ts 的 siblingTitles 注释）。
-    // 标题只存在于规划步的产出里，这边没有，所以必须由 backend 传过来。
-    const raw = body?.section
-    const section: BlockSectionContext | undefined = raw && typeof raw.heading === 'string'
-      ? {
-          heading: String(raw.heading),
-          causalLink: String(raw.causalLink ?? ''),
-          siblingTitles: (Array.isArray(raw.siblingTitles) ? raw.siblingTitles : [])
-            .map((t: unknown) => String(t ?? '').trim())
-            .filter((t: string) => t.length > 0),
-        }
-      : undefined
-    // 只在"上游还在发旧字段"时报警：backend 未同步部署的窗口里兄弟上下文会整段消失，
-    // 块照写但少了防重复提示。空着不报会让这种半部署状态看起来一切正常。
-    if (section && section.siblingTitles.length === 0 && Array.isArray(raw?.siblingIndices)) {
-      console.warn('[BriefBlock] 上游只发了 siblingIndices 没发 siblingTitles —— backend 与 ai-worker 版本不一致')
-    }
-
-    // 原文可缺省。给了就走证据链（声明判断 → 检索 → 写 → 自检找漏 → 检索 → 重写），
-    // 不给完全是此前行为——上游未同步部署的窗口里块照写，只是没有原文补材料。
-    const articles = await loadArticlesFromR2(c.env, body?.articleKeys)
-    if (Array.isArray(body?.articleKeys) && body.articleKeys.length && !articles.length) {
-      console.warn('[BriefBlock] 上游传了 articleKeys 但一份都没加载成功 → 本块退回只给报告')
-    }
-
-    const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    // 材料的四个口径逐个下传，供 span 对账。expected 只有 backend 知道（story.articleIds
-    // 有多少篇），refsSent 是它过滤后真正发过来的引用数，loaded 是 R2 取回成功的。
-    // 少传任何一个，"材料在哪一环丢的"就只能靠猜。
-    const articleStats = {
-      expected: typeof body?.articlesExpected === 'number' ? body.articlesExpected : undefined,
-      refsSent: Array.isArray(body?.articleKeys) ? body.articleKeys.length : 0,
-      loaded: articles.length,
-    }
-    const result = await service.writeBriefBlock(loaded.reports, index, title, section, { selfCorrect: body?.selfCorrect, articles, articleStats })
-    if (!result.success) {
-      return c.json<APIResponse<null>>({ success: false, error: 'Failed to write brief block', metadata: { details: result.error } }, 500)
-    }
-    return c.json<APIResponse<any>>({
-      success: true,
-      data: result.data!,
-      metadata: {
-        index,
-        verified: result.data!.verified,
-        edits: result.data!.edits,
-        applied: result.data!.applied,
-        blocked: result.data!.blocked,
-      },
-    })
-  } catch (error: any) {
-    console.error('Brief block writing error:', error)
-    // 端点层的失败也要成 span。writeBriefBlock 内部的 catch 会补落 block_outcome=threw，
-    // 但**在它之前**就抛的（loadReportsFromR2 读 R2 失败、body 解析失败）连 span id 都还没生成
-    // ——2026-09-09 实测就丢过一次：R2 读失败 8.6s 返回 500，`name='block'` 一条记录都没有，
-    // 于是这次失败不在「块失败率」的分母里，重试成功后只剩一套成功记录。
-    try {
-      const idx = Number((await c.req.json().catch(() => ({} as any)))?.index)
-      await recordSpan(c.env, readTraceContext(c.req.raw), {
-        name: 'block', stage: 'block', idx: Number.isInteger(idx) ? idx : 0, status: 'error',
-        attributes: {
-          block_index: Number.isInteger(idx) ? idx : null,
-          block_outcome: 'endpoint_threw',
-          error: String(error?.message ?? error),
-        },
-      })
-    } catch { /* 观测失败不改变响应 */ }
-    return c.json<APIResponse<null>>({ success: false, error: 'Failed to write brief block', metadata: { details: error.message } }, 500)
-  }
-})
-
-// 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧（services/report-v3.ts）。
-// 写作层 v3 直接吃这份产出；旧的 intelligence 报告端点不动。
-app.post('/meridian/report-v3', async (c) => {
-  try {
-    const body = await c.req.json()
-    const articles = Array.isArray(body?.articles) ? body.articles : null
-    if (!articles || !articles.length) {
-      return c.json<APIResponse<null>>({ success: false, error: 'articles must be a non-empty array' }, 400)
-    }
-    const bad = articles.findIndex(
-      (a: any) => !Number.isInteger(a?.id) || typeof a?.title !== 'string' || typeof a?.content !== 'string' || !a.content.trim()
-    )
-    if (bad >= 0) {
-      return c.json<APIResponse<null>>({ success: false, error: `articles[${bad}] needs {id:int, title:string, content:non-empty string}` }, 400)
-    }
-    const service = new ReportV3Service(c.env, readTraceContext(c.req.raw))
-    const data = await service.generate(
-      { title: typeof body?.title === 'string' ? body.title : '', articles },
-      body?.skipCache === true
-    )
-    return c.json<APIResponse<typeof data>>({ success: true, data })
-  } catch (error: any) {
-    console.error('Report v3 error:', error)
-    return c.json<APIResponse<null>>({ success: false, error: `Failed to build report v3: ${error?.message ?? String(error)}` }, 500)
-  }
-})
-
 // 简报块 v6：一个簇的原文 → 一块高管简报（services/brief-block-v6.ts）。
 // 请求体与 /meridian/report-v3 逐字同构（多一个可选的 tier），backend 可复用同一份文章材料。
 // tier 决定篇幅：'lead' = 5–7 句，'more' / 不传 = 原 exec 档（3–5 句），'brief' = 1 句。
@@ -1038,34 +712,6 @@ app.post('/meridian/brief-block-v6', async (c) => {
   }
 })
 
-// 写作层 v3：一个簇的 report-v3 → 简报里的一块正文（apps/backend/prototypes/brief-writer-v3/GOAL.md）。
-// 与上面的 write-brief-block 并存，互不影响；backend workflow 暂不接线（生产报告层还是旧格式）。
-app.post('/meridian/write-block-v3', async (c) => {
-  try {
-    const body = await c.req.json()
-    const report = body?.report
-    if (!report || !Array.isArray(report.facts) || !Array.isArray(report.parties) || !report.sentences || typeof report.summary !== 'string') {
-      return c.json<APIResponse<null>>({ success: false, error: 'report must be a report-v3 object (summary, facts, parties, sentences)' }, 400)
-    }
-    const tier = body?.tier
-    if (tier !== 'lead' && tier !== 'more' && tier !== 'brief') {
-      return c.json<APIResponse<null>>({ success: false, error: "tier must be 'lead' | 'more' | 'brief'" }, 400)
-    }
-    // body.model：dev-only 覆盖，供模型 spike 用（不传 = 原行为，恒用 brief-writer-v3.ts 里的 MODEL 常量）
-    const service = new BriefWriterV3Service(c.env, readTraceContext(c.req.raw), typeof body?.model === 'string' ? body.model : undefined)
-    // body.variant: 'one-source'：opt-in spike，限每句正文最多用 1–2 个要点（GOAL「限融合」）；不传 = 默认行为不变
-    const variant = body?.variant === 'one-source' ? 'one-source' : undefined
-    const data = await service.write(report, tier, body?.skipCache === true, variant)
-    if (!data.text.trim()) {
-      return c.json<APIResponse<null>>({ success: false, error: 'empty block text' }, 500)
-    }
-    return c.json<APIResponse<typeof data>>({ success: true, data })
-  } catch (error: any) {
-    console.error('Write block v3 error:', error)
-    return c.json<APIResponse<null>>({ success: false, error: `Failed to write block v3: ${error?.message ?? String(error)}` }, 500)
-  }
-})
-
 // 简报整篇标题。v3 链路的拼装在 backend 用代码做（三节、<u> 条目全是确定性的），
 // 只剩「给整篇起个名」这一次调用，沿用旧链路同一个 prompt，标题风格不变。
 app.post('/meridian/brief-title', async (c) => {
@@ -1090,47 +736,6 @@ app.post('/meridian/brief-title', async (c) => {
   } catch (error: any) {
     console.error('Brief title error:', error)
     return c.json<APIResponse<null>>({ success: false, error: `Failed to generate brief title: ${error?.message ?? String(error)}` }, 500)
-  }
-})
-
-app.post('/meridian/assemble-brief', async (c) => {
-  try {
-    const body = await c.req.json()
-    const loaded = await loadReportsFromR2(c.env, body?.reportKeys)
-    if (!loaded.ok) return c.json<APIResponse<null>>({ success: false, error: loaded.error }, 400)
-
-    const skeleton = body?.skeleton
-    if (!skeleton || !Array.isArray(skeleton.main) || !Array.isArray(skeleton.isolated)) {
-      return c.json<APIResponse<null>>({ success: false, error: 'skeleton {main, isolated} is required' }, 400)
-    }
-    if (!Array.isArray(body?.blocks) || body.blocks.length === 0) {
-      return c.json<APIResponse<null>>({ success: false, error: 'blocks must be a non-empty array' }, 400)
-    }
-
-    const service = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    const result = await service.assembleBrief(loaded.reports, skeleton as BriefSkeleton, body.blocks)
-    if (!result.success) {
-      return c.json<APIResponse<null>>({ success: false, error: 'Failed to assemble brief', metadata: { details: result.error } }, 500)
-    }
-
-    return c.json<APIResponse<BriefContent>>({
-      success: true,
-      data: { title: result.data!.title, content: result.data!.content },
-      metadata: {
-        content_length: result.data!.content.length,
-        block_count: body.blocks.length,
-        report_count: loaded.reports.length,
-        // 覆盖对账：b′ 下这是**确定已知**的调用结果而非判官推断，dropped 恒等于块 step 失败数
-        coverage: result.data!.coverage,
-        model_used: result.data!.model,
-        // 传感器读数（只报不改），backend 落 observability
-        hygiene_findings: result.hygiene ?? [],
-        consistency_findings: result.consistency ?? [],
-      },
-    })
-  } catch (error: any) {
-    console.error('Brief assembly error:', error)
-    return c.json<APIResponse<null>>({ success: false, error: 'Failed to assemble brief', metadata: { details: error.message } }, 500)
   }
 })
 
@@ -1341,90 +946,6 @@ app.post('/meridian/chat', async (c) => {
       success: false,
       error: 'Failed to process chat request',
       metadata: { details: error.message }
-    }, 500)
-  }
-})
-
-// ============================================================================
-// Status and Monitoring - 简化版
-// ============================================================================
-
-app.get('/meridian/status', (c) => {
-  try {
-    const aiGatewayService = new AIGatewayService(c.env)
-    
-    return c.json<APIResponse<any>>({ 
-      success: true,
-      data: {
-        service: 'meridian-ai-worker',
-        version: '2.0.0-simplified',
-        status: 'active',
-        endpoints: {
-          // 核心工作流端点
-          article_analysis: '/meridian/article/analyze',
-          embedding_generation: '/meridian/embeddings/generate', 
-          story_validation: '/meridian/story/validate',
-          // 情报分析端点
-          intelligence_batch_analysis: '/meridian/intelligence/analyze-stories',
-          intelligence_single_analysis: '/meridian/intelligence/analyze-single-story',
-          brief_generation: '/meridian/generate-final-brief',
-          brief_tldr: '/meridian/generate-brief-tldr',
-          brief_summary: '/meridian/generate-brief-summary',
-          // 通用端点
-          chat: '/meridian/chat',
-          health: '/health'
-        },
-        workflow: {
-          description: '聚类分析 → 故事验证 → 情报分析 → 简报生成',
-          data_flow: 'ClusteringResult → ValidatedStories → IntelligenceReports → FinalBrief',
-          architecture: 'Clean Architecture - 服务职责分离，代码简洁易读',
-          input_formats: {
-            story_validation: 'ClusteringResult + articlesData (MinimalArticleInfo[]) → ValidatedStories',
-            intelligence_batch_analysis: 'ValidatedStories + ArticleDataset → IntelligenceReports',
-            intelligence_single_analysis: 'Story + Article[] → IntelligenceReport',
-            brief_generation: 'Array of StoryAnalysis objects'
-          },
-          refactored_services: {
-            description: '重构后的服务架构',
-            features: [
-              'StoryValidationService - 故事验证服务',
-              'IntelligenceService - 情报分析服务',
-              'BriefGenerationService - 简报生成服务',
-              '统一类型管理 - types/ 目录统一管理',
-              '通用工具函数 - utils/ 目录分离',
-              '简洁端点实现 - 只保留端点定义'
-            ]
-          }
-        },
-        providers: aiGatewayService.getAvailableProviders()
-      }
-    })
-  } catch (error) {
-    return c.json<APIResponse<null>>({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, 500)
-  }
-})
-
-app.get('/test', async (c) => {
-  try {
-    const aiGatewayService = new AIGatewayService(c.env)
-    
-    return c.json<APIResponse<any>>({
-      success: true,
-      data: {
-        service: 'meridian-ai-worker',
-        message: 'Service is operational',
-        providers: aiGatewayService.getAvailableProviders(),
-        capabilities: ['chat', 'embedding', 'intelligence', 'story_validation', 'brief_generation']
-      }
-    })
-  } catch (error) {
-    console.error('Service test error:', error)
-    return c.json<APIResponse<null>>({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
     }, 500)
   }
 })

@@ -30,13 +30,21 @@ export function formatReportDate(date: Date): FormattedDate {
   };
 }
 
-export function generateReportSlug(date: Date): string {
-  const { month, day, year } = formatReportDate(date);
-  return `${month.toLowerCase()}-${day}-${year}`;
-}
-
 export function ensureDate(dateInput: Date | string | null | undefined): Date {
   return dateInput ? new Date(dateInput) : new Date();
+}
+
+export function formatScrapeFrequency(scrapeFrequency: number): string {
+  switch (scrapeFrequency) {
+    case 1:
+      return 'Hourly';
+    case 2:
+      return '4 Hours';
+    case 3:
+      return '6 Hours';
+    default:
+      return 'Daily';
+  }
 }
 
 const DB_CONTEXT_KEY = '_meridianDb';

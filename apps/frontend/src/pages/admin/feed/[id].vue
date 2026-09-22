@@ -43,23 +43,6 @@ if (feedError.value) {
 type FeedDetails = NonNullable<typeof feedDetails.value>;
 type Article = NonNullable<FeedDetails['articles']>[number];
 
-const formatDate = (dateStr: string | undefined) => {
-  if (dateStr === undefined) {
-    return '-';
-  }
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) {
-    return '-';
-  }
-  const Y = date.getFullYear();
-  const M = String(date.getMonth() + 1).padStart(2, '0');
-  const D = String(date.getDate()).padStart(2, '0');
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  const s = String(date.getSeconds()).padStart(2, '0');
-  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
-};
-
 const getStatusColor = (status: Article['status']) => {
   switch (status) {
     case 'PROCESSED':
@@ -96,15 +79,6 @@ const getQualityColor = (quality: Article['content_quality']) => {
     default:
       return 'text-gray-600';
   }
-};
-
-// modal state for analysis view
-const selectedArticle = ref<Article | null>(null);
-const showAnalysisModal = ref(false);
-
-const viewAnalysis = (article: Article) => {
-  selectedArticle.value = article;
-  showAnalysisModal.value = true;
 };
 
 // watch for filter/sort changes and refresh data
@@ -246,19 +220,13 @@ async function deleteSource() {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr
-                v-for="article in feedDetails.articles"
-                :key="article.id"
-                class="hover:bg-gray-50 cursor-pointer"
-                @click="viewAnalysis(article)"
-              >
+              <tr v-for="article in feedDetails.articles" :key="article.id" class="hover:bg-gray-50">
                 <td class="px-2 py-2">
                   <div class="flex items-center">
                     <a
                       :href="article.url"
                       target="_blank"
                       class="text-blue-600 hover:underline truncate max-w-md"
-                      @click.stop
                       >{{ article.title }}</a
                     >
                     <span v-if="!article.hasEmbedding" class="ml-2 text-xs text-yellow-600">(No Embedding)</span>

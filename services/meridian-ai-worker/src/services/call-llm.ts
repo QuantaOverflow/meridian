@@ -70,9 +70,6 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // skipCache 必须为 true：三轮洗牌虽然 prompt 不同不会互相命中，但跨期若有相同候选集
   // 会静默复用旧排序——Gateway 默认缓存曾把一次 eval 的样本量退化成 1。
   story_rank: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000, skipCache: true },
-  // 报告层 v3：抽取（每批 ≤20 句）、去重分组、各方与分歧三种调用。maxTokens 与 frequency_penalty
-  // 沿用原型实测值（各方那次要读整簇原文、产出最长，故按最大的给，单次调用再按需覆盖）。
-  report_v3: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.2 },
   // 简报块 v6：窗口标重点 + 一次写作，两种调用共用这个 phase（callIndex 区分 R2 key）。
   // maxTokens 8000 与 temperature 0.1 沿用原型实测值（原型 chatJson 的 max_tokens=8000）。
   // **不设 frequency_penalty**：原型没有它，而 v6 与生产的那份对比读数（同 3 簇，写作层

@@ -133,17 +133,6 @@ const toggleSort = (key: keyof Source) => {
     sortOrder.value = 'asc';
   }
 };
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const Y = date.getFullYear();
-  const M = String(date.getMonth() + 1).padStart(2, '0');
-  const D = String(date.getDate()).padStart(2, '0');
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  const s = String(date.getSeconds()).padStart(2, '0');
-  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
-};
-
 const formatTimeAgo = (dateStr: string | null) => {
   if (!dateStr) return 'Never';
   return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
@@ -174,9 +163,7 @@ async function addSource() {
 
 // Add health status computation
 const getSourceHealth = (source: Source) => {
-  const isStale = source.lastChecked
-    ? new Date().getTime() - new Date(source.lastChecked).getTime() > 24 * 60 * 60 * 1000
-    : true;
+  const isStale = isSourceStale(source.lastChecked);
 
   if ((source.errorRate ?? 0) > 10 || isStale) return 'red';
   if ((source.errorRate ?? 0) > 0 || (source.lowQualityRate ?? 0) > 15) return 'yellow';

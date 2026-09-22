@@ -546,6 +546,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
              .limit(articleLimit || 100);
           console.log(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
 
+          // 窗口截短的判别信号。取数是「窗口内按 publish_date 倒序取前 N 篇」，取满 N 就说明
+          // 窗口里还有更旧的合格文章没被看过——**时间窗被 limit 悄悄截短了**，而这在旧代码里
+          // 只能靠事后翻库反推（08-15 那次 2 天窗实际只覆盖 21.1 小时就是这么发现的）。
+          // 取满不等于一定出问题（正好相等也可能），但它是唯一能在日志里直接看见的信号。
+          if (article_ids.length === 0 && queryResult.length >= (articleLimit || 100)) {
+            console.warn(
+              `[AutoBrief] ⚠️ 取数取满上限 ${articleLimit || 100} 篇，时间窗可能被截短：` +
+                `窗口设定 ${timeRangeDays} 天，但更旧的合格文章不会进入本期。` +
+                `若持续出现，调高 CRON_BRIEF_PARAMS.ARTICLE_LIMIT。`
+            );
+          }
+
           // 验证嵌入向量有效性
           const validArticles = queryResult.filter(row => 
             Array.isArray(row.embedding) && row.embedding.length === 384

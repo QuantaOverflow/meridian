@@ -34,7 +34,7 @@
 ## 快速开始
 
 ```bash
-cd scripts/eval/clustering
+cd eval/clustering
 S=../../../apps/backend/prototypes/_data/cluster-sweep
 
 pnpm run score -- --window=F2 --min=3 $S/F2-fine-avg-t0.10.json      # 产品口径（主用）

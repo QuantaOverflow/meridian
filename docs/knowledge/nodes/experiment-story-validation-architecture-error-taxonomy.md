@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治故事过拆", "设计验收门"],
   "scope": "story-validation 环节的 7 个架构臂对照，244 条产出标注，按成员集去重后 113 个唯一成员集人工严口径标注（correct/umbrella/wrongPair/borderline 四分类）",
-  "source": "scripts/eval/story-validation/rubric.md（HEAD 版本，随本轮清理被删除，可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或 commit b7ab0ea 恢复查看）第 1 节与第 6 节；commit b7ab0ea 提交信息本身",
+  "source": "eval/story-validation/rubric.md（HEAD 版本，随本轮清理被删除，可用 `git show HEAD:eval/story-validation/rubric.md` 或 commit b7ab0ea 恢复查看）第 1 节与第 6 节；commit b7ab0ea 提交信息本身",
   "conditions": [
     "7 个架构臂具体是哪些未在 rubric.md 中逐一列出，只区分『整簇自由划』与『几何预分组』两大类",
     "umbrella 定义：故事内有真核（≥2 篇确实同一发生）但混入了别的发生；wrongPair 定义：压根没有真核，成员是题材/地域/人物相似的不同发生被硬凑",

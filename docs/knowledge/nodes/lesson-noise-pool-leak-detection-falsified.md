@@ -6,7 +6,7 @@
   "date": "2026-09-20",
   "status": "recorded",
   "tasks": ["改聚类"],
-  "scope": "两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `scripts/eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）",
+  "scope": "两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）",
   "source": "docs/adr/0003-cluster-as-brief-block.md「已证伪，别重跑」第 6 条；2026-09-20 本地重建 ml-service 镜像复跑两窗金标时的探针",
   "conditions": [
     "口径必须写清 --min=3、宽松 members+related、两窗中哪一窗——这轮一开始误用 --min=2 复测，得到与 ADR 对不上的读数，一度误判「ADR 本身有错」，改回 --min=3 才对齐；后续任何人复用这条经验时必须先核对口径",

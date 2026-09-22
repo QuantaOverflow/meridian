@@ -1,6 +1,6 @@
 // 确定性自测(不碰 LLM):每条断言用 2026-07-15 的【真实踩坑场景】当测试向量,不用编的例子。
 // 跑法(_shared 无自身 package.json,借任一 harness 的 tsx,与 metrics.test.ts 同):
-//   cd scripts/eval/intel-grounding && npx tsx ../_shared/hygiene.test.ts
+//   cd eval/intel-grounding && npx tsx ../_shared/hygiene.test.ts
 import {
   checkIndependentSamples, checkRoundTrip, cacheIfValid, checkDetectorSees,
   checkZeroHitsNeedsReview, checkAgainstPriorReading, report, type HygieneIssue,

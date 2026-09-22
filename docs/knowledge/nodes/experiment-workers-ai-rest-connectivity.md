@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["提高链路健壮性", "治事实关系错"],
   "scope": "本地开发Workers AI连接诊断，现有Wrangler OAuth+官方REST；非长期SLA或语义验收",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/CONNECTION-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/CONNECTION-RESULT.md",
   "conditions": ["固定真实glm-4.7-flash/thinking off，官方REST指定Gateway/skip-cache，绕过wrangler remote binding", "现有凭证只进程内使用，不输出保存、不新登录修改权限；首失败停，有界组测试，保留401", "组间时间/认证会话存在变化，不能因果证明binding是唯一根因；Gateway观测日志未另查"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"measure-retry-signature-gap"}],

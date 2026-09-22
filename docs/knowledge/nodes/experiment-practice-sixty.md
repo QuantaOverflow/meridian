@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "glm-4.7-flash，五个 dev 簇，60 道人工练习；共同有效 54 题；非盲单标注，非独立验证",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
   "conditions": ["Workers AI 是被测模块；参考标签与语义判断来自当前 Codex，无远程 judge"],
   "evidence_origin": "local_record",
   "relations": [{"type": "yields", "to": "lesson-practice-typed-anchors"}],

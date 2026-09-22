@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "提高链路健壮性"],
   "scope": "v0.7/v0.8/v0.9同七开发目标真实迭代与v0.9.1真实原输出离线回放，非独立验证或整句验收",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/TARGET-ONLY-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/TARGET-ONLY-RESULT.md",
   "conditions": ["抽取阶段仅TARGET，身份消歧独立暂缓；固定Workers AI REST/glm，无远程judge/heldout", "v0.8移除LLM复制与序号任务，四引用接口；v0.9代码报告词清单与遗漏/重叠真实错误反馈一次", "v0.9.1只对唯一长度保持大小写匹配还原原文及共享原主语明确and later兄弟报告截界，保留变换收据；底层精确校验不放宽"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

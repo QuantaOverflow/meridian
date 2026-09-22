@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["演化组合架构"],
   "scope": "dev 五簇上与人工杂质标注对照；2026-09-19 在 heldout 的 c51(116 篇/41% 杂质)上端到端验过一次；未验跨日期语料",
-  "source": "scripts/eval/cluster-to-brief/arms/structure-router/run.mjs（mergeStorylines/route）+ out/structure-router/structure-c<id>.json",
+  "source": "eval/cluster-to-brief/arms/structure-router/run.mjs（mergeStorylines/route）+ out/structure-router/structure-c<id>.json",
   "conditions": [
     "必须用 e5 合并后的 canonicalStorylineKey，不是合并前的 storylineKey：后者在 c36 上只匹配 8 篇，而真实主导成分是 56 篇",
     "主导成分少于 2 篇时跳过筛选，不把簇筛空"

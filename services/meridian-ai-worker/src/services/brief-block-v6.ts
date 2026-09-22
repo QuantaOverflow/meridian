@@ -8,7 +8,7 @@
  *              档，tier=brief 走 1–2 句的短档）
  *   5 补出处   句中数字/引语不在所引原句里 → 在材料池里找字面包含它的原句补上        代码
  *
- * 移植自原型 `scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
+ * 移植自原型 `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
  * `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 这一条路径。
  * 纯函数在 utils/brief-block-v6.ts，prompt 在 prompts/briefBlockV6.ts。
  *

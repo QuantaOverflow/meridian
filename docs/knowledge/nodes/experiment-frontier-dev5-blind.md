@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["演化组合架构"],
   "scope": "dev 五簇（1/7/36/37/43），heldout 两簇已被消耗、无干净验收集。n=5 且七簇全部来自同一次生产运行（cron-brief-1789477249362，2026-09-15），不是从簇的总体独立抽样",
-  "source": "scripts/eval/cluster-to-brief/frontier.mjs 与 out/frontier.json、out/_blind/",
+  "source": "eval/cluster-to-brief/frontier.mjs 与 out/frontier.json、out/_blind/",
   "conditions": [
     "**盲判**：判定包拷进洗过牌的代号目录（P/Q/R/S/T），判官看不到臂名，判完按 MAP.json 回填",
     "五条轴在跑之前声明：核心层覆盖、正确性(fatal/hard/distortion)、引用不足率、块内冗余率、成本",

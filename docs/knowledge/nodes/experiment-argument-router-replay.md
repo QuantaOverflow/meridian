@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错", "提高链路健壮性"],
   "scope":"v0.13同四开发候选，真实v0.12动作加确定性论元路由，非新远程全链/独立验证/正常整句通过",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
   "conditions":["不修改或人工填入模型输出，复用v0.12真实动作与v0.11 p11配对/He解析，无远程judge/heldout/生产融合", "只支持accelerate/deploy辅助词简单结构及完全匹配in NP that原speaker原verb关系结构，名词头仅提出指代建议；限定语未比较且保留receipt", "主Codex本地非盲核对新命题/参数对应，hash语义门继续保留；未支持/否定/协调/嵌套/重复引用待定"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

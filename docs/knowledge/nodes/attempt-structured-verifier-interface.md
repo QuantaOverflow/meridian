@@ -7,7 +7,7 @@
   "status": "tested",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "structured-v0.2部分真实glm烟测，1题完整/1题转换部分；另有本地人工结构测试，不读heldout，无整体效果结论",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
   "conditions": ["候选/证据独立转换；代码仅在可审计对齐前提下比较；扩展上下文另版本重审标签", "用户要求跑真实LLM，审批通过；人工参考图不进入模型，judge为本地Codex"],
   "evidence_origin": "local_record",
   "relations": [

@@ -14,11 +14,16 @@ scratch/
 worklist/
 traces/
 sources/
-fixtures/
 .cache/
 .r2cache/
 *.log
 _rescore-cache.json
+
+# 不挡 fixtures/：按落位规则，输入 fixture 是「能让别人复现或验证」的东西，入 git。
+# 曾经挡过（2026-09-22 加），没立刻出事只因为 git 对已跟踪文件不看 gitignore——
+# 直到 2026-09-23 把 scripts/eval/ 整体搬到 eval/，路径一变它们就成了「新文件」，
+# cluster-to-brief 的 10 份人工判据清单当场被静默挡掉。
+# 已退役 harness 遗留的 fixtures/ 靠删目录时一并清，不靠这条兜底。
 
 # 例外：入库的金标、数据集与说明书不受上面规则影响。
 !*/gold/

@@ -83,110 +83,6 @@ importers:
         specifier: ^4.14.0
         version: 4.93.0(@cloudflare/workers-types@4.20250519.0)
 
-  apps/backend/prototypes/block-writer:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/brief-v3-prod: {}
-
-  apps/backend/prototypes/brief-writer-v3: {}
-
-  apps/backend/prototypes/cluster-judge-step:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/cluster-postprocess:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/cluster-redundancy:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/cluster-story-judge:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/intel-latency:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/intel-pipeline:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/intel-schema-v2:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  apps/backend/prototypes/local-grounding: {}
-
-  apps/backend/prototypes/srl-extractive: {}
-
   apps/frontend:
     dependencies:
       date-fns:
@@ -254,6 +150,46 @@ importers:
         specifier: ^3.24.3
         version: 3.24.3
 
+  eval/article-quality:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.19
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.3
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
+  eval/cluster-to-brief: {}
+
+  eval/clustering:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.19
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.3
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
+  eval/scorer-recall: {}
+
+  eval/scrape-quality:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.19
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.3
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
   packages/database:
     dependencies:
       drizzle-orm:
@@ -277,102 +213,6 @@ importers:
         version: 0.31.0
       typescript:
         specifier: ^5.8.2
-        version: 5.8.2
-
-  scripts/eval/article-quality:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/cluster-to-brief: {}
-
-  scripts/eval/clustering:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/error-analysis:
-    dependencies:
-      postgres:
-        specifier: ^3.4.5
-        version: 3.4.5
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/faithfulness:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/intel-grounding:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/offline-review:
-    dependencies:
-      postgres:
-        specifier: ^3.4.5
-        version: 3.4.5
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  scripts/eval/scorer-recall: {}
-
-  scripts/eval/scrape-quality:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
         version: 5.8.2
 
   services/meridian-ai-worker:
@@ -408,58 +248,6 @@ importers:
       wrangler:
         specifier: ^3.22.0
         version: 3.114.8(@cloudflare/workers-types@4.20250519.0)
-
-  services/meridian-ai-worker/prototypes/rarr-guard:
-    dependencies:
-      postgres:
-        specifier: ^3.4.5
-        version: 3.4.5
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  services/meridian-ai-worker/prototypes/rarr-narrow-oracle:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  services/meridian-ai-worker/prototypes/rarr-retrieval:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  services/meridian-ai-worker/prototypes/sibling-context:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.19
-        version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.19.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
 
   services/meridian-ml-service/cf-worker:
     dependencies:

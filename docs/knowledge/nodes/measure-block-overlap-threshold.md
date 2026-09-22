@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "report 76/77/78 三期简报、约 900 个块对；判为阳性/阴性的共 7 对，其中只有 0.52 与 0.19 两对做过人工逐句核实，其余靠标题相似 + 共享专名判断。n=3 期，不是验过的精度，没有 precision/recall 读数",
-  "source": "services/meridian-ai-worker/src/utils/block-overlap.ts 与 scripts/eval/block-overlap/baseline.ts 的头注释（引入于 commit c4988c1，已于 2026-09-22 随奥卡姆剃刀清理删除；读数仅存于本节点）",
+  "source": "services/meridian-ai-worker/src/utils/block-overlap.ts 与 eval/block-overlap/baseline.ts 的头注释（引入于 commit c4988c1，已于 2026-09-22 随奥卡姆剃刀清理删除；读数仅存于本节点）",
   "conditions": [
     "判据为传感器自身的 cont（块间内容重合度），不是余弦相似度",
     "全部读数来自离线 baseline 脚本，传感器从未接入 assembleBrief，没有任何线上运行数据",

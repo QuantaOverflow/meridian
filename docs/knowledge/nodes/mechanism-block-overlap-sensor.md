@@ -7,7 +7,7 @@
   "status": "historical",
   "tasks": ["设计验收门"],
   "scope": "一期简报内部的块两两比较；英文小写正文；离线运行。从未接入 assembleBrief，无线上数据",
-  "source": "services/meridian-ai-worker/src/utils/block-overlap.ts + scripts/eval/block-overlap/baseline.ts（commit c4988c1 引入，已于 2026-09-22 随清理删除；机制描述仅存于本节点）",
+  "source": "services/meridian-ai-worker/src/utils/block-overlap.ts + eval/block-overlap/baseline.ts（commit c4988c1 引入，已于 2026-09-22 随清理删除；机制描述仅存于本节点）",
   "conditions": [
     "同一期内块数 ≥2，且块正文足够长（短块会让归一量虚高，必须同时读绝对量）",
     "阈值 0.22 的来历与样本量见 measure-block-overlap-threshold，换 prompt 需重标"

@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "mechanical-v0.5真实glm；计划7开发TARGET，仅p11正常候选完成，源句两次基础设施失败，5未运行",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-REAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-REAL-RESULT.md",
   "conditions": ["用户明确要求真实重跑，角色由LLM抽取，受限字段由代码生成，不调用远程judge/heldout", "首个Network connection lost审计预留并重启一次，剩余第二尝试仍失败即停，不再恢复；服务关闭"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

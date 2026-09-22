@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错","提高链路健壮性"],
   "scope":"20新开发文章正常错误40对照，主Codex编写非盲，窄语法字段比较+整句模型语义门；非完整分解或生产验收",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
   "conditions":["源/候选窄因子独立抽取，哈希原文位置；完整事件键匹配后代码比较，coverageVerified始终false，未知不通过", "LLM输出代码原文chunk整数选择，不再复制quote或生成offset/sourceIndex；batch2并保留完整半径2上下文，每实验最多25逻辑50HTTP90000tokens，每请求60秒", "冻结前后本地审原文，无远程judge；glm-4.7-flash Workers AI REST+Gateway skip-cache且thinking关闭，max_tokens5000，temperature0，最终heldout未读；新文章但关联底层事件可能重叠"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],
@@ -21,4 +21,4 @@
 }
 ---
 
-plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在scripts/eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。
+plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。

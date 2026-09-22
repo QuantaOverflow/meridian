@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["演化组合架构"],
   "scope": "heldout 两簇(28 us airman 16 篇/13% 杂质、51 china 116 篇/41% 杂质)。**这一轮把它们消耗掉了** —— 对这三个候选,它们不再是未见过的数据",
-  "source": "scripts/eval/cluster-to-brief/out/{direct-raw,direct-raw-routed-storyline,_production-r94}/ 的 c28/c51 产出与判定",
+  "source": "eval/cluster-to-brief/out/{direct-raw,direct-raw-routed-storyline,_production-r94}/ 的 c28/c51 产出与判定",
   "conditions": [
     "**heldout 此前从未被任何臂跑过**(2026-09-18 被 structured-verifier 那条线拿去造过注入题,但没有臂在上面产出过成稿)",
     "两个原型臂盲判(代号 X/Y 洗牌),生产无法盲判(它一句出处都没有)",

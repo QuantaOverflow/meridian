@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "practice-v1 七个已知错误题的现有 baseline/rules 输出；非盲回顾，未新增模型调用",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
   "conditions": ["候选、原句和原模型输出均来自已完成练习；不能识别隐藏推理阶段"],
   "evidence_origin": "local_record",
   "relations": [{"type": "yields", "to": "lesson-relation-factor-observability"}],

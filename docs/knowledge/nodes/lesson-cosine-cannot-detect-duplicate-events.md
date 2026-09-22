@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "本地 e5-small(384 维已归一化)对事件清单里的单句事件描述;未试别的向量模型、未试加数字/实体特征",
-  "source": "scripts/eval/cluster-to-brief/build-checklist.mjs 的 --merge-audit",
+  "source": "eval/cluster-to-brief/build-checklist.mjs 的 --merge-audit",
   "conditions": [
     "真重复的判定是肉眼确认(c36 三对),样本很小",
     "只测了 e5-small 的裸余弦,没测「共享 articleId + 数字集合交集 + 实体重叠」这类组合判据"

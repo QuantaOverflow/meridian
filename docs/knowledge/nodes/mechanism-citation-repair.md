@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["治事实关系错", "设计验收门"],
   "scope": "direct-raw exec 臂(DIRECT_RAW_WRITE_REPAIR=mech);materials = 本次写作用到的全部重点原句",
-  "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(repairCitations / contextOf)",
+  "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(repairCitations / contextOf)",
   "conditions": ["成稿逐句带出处", "比对只认字面包含(数字去千分位、引语归一大小写与标点)"],
   "evidence_origin": "local_record",
   "relations": [

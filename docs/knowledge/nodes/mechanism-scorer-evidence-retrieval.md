@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["设计验收门"],
   "scope": "cluster-to-brief 慢档；dev 五簇上用过，heldout 未验，跨日期语料未验",
-  "source": "scripts/eval/cluster-to-brief/retrieval.mjs（buildIndex/topK）与 build-judge-pack.mjs",
+  "source": "eval/cluster-to-brief/retrieval.mjs（buildIndex/topK）与 build-judge-pack.mjs",
   "conditions": [
     "簇内句向量按簇缓存，缓存键带句子条数与首末句 —— 静默用旧向量是最危险的失效方式（检索照样出结果，全是错的）",
     "不能换成整簇一次直读：[[measure-detection-ceiling]] 实测整簇判官召回只有 26%"

@@ -50,7 +50,7 @@ step 超时约束,所以用全量——那才是聚类真实交给下游的东�
 ## dev / heldout 分割
 
 在 dev 上反复调,**heldout 只在最后报一次**。混用就是过拟合
-(`scripts/eval/article-quality/meta-eval.ts` 里那条设计:迭代只对 dev 调,最终读数只在 heldout 报)。
+(`eval/article-quality/meta-eval.ts` 里那条设计:迭代只对 dev 调,最终读数只在 heldout 报)。
 
 > **2026-09-18:heldout 两簇已被消耗。** `us airman` 28 与 `china` 51 的文章被
 > `arms/atomic-evidence/structured-verifier/` 那条线拿去造人工注入题并跑过冻结验收

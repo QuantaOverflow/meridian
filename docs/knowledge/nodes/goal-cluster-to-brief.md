@@ -10,7 +10,7 @@
     "演化组合架构"
   ],
   "scope": "固定 dev 与 heldout 分割；heldout 仅最终验收",
-  "source": "scripts/eval/cluster-to-brief/README.md",
+  "source": "eval/cluster-to-brief/README.md",
   "conditions": [],
   "evidence_origin": "local_record",
   "relations": [],

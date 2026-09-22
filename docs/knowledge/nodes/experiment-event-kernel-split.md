@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错", "提高链路健壮性"],
   "scope":"v0.12四p12候选/源事件的真实拆分转换，既有开发样本，非独立验证",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
   "conditions":["固定Workers AI REST/glm，动作仅命题、参与者命题及原同句，无邻句/兄弟候选/远程judge/heldout", "8逻辑/16HTTP/12000tokens上限，单请求60秒，1次实际引用错误反馈；p11配对/解析复用旧输出", "代码要求动作词形和两参与者唯一对应，精确引用不计语义验收"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

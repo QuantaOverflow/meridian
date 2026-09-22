@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错", "提高链路健壮性"],
   "scope":"60开发练习/32错误点的旧真实基线与少量已复核关系补丁缓存回放，非分解原型全量真实运行或独立验证",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FULL-PRACTICE-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FULL-PRACTICE-RESULT.md",
   "conditions":["完整保留60题及双错误父句，接口失败单列，不把未知算检出；无新远程调用/judge/heldout/生产融合", "连续数量+状态+单位有限语法，只支持areas/elements的受损毁坏状态，无固定数字/人名/题号，源群体及状态未建立必须本地复核", "路由不读参考标签，旧基线文本/证据hash一致；复用v0.13语义hash门，本地Codex非盲数量审核绑定完整routing/hash及quantity/hash", "宽工作点继承旧基线放行的未覆盖风险；严格工作点无完整覆盖证书便转复核，两者只是反事实回放"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

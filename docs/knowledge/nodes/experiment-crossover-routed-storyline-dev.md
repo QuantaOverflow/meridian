@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["演化组合架构"],
   "scope": "dev 五簇（7/1/36/37/43），heldout 未跑。慢档读数出自旧 scorer（证据=成稿自引的单句），该 scorer 的缺陷当天另测出来，见 lesson-scorer-steers-search——覆盖与快档不受影响，硬错/失真的绝对值不可信",
-  "source": "scripts/eval/cluster-to-brief/out/{direct-raw,direct-raw-routed,direct-raw-routed-storyline}/ 与 out/verify-*-dev.json、out/slow-*-dev.json",
+  "source": "eval/cluster-to-brief/out/{direct-raw,direct-raw-routed,direct-raw-routed-storyline}/ 与 out/verify-*-dev.json、out/slow-*-dev.json",
   "conditions": [
     "四个臂同一批固定输入（fixtures 的 7 簇，dev 5 个），同一套快档脚本",
     "慢档判官为 Claude subagent（继承主会话 opus），非 glm；判定包合并两臂句子、打散去标识后盲判，同一句在两臂都出现时只判一次回填两边",

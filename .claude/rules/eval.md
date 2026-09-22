@@ -1,13 +1,13 @@
 ---
 paths:
   - "eval/**"
-  - "scripts/eval/**"
+  - "eval/**"
 ---
 
 # eval 硬规矩
 
 这些是写 eval 代码时必须遵守的约束。字段含义、函数签名一类的参考资料在
-`scripts/eval/cluster-to-brief/CONTRACTS.md`，需要时再读，不要整份背下来。
+`eval/cluster-to-brief/CONTRACTS.md`，需要时再读，不要整份背下来。
 
 ## 判据不得带架构假设
 

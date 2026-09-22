@@ -8,7 +8,7 @@ packages:
   # 纳入后 `pnpm install` 一次装完，各目录只留 package.json。
   - apps/*/prototypes/*
   - services/*/prototypes/*
-  - scripts/eval/*
+  - eval/*
 
 ignoredBuiltDependencies:
   - workerd

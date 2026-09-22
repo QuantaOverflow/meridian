@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门", "演化组合架构"],
   "scope": "cluster-to-brief harness 的慢档；信度在 c43 上量（两臂各两个独立判官，63 句），反向检验在 c7/c37 上做。heldout 未跑，无人工金标",
-  "source": "scripts/eval/cluster-to-brief/{retrieval.mjs,grading-instructions.mjs,scorer-id.mjs,compare-verdicts.mjs} 与 out/direct-raw{,-grounded}/verdict-c43.judge{A,B}.json",
+  "source": "eval/cluster-to-brief/{retrieval.mjs,grading-instructions.mjs,scorer-id.mjs,compare-verdicts.mjs} 与 out/direct-raw{,-grounded}/verdict-c43.judge{A,B}.json",
   "conditions": [
     "证据由脚本用成稿句去整簇原文检索 top-8（本地 e5-small，384 维已归一化），与成稿引了谁无关",
     "成稿声称的出处另行呈现，只用于新增的 citedSentenceSuffices 一维，守则写明两维互不回改",

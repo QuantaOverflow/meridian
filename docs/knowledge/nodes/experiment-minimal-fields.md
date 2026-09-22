@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "minimal-fields-v0.4；3真实开发命题与1明确合成否定对照，人类固定报告verb/命题，字段分类而非端到端",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MINIMAL-FIELDS-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MINIMAL-FIELDS-RESULT.md",
   "conditions": ["同一冻结输入单字段3请求与三字段组合1请求，另2polarity新请求重复，原文/radius2上下文保留", "先验参考本地测试冻结，提示含通用字段定义，无参考标签入模型；无self-heal、远程judge、heldout或融合", "would conditional/future有类别边界，不能与显式did not漏检混为同强度语义错"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

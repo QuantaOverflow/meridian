@@ -4,7 +4,7 @@
   "title": "自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验",
   "date": "2026-09-17",
   "status": "live",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
   "invalidates_when": "规划表示改变后能生成独立且完整的风险问题，并在正常时序与归因对照上不引入新前提",
   "type": "lesson",
   "tasks": [

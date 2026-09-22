@@ -1,7 +1,7 @@
 // 抓取/解析质量:判 Readability 抽出的"正文"是否其实是抓取/解析失败的产物,或 URL 就非新闻页。
-// 纯函数、零依赖——故可被 backend runtime 与 scripts/eval/scrape-quality 共用(单一真源、免漂移)。
+// 纯函数、零依赖——故可被 backend runtime 与 eval/scrape-quality 共用(单一真源、免漂移)。
 // 签名/规则源自真实数据 + 73 条开放编码金标(precision 1.00 / recall 0.93,详见
-// scripts/eval/scrape-quality 与记忆 scrape-extraction-eval)。
+// eval/scrape-quality 与记忆 scrape-extraction-eval)。
 
 // 抓取/解析失败签名:抓到的"正文"其实是反爬拦截页 / 视频播放器 stub / 登录墙 / 限流页 / 非文章页。
 // gated 签名(视频 / 站点 footer)要求短文本——真文章尾部也常挂视频/footer boilerplate,

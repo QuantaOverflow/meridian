@@ -13,7 +13,7 @@
 检查命令：
 
 ```sh
-node scripts/eval/cluster-to-brief/gold/practice-risk-v1/check.mjs
+node eval/cluster-to-brief/gold/practice-risk-v1/check.mjs
 ```
 
 每簇 12 题，共 30 个对照组：30 条得到证据支持的人工表述、30 条人工错误变体，含 32 个显式错误片段。覆盖主体身份、命名对象、动作强度、归因、时序、数量、模态和因果。来源为当前本地 fixture 正文，使用 `lib.mjs` 的标准句号坐标。未读取 c28/c51 正文、清单或输出。

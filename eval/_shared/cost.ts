@@ -10,7 +10,7 @@
 //   wrap    包住一条命令跑，跑完自动按它的起止时间查 window
 //
 // 跑法（`_shared` 没有自己的 package.json，借任一 harness 的 tsx，与 metrics.test.ts 同）：
-//   cd scripts/eval/faithfulness
+//   cd eval/faithfulness
 //   npx tsx ../_shared/cost.ts dumps ../../../apps/backend/prototypes/brief-writer-v3/out/runs/M3-1789131192155
 //   npx tsx ../_shared/cost.ts window --since=2026-09-11T11:00:00Z --until=2026-09-11T13:00:00Z
 //   npx tsx ../_shared/cost.ts wrap -- node ../../../apps/backend/prototypes/foo/run.ts

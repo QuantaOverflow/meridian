@@ -10,7 +10,7 @@
     "演化组合架构"
   ],
   "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-  "source": "scripts/eval/cluster-to-brief/out/slow-direct-raw-dev.json; scripts/eval/cluster-to-brief/out/slow-structure-router-dev.json; scripts/eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
+  "source": "eval/cluster-to-brief/out/slow-direct-raw-dev.json; eval/cluster-to-brief/out/slow-structure-router-dev.json; eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
   "conditions": [],
   "evidence_origin": "local_record",
   "relations": [

@@ -7,7 +7,7 @@
   "status": "accepted",
   "tasks": ["设计验收门"],
   "scope": "cluster-to-brief 慢档；dev 五簇上跑通，heldout 无干净验收集",
-  "source": "scripts/eval/cluster-to-brief/README.md 的「为什么事实证据由脚本检索」与「判定包指纹」两节",
+  "source": "eval/cluster-to-brief/README.md 的「为什么事实证据由脚本检索」与「判定包指纹」两节",
   "conditions": [
     "取值是在两个候选之间选：被引句 ±2 句窗口 vs 全簇 top-k 检索",
     "窗口取值首测信度更好（0% vs 6%），仍被淘汰 —— 理由是效度而非信度"

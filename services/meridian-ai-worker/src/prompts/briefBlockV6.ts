@@ -1,6 +1,6 @@
 /**
  * 【简报块 v6 · prompt】逐字搬自原型
- * `scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`（`anchorPrompt` / `writePrompt`），
+ * `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`（`anchorPrompt` / `writePrompt`），
  * 取 `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 这一条路径上的
  * 展开结果（ANCHOR_SOURCES=4、WRITE_LEN={max:5,sources:8,exec 文案}、REPAIR_FULL=false）。
  *

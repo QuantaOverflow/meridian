@@ -3,12 +3,12 @@
  * 判据 A：简报块 v6 的纯函数逐字对金标。不调模型，秒级完成。
  *
  * 金标（`test/fixtures/brief-block-v6-golden.json`）是原型
- * `scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs` 在
+ * `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs` 在
  * `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 下冻结的产出。
  * material 的 sha256 前 16 位另行写死在本文件里——金标文件被换掉时它会先炸，
  * 免得「拿一份错金标对自己」这种不报错的错位。
  *
- * ⚠️ 本测试读 `scripts/eval/cluster-to-brief/out/`（gitignored，本地产物）：
+ * ⚠️ 本测试读 `eval/cluster-to-brief/out/`（gitignored，本地产物）：
  *   · 正文    out/_data/d0916/content/<articleId>.txt   ← fetch-dataset.mjs --dataset=d0916 重建
  *   · 重点    out/direct-raw-d0916-write/c<N>-anchors.json
  * 这两份不在的机器上本文件会 skip（而不是静默通过）。
@@ -32,7 +32,7 @@ import {
 } from '../src/utils/brief-block-v6';
 
 const PKG = new URL('..', import.meta.url).pathname;
-const CTB = new URL('../../../scripts/eval/cluster-to-brief/', import.meta.url).pathname;
+const CTB = new URL('../../../eval/cluster-to-brief/', import.meta.url).pathname;
 const ARM = `${CTB}arms/direct-raw/direct-raw.mjs`;
 const GOLDEN = JSON.parse(readFileSync(`${PKG}test/fixtures/brief-block-v6-golden.json`, 'utf8')) as Record<
   string,

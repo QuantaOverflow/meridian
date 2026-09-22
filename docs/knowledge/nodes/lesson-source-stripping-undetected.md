@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "cluster-to-brief 的 grading instructions；证据来自定向抽查（32 句逐句核）与补守则前后的 dev 读数对照",
-  "source": "scripts/eval/cluster-to-brief/grading-instructions.mjs 与 out/frontier.json",
+  "source": "eval/cluster-to-brief/grading-instructions.mjs 与 out/frontier.json",
   "conditions": [
     "补守则同时改变了 packId，全部旧判定被指纹闸自动隔离、重判 —— 前后读数出自不同的两把 scorer，是设计如此，不是可比的 A/B"
   ],

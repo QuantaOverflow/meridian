@@ -6,7 +6,7 @@
 
 ## Decision
 
-**只统一"测量",不动"门"。** 抽一个**类无关**的共享模块 `scripts/eval/_shared/metrics.ts`,四个判官都 import;它对任意 `classes: string[]` 计算并报告统一的一套**单点指标**:per-class 召回、精确率、FPR、Fβ + 总体 κ、balanced accuracy。**每个 harness 现有的门(κ≥0.6 + 召回 floor)一字不改**——新增的精确率/FPR/Fβ 只是"多报几列",不作为闸。"用新指标设新门 / 调操作点"属于后续"优化"阶段,per-harness 按成本单独定。
+**只统一"测量",不动"门"。** 抽一个**类无关**的共享模块 `eval/_shared/metrics.ts`,四个判官都 import;它对任意 `classes: string[]` 计算并报告统一的一套**单点指标**:per-class 召回、精确率、FPR、Fβ + 总体 κ、balanced accuracy。**每个 harness 现有的门(κ≥0.6 + 召回 floor)一字不改**——新增的精确率/FPR/Fβ 只是"多报几列",不作为闸。"用新指标设新门 / 调操作点"属于后续"优化"阶段,per-harness 按成本单独定。
 
 ## Considered Options
 

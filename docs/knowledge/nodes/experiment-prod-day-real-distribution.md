@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["演化组合架构", "设计验收门"],
   "scope": "cron-brief-1789822849701(2026-09-19)当天 selected_for_intel 的 25 簇 818 篇;臂=direct-raw 路由门+主线筛选+最后一步写+exec 篇幅+按报道量必写+mech 修复;k=3;判官=sonnet subagent,未与人工标注对齐",
-  "source": "scripts/eval/cluster-to-brief/datasets/prod-0919.json;判定与分类结果只在本地 scratchpad(未入 git)",
+  "source": "eval/cluster-to-brief/datasets/prod-0919.json;判定与分类结果只在本地 scratchpad(未入 git)",
   "conditions": [
     "判官只拿成稿引用的那几句判,与慢档「证据由判官全簇检索」不是同一把尺,两者读数不可直接比",
     "判官未对齐,精确值不可信(见 lesson-judge-needs-alignment);量级可信",

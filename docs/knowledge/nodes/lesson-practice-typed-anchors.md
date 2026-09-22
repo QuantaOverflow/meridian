@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "practice-risk-v1 人工材料上的当前 glm 核验接口，不能推论所有结构化核验无效",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
   "conditions": ["代码槽首个显式词作为锚点；问题要求读完整候选，仍发生关系漏判"],
   "evidence_origin": "local_record",
   "relations": [{"type": "cautions", "to": "attempt-constrained-risk-slots", "attributes": {"scope": "practice-risk-v1 人工材料上的当前 glm 填槽与精确词锚点核验接口仍漏判角色、方向和状态关系；不能推论所有结构化核验无效"}}],

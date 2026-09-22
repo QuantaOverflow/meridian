@@ -12,7 +12,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "模型从候选文本自动生成独立且完整的窄问题",
@@ -34,7 +34,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "模型定位风险槽，代码生成问题，避免自由问题漂移",
@@ -56,7 +56,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/README.md",
+      "source": "eval/cluster-to-brief/arms/direct-raw/README.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "全量原文窗口产生高召回候选，再按 ID 选材与确定性组装",
@@ -78,7 +78,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/evidence-graph/README.md",
+      "source": "eval/cluster-to-brief/arms/evidence-graph/README.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "先提取原子观察，再以跨文章和跨发布者共识准入",
@@ -100,7 +100,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "限制每个核验调用只能接触所有当前原子共同声明的证据",
@@ -361,7 +361,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "保留候选覆盖，只核验拟入选候选，失败后从同事件槽替补",
@@ -383,7 +383,7 @@
         "演化组合架构"
       ],
       "scope": "五个 dev 簇的 60 道人工练习；模型槽仅第一批四题有下游调用；未使用 heldout",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-GOAL.md",
       "conditions": [
         "固定原句证据；仅练习、非盲单 Codex 标签"
       ],
@@ -406,7 +406,7 @@
         "演化组合架构"
       ],
       "scope": "dev 五簇；heldout 两簇已被别的线消耗，未跑。慢档读数来自旧 scorer（单句证据切片），其缺陷见 lesson-scorer-steers-search",
-      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs（DIRECT_RAW_ROUTE_GATE / DIRECT_RAW_STORYLINE_FILTER 两个开关）",
+      "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs（DIRECT_RAW_ROUTE_GATE / DIRECT_RAW_STORYLINE_FILTER 两个开关）",
       "conditions": [
         "两个开关都读 out/structure-router/structure-c<id>.json，必须先跑 arms/structure-router/run.mjs",
         "筛文章后窗口切分改变，不能复用 direct-raw 的窗口缓存；只加路由门时可以复用",
@@ -432,7 +432,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "用明确单风险问题代替自由全维度展开，减少假维度误杀",
@@ -454,7 +454,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/structure-router/README.md",
+      "source": "eval/cluster-to-brief/arms/structure-router/README.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "hypothesis": "先识别事件结构，再从主线分层取原文写作",
@@ -476,7 +476,7 @@
         "演化组合架构"
       ],
       "scope": "structured-v0.2部分真实glm烟测，1题完整/1题转换部分；另有本地人工结构测试，不读heldout，无整体效果结论",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
       "conditions": [
         "候选/证据独立转换；代码仅在可审计对齐前提下比较；扩展上下文另版本重审标签",
         "用户要求跑真实LLM，审批通过；人工参考图不进入模型，judge为本地Codex"
@@ -670,8 +670,8 @@
       "tasks": [
         "设计验收门"
       ],
-      "scope": "scripts/eval/cluster-to-brief 整个模块;不含生产代码",
-      "source": "scripts/eval/cluster-to-brief/CONTRACTS.md;docs/adr/0005-eval-bootstrap-and-ruler-recalibration.md",
+      "scope": "eval/cluster-to-brief 整个模块;不含生产代码",
+      "source": "eval/cluster-to-brief/CONTRACTS.md;docs/adr/0005-eval-bootstrap-and-ruler-recalibration.md",
       "conditions": [
         "判官是 Claude Code 的 subagent,零 API 费;引入 Inspect 会把它改成付费 API 调用",
         "生成侧全在 JS,Inspect 的 solver 需 shell 调 JS,多一层边界"
@@ -718,7 +718,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "action": "暂缓自由 planner 融合；下一轮验证受约束风险槽",
@@ -782,7 +782,7 @@
         "设计验收门"
       ],
       "scope": "cluster-to-brief 慢档；dev 五簇上跑通，heldout 无干净验收集",
-      "source": "scripts/eval/cluster-to-brief/README.md 的「为什么事实证据由脚本检索」与「判定包指纹」两节",
+      "source": "eval/cluster-to-brief/README.md 的「为什么事实证据由脚本检索」与「判定包指纹」两节",
       "conditions": [
         "取值是在两个候选之间选：被引句 ±2 句窗口 vs 全簇 top-k 检索",
         "窗口取值首测信度更好（0% vs 6%），仍被淘汰 —— 理由是效度而非信度"
@@ -830,7 +830,7 @@
         "提高链路健壮性"
       ],
       "scope": "v0.13同四开发候选，真实v0.12动作加确定性论元路由，非新远程全链/独立验证/正常整句通过",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
       "conditions": [
         "不修改或人工填入模型输出，复用v0.12真实动作与v0.11 p11配对/He解析，无远程judge/heldout/生产融合",
         "只支持accelerate/deploy辅助词简单结构及完全匹配in NP that原speaker原verb关系结构，名词头仅提出指代建议；限定语未比较且保留receipt",
@@ -858,7 +858,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "probe",
@@ -882,7 +882,7 @@
         "提高链路健壮性"
       ],
       "scope": "重复v0.18的40条开发修补回归，NOT新材料/独立验证；仅窄显式语法原型，非生产核验层",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
       "conditions": [
         "额外窄schema：地点绑定同damage事件的homes/vehicles数量；明确Iran judiciary同seizure people/accounts两槽；相同完整25年协议patient+purpose的terminated actor；不存在完整绑定不猜测",
         "沿用v0.18全文/整数span选择和整句模型fallback，不把代码覆盖误当完整语义覆盖；新冻结版本skip-cache重新调用真Workers AI，无远程judge，heldout仍未读",
@@ -897,7 +897,7 @@
       "cost": "22逻辑22HTTP，30821已知tokens，58.218累计请求秒；本轮三实验总64逻辑64HTTP92884tokens254.669秒，美元价未知；无生产修改/部署/提交，全部远程调用结束",
       "record_completeness": "complete",
       "file": "experiment-binding-repair-regression.md",
-      "content": "results hash 90108a75742981d87c196eb5ecb66ecf6153198b38e16a455042f5d037aea861。产物在scripts/eval/cluster-to-brief/out/atomic-evidence/binding-retest-v0.19.1。新事件、别名、作用域、跨句、自然错误及整句LLM未覆盖因素未验证；不能推广事件特定窄grammar到生产，也不能用这次修补零漏放取代之前扩大失败事实。下一步冻结当前机制，换不参与修补的跨事件材料检验，而不是继续补已知文章刷零。"
+      "content": "results hash 90108a75742981d87c196eb5ecb66ecf6153198b38e16a455042f5d037aea861。产物在eval/cluster-to-brief/out/atomic-evidence/binding-retest-v0.19.1。新事件、别名、作用域、跨句、自然错误及整句LLM未覆盖因素未验证；不能推广事件特定窄grammar到生产，也不能用这次修补零漏放取代之前扩大失败事实。下一步冻结当前机制，换不参与修补的跨事件材料检验，而不是继续补已知文章刷零。"
     },
     {
       "id": "experiment-block-consistency-tuning",
@@ -1023,8 +1023,8 @@
         "设计验收门",
         "改报告层结构"
       ],
-      "scope": "scripts/eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径",
-      "source": "commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）；commit 52acb84（2026-07-07，feat(brief-gen): 合成漏报修复(覆盖契约)+A/B双尺复测 dropped 13.4%→6.2%）；commit 232b15e（2026-07-08，feat(brief-gen): 两遍法覆盖补录(coverage repair)——合成漏报 0/112 硬保证）；scripts/eval/coverage-judge/disagreements.md（35 条分歧样本明细）；scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节",
+      "scope": "eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径",
+      "source": "commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）；commit 52acb84（2026-07-07，feat(brief-gen): 合成漏报修复(覆盖契约)+A/B双尺复测 dropped 13.4%→6.2%）；commit 232b15e（2026-07-08，feat(brief-gen): 两遍法覆盖补录(coverage repair)——合成漏报 0/112 硬保证）；eval/coverage-judge/disagreements.md（35 条分歧样本明细）；eval/coverage-judge/README.md「结果（2026-07-03 首验）」节",
       "conditions": [
         "母集团：到达合成层的 story（brief_stories.selected_for_intel=true 且 intel_report_r2_key 非空），取自 error-analysis 路2 用过的 8 条真实 brief（admin-brief-*），共 112 story-disposition 组",
         "gold 构成：77 三尺一致 + 16 grounded（简报正文实体检索坐实）+ 2 人裁 + 17 headline↔noteworthy 多数决",
@@ -1042,7 +1042,7 @@
       "cost": "未知——commit message 未记录 LLM 调用量与费用；112 条金标 × 三个标注源 + 35 条人裁 + 两轮 A/B（每轮 8 期简报重新生成）的总成本未留痕",
       "record_completeness": "summary_only",
       "file": "experiment-coverage-judge-kappa-n112.md",
-      "content": "## 与 error-analysis 「合成漏报占缺陷 68%」的关系（不重复记录）\n\nd2b6f09 的 commit message 明确写道，这次 κ 验证「是 error-analysis 路2『合成漏报占缺陷 68%』\n头号结论的依据」。这个 68% 数字本身**已经蒸馏进本仓的其他已入库文档**，不在本节点重复：\n`docs/ROADMAP.md:151`、`docs/adr/0004-brief-writer-v3.md:53`、\n`scripts/eval/error-analysis/README.md`「背景」节都记着这个数字，且 ROADMAP 明确写\n\"合成漏报已于 2026-07-08 收口（dropped 13.4% → 0.0%）\"——与本节点的 A/B 结果一致。\n用户的私人 memory 里也已经有 `error-analysis-path2-attribution` 这条节点记录了逐层归因\n的聚合表，并诚实标注\"逐条 open-code 明细已丢，只剩聚合百分比\"。\n\n本节点记录的是**验证 judge 本身可信度**这一步（κ=0.965），它是让\"dropped=漏报\"这个消费\n口径立得住的前提，而不是重新推导 68% 这个数字——两者是因果链上相邻但独立的两件事：\n先有本节点的 κ 验证，\"dropped 计数可信\"这个结论才立得住；68% 的归因数字则来自另一批\nopen-code 人工判读（error-analysis 路2），不是从这 112 条 gold 里算出来的。\n\n## 三尺分歧率本身也是一个读数\n\n112 条里 35 条（约 31%）三尺不一致、需要人裁，说明即便是\"story 去向\"这种看起来客观的\n判断，三个独立信号源的自然分歧率也不低。这个比例可以作为以后设计类似三角测量时的参照——\n如果新任务的分歧率远高于 31%，大概率意味着判定粒度本身需要重新设计，而不是简单加标注器\n就能收敛（见 [[mechanism-coverage-judge-triangulation]] 的 invalidates_when）。"
+      "content": "## 与 error-analysis 「合成漏报占缺陷 68%」的关系（不重复记录）\n\nd2b6f09 的 commit message 明确写道，这次 κ 验证「是 error-analysis 路2『合成漏报占缺陷 68%』\n头号结论的依据」。这个 68% 数字本身**已经蒸馏进本仓的其他已入库文档**，不在本节点重复：\n`docs/ROADMAP.md:151`、`docs/adr/0004-brief-writer-v3.md:53`、\n`eval/error-analysis/README.md`「背景」节都记着这个数字，且 ROADMAP 明确写\n\"合成漏报已于 2026-07-08 收口（dropped 13.4% → 0.0%）\"——与本节点的 A/B 结果一致。\n用户的私人 memory 里也已经有 `error-analysis-path2-attribution` 这条节点记录了逐层归因\n的聚合表，并诚实标注\"逐条 open-code 明细已丢，只剩聚合百分比\"。\n\n本节点记录的是**验证 judge 本身可信度**这一步（κ=0.965），它是让\"dropped=漏报\"这个消费\n口径立得住的前提，而不是重新推导 68% 这个数字——两者是因果链上相邻但独立的两件事：\n先有本节点的 κ 验证，\"dropped 计数可信\"这个结论才立得住；68% 的归因数字则来自另一批\nopen-code 人工判读（error-analysis 路2），不是从这 112 条 gold 里算出来的。\n\n## 三尺分歧率本身也是一个读数\n\n112 条里 35 条（约 31%）三尺不一致、需要人裁，说明即便是\"story 去向\"这种看起来客观的\n判断，三个独立信号源的自然分歧率也不低。这个比例可以作为以后设计类似三角测量时的参照——\n如果新任务的分歧率远高于 31%，大概率意味着判定粒度本身需要重新设计，而不是简单加标注器\n就能收敛（见 [[mechanism-coverage-judge-triangulation]] 的 invalidates_when）。"
     },
     {
       "id": "experiment-crossover-routed-storyline-dev",
@@ -1054,7 +1054,7 @@
         "演化组合架构"
       ],
       "scope": "dev 五簇（7/1/36/37/43），heldout 未跑。慢档读数出自旧 scorer（证据=成稿自引的单句），该 scorer 的缺陷当天另测出来，见 lesson-scorer-steers-search——覆盖与快档不受影响，硬错/失真的绝对值不可信",
-      "source": "scripts/eval/cluster-to-brief/out/{direct-raw,direct-raw-routed,direct-raw-routed-storyline}/ 与 out/verify-*-dev.json、out/slow-*-dev.json",
+      "source": "eval/cluster-to-brief/out/{direct-raw,direct-raw-routed,direct-raw-routed-storyline}/ 与 out/verify-*-dev.json、out/slow-*-dev.json",
       "conditions": [
         "四个臂同一批固定输入（fixtures 的 7 簇，dev 5 个），同一套快档脚本",
         "慢档判官为 Claude subagent（继承主会话 opus），非 glm；判定包合并两臂句子、打散去标识后盲判，同一句在两臂都出现时只判一次回填两边",
@@ -1084,7 +1084,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/out/slow-direct-raw-dev.json",
+      "source": "eval/cluster-to-brief/out/slow-direct-raw-dev.json",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "prototype_evaluation",
@@ -1108,7 +1108,7 @@
         "提高链路健壮性"
       ],
       "scope": "v0.12四p12候选/源事件的真实拆分转换，既有开发样本，非独立验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EVENT-ARGUMENT-RESULT.md",
       "conditions": [
         "固定Workers AI REST/glm，动作仅命题、参与者命题及原同句，无邻句/兄弟候选/远程judge/heldout",
         "8逻辑/16HTTP/12000tokens上限，单请求60秒，1次实际引用错误反馈；p11配对/解析复用旧输出",
@@ -1136,7 +1136,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
+      "source": "eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "prototype_evaluation",
@@ -1160,7 +1160,7 @@
         "提高链路健壮性"
       ],
       "scope": "新20事件/文章40正常错误对照，整句模型语义门+机械引用接口+不变数量窄规则；非完整分解核验链路、非独立可靠性或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EXPANDED-DEV-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EXPANDED-DEV-RESULT.md",
       "conditions": [
         "模型只输出slot/status/errorSpan/quote字符串/reason，代码分配ID/claim/来源编号/偏移，exact quote唯一来源文档，不猜未知歧义；逐条隔离故障，具体字段错误单条有限self-heal",
         "引用150字符硬限制；sourceIndex不再由模型生成。先保存v0.15真实raw离线绑定回归8/8，旧合同未强制150字符事实保留，无新增调用及语义修正",
@@ -1191,7 +1191,7 @@
       "scope": "extract-compare.ts 的 LLM 抽取（逐字引用、禁算术）+ 代码比对（区间相交判冲突）通道；对照对象是 intel-grounding 金标集（真实）与另一份合成集",
       "source": "services/meridian-ai-worker/src/services/extract-compare.ts:10-12；services/meridian-ai-worker/src/services/faithfulness-check.ts:18-19（门 F 条款 C 引用同一读数：「精度 0.833~1.0」）",
       "conditions": [
-        "真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 scripts/eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）",
+        "真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）",
         "0.833~1.0 是两个数据集上精度的区间描述，不是单一精确值——本节点原样保留区间，不折算成单点"
       ],
       "evidence_origin": "local_record",
@@ -1216,7 +1216,7 @@
         "提高链路健壮性"
       ],
       "scope": "20新开发文章正常错误40对照，主Codex编写非盲，窄语法字段比较+整句模型语义门；非完整分解或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
       "conditions": [
         "源/候选窄因子独立抽取，哈希原文位置；完整事件键匹配后代码比较，coverageVerified始终false，未知不通过",
         "LLM输出代码原文chunk整数选择，不再复制quote或生成offset/sourceIndex；batch2并保留完整半径2上下文，每实验最多25逻辑50HTTP90000tokens，每请求60秒",
@@ -1231,7 +1231,7 @@
       "cost": "20逻辑20HTTP，31193已知tokens，133.754请求秒；美元价未知，无远程judge/生产修改/部署/提交",
       "record_completeness": "complete",
       "file": "experiment-factor-choice-dev.md",
-      "content": "plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在scripts/eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。"
+      "content": "plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。"
     },
     {
       "id": "experiment-faithfulness-judge-alignment-kappa",
@@ -1299,7 +1299,7 @@
         "提高链路健壮性"
       ],
       "scope": "四未使用开发文章/事件八正常错误对照的新整句基线与不变数量规则，三独立报告抽取诊断；非完整分解原型端到端、非独立可靠性验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FRESH-DEV-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FRESH-DEV-RESULT.md",
       "conditions": [
         "相对旧60题缓存回放冻结组件代码/请求hash，改材料；开发文章1000985/1003362/1004976/1001409未在原练习使用，主Codex自编非盲，heldout c28/c51未读",
         "ContextStore半径2未截断，主Codex本地检查上下文足够，参考不进入请求；Workers AI仅被测模型，无远程judge",
@@ -1327,7 +1327,7 @@
         "演化组合架构"
       ],
       "scope": "dev 五簇（1/7/36/37/43），heldout 两簇已被消耗、无干净验收集。n=5 且七簇全部来自同一次生产运行（cron-brief-1789477249362，2026-09-15），不是从簇的总体独立抽样",
-      "source": "scripts/eval/cluster-to-brief/frontier.mjs 与 out/frontier.json、out/_blind/",
+      "source": "eval/cluster-to-brief/frontier.mjs 与 out/frontier.json、out/_blind/",
       "conditions": [
         "**盲判**：判定包拷进洗过牌的代号目录（P/Q/R/S/T），判官看不到臂名，判完按 MAP.json 回填",
         "五条轴在跑之前声明：核心层覆盖、正确性(fatal/hard/distortion)、引用不足率、块内冗余率、成本",
@@ -1357,7 +1357,7 @@
         "提高链路健壮性"
       ],
       "scope": "60开发练习/32错误点的旧真实基线与少量已复核关系补丁缓存回放，非分解原型全量真实运行或独立验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FULL-PRACTICE-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FULL-PRACTICE-RESULT.md",
       "conditions": [
         "完整保留60题及双错误父句，接口失败单列，不把未知算检出；无新远程调用/judge/heldout/生产融合",
         "连续数量+状态+单位有限语法，只支持areas/elements的受损毁坏状态，无固定数字/人名/题号，源群体及状态未建立必须本地复核",
@@ -1416,7 +1416,7 @@
         "提高链路健壮性"
       ],
       "scope": "用户授权打开预留c28/c51来源；30正常/30人工注入错误短语60控制；来源heldout但非独立盲写标签或自然错误金标，非生产验收",
-      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md",
+      "source": "eval/cluster-to-brief/out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md",
       "conditions": [
         "核验组件逐项与v0.19.1回归冻结hash相同，先precommit再读来源再编写冻结60条；不按结果改prompt/schema/factor/routing，不删失败题，不重试语义错误",
         "每簇hash固定取15文章，原文半径2未截断，5风险类型目标均衡，997234无早期数量时调用前记录改归因，最终quantity5/actor7/polarity6/state6/scope6；未按规则coverage筛选",
@@ -1444,7 +1444,7 @@
         "演化组合架构"
       ],
       "scope": "heldout 两簇(28 us airman 16 篇/13% 杂质、51 china 116 篇/41% 杂质)。**这一轮把它们消耗掉了** —— 对这三个候选,它们不再是未见过的数据",
-      "source": "scripts/eval/cluster-to-brief/out/{direct-raw,direct-raw-routed-storyline,_production-r94}/ 的 c28/c51 产出与判定",
+      "source": "eval/cluster-to-brief/out/{direct-raw,direct-raw-routed-storyline,_production-r94}/ 的 c28/c51 产出与判定",
       "conditions": [
         "**heldout 此前从未被任何臂跑过**(2026-09-18 被 structured-verifier 那条线拿去造过注入题,但没有臂在上面产出过成稿)",
         "两个原型臂盲判(代号 X/Y 洗牌),生产无法盲判(它一句出处都没有)",
@@ -2091,8 +2091,8 @@
       "tasks": [
         "设计验收门"
       ],
-      "scope": "仅 scripts/eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平",
-      "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；scripts/eval/intel-grounding/gold/judge-gold.jsonl（100 条）、gold/human-adjudicated.jsonl（24 条）、gold/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 scripts/eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
+      "scope": "仅 eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平",
+      "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；eval/intel-grounding/gold/judge-gold.jsonl（100 条）、gold/human-adjudicated.jsonl（24 条）、gold/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
       "conditions": [
         "judge-gold.jsonl 共 100 条 factual claim，终裁后 factual=88 supported / 4 unsupported / 8 contradicted；其中 7 条经用户二次人裁终裁（缺口类断言、日期可源内推算类归为 contradicted、复合 claim 逐成分核源，政策写进 rubric.md 的「人裁终裁政策」节）",
         "human-adjudicated.jsonl 24 条是另一批人裁样本，用于交叉核验",
@@ -2124,7 +2124,7 @@
         "提高链路健壮性"
       ],
       "scope": "v0.6七开发目标真实调用与v0.6.1离线原输出回放，非端到端或独立验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/ISOLATED-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/ISOLATED-RESULT.md",
       "conditions": [
         "固定Workers AI REST/glm，角色模型转换与代码字段处理，无heldout或远程judge",
         "v0.6一次全部错误反馈；v0.6.1不改原始真实输出，新增直接相邻精确命题定位与declined/refused窄词面守卫",
@@ -2152,7 +2152,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "probe",
@@ -2176,7 +2176,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "probe",
@@ -2200,7 +2200,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "probe",
@@ -2224,7 +2224,7 @@
         "演化组合架构"
       ],
       "scope": "mechanical-v0.5，既有v0.4四固定命题和v0.3七角色目标离线回放；非独立或端到端验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-RESULT.md",
       "conditions": [
         "reportMode/eventState/polarity由有限词典和受限英语单谓语模板代码生成，roles仍LLM，unknown不回退模型",
         "旧raw/原文保留；新增机械runner仅dry-run和模拟网络测试，未真实重跑角色prompt/错误反馈",
@@ -2252,7 +2252,7 @@
         "演化组合架构"
       ],
       "scope": "mechanical-v0.5真实glm；计划7开发TARGET，仅p11正常候选完成，源句两次基础设施失败，5未运行",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-REAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-REAL-RESULT.md",
       "conditions": [
         "用户明确要求真实重跑，角色由LLM抽取，受限字段由代码生成，不调用远程judge/heldout",
         "首个Network connection lost审计预留并重启一次，剩余第二尝试仍失败即停，不再恢复；服务关闭"
@@ -2280,7 +2280,7 @@
         "提高链路健壮性"
       ],
       "scope": "mechanical-rest-v0.5，4既有候选+3源句TARGET，完整执行前置转换链，非端到端核验或独立验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REST-SCHEME-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REST-SCHEME-RESULT.md",
       "conditions": [
         "真实Workers AI REST/现有Wrangler会话，固定glm/thinking off，角色模型转换、受限字段机械生成，无远程judge/heldout",
         "每次最多一次全部错误反馈；规则冻结，无中途修订或后续扩采样",
@@ -2308,7 +2308,7 @@
         "演化组合架构"
       ],
       "scope": "minimal-fields-v0.4；3真实开发命题与1明确合成否定对照，人类固定报告verb/命题，字段分类而非端到端",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MINIMAL-FIELDS-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MINIMAL-FIELDS-RESULT.md",
       "conditions": [
         "同一冻结输入单字段3请求与三字段组合1请求，另2polarity新请求重复，原文/radius2上下文保留",
         "先验参考本地测试冻结，提示含通用字段定义，无参考标签入模型；无self-heal、远程judge、heldout或融合",
@@ -2336,10 +2336,10 @@
         "设计验收门"
       ],
       "scope": "四个簇、83 句，来自 brief-v3-prod 的 M2 run（跑的是产品代码路径）；非盲单人判定，不是独立金标",
-      "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+      "source": "eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
       "conditions": [
         "候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致",
-        "原文来自同 run 的 out/raw/<c>/A/batch*.json；scripts/eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照",
+        "原文来自同 run 的 out/raw/<c>/A/batch*.json；eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照",
         "判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号",
         "有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用"
       ],
@@ -2365,7 +2365,7 @@
         "演化组合架构"
       ],
       "scope": "glm-4.7-flash，五个 dev 簇，60 道人工练习；共同有效 54 题；非盲单标注，非独立验证",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
       "conditions": [
         "Workers AI 是被测模块；参考标签与语义判断来自当前 Codex，无远程 judge"
       ],
@@ -2391,7 +2391,7 @@
         "设计验收门"
       ],
       "scope": "cron-brief-1789822849701(2026-09-19)当天 selected_for_intel 的 25 簇 818 篇;臂=direct-raw 路由门+主线筛选+最后一步写+exec 篇幅+按报道量必写+mech 修复;k=3;判官=sonnet subagent,未与人工标注对齐",
-      "source": "scripts/eval/cluster-to-brief/datasets/prod-0919.json;判定与分类结果只在本地 scratchpad(未入 git)",
+      "source": "eval/cluster-to-brief/datasets/prod-0919.json;判定与分类结果只在本地 scratchpad(未入 git)",
       "conditions": [
         "判官只拿成稿引用的那几句判,与慢档「证据由判官全簇检索」不是同一把尺,两者读数不可直接比",
         "判官未对齐,精确值不可信(见 lesson-judge-needs-alignment);量级可信",
@@ -2419,7 +2419,7 @@
         "设计验收门"
       ],
       "scope": "dev 五簇(1/7/36/37/43),全部来自同一次生产运行 cron-brief-1789477249362(2026-09-15)。无跨日期证据,heldout 已消耗",
-      "source": "Neon reports.id=94 与 brief_stories(workflow_id=cron-brief-1789477249362);臂产出在 scripts/eval/cluster-to-brief/out/",
+      "source": "Neon reports.id=94 与 brief_stories(workflow_id=cron-brief-1789477249362);臂产出在 eval/cluster-to-brief/out/",
       "conditions": [
         "**这是本仓第一次把原型与被替换对象放进同一把尺**。此前「原型更好」建立在原型互比上,生产的 18.3% 错误率是另一条流水线(M2 run,语料 id 90xxxx)手工标注的,与原型读数不可比",
         "五个原型臂盲判(代号洗牌),**生产无法盲判** —— 它一句出处都没有,判官一眼认得出,可能有偏向",
@@ -2448,7 +2448,7 @@
         "治事实关系错"
       ],
       "scope": "17 条题全部取自已消耗的 heldout c28/c51 与已调优的开发批，且按已知失败挑选；定性死活判断，非通过率、非泛化证据",
-      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+      "source": "eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
       "conditions": [
         "三臂同题、同 batch 大小（2）、同一次运行内交错跑完；对照臂 A′ 真跑而非引用历史 results，以消除题集与 batching 混淆",
         "@cf/zai-org/glm-4.7-flash，真 Workers AI REST+Gateway，skip-cache、thinking 关闭、temperature 0；无远程 judge",
@@ -2478,7 +2478,7 @@
         "提高链路健壮性"
       ],
       "scope": "v0.10/v0.11复用真实抽取的四已知开发候选，主Codex非盲语义复核后代码比较，不是独立可靠性或整句通过",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/RELATION-CHAIN-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/RELATION-CHAIN-RESULT.md",
       "conditions": [
         "复用v0.9原始真实抽取与v0.9.1确定性规范化，不重新抽取；固定Workers AI REST/glm，无heldout或远程judge",
         "每轮最多7逻辑/14HTTP/15000tokens，1次实际错误反馈；身份消歧与单命题配对独立，配对不见报告模式/说话人",
@@ -2506,7 +2506,7 @@
         "提高链路健壮性"
       ],
       "scope": "20另批新开发文章正常错误40对照，固定开发池非盲，自然错误与跨事件泛化未知",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FACTOR-ITERATION-RESULT.md",
       "conditions": [
         "v0.17全部接口沿用，新增完整population+unit数量比较、显式配对偏好分支、actor+import-ban范围、同完整proposition报告者；不存在的表示不当检出，coverageVerified仍false",
         "v0.18代码材料运行前冻结，文章未用于此前测试；事件相关性可能存在，heldout未读，不宣称20独立事件",
@@ -2521,7 +2521,7 @@
       "cost": "22逻辑22HTTP，30870已知tokens，62.697累计请求秒；无基础设施/未知usage/远程judge，美元价未知，无生产修改/部署/提交",
       "record_completeness": "complete",
       "file": "experiment-relation-confirm-dev.md",
-      "content": "plan hash ea1cf39e862404cad7a7c8205d9034cb0493025040f2d3b08c2875c757706604；results hash 047e9a4fd3575a4cac16cd8a3b8d56ed6862f614bc0fb55ec9eaffe063c69307。产物在scripts/eval/cluster-to-brief/out/atomic-evidence/confirm-dev-v0.18。与旧失败机制相同：模型可以引用正确主体/数量同时判断错误候选supported；引用接地不保证关系一致。"
+      "content": "plan hash ea1cf39e862404cad7a7c8205d9034cb0493025040f2d3b08c2875c757706604；results hash 047e9a4fd3575a4cac16cd8a3b8d56ed6862f614bc0fb55ec9eaffe063c69307。产物在eval/cluster-to-brief/out/atomic-evidence/confirm-dev-v0.18。与旧失败机制相同：模型可以引用正确主体/数量同时判断错误候选supported；引用接地不保证关系一致。"
     },
     {
       "id": "experiment-relation-factor-review",
@@ -2534,7 +2534,7 @@
         "演化组合架构"
       ],
       "scope": "practice-v1 七个已知错误题的现有 baseline/rules 输出；非盲回顾，未新增模型调用",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
       "conditions": [
         "候选、原句和原模型输出均来自已完成练习；不能识别隐藏推理阶段"
       ],
@@ -2559,7 +2559,7 @@
         "设计验收门"
       ],
       "scope": "金标来自 brief-v3-prod 的 M2 run（老 v3 写作层，自然错误率 18.3%），**不是** cluster-to-brief 的任何一个臂；召回不能直接外推到那批臂",
-      "source": "scripts/eval/scorer-recall/（gold/natural-errors.jsonl 入库；语料在 apps/backend/prototypes/brief-v3-prod/out，本地不入 git）",
+      "source": "eval/scorer-recall/（gold/natural-errors.jsonl 入库；语料在 apps/backend/prototypes/brief-v3-prod/out，本地不入 git）",
       "conditions": [
         "grading instructions 与 cluster-to-brief 的判定包逐字同源（含「判不准的归属类错误标 ok」那条）",
         "该流水线不标逐句出处，所以只判事实正确性一件事，没有覆盖维、没有引用维",
@@ -2618,7 +2618,7 @@
         "演化组合架构"
       ],
       "scope": "cluster-to-brief harness 的慢档；信度在 c43 上量（两臂各两个独立判官，63 句），反向检验在 c7/c37 上做。heldout 未跑，无人工金标",
-      "source": "scripts/eval/cluster-to-brief/{retrieval.mjs,grading-instructions.mjs,scorer-id.mjs,compare-verdicts.mjs} 与 out/direct-raw{,-grounded}/verdict-c43.judge{A,B}.json",
+      "source": "eval/cluster-to-brief/{retrieval.mjs,grading-instructions.mjs,scorer-id.mjs,compare-verdicts.mjs} 与 out/direct-raw{,-grounded}/verdict-c43.judge{A,B}.json",
       "conditions": [
         "证据由脚本用成稿句去整簇原文检索 top-8（本地 e5-small，384 维已归一化），与成稿引了谁无关",
         "成稿声称的出处另行呈现，只用于新增的 citedSentenceSuffices 一维，守则写明两维互不回改",
@@ -2647,7 +2647,7 @@
         "设计验收门"
       ],
       "scope": "排序键 `importance + COVERAGE_WEIGHT·log2(1+独立源数)`，importance 来自当时的 story-validation LLM 4 维 CoT rubric；这把尺量的是**已退役**的排序键，不代表当前生产排序公式，见 [[lesson-selection-formula-never-measured]]",
-      "source": "scripts/eval/selection/BASELINE.md；commit 0b43902（2026-06-06，feat(eval): 选择层工具转正 + NDCG 基线 0.958 + 防回归闸）；commit 4ebd969（feat(brief): importance 升级为 4 维 CoT rubric + 选择层 prompt eval 工具）",
+      "source": "eval/selection/BASELINE.md；commit 0b43902（2026-06-06，feat(eval): 选择层工具转正 + NDCG 基线 0.958 + 防回归闸）；commit 4ebd969（feat(brief): importance 升级为 4 维 CoT rubric + 选择层 prompt eval 工具）",
       "conditions": [
         "gold 来源：5 run，2026-06-03~2026-06-04，gold 类型是「silver 派生」（人工快标而非独立精标），BASELINE.md 自陈「绝对值略乐观」",
         "gold 共 47 条 rel≥2 的强相关样本",
@@ -2708,7 +2708,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "probe",
@@ -2732,7 +2732,7 @@
         "设计验收门"
       ],
       "scope": "story-validation 环节的 7 个架构臂对照，244 条产出标注，按成员集去重后 113 个唯一成员集人工严口径标注（correct/umbrella/wrongPair/borderline 四分类）",
-      "source": "scripts/eval/story-validation/rubric.md（HEAD 版本，随本轮清理被删除，可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或 commit b7ab0ea 恢复查看）第 1 节与第 6 节；commit b7ab0ea 提交信息本身",
+      "source": "eval/story-validation/rubric.md（HEAD 版本，随本轮清理被删除，可用 `git show HEAD:eval/story-validation/rubric.md` 或 commit b7ab0ea 恢复查看）第 1 节与第 6 节；commit b7ab0ea 提交信息本身",
       "conditions": [
         "7 个架构臂具体是哪些未在 rubric.md 中逐一列出，只区分『整簇自由划』与『几何预分组』两大类",
         "umbrella 定义：故事内有真核（≥2 篇确实同一发生）但混入了别的发生；wrongPair 定义：压根没有真核，成员是题材/地域/人物相似的不同发生被硬凑",
@@ -2760,7 +2760,7 @@
         "治故事过拆",
         "设计验收门"
       ],
-      "scope": "story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）",
+      "scope": "story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）",
       "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:182-188；services/meridian-ai-worker/src/services/story-validation.ts:65-73",
       "conditions": [
         "『严精度』指 rubric.md 的人工严口径（故事内不能混入别的发生才算 correct），区别于机械尺 event_recall2.mjs 的宽口径（故事内有真核即算对，2026-08-20 实测宽口径 75% vs 严口径仅 41.7%，差距全在伞状）",
@@ -2776,7 +2776,7 @@
       "cost": "未知（复核步骤本身的调用量见 story-validation.ts:22-23：全量 57 簇 1254 篇场景下约 195 次复核调用，单次复核中位耗时 2.3s，但该成本数字来自另一次全量运行，非本实验的直接成本记录）",
       "record_completeness": "summary_only",
       "file": "experiment-story-validation-verify-stage-tradeoff.md",
-      "content": "## 读数原文\n\n`storyValidation.ts:182-188`：\n\n> 这一步是拿召回换精度：08-20 实测它把 103 个故事削到 74 个，事件召回 98%→76%，\n> 但严精度 75.7%→89.2%、**前 15 条精度 53.3%→93.3%**。\n> 下游 maxStoriesToGenerate 只放 15 条进情报分析，所以按「实际进简报的真故事条数」算\n> 是 8 条 → 14 条，复核这一步是净赚的。\n\n`story-validation.ts:65-73`（架构总述，两天复验一致的总体精度）：\n\n> 人工严口径（scripts/eval/story-validation/rubric.md，08-18 与 08-20 两天独立复验）：\n> 生产原形态 41.7% → 本形态 89-92%；进简报的前 15 条精度 93.3%（两天相同）。\n\n## 为什么净赚判断依赖『下游只取前 15』这个前提\n\n这条『净赚』结论不是无条件成立的——它成立是因为下游 `maxStoriesToGenerate` 只消费\n排序后的前 15 条。若下游改成消费全部验证通过的故事（例如某天新闻量小、故事数不足 15），\n复核步骤丢掉的 22 个百分点召回（98%→76%）会直接转化成漏报的真实事件，『净赚』的前提\n就不再成立。这是这条读数的一个隐含适用边界，源文件本身没有单独提示。\n\n## 关联\n\n产生 [[lesson-story-validation-verify-precision-recall-tradeoff]]。与\n[[experiment-story-validation-architecture-error-taxonomy]] 是同一次架构替换的两个侧面：\n后者讲『判官单独一段』相对『整簇自由划』的错误类型转变（umbrella→wrongPair），\n本节点讲『判官+复核两段式』相对『判官单独一段』在同一批 wrongPair/umbrella 候选里\n进一步做的精度/召回取舍。"
+      "content": "## 读数原文\n\n`storyValidation.ts:182-188`：\n\n> 这一步是拿召回换精度：08-20 实测它把 103 个故事削到 74 个，事件召回 98%→76%，\n> 但严精度 75.7%→89.2%、**前 15 条精度 53.3%→93.3%**。\n> 下游 maxStoriesToGenerate 只放 15 条进情报分析，所以按「实际进简报的真故事条数」算\n> 是 8 条 → 14 条，复核这一步是净赚的。\n\n`story-validation.ts:65-73`（架构总述，两天复验一致的总体精度）：\n\n> 人工严口径（eval/story-validation/rubric.md，08-18 与 08-20 两天独立复验）：\n> 生产原形态 41.7% → 本形态 89-92%；进简报的前 15 条精度 93.3%（两天相同）。\n\n## 为什么净赚判断依赖『下游只取前 15』这个前提\n\n这条『净赚』结论不是无条件成立的——它成立是因为下游 `maxStoriesToGenerate` 只消费\n排序后的前 15 条。若下游改成消费全部验证通过的故事（例如某天新闻量小、故事数不足 15），\n复核步骤丢掉的 22 个百分点召回（98%→76%）会直接转化成漏报的真实事件，『净赚』的前提\n就不再成立。这是这条读数的一个隐含适用边界，源文件本身没有单独提示。\n\n## 关联\n\n产生 [[lesson-story-validation-verify-precision-recall-tradeoff]]。与\n[[experiment-story-validation-architecture-error-taxonomy]] 是同一次架构替换的两个侧面：\n后者讲『判官单独一段』相对『整簇自由划』的错误类型转变（umbrella→wrongPair），\n本节点讲『判官+复核两段式』相对『判官单独一段』在同一批 wrongPair/umbrella 候选里\n进一步做的精度/召回取舍。"
     },
     {
       "id": "experiment-structure-router-c36",
@@ -2789,7 +2789,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/out/slow-structure-router-dev.json",
+      "source": "eval/cluster-to-brief/out/slow-structure-router-dev.json",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "prototype_evaluation",
@@ -2813,7 +2813,7 @@
         "演化组合架构"
       ],
       "scope": "split-heal-v0.3，p11/p12四候选与三源句；转换组件，不含自动对齐/整句接受，不读heldout",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/SPLIT-HEAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/SPLIT-HEAL-RESULT.md",
       "conditions": [
         "TARGET逐句角色转换，独立逐报告状态转换，源句附原radius2上下文；代码分配来源命名空间ID",
         "实际代码校验错误加上次输出回传最多一次，无标准答案注入；主Codex本地非盲复核，无远程judge",
@@ -2841,7 +2841,7 @@
         "演化组合架构"
       ],
       "scope": "structured-v0.2，6题人工参考结构与29本地测试；非模型准确率、非独立验证，不读heldout",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/LOCAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/LOCAL-RESULT.md",
       "conditions": [
         "参考结构与对齐人工指定，不进入模型；真实Workers AI调用因缺明确数据发送授权尚未运行",
         "候选/证据context-v2参考判断由主Codex非盲本地复核"
@@ -2868,7 +2868,7 @@
         "演化组合架构"
       ],
       "scope": "glm-4.7-flash，structured-v0.2/context-v2，p12-u完整与p11-u部分；计划6题未跑满，非盲开发诊断",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
       "conditions": [
         "用户要求真实LLM后审批通过，候选/证据独立转换；无参考图/标签入模型，无远程judge",
         "一次AI binding连接丢失后审计重启并最多恢复一次，未知usage留预算reserve；预算停止后服务关闭"
@@ -2895,7 +2895,7 @@
         "提高链路健壮性"
       ],
       "scope": "v0.7/v0.8/v0.9同七开发目标真实迭代与v0.9.1真实原输出离线回放，非独立验证或整句验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/TARGET-ONLY-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/TARGET-ONLY-RESULT.md",
       "conditions": [
         "抽取阶段仅TARGET，身份消歧独立暂缓；固定Workers AI REST/glm，无远程judge/heldout",
         "v0.8移除LLM复制与序号任务，四引用接口；v0.9代码报告词清单与遗漏/重叠真实错误反馈一次",
@@ -2923,7 +2923,7 @@
         "治事实关系错"
       ],
       "scope": "本地开发Workers AI连接诊断，现有Wrangler OAuth+官方REST；非长期SLA或语义验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/CONNECTION-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/CONNECTION-RESULT.md",
       "conditions": [
         "固定真实glm-4.7-flash/thinking off，官方REST指定Gateway/skip-cache，绕过wrangler remote binding",
         "现有凭证只进程内使用，不输出保存、不新登录修改权限；首失败停，有界组测试，保留401",
@@ -3327,7 +3327,7 @@
         "演化组合架构"
       ],
       "scope": "固定 dev 与 heldout 分割；heldout 仅最终验收",
-      "source": "scripts/eval/cluster-to-brief/README.md",
+      "source": "eval/cluster-to-brief/README.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "criteria": "核心覆盖达到冻结通过线、hard <= 1、fatal = 0；出处与结构契约通过；记录成本，局部指标不能代替端到端判定",
@@ -3389,7 +3389,7 @@
         "治事实关系错"
       ],
       "scope": "依据为四个簇 83 句的非盲单人判定；自然错误率区间宽，结论是判据层级而非具体阈值",
-      "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+      "source": "eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
       "conditions": [
         "有效样本 4 个簇；形状分布来自单一日期快照，季节性未知"
       ],
@@ -3495,19 +3495,19 @@
         "治故事过拆",
         "改聚类/切分链路"
       ],
-      "scope": "apps/backend/src/lib/core/candidate-grouping.ts 的 completeLinkage 函数与 CANDIDATE_GROUP_THRESHOLD 常量；判据为簇内文章 embedding 两两余弦相似度；标定样本为 2026-08-20/21 两天独立数据 + 人工严口径（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）复验",
+      "scope": "apps/backend/src/lib/core/candidate-grouping.ts 的 completeLinkage 函数与 CANDIDATE_GROUP_THRESHOLD 常量；判据为簇内文章 embedding 两两余弦相似度；标定样本为 2026-08-20/21 两天独立数据 + 人工严口径（eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）复验",
       "source": "apps/backend/src/lib/core/constants.ts:69-77（CANDIDATE_GROUP_THRESHOLD 常量头注释）；apps/backend/src/lib/core/candidate-grouping.ts:13-14, 26-32；commit 9bef77b 提交说明",
       "conditions": [
         "阈值作用在文章 embedding 之间（簇内两两余弦），不是在故事质心之间——与 measure-story-merge-threshold-094（0.94，作用于故事质心）是不同层的同名机制，两者标定时间相近（08-21 vs 08-30）但样本、判据对象都不同，不要混为一谈",
         "算法选全链凝聚（complete-linkage）而非单链：单链任意一对超阈值就并、会串联成巨团；全链要求组内所有对都超阈值。candidate-grouping.ts 头注释明确记录『本仓上游的 candidate-grouping.ts 早就是全链，story-dedup 那一层是漏网的』（见 lesson-single-link-merge-falsified 的 conditions）——即本仓两处独立引入的聚合层，候选分组这一处从一开始就选对了算法，story-dedup 那一处后来才补上",
-        "『严精度』『前 15 条精度』的定义与人工标注方法论，见 scripts/eval/story-validation/rubric.md——该文件本轮清理已删除（git status 显示为待提交的 D），可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或对应引入提交 b7ab0ea 恢复查看。⚠️ 该文件是标注方法论说明（什么算『同一发生』、umbrella/wrongPair 怎么区分），不包含本节点记录的阈值扫描数字表——扫描数字唯一的留存位置是 constants.ts 的头注释和 commit 9bef77b 的提交说明，两者互为印证",
+        "『严精度』『前 15 条精度』的定义与人工标注方法论，见 eval/story-validation/rubric.md——该文件本轮清理已删除（git status 显示为待提交的 D），可用 `git show HEAD:eval/story-validation/rubric.md` 或对应引入提交 b7ab0ea 恢复查看。⚠️ 该文件是标注方法论说明（什么算『同一发生』、umbrella/wrongPair 怎么区分），不包含本节点记录的阈值扫描数字表——扫描数字唯一的留存位置是 constants.ts 的头注释和 commit 9bef77b 的提交说明，两者互为印证",
         "0.90 这一行的『严精度 89-92%』『前 15 条精度 93.3%』与 experiment-story-validation-verify-stage-tradeoff 记录的『严精度 75.7%→89.2%』『前 15 条精度 53.3%→93.3%』是同一批复验数据（判官+复核两段式相对旧架构的整体表现），本节点不重复该实验的完整记录，只摘录阈值扫描本身的对照表"
       ],
       "evidence_origin": "local_record",
       "kind": "observation",
       "invalidates_when": "换 embedding 模型后重新扫描阈值-精度曲线；或按 docs/engineering-notes/cluster-to-story-segmentation.md §7.2（本地文件，未入 git）建议的方向换成自适应判据（BIC 式模型选择或基于图模块度的 Leiden 递归终止），不再依赖固定的两两阈值一刀切——见 experiment-set-partition-literature-review 记录的『0.90 这种取值方式本身在文献里没有先例』",
       "file": "lesson-candidate-group-threshold-090.md",
-      "content": "## 阈值扫描原文\n\n`constants.ts:69-77`：\n\n> 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径（scripts/eval/story-validation/rubric.md）复验：\n>   0.85（原型初值，随手定） 严精度 58-60%，配复核后 85-87%，前15精度 33-53%\n>   0.87                  严精度 70%\n>   0.90                  严精度 76-84%，配复核后 89-92%，**前15精度两天都是 93.3%**\n>   0.91 起掉崖：一次丢 4 个人工确认的真事件（4 篇的 Face the Nation 当期综述、3 篇的官员回应等）\n> 上限卡在 0.90 的理由是「0.91 开始丢真事件」，不是「组太大」——0.90 下组中位 2 篇、最大 16 篇。\n\n## 掉崖的具体样本\n\n0.91 一次性丢掉的 4 个人工确认真事件里，明确记录了两个具体样本：一个是 4 篇报道同一期\nFace the Nation 节目的综述，一个是 3 篇报道官员回应的组。这两个样本的共同特征是**成员数\n偏多但确实是同一发生**（例如 §2.4 的规范：节目当期综述算合法成员），说明 0.91 这一档\n开始把『成员多但真实』的组也当成过度合并切碎——阈值的上限不是被『组变得太大』卡住的，\n而是被『继续收紧就开始误伤真实的多成员事件』卡住的。\n\n## 全链凝聚为什么选这个算法\n\n`candidate-grouping.ts:26-32`：\n\n> 算法选全链(complete-linkage)不选单链：单链任意一对超阈值就并，会串联成巨团；\n> 全链要求组内**所有**对都超阈值，不串联。实测在 0.90 上组中位数 2 篇、最大 16 篇。\n\n这与 [[lesson-single-link-merge-falsified]] 记录的 story-dedup 层『单链→全链』修复是\n同一个算法原理的两次独立应用：单链只要链上任意相邻一对过线就会传递合并，容易把 A-B、\nB-C 都过线但 A-C 不过线的三者串成一团；全链要求组内所有两两对都过线，构造上不可能出现\n这种串联。候选分组这一层从设计之初就选了全链，没有经历 story-dedup 那次『先用错、\n再改对』的过程。\n\n## 这批读数比现存节点多出的部分\n\n`experiment-story-validation-verify-stage-tradeoff` 已经记录了 0.90 这一档的头条精度数字\n（严精度 89.2%、前 15 条精度 93.3%），但没有记录：\n- 0.85/0.87 两档更宽松阈值下的对照精度（58-60%、70%）；\n- 0.91 起的悬崖及其具体丢失样本；\n- 全链凝聚在 0.90 下的组规模分布（中位 2、最大 16）。\n\n这三块是本节点补上的、此前未蒸馏的部分。\n\n## 关联\n\n阈值取值方式本身的文献适用边界（『两两一刀切无先例』），见\n[[experiment-set-partition-literature-review]]。全链算法原理与另一层聚合的对照见\n[[lesson-single-link-merge-falsified]]，故事质心层另一个同名机制的独立标定见\n[[measure-story-merge-threshold-094]]。头条精度数字的完整实验记录见\n[[experiment-story-validation-verify-stage-tradeoff]]。"
+      "content": "## 阈值扫描原文\n\n`constants.ts:69-77`：\n\n> 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径（eval/story-validation/rubric.md）复验：\n>   0.85（原型初值，随手定） 严精度 58-60%，配复核后 85-87%，前15精度 33-53%\n>   0.87                  严精度 70%\n>   0.90                  严精度 76-84%，配复核后 89-92%，**前15精度两天都是 93.3%**\n>   0.91 起掉崖：一次丢 4 个人工确认的真事件（4 篇的 Face the Nation 当期综述、3 篇的官员回应等）\n> 上限卡在 0.90 的理由是「0.91 开始丢真事件」，不是「组太大」——0.90 下组中位 2 篇、最大 16 篇。\n\n## 掉崖的具体样本\n\n0.91 一次性丢掉的 4 个人工确认真事件里，明确记录了两个具体样本：一个是 4 篇报道同一期\nFace the Nation 节目的综述，一个是 3 篇报道官员回应的组。这两个样本的共同特征是**成员数\n偏多但确实是同一发生**（例如 §2.4 的规范：节目当期综述算合法成员），说明 0.91 这一档\n开始把『成员多但真实』的组也当成过度合并切碎——阈值的上限不是被『组变得太大』卡住的，\n而是被『继续收紧就开始误伤真实的多成员事件』卡住的。\n\n## 全链凝聚为什么选这个算法\n\n`candidate-grouping.ts:26-32`：\n\n> 算法选全链(complete-linkage)不选单链：单链任意一对超阈值就并，会串联成巨团；\n> 全链要求组内**所有**对都超阈值，不串联。实测在 0.90 上组中位数 2 篇、最大 16 篇。\n\n这与 [[lesson-single-link-merge-falsified]] 记录的 story-dedup 层『单链→全链』修复是\n同一个算法原理的两次独立应用：单链只要链上任意相邻一对过线就会传递合并，容易把 A-B、\nB-C 都过线但 A-C 不过线的三者串成一团；全链要求组内所有两两对都过线，构造上不可能出现\n这种串联。候选分组这一层从设计之初就选了全链，没有经历 story-dedup 那次『先用错、\n再改对』的过程。\n\n## 这批读数比现存节点多出的部分\n\n`experiment-story-validation-verify-stage-tradeoff` 已经记录了 0.90 这一档的头条精度数字\n（严精度 89.2%、前 15 条精度 93.3%），但没有记录：\n- 0.85/0.87 两档更宽松阈值下的对照精度（58-60%、70%）；\n- 0.91 起的悬崖及其具体丢失样本；\n- 全链凝聚在 0.90 下的组规模分布（中位 2、最大 16）。\n\n这三块是本节点补上的、此前未蒸馏的部分。\n\n## 关联\n\n阈值取值方式本身的文献适用边界（『两两一刀切无先例』），见\n[[experiment-set-partition-literature-review]]。全链算法原理与另一层聚合的对照见\n[[lesson-single-link-merge-falsified]]，故事质心层另一个同名机制的独立标定见\n[[measure-story-merge-threshold-094]]。头条精度数字的完整实验记录见\n[[experiment-story-validation-verify-stage-tradeoff]]。"
     },
     {
       "id": "lesson-container-image-deploy-gap",
@@ -3541,7 +3541,7 @@
         "设计验收门"
       ],
       "scope": "本地 e5-small(384 维已归一化)对事件清单里的单句事件描述;未试别的向量模型、未试加数字/实体特征",
-      "source": "scripts/eval/cluster-to-brief/build-checklist.mjs 的 --merge-audit",
+      "source": "eval/cluster-to-brief/build-checklist.mjs 的 --merge-audit",
       "conditions": [
         "真重复的判定是肉眼确认(c36 三对),样本很小",
         "只测了 e5-small 的裸余弦,没测「共享 articleId + 数字集合交集 + 实体重叠」这类组合判据"
@@ -3668,12 +3668,12 @@
       "tasks": [
         "设计验收门"
       ],
-      "scope": "本仓 scripts/eval/ 下所有依赖 README 顶部「状态行」传达验收进度的 harness；不特指某一次代码缺陷",
-      "source": "scripts/eval/intel-grounding/README.md:12（截至 2026-09-22 仍写「本线状态：harness ready，judge 未验证...不得把本线的任何读数当可信」）对照 commit 36e186a（2026-07-10）message 里已经给出的 κ 数字；README.md:68-77「还差什么才算 eval 真正完成」节列出的三步（建真人金标/填充合成批/跑 κ 验收闸）在 commit 时间线上其实已经做完前两步、第三步也已经跑出过结果",
+      "scope": "本仓 eval/ 下所有依赖 README 顶部「状态行」传达验收进度的 harness；不特指某一次代码缺陷",
+      "source": "eval/intel-grounding/README.md:12（截至 2026-09-22 仍写「本线状态：harness ready，judge 未验证...不得把本线的任何读数当可信」）对照 commit 36e186a（2026-07-10）message 里已经给出的 κ 数字；README.md:68-77「还差什么才算 eval 真正完成」节列出的三步（建真人金标/填充合成批/跑 κ 验收闸）在 commit 时间线上其实已经做完前两步、第三步也已经跑出过结果",
       "conditions": [
         "README 的「未验证」警告写于更早的 commit（本节点未逐一定位哪一条 commit 首次写下这句话，只确认它在 36e186a 之后的 HEAD 仍然存在，未被更新）",
         "36e186a 之后该目录还有 e31fbf9（补 skipCache）、61a3bcc（判官客户端收敛）等 6 次后续 commit，没有一次修改 README 的状态行",
-        "对照组：coverage-judge 的 README 在验完 κ 后确实把「结果」小节写回了 README（见 scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节），状态描述与实际验收结果保持同步——同一个仓库里两种做法并存，intel-grounding 是反例，coverage-judge 是正例"
+        "对照组：coverage-judge 的 README 在验完 κ 后确实把「结果」小节写回了 README（见 eval/coverage-judge/README.md「结果（2026-07-03 首验）」节），状态描述与实际验收结果保持同步——同一个仓库里两种做法并存，intel-grounding 是反例，coverage-judge 是正例"
       ],
       "evidence_origin": "local_record",
       "kind": "observation",
@@ -3712,7 +3712,7 @@
         "设计验收门"
       ],
       "scope": "任何让 LLM 对一组候选项做分组/归类判断、且存在『部分候选项其实不该被分进任何组』这种可能性的任务 schema 设计",
-      "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19（旧 single_story/collection_of_stories 二分支设计的结构性缺陷说明）；scripts/eval/story-validation/rubric.md（HEAD 版本，见 experiment-story-validation-architecture-error-taxonomy 的 source 说明）第 1 节 umbrella/wrongPair 实测",
+      "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19（旧 single_story/collection_of_stories 二分支设计的结构性缺陷说明）；eval/story-validation/rubric.md（HEAD 版本，见 experiment-story-validation-architecture-error-taxonomy 的 source 说明）第 1 节 umbrella/wrongPair 实测",
       "conditions": [
         "旧架构（『整簇丢给模型自己判 single_story/collection_of_stories 并划出所有子故事』）的 outliers 数组只存在于 single_story 分支——collection_of_stories 分支没有任何合法位置安放『不属于任何故事的成员』",
         "2026-08-18 生产实测：这一结构性缺陷下，352/967 篇进簇文章走的是『默默不提』这条路——模型选择的三条路径（硬配对/整簇丢弃/默默不提）全部是错误应对",
@@ -3777,7 +3777,7 @@
       "tasks": [
         "改聚类"
       ],
-      "scope": "两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `scripts/eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）",
+      "scope": "两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）",
       "source": "docs/adr/0003-cluster-as-brief-block.md「已证伪，别重跑」第 6 条；2026-09-20 本地重建 ml-service 镜像复跑两窗金标时的探针",
       "conditions": [
         "口径必须写清 --min=3、宽松 members+related、两窗中哪一窗——这轮一开始误用 --min=2 复测，得到与 ADR 对不上的读数，一度误判「ADR 本身有错」，改回 --min=3 才对齐；后续任何人复用这条经验时必须先核对口径",
@@ -3802,7 +3802,7 @@
         "演化组合架构"
       ],
       "scope": "practice-risk-v1 人工材料上的当前 glm 核验接口，不能推论所有结构化核验无效",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-RESULT.md",
       "conditions": [
         "代码槽首个显式词作为锚点；问题要求读完整候选，仍发生关系漏判"
       ],
@@ -3844,7 +3844,7 @@
         "演化组合架构"
       ],
       "scope": "practice-v1 已知错误输出的回顾；不是对模型内部过程或通用能力的结论",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
       "conditions": [
         "旧输出只保存锚点、引用、状态和理由，不单独保存两侧关系抽取"
       ],
@@ -3864,7 +3864,7 @@
         "治事实关系错"
       ],
       "scope": "glm-4.7-flash 上的句级核验；材料为已消耗 heldout 与已调优开发题，未在未接触材料上复验",
-      "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+      "source": "eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
       "conditions": [
         "结论限定在单候选句对单证据句（+半径 2 窗口）的题型；跨文章取舍与漏报未测"
       ],
@@ -3926,7 +3926,7 @@
         "设计验收门",
         "改报告层结构"
       ],
-      "scope": "apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 scripts/eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）",
+      "scope": "apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）",
       "source": "apps/backend/src/lib/core/storyline.ts:104-136（blockScore 与 blockImportance 函数上方的代码注释，作者本人在 2026-09-02 左右写下并自陈「纯公式这一档从未被测过」「机制：广泛报道 ≠ 重要」「接受这个降级是明确决定，不是没看见」）",
       "conditions": [
         "blockScore(distinctSources, articleCount) = log2(1+源数) + 0.5·log2(1+篇数)，纯公式、零 LLM，取代 story-validation 的 LLM importance(1-10)",
@@ -3938,7 +3938,7 @@
       "kind": "gap",
       "invalidates_when": "有人针对 blockScore/blockImportance 这一档排序键补做了 NDCG 或等价的排序质量评估（哪怕是复用 selection/BASELINE.md 同一批金标重新跑一次），之后这条「未测」的记录应当被新的实验结果取代，而不是继续引用本节点",
       "file": "lesson-selection-formula-never-measured.md",
-      "content": "**这是一个尚未解决的缺口，不是一次失败的实验**——没有任何 harness 跑过、也没有任何 gold\n标注过 `blockScore`/`blockImportance` 这一档排序键的效果好坏。记录它的理由是：如果不写\n下来，删掉 `scripts/eval/selection/` 之后，\"NDCG=0.958 这把尺\"和\"生产实际在跑的排序公式\"\n之间的错位关系就彻底没人知道了——将来有人翻出 BASELINE.md 的历史版本（或翻到这条知识节点），\n可能会想当然地把 0.958 当成当前排序质量，这是错的。\n\n## 时间线\n\n1. 2026-06-06（commit 0b43902）：NDCG@10=0.958 基线建立，排序键是\n   `LLM importance + COVERAGE_WEIGHT·log2(1+源数)`（见 [[experiment-selection-ndcg-baseline]]）。\n2. 某个时间点（本节点未追踪具体 commit）：生产排序键换成了零 LLM 的 `blockScore`，\n   代码注释里明确写这是\"有代价的降级，不是等价替换\"，并且列出了旧基线里两个组成部分各自\n   的贡献（rubric +0.068、覆盖度 +0.018），暗示换成纯公式大概率会丢掉 rubric 那部分收益——\n   但这只是作者基于旧数据做的**推断**，不是新的实测。\n3. 到 2026-09-22（本次蒸馏时点）：纯公式这一档排序键依然没有对应的 NDCG 或任何排序质量\n   读数。`scripts/eval/selection/` 这套 harness（BASELINE.md、rescore.ts、gold-worklist-\n   2026-06-05.csv 等）本身面临被删除——一旦删除，连\"曾经有把尺能测这个\"的痕迹都会消失，\n   除非有意识地把这个缺口写进知识库。\n\n## 为什么这个缺口值得显式标注为未决事项\n\n- **换排序键是明确决定，但决定没有配对验证。** 代码注释说\"接受这个降级是明确决定，不是\n  没看见\"——这句话本身说明作者知道有风险，但目前项目里没有任何地方记录\"这个风险后来\n  兑现了没有\"。\n- **旧基线不能直接拿来推断新公式的表现。** 0.958 的大头贡献来自 LLM rubric（+0.068），\n  而新公式恰恰砍掉了这部分，仅保留覆盖度那一档小贡献（+0.018）的思路（对数加权源数/\n  篇数）。类推的方向是\"新公式可能接近甚至低于 0.872（纯旧 importance 都没有）那一档\"，\n  但这只是基于历史分解数字做的合理怀疑，不是实测，不能当结论使用。\n- **重新测的成本相对可控。** `gold-worklist-2026-06-05.csv`（140 行）和 BASELINE.md 描述的\n  方法论如果在删除前完整入库或至少被本节点引用路径记录下来，之后想补测时不需要从零设计\n  金标格式。"
+      "content": "**这是一个尚未解决的缺口，不是一次失败的实验**——没有任何 harness 跑过、也没有任何 gold\n标注过 `blockScore`/`blockImportance` 这一档排序键的效果好坏。记录它的理由是：如果不写\n下来，删掉 `eval/selection/` 之后，\"NDCG=0.958 这把尺\"和\"生产实际在跑的排序公式\"\n之间的错位关系就彻底没人知道了——将来有人翻出 BASELINE.md 的历史版本（或翻到这条知识节点），\n可能会想当然地把 0.958 当成当前排序质量，这是错的。\n\n## 时间线\n\n1. 2026-06-06（commit 0b43902）：NDCG@10=0.958 基线建立，排序键是\n   `LLM importance + COVERAGE_WEIGHT·log2(1+源数)`（见 [[experiment-selection-ndcg-baseline]]）。\n2. 某个时间点（本节点未追踪具体 commit）：生产排序键换成了零 LLM 的 `blockScore`，\n   代码注释里明确写这是\"有代价的降级，不是等价替换\"，并且列出了旧基线里两个组成部分各自\n   的贡献（rubric +0.068、覆盖度 +0.018），暗示换成纯公式大概率会丢掉 rubric 那部分收益——\n   但这只是作者基于旧数据做的**推断**，不是新的实测。\n3. 到 2026-09-22（本次蒸馏时点）：纯公式这一档排序键依然没有对应的 NDCG 或任何排序质量\n   读数。`eval/selection/` 这套 harness（BASELINE.md、rescore.ts、gold-worklist-\n   2026-06-05.csv 等）本身面临被删除——一旦删除，连\"曾经有把尺能测这个\"的痕迹都会消失，\n   除非有意识地把这个缺口写进知识库。\n\n## 为什么这个缺口值得显式标注为未决事项\n\n- **换排序键是明确决定，但决定没有配对验证。** 代码注释说\"接受这个降级是明确决定，不是\n  没看见\"——这句话本身说明作者知道有风险，但目前项目里没有任何地方记录\"这个风险后来\n  兑现了没有\"。\n- **旧基线不能直接拿来推断新公式的表现。** 0.958 的大头贡献来自 LLM rubric（+0.068），\n  而新公式恰恰砍掉了这部分，仅保留覆盖度那一档小贡献（+0.018）的思路（对数加权源数/\n  篇数）。类推的方向是\"新公式可能接近甚至低于 0.872（纯旧 importance 都没有）那一档\"，\n  但这只是基于历史分解数字做的合理怀疑，不是实测，不能当结论使用。\n- **重新测的成本相对可控。** `gold-worklist-2026-06-05.csv`（140 行）和 BASELINE.md 描述的\n  方法论如果在删除前完整入库或至少被本节点引用路径记录下来，之后想补测时不需要从零设计\n  金标格式。"
     },
     {
       "id": "lesson-self-check-needs-separate-call",
@@ -4015,7 +4015,7 @@
         "设计验收门"
       ],
       "scope": "cluster-to-brief 的 grading instructions；证据来自定向抽查（32 句逐句核）与补守则前后的 dev 读数对照",
-      "source": "scripts/eval/cluster-to-brief/grading-instructions.mjs 与 out/frontier.json",
+      "source": "eval/cluster-to-brief/grading-instructions.mjs 与 out/frontier.json",
       "conditions": [
         "补守则同时改变了 packId，全部旧判定被指纹闸自动隔离、重判 —— 前后读数出自不同的两把 scorer，是设计如此，不是可比的 A/B"
       ],
@@ -4079,7 +4079,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/out/slow-direct-raw-dev.json; scripts/eval/cluster-to-brief/out/slow-structure-router-dev.json; scripts/eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
+      "source": "eval/cluster-to-brief/out/slow-direct-raw-dev.json; eval/cluster-to-brief/out/slow-structure-router-dev.json; eval/cluster-to-brief/out/slow-evidence-graph-dev.json",
       "conditions": [],
       "evidence_origin": "local_record",
       "kind": "tradeoff",
@@ -4172,7 +4172,7 @@
       "legacy_relations": {},
       "kind": "observation",
       "file": "measure-analysis-fields-vs-report.md",
-      "content": "**同一批文章，LLM 读了三遍**，三条流水线互不复用：\n\n| 遍 | 谁 | 产出 | 谁消费 |\n|---|---|---|---|\n| 1 | 文章分析（全量 500–770 篇/天） | `event_summary_points` 等结构化字段 | 拼成文本喂 embedding，供聚类 |\n| 2 | 报告层 extract（入选 ~150 篇/天） | 带出处的事实 | 写作层要点 |\n| 3 | 报告层 voices（入选 25 簇/天） | 当事方、分歧 | 写作层立场材料 |\n\n第一遍的产出除了拼成一个字符串喂 embedding，**再没人用过**。\n\n**能不能直接拿摘要点替代抽取——测了，不行**（金标同口径）：\n\n| | c0（金标 13） | c18（金标 30） |\n|---|---|---|\n| 摘要点（107 条 / 36 条） | 9/13 | 16/30 |\n| 报告层全部事实（78 / 27 条） | **13/13** | **20/30** |\n\n摘要点**条数比报告层事实还多**却覆盖更低。漏的全是专名、机构、金额：`Greer`、`Davos`、\n`European Parliament`、`Mosseri`、`Dutch court`、`$18bn settlement`、`Greens`、`New Zealand`。\n根因是两个 prompt 的目标不同——分析写的是给 embedding 用的**概括性主题句**，报告层写的是\n给写作层用的**事实台账**，概括天然丢专名。\n\n**把抽取搬进分析层也不划算，原因是基数**：分析对全量 500–770 篇跑，报告层只对入选 ~150 篇跑，\n比例 3.7:1。每篇多输出约 280 token 的详细事实要对 550 篇付（≈5,700 neurons/天），\n而省下的 extract + voices 只在 150 篇/25 簇上（≈5,900 neurons/天）——**大致打平，且对每天篇数敏感**\n（按 770 篇算就变净亏）。现行架构「把贵的抽取放在筛选之后」是对的。\n\n**想倒过来（先聚类后分析）走不通**：embedding 的输入是 `generateSearchText`，而它拼的正是分析产出的字段，\n所以分析必须全量先跑。用户口径的理由更根本——**不能预先假设标题和摘要能筛出该要的文章，\n分析本身就是召回机制**。\n\n顺带记一条盲区：`generateSearchText` 只有一句「从文章分析数据中提取关键信息」的注释，没有任何理由记录，\ngit 历史里只经历过目录重构；`scripts/eval/clustering/` 有金标、打分器、rubric，\n但**从没测过 embedding 的输入文本**，测的全是聚类器与阈值。"
+      "content": "**同一批文章，LLM 读了三遍**，三条流水线互不复用：\n\n| 遍 | 谁 | 产出 | 谁消费 |\n|---|---|---|---|\n| 1 | 文章分析（全量 500–770 篇/天） | `event_summary_points` 等结构化字段 | 拼成文本喂 embedding，供聚类 |\n| 2 | 报告层 extract（入选 ~150 篇/天） | 带出处的事实 | 写作层要点 |\n| 3 | 报告层 voices（入选 25 簇/天） | 当事方、分歧 | 写作层立场材料 |\n\n第一遍的产出除了拼成一个字符串喂 embedding，**再没人用过**。\n\n**能不能直接拿摘要点替代抽取——测了，不行**（金标同口径）：\n\n| | c0（金标 13） | c18（金标 30） |\n|---|---|---|\n| 摘要点（107 条 / 36 条） | 9/13 | 16/30 |\n| 报告层全部事实（78 / 27 条） | **13/13** | **20/30** |\n\n摘要点**条数比报告层事实还多**却覆盖更低。漏的全是专名、机构、金额：`Greer`、`Davos`、\n`European Parliament`、`Mosseri`、`Dutch court`、`$18bn settlement`、`Greens`、`New Zealand`。\n根因是两个 prompt 的目标不同——分析写的是给 embedding 用的**概括性主题句**，报告层写的是\n给写作层用的**事实台账**，概括天然丢专名。\n\n**把抽取搬进分析层也不划算，原因是基数**：分析对全量 500–770 篇跑，报告层只对入选 ~150 篇跑，\n比例 3.7:1。每篇多输出约 280 token 的详细事实要对 550 篇付（≈5,700 neurons/天），\n而省下的 extract + voices 只在 150 篇/25 簇上（≈5,900 neurons/天）——**大致打平，且对每天篇数敏感**\n（按 770 篇算就变净亏）。现行架构「把贵的抽取放在筛选之后」是对的。\n\n**想倒过来（先聚类后分析）走不通**：embedding 的输入是 `generateSearchText`，而它拼的正是分析产出的字段，\n所以分析必须全量先跑。用户口径的理由更根本——**不能预先假设标题和摘要能筛出该要的文章，\n分析本身就是召回机制**。\n\n顺带记一条盲区：`generateSearchText` 只有一句「从文章分析数据中提取关键信息」的注释，没有任何理由记录，\ngit 历史里只经历过目录重构；`eval/clustering/` 有金标、打分器、rubric，\n但**从没测过 embedding 的输入文本**，测的全是聚类器与阈值。"
     },
     {
       "id": "measure-attribution-not-faithfulness",
@@ -4204,7 +4204,7 @@
       "title": "自由风险问题规划在四句开发样本中重复整句且把 after 改成 cause，不能直接接专门核验",
       "date": "2026-09-17",
       "status": "live",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/AUTO-RISK-RESULT.md",
       "invalidates_when": "规划表示改变后能生成独立且完整的风险问题，并在正常时序与归因对照上不引入新前提",
       "type": "lesson",
       "tasks": [
@@ -4236,7 +4236,7 @@
         "设计验收门"
       ],
       "scope": "report 76/77/78 三期简报、约 900 个块对；判为阳性/阴性的共 7 对，其中只有 0.52 与 0.19 两对做过人工逐句核实，其余靠标题相似 + 共享专名判断。n=3 期，不是验过的精度，没有 precision/recall 读数",
-      "source": "services/meridian-ai-worker/src/utils/block-overlap.ts 与 scripts/eval/block-overlap/baseline.ts 的头注释（引入于 commit c4988c1，已于 2026-09-22 随奥卡姆剃刀清理删除；读数仅存于本节点）",
+      "source": "services/meridian-ai-worker/src/utils/block-overlap.ts 与 eval/block-overlap/baseline.ts 的头注释（引入于 commit c4988c1，已于 2026-09-22 随奥卡姆剃刀清理删除；读数仅存于本节点）",
       "conditions": [
         "判据为传感器自身的 cont（块间内容重合度），不是余弦相似度",
         "全部读数来自离线 baseline 脚本，传感器从未接入 assembleBrief，没有任何线上运行数据",
@@ -4258,7 +4258,7 @@
         "设计验收门"
       ],
       "scope": "dev 五簇的核心层 21 条(占清单 141 条的 14.9%);次层 24 条与尾层 96 条未校核",
-      "source": "scripts/eval/cluster-to-brief/{audit-checklist.mjs,apply-audit.mjs,compare-audits.mjs} 与 out/_checklist-audit/",
+      "source": "eval/cluster-to-brief/{audit-checklist.mjs,apply-audit.mjs,compare-audits.mjs} 与 out/_checklist-audit/",
       "conditions": [
         "两个校核者读同一份证据包(全簇检索 top-6 + 每篇支持文章各自最匹配的一句),互不可见",
         "唯一变量是模型(opus / sonnet),指令逐字相同",
@@ -4367,7 +4367,7 @@
       "title": "相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界",
       "date": "2026-09-17",
       "status": "live",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
       "invalidates_when": "换模型或证据门表示后，整批判定在同一组关系错对照上达到相同召回且没有跨项借证据",
       "type": "lesson",
       "tasks": [
@@ -4492,7 +4492,7 @@
       "title": "八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证",
       "date": "2026-09-17",
       "status": "live",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
       "invalidates_when": "自动问题规划遗漏必要风险或引入错误前提，或未见样本上专门核验再次漏判和误杀",
       "type": "lesson",
       "tasks": [
@@ -4620,7 +4620,7 @@
         "设计验收门"
       ],
       "scope": "一期简报内部的块两两比较；英文小写正文；离线运行。从未接入 assembleBrief，无线上数据",
-      "source": "services/meridian-ai-worker/src/utils/block-overlap.ts + scripts/eval/block-overlap/baseline.ts（commit c4988c1 引入，已于 2026-09-22 随清理删除；机制描述仅存于本节点）",
+      "source": "services/meridian-ai-worker/src/utils/block-overlap.ts + eval/block-overlap/baseline.ts（commit c4988c1 引入，已于 2026-09-22 随清理删除；机制描述仅存于本节点）",
       "conditions": [
         "同一期内块数 ≥2，且块正文足够长（短块会让归一量虚高，必须同时读绝对量）",
         "阈值 0.22 的来历与样本量见 measure-block-overlap-threshold，换 prompt 需重标"
@@ -4643,7 +4643,7 @@
         "设计验收门"
       ],
       "scope": "cluster-to-brief 的慢档覆盖轴;dev 五簇 + heldout 两簇都在用,核心层内容经过一次双模型校核,分层本身未验",
-      "source": "scripts/eval/cluster-to-brief/build-checklist.mjs 的 computeTiers 与 expectations.json 的 coreTierRule",
+      "source": "eval/cluster-to-brief/build-checklist.mjs 的 computeTiers 与 expectations.json 的 coreTierRule",
       "conditions": [
         "核心层门槛必须是相对的:绝对 >=6 篇在 6 篇的簇上算不出来、在 116 篇的簇上形同虚设;按簇规模取比例则让大簇核心层恒为空(簇越大文章越分散到更多事件)",
         "口径只在 computeTiers 里定义一次,score-slow 读清单里写好的 coreMin,不自己算"
@@ -4668,7 +4668,7 @@
         "设计验收门"
       ],
       "scope": "direct-raw exec 臂(DIRECT_RAW_WRITE_REPAIR=mech);materials = 本次写作用到的全部重点原句",
-      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(repairCitations / contextOf)",
+      "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(repairCitations / contextOf)",
       "conditions": [
         "成稿逐句带出处",
         "比对只认字面包含(数字去千分位、引语归一大小写与标点)"
@@ -4690,8 +4690,8 @@
       "tasks": [
         "设计验收门"
       ],
-      "scope": "验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 scripts/eval/coverage-judge/",
-      "source": "scripts/eval/coverage-judge/README.md「三尺三角测量」节 + commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）",
+      "scope": "验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 eval/coverage-judge/",
+      "source": "eval/coverage-judge/README.md「三尺三角测量」节 + commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）",
       "conditions": [
         "前提：被验判官（qwen-long）与被评对象（简报生成也用 qwen 家族）同家族，self-preference 风险正是要验的东西",
         "第二标注器必须是异家族模型（这里用 GPT/codex），理由是与被验判官不共享同一套系统性偏差",
@@ -4715,7 +4715,7 @@
         "演化组合架构"
       ],
       "scope": "dev 五簇上与人工杂质标注对照；2026-09-19 在 heldout 的 c51(116 篇/41% 杂质)上端到端验过一次；未验跨日期语料",
-      "source": "scripts/eval/cluster-to-brief/arms/structure-router/run.mjs（mergeStorylines/route）+ out/structure-router/structure-c<id>.json",
+      "source": "eval/cluster-to-brief/arms/structure-router/run.mjs（mergeStorylines/route）+ out/structure-router/structure-c<id>.json",
       "conditions": [
         "必须用 e5 合并后的 canonicalStorylineKey，不是合并前的 storylineKey：后者在 c36 上只匹配 8 篇，而真实主导成分是 56 篇",
         "主导成分少于 2 篇时跳过筛选，不把簇筛空"
@@ -4740,7 +4740,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "input": "原子及继承的原始证据坐标",
@@ -4784,7 +4784,7 @@
         "设计验收门"
       ],
       "scope": "cluster-to-brief 慢档；已随一次真实的守则变更跑通（6 份旧判定被自动隔离）",
-      "source": "scripts/eval/cluster-to-brief/scorer-id.mjs、build-judge-pack.mjs、score-slow.mjs、scratch/selftest-slow.mjs",
+      "source": "eval/cluster-to-brief/scorer-id.mjs、build-judge-pack.mjs、score-slow.mjs、scratch/selftest-slow.mjs",
       "conditions": [
         "grading instructions 必须抽成独立模块才算得出指纹 —— build-judge-pack.mjs 是脚本、有顶层副作用",
         "自测覆盖三种失效：缺指纹 / 包被改过 / 尺改了但包没重建，期望 exit 2"
@@ -4809,7 +4809,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/README.md",
+      "source": "eval/cluster-to-brief/arms/direct-raw/README.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "input": "全部文章及句级出处",
@@ -4854,7 +4854,7 @@
         "设计验收门"
       ],
       "scope": "cluster-to-brief 慢档；dev 五簇上用过，heldout 未验，跨日期语料未验",
-      "source": "scripts/eval/cluster-to-brief/retrieval.mjs（buildIndex/topK）与 build-judge-pack.mjs",
+      "source": "eval/cluster-to-brief/retrieval.mjs（buildIndex/topK）与 build-judge-pack.mjs",
       "conditions": [
         "簇内句向量按簇缓存，缓存键带句子条数与首末句 —— 静默用旧向量是最危险的失效方式（检索照样出结果，全是错的）",
         "不能换成整簇一次直读：[[measure-detection-ceiling]] 实测整簇判官召回只有 26%"
@@ -4879,7 +4879,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "input": "簇内文章",
@@ -4901,7 +4901,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "input": "一个明确风险问题、候选断言与原文",
@@ -4947,7 +4947,7 @@
         "演化组合架构"
       ],
       "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-      "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
+      "source": "eval/cluster-to-brief/arms/atomic-evidence/DESIGN.md",
       "conditions": [],
       "evidence_origin": "local_record",
       "input": "候选的文章与发布者支持信息",
@@ -5016,7 +5016,7 @@
         "治事实关系错"
       ],
       "scope": "direct-raw exec 臂;窗口 30k 字符、每窗最多 12 条重点、每条最多 4 个出处;glm-4.7-flash",
-      "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(DIRECT_RAW_WRITE_AT_END)",
+      "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(DIRECT_RAW_WRITE_AT_END)",
       "conditions": [
         "簇内全量原文可读,不做 30 篇截断",
         "窗口步与写作步用同一个模型"

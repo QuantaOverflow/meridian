@@ -10,7 +10,7 @@
     "演化组合架构"
   ],
   "scope": "仅 c36 开发样本；未使用 heldout，不代表完整组合或生产验收",
-  "source": "scripts/eval/cluster-to-brief/arms/evidence-graph/README.md",
+  "source": "eval/cluster-to-brief/arms/evidence-graph/README.md",
   "conditions": [],
   "evidence_origin": "local_record",
   "relations": [

@@ -6,7 +6,7 @@
   "date": "2026-09-22",
   "status": "live",
   "tasks": ["设计验收门", "改报告层结构"],
-  "scope": "apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 scripts/eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）",
+  "scope": "apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）",
   "source": "apps/backend/src/lib/core/storyline.ts:104-136（blockScore 与 blockImportance 函数上方的代码注释，作者本人在 2026-09-02 左右写下并自陈「纯公式这一档从未被测过」「机制：广泛报道 ≠ 重要」「接受这个降级是明确决定，不是没看见」）",
   "conditions": [
     "blockScore(distinctSources, articleCount) = log2(1+源数) + 0.5·log2(1+篇数)，纯公式、零 LLM，取代 story-validation 的 LLM importance(1-10)",
@@ -23,7 +23,7 @@
 
 **这是一个尚未解决的缺口，不是一次失败的实验**——没有任何 harness 跑过、也没有任何 gold
 标注过 `blockScore`/`blockImportance` 这一档排序键的效果好坏。记录它的理由是：如果不写
-下来，删掉 `scripts/eval/selection/` 之后，"NDCG=0.958 这把尺"和"生产实际在跑的排序公式"
+下来，删掉 `eval/selection/` 之后，"NDCG=0.958 这把尺"和"生产实际在跑的排序公式"
 之间的错位关系就彻底没人知道了——将来有人翻出 BASELINE.md 的历史版本（或翻到这条知识节点），
 可能会想当然地把 0.958 当成当前排序质量，这是错的。
 
@@ -36,7 +36,7 @@
    的贡献（rubric +0.068、覆盖度 +0.018），暗示换成纯公式大概率会丢掉 rubric 那部分收益——
    但这只是作者基于旧数据做的**推断**，不是新的实测。
 3. 到 2026-09-22（本次蒸馏时点）：纯公式这一档排序键依然没有对应的 NDCG 或任何排序质量
-   读数。`scripts/eval/selection/` 这套 harness（BASELINE.md、rescore.ts、gold-worklist-
+   读数。`eval/selection/` 这套 harness（BASELINE.md、rescore.ts、gold-worklist-
    2026-06-05.csv 等）本身面临被删除——一旦删除，连"曾经有把尺能测这个"的痕迹都会消失，
    除非有意识地把这个缺口写进知识库。
 

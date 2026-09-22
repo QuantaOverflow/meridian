@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "mechanical-v0.5，既有v0.4四固定命题和v0.3七角色目标离线回放；非独立或端到端验证",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/MECHANICAL-RESULT.md",
   "conditions": ["reportMode/eventState/polarity由有限词典和受限英语单谓语模板代码生成，roles仍LLM，unknown不回退模型", "旧raw/原文保留；新增机械runner仅dry-run和模拟网络测试，未真实重跑角色prompt/错误反馈", "主Codex本地复核开发回放；would时间、嵌套、外部否定/未知语法保留unknown"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

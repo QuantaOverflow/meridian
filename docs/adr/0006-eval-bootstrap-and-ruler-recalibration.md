@@ -1,6 +1,6 @@
 # ADR 0006：冷启动阶段怎么演化架构，以及尺什么时候必须重定
 
-- 状态：已采纳（方法论；配套实现已入库：`scripts/eval/cluster-to-brief/CONTRACTS.md` 与 dataset / policy / judges 三层）
+- 状态：已采纳（方法论；配套实现已入库：`eval/cluster-to-brief/CONTRACTS.md` 与 dataset / policy / judges 三层）
 - 日期：2026-09-20
 - 相关：ADR 0003（一簇即一条）、ADR 0004（写作层 v3）、`docs/knowledge/nodes/decision-eval-module-contracts.md`、
   `lesson-coverage-metric-pushes-listing`、`lesson-handpicked-fixtures-dont-extrapolate`、`lesson-judge-needs-alignment`、
@@ -69,7 +69,7 @@
 
 ### 5. 四层边界（借 Inspect 的概念，不引入框架）
 
-dataset / solver / scorer / judge 互不依赖，细则见 `scripts/eval/cluster-to-brief/CONTRACTS.md`：
+dataset / solver / scorer / judge 互不依赖，细则见 `eval/cluster-to-brief/CONTRACTS.md`：
 
 - dataset 定在最宽的稳定边界（一天全量 + 聚类快照 + 选中列表），标注挂在**输入**上；
 - 输出契约架构中立，带逐句出处与原句原文（`quote`），scorer 因此不依赖生产的切句逻辑；

@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "structured-v0.2，6题人工参考结构与29本地测试；非模型准确率、非独立验证，不读heldout",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/LOCAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/LOCAL-RESULT.md",
   "conditions": ["参考结构与对齐人工指定，不进入模型；真实Workers AI调用因缺明确数据发送授权尚未运行", "候选/证据context-v2参考判断由主Codex非盲本地复核"],
   "evidence_origin": "local_record",
   "relations": [{"type": "yields", "to": "lesson-relation-factor-observability"}],

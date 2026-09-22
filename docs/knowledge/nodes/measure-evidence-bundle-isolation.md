@@ -4,7 +4,7 @@
   "title": "相同证据包隔离在八句探针有效，但扩展仍误杀和漏判，不能视为充分安全边界",
   "date": "2026-09-17",
   "status": "live",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/GOAL.md",
   "invalidates_when": "换模型或证据门表示后，整批判定在同一组关系错对照上达到相同召回且没有跨项借证据",
   "type": "lesson",
   "tasks": [

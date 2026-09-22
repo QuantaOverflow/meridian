@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "提高链路健壮性"],
   "scope": "v0.10/v0.11复用真实抽取的四已知开发候选，主Codex非盲语义复核后代码比较，不是独立可靠性或整句通过",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/RELATION-CHAIN-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/RELATION-CHAIN-RESULT.md",
   "conditions": ["复用v0.9原始真实抽取与v0.9.1确定性规范化，不重新抽取；固定Workers AI REST/glm，无heldout或远程judge", "每轮最多7逻辑/14HTTP/15000tokens，1次实际错误反馈；身份消歧与单命题配对独立，配对不见报告模式/说话人", "v0.11改编号选择/不透明候选ID及开发事件区分提示，非纯消融；本地审核hash门必须覆盖命题与身份，未知不计成功检错"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

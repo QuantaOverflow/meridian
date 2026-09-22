@@ -1,5 +1,5 @@
 // 确定性自测(不碰 LLM):喂写死的 (gold, pred),断言指标 = 手算已知值。
-// 跑法:npx tsx scripts/eval/_shared/metrics.test.ts   —— 见 ADR 0002 的验证策略。
+// 跑法:npx tsx eval/_shared/metrics.test.ts   —— 见 ADR 0002 的验证策略。
 import { confusion, cohensKappa, perClass, balancedAccuracy, fBeta, type Pred } from './metrics.js';
 
 let failures = 0;

@@ -6,7 +6,7 @@
   "date": "2026-08-20",
   "status": "recorded",
   "tasks": ["治故事过拆", "设计验收门"],
-  "scope": "story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）",
+  "scope": "story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）",
   "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:182-188；services/meridian-ai-worker/src/services/story-validation.ts:65-73",
   "conditions": [
     "『严精度』指 rubric.md 的人工严口径（故事内不能混入别的发生才算 correct），区别于机械尺 event_recall2.mjs 的宽口径（故事内有真核即算对，2026-08-20 实测宽口径 75% vs 严口径仅 41.7%，差距全在伞状）",
@@ -38,7 +38,7 @@
 
 `story-validation.ts:65-73`（架构总述，两天复验一致的总体精度）：
 
-> 人工严口径（scripts/eval/story-validation/rubric.md，08-18 与 08-20 两天独立复验）：
+> 人工严口径（eval/story-validation/rubric.md，08-18 与 08-20 两天独立复验）：
 > 生产原形态 41.7% → 本形态 89-92%；进简报的前 15 条精度 93.3%（两天相同）。
 
 ## 为什么净赚判断依赖『下游只取前 15』这个前提

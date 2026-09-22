@@ -7,7 +7,7 @@
   "status": "tested",
   "tasks": ["演化组合架构"],
   "scope": "dev 五簇；heldout 两簇已被别的线消耗，未跑。慢档读数来自旧 scorer（单句证据切片），其缺陷见 lesson-scorer-steers-search",
-  "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs（DIRECT_RAW_ROUTE_GATE / DIRECT_RAW_STORYLINE_FILTER 两个开关）",
+  "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs（DIRECT_RAW_ROUTE_GATE / DIRECT_RAW_STORYLINE_FILTER 两个开关）",
   "conditions": [
     "两个开关都读 out/structure-router/structure-c<id>.json，必须先跑 arms/structure-router/run.mjs",
     "筛文章后窗口切分改变，不能复用 direct-raw 的窗口缓存；只加路由门时可以复用",

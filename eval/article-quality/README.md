@@ -17,7 +17,7 @@ KEEP    其余
 
 > 注意：门是**分类阈值**，不是连续分数 cutoff。所谓"校准 cutoff" = 校准这条分类边界——验 scorer 在每个类、尤其在 KEEP/REJECT 边界上判得准不准，再决定门逻辑该往松/紧调。
 
-这把尺从没做过 eval，无法判断它拦对没拦对。本 harness 验 **scorer↔人 一致性**，复用 faithfulness 那条线（`scripts/eval/faithfulness/`）的方法论：盲标表 + κ + per-class + dev/heldout 切分。
+这把尺从没做过 eval，无法判断它拦对没拦对。本 harness 验 **scorer↔人 一致性**，复用 faithfulness 那条线（`eval/faithfulness/`）的方法论：盲标表 + κ + per-class + dev/heldout 切分。
 
 ## 文件
 
@@ -34,7 +34,7 @@ KEEP    其余
 ## 跑法
 
 ```bash
-cd scripts/eval/article-quality
+cd eval/article-quality
 pnpm install            # 装本地 tsx + typescript（见 package.json，本地 node_modules 模式）
 
 # A) meta-eval（默认跑种子金标，端到端 smoke）
@@ -81,7 +81,7 @@ env：`AI_WORKER_URL`、`KAPPA_MIN`(0.6)、`RECALL_MIN`(0.7)、`CONCURRENCY`(4)�
 
 ## 结果（2026-07-01，首轮金标 + 判官读数）
 
-**金标**：`gold/quality-gold.jsonl`（73 条，非 5 条种子）。溯源：从 `scripts/eval/scrape-quality` 的 73 篇真实 R2 正文语料，按本 rubric 标 content_quality/completeness。标注方法（跨家族 + 真人裁定，避免单模型共盲）：
+**金标**：`gold/quality-gold.jsonl`（73 条，非 5 条种子）。溯源：从 `eval/scrape-quality` 的 73 篇真实 R2 正文语料，按本 rubric 标 content_quality/completeness。标注方法（跨家族 + 真人裁定，避免单模型共盲）：
 - 主标注 = Claude；第二标注 = **codex 独立盲标**（`gold/codex-labels.jsonl`，跨模型家族）；
 - 二者 15 条分歧由**真人逐条裁定**（原则：高质量去娱乐化新闻=OK，娱乐/观点/太短=LOW，有具体事实短新闻=OK，纯色彩/预告=LOW），落定为金标（`adjudicated:true`）。
 

@@ -52,5 +52,5 @@
 分析本身就是召回机制**。
 
 顺带记一条盲区：`generateSearchText` 只有一句「从文章分析数据中提取关键信息」的注释，没有任何理由记录，
-git 历史里只经历过目录重构；`scripts/eval/clustering/` 有金标、打分器、rubric，
+git 历史里只经历过目录重构；`eval/clustering/` 有金标、打分器、rubric，
 但**从没测过 embedding 的输入文本**，测的全是聚类器与阈值。

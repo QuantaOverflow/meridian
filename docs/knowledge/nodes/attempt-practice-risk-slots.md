@@ -7,7 +7,7 @@
   "status": "tested",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "五个 dev 簇的 60 道人工练习；模型槽仅第一批四题有下游调用；未使用 heldout",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-GOAL.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/PRACTICE-GOAL.md",
   "conditions": ["固定原句证据；仅练习、非盲单 Codex 标签"],
   "evidence_origin": "local_record",
   "relations": [

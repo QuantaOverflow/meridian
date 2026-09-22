@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "split-heal-v0.3，p11/p12四候选与三源句；转换组件，不含自动对齐/整句接受，不读heldout",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/SPLIT-HEAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/SPLIT-HEAL-RESULT.md",
   "conditions": ["TARGET逐句角色转换，独立逐报告状态转换，源句附原radius2上下文；代码分配来源命名空间ID", "实际代码校验错误加上次输出回传最多一次，无标准答案注入；主Codex本地非盲复核，无远程judge", "与v0.2接口/职责不同，且无无反馈消融，不能归因净收益"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

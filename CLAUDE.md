@@ -26,7 +26,7 @@
 ## 工作规则
 - 分支：`meridian-dev` 是主干（没有 `main`）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
-- 改 LLM prompt：编辑 `services/meridian-ai-worker/src/prompts/` → 跑 `scripts/eval/` 评估 → 再合
+- 改 LLM prompt：编辑 `services/meridian-ai-worker/src/prompts/` → 跑 `eval/` 评估 → 再合
 - 完成前跑 `pnpm typecheck`；项目暂无单元测试，"完成"以 typecheck + 手动验证为准
 - 报错先 `wrangler tail`，再加 console.log
 
@@ -45,7 +45,7 @@
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
-- 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `scripts/eval/cluster-to-brief/CONTRACTS.md`）
+- 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `eval/cluster-to-brief/CONTRACTS.md`）
 - 架构决策记录 → `docs/adr/`
 
 ## 知识蒸馏（每个 spike / goal 结束时做）
@@ -77,8 +77,8 @@
 |---|---|---|
 | 产品代码 | `<package>/src/` | ✅ |
 | 单元/集成测试 | `<package>/test/`（跟包走，**不设顶层 tests/**——monorepo 惯例） | ✅ |
-| eval harness / 金标 / rubric | `scripts/eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
-| eval 中间产物（worklist / packet / dump） | 留 `scripts/eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
+| eval harness / 金标 / rubric | `eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
+| eval 中间产物（worklist / packet / dump） | 留 `eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
 | eval 运行报告 | 该 harness 目录下的 `out/`（`.gitignore` 已挡） | ❌ |
 | 原型 / 探索实验（含 fixtures 与产物） | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | ❌ 只留本地（根 `.gitignore` 整目录挡） |
 | 一次性探测脚本 / 临时输出 | scratchpad，不进 repo | ❌ |
@@ -103,7 +103,7 @@
 
 | 文件 | 触发路径 | 内容 |
 |---|---|---|
-| `eval.md` | `eval/**`、`scripts/eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
+| `eval.md` | `eval/**`、`eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
 | `local-verification.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | wrangler dev 单端点与联调、R2 注意事项、typecheck 的两个坑 |
 | `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 

@@ -7,10 +7,10 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "设计验收门"],
   "scope": "四个簇、83 句，来自 brief-v3-prod 的 M2 run（跑的是产品代码路径）；非盲单人判定，不是独立金标",
-  "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+  "source": "eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
   "conditions": [
     "候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致",
-    "原文来自同 run 的 out/raw/<c>/A/batch*.json；scripts/eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照",
+    "原文来自同 run 的 out/raw/<c>/A/batch*.json；eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照",
     "判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号",
     "有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用"
   ],

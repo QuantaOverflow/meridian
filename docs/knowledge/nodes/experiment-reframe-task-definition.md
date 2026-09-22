@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错"],
   "scope": "17 条题全部取自已消耗的 heldout c28/c51 与已调优的开发批，且按已知失败挑选；定性死活判断，非通过率、非泛化证据",
-  "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+  "source": "eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
   "conditions": [
     "三臂同题、同 batch 大小（2）、同一次运行内交错跑完；对照臂 A′ 真跑而非引用历史 results，以消除题集与 batching 混淆",
     "@cf/zai-org/glm-4.7-flash，真 Workers AI REST+Gateway，skip-cache、thinking 关闭、temperature 0；无远程 judge",

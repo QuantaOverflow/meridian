@@ -59,7 +59,7 @@
 「22 名美军阵亡」这类读者会当真的错。此前在 7 簇手挑集合上从没量准过
 （见 `lesson-handpicked-fixtures-dont-extrapolate`）。
 
-**配套把 eval 重构成模块**（ADR 0006、`scripts/eval/cluster-to-brief/CONTRACTS.md`）：
+**配套把 eval 重构成模块**（ADR 0006、`eval/cluster-to-brief/CONTRACTS.md`）：
 dataset 可版本化且标注挂在输入上、判据只描述输出性质（`noEventMixing` 取代「必须拆 ≥2 块」）、
 评分与生成分离、判官有六轴规格与落盘验收闸、默认 k=3 报均值与极差。
 
@@ -83,7 +83,7 @@ dataset 可版本化且标注挂在输入上、判据只描述输出性质（`no
 
 ---
 
-## 2026-09-19 · scorer 重建与第一条 Pareto frontier（`scripts/eval/cluster-to-brief/`）
+## 2026-09-19 · scorer 重建与第一条 Pareto frontier（`eval/cluster-to-brief/`）
 
 **这一轮是问题层搜索，不是实现层。** 判据改了，按 CONTEXT.md「判据变了旧读数作废」，
 **此前全部实现层读数作废** —— 包括写进知识库的「逐句接地把硬错从 5 压到 1」那条归因。
@@ -184,7 +184,7 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 
 **现状：纯传感器已上线**（2026-07-12，ai-worker `9d7eafde` / backend `5acefe08`）。运行时只标记不改简报（此前影子门一直在真改，路径 B 删句已关）。
 
-**离线预筛脚本已建并冒烟过**（`scripts/eval/offline-review/prefilter.ts`，worklist = flagged 全集 + 审计抽样；冒烟抓出 000 报警号、日期区间、FNV 抽样偏差三个 bug 并已修）。
+**离线预筛脚本已建并冒烟过**（`eval/offline-review/prefilter.ts`，worklist = flagged 全集 + 审计抽样；冒烟抓出 000 报警号、日期区间、FNV 抽样偏差三个 bug 并已修）。
 
 **要做：**
 1. 攒 1–2 周生产数据
@@ -222,8 +222,8 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 - 抓取/解析正确率 eval：机械签名检测器 precision 1.0 / recall 0.87，已部署（EXTRACTION_JUNK 生产实证）
 - 环 1 grounding 判官已验（离线 Claude κ 0.779，三闸全过）
 - 覆盖对账判官已验（κ 0.965、dropped precision 1.0）
-- 检测型判官指标统一到 `scripts/eval/_shared/metrics.ts`（ADR 0002）
-- 聚类 eval 重建：两窗人读全覆盖金标 + 产品口径打分器（`scripts/eval/clustering/`）
+- 检测型判官指标统一到 `eval/_shared/metrics.ts`（ADR 0002）
+- 聚类 eval 重建：两窗人读全覆盖金标 + 产品口径打分器（`eval/clustering/`）
 
 **输入端**
 - 源池 11 → 17 行（有效源 8 → 14，进稿约 230 → 600/天）

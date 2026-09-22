@@ -1,5 +1,5 @@
 /**
- * 【简报块 v6 · 纯函数】原型 `scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`
+ * 【简报块 v6 · 纯函数】原型 `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`
  * 在 `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 这一条路径下的移植。
  *
  * 这是**移植不是重写**：窗口预算、出处上限、必写档口径、代词句带前一句、补出处的"只补不删"
@@ -313,7 +313,7 @@ export function writeMaterial(
     .join('\n\n');
 }
 
-// ── 数字 / 引语核对（移植自 scripts/eval/cluster-to-brief/lib.mjs）────────
+// ── 数字 / 引语核对（移植自 eval/cluster-to-brief/lib.mjs）────────
 /** 句中出现的数字，去掉千分位。日期类（1900-2100 的四位整数）不算，它们常被正确推算出来。 */
 export function numbersIn(text: unknown): Set<string> {
   const out = new Set<string>();

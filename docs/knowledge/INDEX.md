@@ -514,7 +514,7 @@
   - 来源性质：local_record
   - 条件：主agent只读检查项目及用户Claude settings中的hook事件与knowledge匹配，不输出其他配置或secret；项目settings.json不存在，settings.local.json只有SessionStart/UserPromptSubmit，没有知识库Stop注册，已检查用户文件也无知识库Stop注册；运行时/plugin/managed配置未验；Claude官方文档说明默认读取CLAUDE.md而非AGENTS.md，支持@AGENTS.md导入；本项目CLAUDE.md有知识库摘要，但无该导入，现有本地hook命令也没有显式引用AGENTS或knowledge，脚本间接行为未全面审计；Claude官方Stop支持hook_event_name、stop_hook_active及decision:block/reason；现脚本相应协议匹配、有内容指纹成功缓存、只读检查和一次续跑上限。此为静态协议兼容判断，不是客户端触发证据
 - [覆盖对账判官（reconcileCoverage）在 112 条三角测量金标上 κ=0.965 通过，dropped precision=1.000；随后用它验证两遍法把合成漏报从 13.4% 压到 0%](nodes/experiment-coverage-judge-kappa-n112.md) · `recorded` · 结果：passed · **历史摘要，运行细节不完整** · `experiment-coverage-judge-kappa-n112`
-  - 范围：scripts/eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径
+  - 范围：eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径
   - 来源性质：local_record
   - 条件：母集团：到达合成层的 story（brief_stories.selected_for_intel=true 且 intel_report_r2_key 非空），取自 error-analysis 路2 用过的 8 条真实 brief（admin-brief-*），共 112 story-disposition 组；gold 构成：77 三尺一致 + 16 grounded（简报正文实体检索坐实）+ 2 人裁 + 17 headline↔noteworthy 多数决；三尺方法论见 [[mechanism-coverage-judge-triangulation]]：judge=qwen-long（三分类）/ codex=GPT（异家族第二标注）/ det=无 LLM 专有名词加权词汇重叠对齐器（dropped/covered 强、headline/noteworthy 弱）；忠实点：顺序对齐生产（R2 key idx 昇序=intel step 顺=生产 reports[] 顺）、label 用 executiveSummary.replace(/\s+/g,' ').trim().slice(0,160)（与 runtime reconcileCoverage 完全一致）、判定兜底（漏判/非法 disposition→dropped）与生产一致；A/B 复测前置条件：8 期生产简报的原始生成时间早于 bc3f8a9（RARR+输入修复），不能直接当对照，因此两臂（baseline/treatment）都在同一份代码 HEAD 上重放生成，唯一变量是 prompt；两遍法（232b15e）的 repairCoverage 不经 LLM：程序化从 dropped story 的 executiveSummary 逐字取首句补插 noteworthy，by-construction 不引入新编造；对账失败则跳过（best-effort，不拖垮主流程）
   - 入边 `based_on` ← [三尺三角测量：judge + 异家族第二标注 + 决定论对齐器共同标注，分歧交人裁，避免 LLM-judge 自证](nodes/mechanism-coverage-judge-triangulation.md)
@@ -549,7 +549,7 @@
 - [代码坐实的数字/日期硬冲突（extract-compare 通道）精度实测 0.833~1.0，真金标修 3 弄坏 0](nodes/experiment-extract-compare-code-verified-precision.md) · `recorded` · 结果：passed · **历史摘要，运行细节不完整** · `experiment-extract-compare-code-verified-precision`
   - 范围：extract-compare.ts 的 LLM 抽取（逐字引用、禁算术）+ 代码比对（区间相交判冲突）通道；对照对象是 intel-grounding 金标集（真实）与另一份合成集
   - 来源性质：local_record
-  - 条件：真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 scripts/eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）；0.833~1.0 是两个数据集上精度的区间描述，不是单一精确值——本节点原样保留区间，不折算成单点
+  - 条件：真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）；0.833~1.0 是两个数据集上精度的区间描述，不是单一精确值——本节点原样保留区间，不折算成单点
   - 形成经验 → [单票否决权要配得上证据的确定性：LLM 单条判决不配，代码坐实的硬冲突才配](nodes/lesson-veto-power-must-match-evidence-certainty.md)
 - [v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%](nodes/experiment-factor-choice-dev.md) · `recorded` · 结果：failed · `experiment-factor-choice-dev`
   - 范围：20新开发文章正常错误40对照，主Codex编写非盲，窄语法字段比较+整句模型语义门；非完整分解或生产验收
@@ -718,7 +718,7 @@
   - 来源性质：local_analysis
   - 形成经验 → [写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍](nodes/measure-writer-input-anatomy.md)
 - [intel-grounding 判官选型：Claude κ=0.779 通过（离线，未过真 API 复验）；qwen 现场重跑 κ=0.407 FAIL](nodes/experiment-intel-grounding-judge-selection.md) · `recorded` · 结果：mixed · **历史摘要，运行细节不完整** · `experiment-intel-grounding-judge-selection`
-  - 范围：仅 scripts/eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平
+  - 范围：仅 eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平
   - 来源性质：local_record
   - 条件：judge-gold.jsonl 共 100 条 factual claim，终裁后 factual=88 supported / 4 unsupported / 8 contradicted；其中 7 条经用户二次人裁终裁（缺口类断言、日期可源内推算类归为 contradicted、复合 claim 逐成分核源，政策写进 rubric.md 的「人裁终裁政策」节）；human-adjudicated.jsonl 24 条是另一批人裁样本，用于交叉核验；synthetic-contradicted.jsonl 26 条为确定性最小扰动生成（negation 7、number/direction 等），双重逐字校验（扰动词在 claim 里、source_quote 在源里）后入库，不猜语义；meta-eval.ts 的 gate：κ≥0.6（KAPPA_MIN）且幻觉类（unsupported/contradicted）召回≥0.7（RECALL_MIN）；qwen 侧 judge_model=qwen-max，走真实 DashScope API（本地 out/judge-meta/meta-1783664090586.json，checked_at 2026-07-10T06:14:50Z，与 commit message 的 κ0.407 完全对得上）；Claude 侧 commit message 称「Claude判官离线κ0.779/unsup0.75/contra0.875三闸全过（待真API重验）」——**离线**指未必经过 llm.ts 里真正打 Anthropic API 的 meta-eval.ts 流程；本地 out/judge-meta/ 现存的 7 份产物里 judge_model 只有 qwen-max 与 deepseek-v3，没有任何一份 judge_model=claude-*，说明这次真 API 复验从未发生或未留痕；同批还有 judge_model=deepseek-v3 的两次本地真跑（2026-07-11），judge-gold.jsonl 上 κ=0.285、synthetic-contradicted.jsonl 上 κ=0，两者都远低于 0.6 门槛，Deepseek 未被 commit message 提及，可能是同一轮里顺手加测的第三家判官，结果同样 FAIL
   - 形成经验 → [算出来的验收结果不会自动同步进 README 状态行——intel-grounding 的「judge 未验证」在有 κ 数字之后仍挂了两个多月](nodes/lesson-intel-grounding-readme-stale.md)
@@ -770,7 +770,7 @@
 - [自然简报候选句实测：事实错 18.3%，8 个多句 block 全含错，15/15 错在写作层](nodes/experiment-natural-error-rate-v3.md) · `recorded` · 结果：observed · `experiment-natural-error-rate-v3`
   - 范围：四个簇、83 句，来自 brief-v3-prod 的 M2 run（跑的是产品代码路径）；非盲单人判定，不是独立金标
   - 来源性质：local_record
-  - 条件：候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致；原文来自同 run 的 out/raw/<c>/A/batch*.json；scripts/eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照；判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号；有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用
+  - 条件：候选取自 apps/backend/prototypes/brief-v3-prod/out/runs/M2-1789179743813/c{0,3,13,18}-{lead,more,brief}.json 的 text；切句数与流水线 trace.marks.sentences 一致；原文来自同 run 的 out/raw/<c>/A/batch*.json；eval/cluster-to-brief/fixtures/content/ 的文章 id 区间 986133–1009708 与本 run 的 912508–918595 完全不重叠，是不同日期快照；判官为本地读原文的 agent，零远程 LLM 调用；判定逐条带候选句、对照原文句与 articleId:句号；有效样本单位是 4 个簇，不是 82 句；按句当独立样本算出的窄区间不可引用
   - 形成经验 → [验收单位该是 block 不是句；注入题的形状与自然错误分布对不上](nodes/lesson-acceptance-unit-block-not-sentence.md)
   - 入边 `based_on` ← [简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md)
   - 入边 `based_on` ← [渲染给写作层看见什么，它就抄什么：概述整句抄、小标题抄进正文、内部字段抄、引用号抄](nodes/lesson-writer-copies-visible-input.md)（scope: 该实验的写作层归因（15/15 错在写作层、句内融合为主）与本条的照抄病例互为补充；本条只保留渲染契约相关的病例，不宣称新的错误率）
@@ -856,7 +856,7 @@
   - 条件：7 个架构臂具体是哪些未在 rubric.md 中逐一列出，只区分『整簇自由划』与『几何预分组』两大类；umbrella 定义：故事内有真核（≥2 篇确实同一发生）但混入了别的发生；wrongPair 定义：压根没有真核，成员是题材/地域/人物相似的不同发生被硬凑；commit b7ab0ea 的提交说明文字写的是『几何预分组错误 76-82% 是 wrongPair』，与 rubric.md 文件正文『80–100%』不一致——本节点采用文件正文（读原文优先于转述）；113 个唯一成员集的总体分布：correct 51 / wrongPair 37 / umbrella 25（合计 113，未按架构臂拆分，是全部去重后的汇总分布）
   - 形成经验 → [分类/分组任务里如果模型没有『合法排除某成员』的出口，就会被逼着硬凑（伞状糊）而不是正确地拒绝](nodes/lesson-legal-exclusion-path-prevents-forced-fit.md)
 - [复核（二审）步骤拿召回换精度：103 个故事削到 74 个，事件召回 98%→76%，严精度 75.7%→89.2%，前 15 条精度 53.3%→93.3%](nodes/experiment-story-validation-verify-stage-tradeoff.md) · `recorded` · 结果：passed · **历史摘要，运行细节不完整** · `experiment-story-validation-verify-stage-tradeoff`
-  - 范围：story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）
+  - 范围：story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）
   - 来源性质：local_record
   - 条件：『严精度』指 rubric.md 的人工严口径（故事内不能混入别的发生才算 correct），区别于机械尺 event_recall2.mjs 的宽口径（故事内有真核即算对，2026-08-20 实测宽口径 75% vs 严口径仅 41.7%，差距全在伞状）；下游 maxStoriesToGenerate 只放 15 条进情报分析，所以『进简报的真故事条数』这个口径（8 条→14 条）比『总故事数量』（103→74）更贴近实际收益；两天独立复验（08-18 与 08-20）里，『进简报的前 15 条精度 93.3%』的结论保持一致（storyValidation.ts:19 与 story-validation.ts:73 均写『两天相同』）
   - 形成经验 → [故事验证的精度与召回是硬取舍：拆得越严去伪存真越准，漏掉的真实事件也越多，不存在两头都好的免费操作](nodes/lesson-story-validation-verify-precision-recall-tradeoff.md)
@@ -1045,9 +1045,9 @@
   - 失效条件：若验证范式改为『整篇一次性核对自身一致性』而非『逐单元对源核对』，该结构性盲区不复存在（问题形式已经变了，不需要专门的块间传感器）；调参教训部分不会因架构变化失效，只要还在手工调规则型检测器就适用
   - 入边 `yields` ← [块间数值一致性传感器：第 75 期实测精度 3/4，加块标题后召回涨但精度从 2/2 掉到 3/6，补地点消歧才回到 3/4](nodes/experiment-block-consistency-tuning.md)
 - [候选分组阈值 0.90 的来历：0.85→0.87→0.90→0.91 四点扫描，0.91 起掉崖丢真事件；全链凝聚在 0.90 上组中位数 2 篇、最大 16 篇；标定方法文件已随本轮清理移出 git](nodes/lesson-candidate-group-threshold-090.md) · `recorded` · `lesson-candidate-group-threshold-090`
-  - 范围：apps/backend/src/lib/core/candidate-grouping.ts 的 completeLinkage 函数与 CANDIDATE_GROUP_THRESHOLD 常量；判据为簇内文章 embedding 两两余弦相似度；标定样本为 2026-08-20/21 两天独立数据 + 人工严口径（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）复验
+  - 范围：apps/backend/src/lib/core/candidate-grouping.ts 的 completeLinkage 函数与 CANDIDATE_GROUP_THRESHOLD 常量；判据为簇内文章 embedding 两两余弦相似度；标定样本为 2026-08-20/21 两天独立数据 + 人工严口径（eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）复验
   - 来源性质：local_record
-  - 条件：阈值作用在文章 embedding 之间（簇内两两余弦），不是在故事质心之间——与 measure-story-merge-threshold-094（0.94，作用于故事质心）是不同层的同名机制，两者标定时间相近（08-21 vs 08-30）但样本、判据对象都不同，不要混为一谈；算法选全链凝聚（complete-linkage）而非单链：单链任意一对超阈值就并、会串联成巨团；全链要求组内所有对都超阈值。candidate-grouping.ts 头注释明确记录『本仓上游的 candidate-grouping.ts 早就是全链，story-dedup 那一层是漏网的』（见 lesson-single-link-merge-falsified 的 conditions）——即本仓两处独立引入的聚合层，候选分组这一处从一开始就选对了算法，story-dedup 那一处后来才补上；『严精度』『前 15 条精度』的定义与人工标注方法论，见 scripts/eval/story-validation/rubric.md——该文件本轮清理已删除（git status 显示为待提交的 D），可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或对应引入提交 b7ab0ea 恢复查看。⚠️ 该文件是标注方法论说明（什么算『同一发生』、umbrella/wrongPair 怎么区分），不包含本节点记录的阈值扫描数字表——扫描数字唯一的留存位置是 constants.ts 的头注释和 commit 9bef77b 的提交说明，两者互为印证；0.90 这一行的『严精度 89-92%』『前 15 条精度 93.3%』与 experiment-story-validation-verify-stage-tradeoff 记录的『严精度 75.7%→89.2%』『前 15 条精度 53.3%→93.3%』是同一批复验数据（判官+复核两段式相对旧架构的整体表现），本节点不重复该实验的完整记录，只摘录阈值扫描本身的对照表
+  - 条件：阈值作用在文章 embedding 之间（簇内两两余弦），不是在故事质心之间——与 measure-story-merge-threshold-094（0.94，作用于故事质心）是不同层的同名机制，两者标定时间相近（08-21 vs 08-30）但样本、判据对象都不同，不要混为一谈；算法选全链凝聚（complete-linkage）而非单链：单链任意一对超阈值就并、会串联成巨团；全链要求组内所有对都超阈值。candidate-grouping.ts 头注释明确记录『本仓上游的 candidate-grouping.ts 早就是全链，story-dedup 那一层是漏网的』（见 lesson-single-link-merge-falsified 的 conditions）——即本仓两处独立引入的聚合层，候选分组这一处从一开始就选对了算法，story-dedup 那一处后来才补上；『严精度』『前 15 条精度』的定义与人工标注方法论，见 eval/story-validation/rubric.md——该文件本轮清理已删除（git status 显示为待提交的 D），可用 `git show HEAD:eval/story-validation/rubric.md` 或对应引入提交 b7ab0ea 恢复查看。⚠️ 该文件是标注方法论说明（什么算『同一发生』、umbrella/wrongPair 怎么区分），不包含本节点记录的阈值扫描数字表——扫描数字唯一的留存位置是 constants.ts 的头注释和 commit 9bef77b 的提交说明，两者互为印证；0.90 这一行的『严精度 89-92%』『前 15 条精度 93.3%』与 experiment-story-validation-verify-stage-tradeoff 记录的『严精度 75.7%→89.2%』『前 15 条精度 53.3%→93.3%』是同一批复验数据（判官+复核两段式相对旧架构的整体表现），本节点不重复该实验的完整记录，只摘录阈值扫描本身的对照表
   - 失效条件：换 embedding 模型后重新扫描阈值-精度曲线；或按 docs/engineering-notes/cluster-to-story-segmentation.md §7.2（本地文件，未入 git）建议的方向换成自适应判据（BIC 式模型选择或基于图模块度的 Leiden 递归终止），不再依赖固定的两两阈值一刀切——见 experiment-set-partition-literature-review 记录的『0.90 这种取值方式本身在文献里没有先例』
   - 适用范围内的警示 → [单链聚合已证伪：7 期实测 32 个多条组里 21 个内部存在没过线的配对，14 条巨团是串出来的](nodes/lesson-single-link-merge-falsified.md)（scope: 补充说明：本仓两处独立的聚合层（候选分组 vs story-dedup）里，候选分组这一处从设计之初就是全链，不是 lesson-single-link-merge-falsified 记录的那次『单链→全链』修复所覆盖的对象；两者共享『全链优于单链』这个算法原理，但不是同一次实验）
 - [CF Container 部署的壳与镜像是两个产物：deployments list 只反映壳，判镜像要看 containers info 的 version 与 LAST MODIFIED](nodes/lesson-container-image-deploy-gap.md) · `recorded` · `lesson-container-image-deploy-gap`
@@ -1104,9 +1104,9 @@
   - 入边 `based_on` ← [eval 按 dataset/solver/scorer/judge 四层定契约,借 Inspect 的概念但不引入框架](nodes/decision-eval-module-contracts.md)
   - 入边 `yields` ← [真实一天不挑选的 25 簇上跑 v6：读者可见错 6.5%、出处挂错 22%、路由门拒掉 32%](nodes/experiment-prod-day-real-distribution.md)
 - [算出来的验收结果不会自动同步进 README 状态行——intel-grounding 的「judge 未验证」在有 κ 数字之后仍挂了两个多月](nodes/lesson-intel-grounding-readme-stale.md) · `recorded` · `lesson-intel-grounding-readme-stale`
-  - 范围：本仓 scripts/eval/ 下所有依赖 README 顶部「状态行」传达验收进度的 harness；不特指某一次代码缺陷
+  - 范围：本仓 eval/ 下所有依赖 README 顶部「状态行」传达验收进度的 harness；不特指某一次代码缺陷
   - 来源性质：local_record
-  - 条件：README 的「未验证」警告写于更早的 commit（本节点未逐一定位哪一条 commit 首次写下这句话，只确认它在 36e186a 之后的 HEAD 仍然存在，未被更新）；36e186a 之后该目录还有 e31fbf9（补 skipCache）、61a3bcc（判官客户端收敛）等 6 次后续 commit，没有一次修改 README 的状态行；对照组：coverage-judge 的 README 在验完 κ 后确实把「结果」小节写回了 README（见 scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节），状态描述与实际验收结果保持同步——同一个仓库里两种做法并存，intel-grounding 是反例，coverage-judge 是正例
+  - 条件：README 的「未验证」警告写于更早的 commit（本节点未逐一定位哪一条 commit 首次写下这句话，只确认它在 36e186a 之后的 HEAD 仍然存在，未被更新）；36e186a 之后该目录还有 e31fbf9（补 skipCache）、61a3bcc（判官客户端收敛）等 6 次后续 commit，没有一次修改 README 的状态行；对照组：coverage-judge 的 README 在验完 κ 后确实把「结果」小节写回了 README（见 eval/coverage-judge/README.md「结果（2026-07-03 首验）」节），状态描述与实际验收结果保持同步——同一个仓库里两种做法并存，intel-grounding 是反例，coverage-judge 是正例
   - 失效条件：本仓引入了「验收结果自动回写 README/状态文件」的机制（例如 stop-hook 类似的校验），使得代码里的验收状态与文档描述不可能出现这种漂移
   - 入边 `yields` ← [intel-grounding 判官选型：Claude κ=0.779 通过（离线，未过真 API 复验）；qwen 现场重跑 κ=0.407 FAIL](nodes/experiment-intel-grounding-judge-selection.md)
 - [没与人工对齐的判官把缺陷数虚高 4 倍——混淆「出处挂错」与「编造」](nodes/lesson-judge-needs-alignment.md) · `recorded` · `lesson-judge-needs-alignment`
@@ -1138,7 +1138,7 @@
   - 适用范围内的警示 → [块间重复传感器：块内文档频率自校准 + 两路信号（稀有词共享 / 长 n-gram），不用专名词表](nodes/mechanism-block-overlap-sensor.md)（scope: 碎片化表现为大量低重合度的块对（尼泊尔 11 块两两 0.18–0.22），块对传感器结构上看不见这个病）
   - 入边 `cautions` ← [故事验证的精度与召回是硬取舍：拆得越严去伪存真越准，漏掉的真实事件也越多，不存在两头都好的免费操作](nodes/lesson-story-validation-verify-precision-recall-tradeoff.md)（scope: 把这条『收紧验证提升精度』的取舍外推成『验证越严越好、拆分越细越好』时，在单一大事件的大簇上会撞见完全不同的失败模式——过细的拆分本身就是缺陷（91 篇报道被切成 22 个故事），不是可以无限换取的精度）
 - [生产无金标几何漏报检测器已证伪：噪声池再凝聚查漏，精度仅 0.05–0.33，无可用操作点](nodes/lesson-noise-pool-leak-detection-falsified.md) · `recorded` · `lesson-noise-pool-leak-detection-falsified`
-  - 范围：两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `scripts/eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）
+  - 范围：两窗人读金标 F1(1142 篇/119 事件)、F2(1252 篇/130 事件)，`agglomerative_cosine` 阈值 0.10、`agglomerative_min_cluster_size=3` 聚类后的噪声池；打分口径固定为 `eval/clustering/product-score.ts --min=3`，宽松 members+related。只测了「噪声池内再跑一次同款凝聚、≥3 篇成组即判定为疑似漏报事件」这一种几何方案，未测别的候选生成方式（如实体/时间特征）
   - 来源性质：local_record
   - 条件：口径必须写清 --min=3、宽松 members+related、两窗中哪一窗——这轮一开始误用 --min=2 复测，得到与 ADR 对不上的读数，一度误判「ADR 本身有错」，改回 --min=3 才对齐；后续任何人复用这条经验时必须先核对口径；进簇率只有 0.379(F1)/0.350(F2)，噪声池占约 65% 的文章；但其中 81% 是金标里本来就只有一篇报道的孤稿——真正被漏掉的多篇事件只占全库 4.9%(F1)/6.4%(F2)；按 ≥3 篇口径，F1 只有 3 个事件、F2 只有 4 个事件被整簇漏掉，全部是 3–4 篇的边缘事件（印尼野火、突尼斯抗议、悉尼马拉松/欧冠抽签、蒙大拿枪击、里昂欧冠、西甲巴萨）；≥5 篇的事件零整个丢失；候选生成脚本/阈值网格的具体代码路径未知——这是本轮探针的产物，未落成 eval harness 里的可复现脚本
   - 失效条件：换一种候选生成方式（例如用实体重叠、时间窗口、标题关键词等非纯几何特征去筛噪声池候选组），或者真漏报事件的样本量显著增大（比如聚类阈值改得更松、真漏报从个位数变成几十个）之后，在同一口径下重测这条结论——只要精度仍在个位数区间且没有可用操作点，本条不算被推翻；只有测出稳定可用的精度/召回权衡才算推翻
@@ -1216,7 +1216,7 @@
   - 入边 `justified_by` ← [判定包指纹：把「判据变了旧读数作废」从 prose 变成退出码](nodes/mechanism-pack-fingerprint.md)
   - 入边 `justified_by` ← [评分方自己检索证据：判官看到的材料与成稿引了谁无关](nodes/mechanism-scorer-evidence-retrieval.md)
 - [生产选择层现在跑的是零 LLM 纯公式 blockImportance，但 NDCG=0.958 这把尺量的是已退役的 storyValidation LLM importance——纯公式这一档从未被任何 harness 测过](nodes/lesson-selection-formula-never-measured.md) · `live` · `lesson-selection-formula-never-measured`
-  - 范围：apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 scripts/eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）
+  - 范围：apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）
   - 来源性质：local_record
   - 条件：blockScore(distinctSources, articleCount) = log2(1+源数) + 0.5·log2(1+篇数)，纯公式、零 LLM，取代 story-validation 的 LLM importance(1-10)；blockImportance 是 blockScore 的取整钳位版本，仅供下游 storyThreads 的 latest_importance>mean_importance 升温判断与 ORDER BY importance 使用，代码注释明确写「排序不要用它——排序用 blockScore 原值」；storyValidation.ts（services/meridian-ai-worker/src/prompts/ 与 services/meridian-ai-worker/src/services/story-validation.ts）仍存在于代码库并被 apps/backend/src/workflows/auto-brief-generation.ts 等处引用，但用于选择层排序的 LLM importance 路径已被 blockScore 取代——storyValidation.ts 是否还被用于其他用途（例如别的字段校验）未在本节点核实，不确认其「已完全退役」，只确认「排序键已经换成纯公式」；2026-09-02 那次实测（零 LLM 重排真实数据）具体换人：挤进前 15 的包括航母停靠泰国(9源16篇)、图派克案宣判(7源15篇)等；被挤出去的包括刚果埃博拉死亡超3000(3源4篇)、习近平访埃及(3源5篇)等——这次「换人」实测本身也没有对应的 NDCG/recall 读数，只是定性列出了排序结果差异
   - 失效条件：有人针对 blockScore/blockImportance 这一档排序键补做了 NDCG 或等价的排序质量评估（哪怕是复用 selection/BASELINE.md 同一批金标重新跑一次），之后这条「未测」的记录应当被新的实验结果取代，而不是继续引用本节点
@@ -1469,7 +1469,7 @@
   - 失效条件：扩到专名与从句后误补出现(补上的原句其实不支撑该句)
   - 保留依据 → [没与人工对齐的判官把缺陷数虚高 4 倍——混淆「出处挂错」与「编造」](nodes/lesson-judge-needs-alignment.md)
 - [三尺三角测量：judge + 异家族第二标注 + 决定论对齐器共同标注，分歧交人裁，避免 LLM-judge 自证](nodes/mechanism-coverage-judge-triangulation.md) · `recorded` · `mechanism-coverage-judge-triangulation`
-  - 范围：验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 scripts/eval/coverage-judge/
+  - 范围：验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 eval/coverage-judge/
   - 来源性质：local_record
   - 条件：前提：被验判官（qwen-long）与被评对象（简报生成也用 qwen 家族）同家族，self-preference 风险正是要验的东西；第二标注器必须是异家族模型（这里用 GPT/codex），理由是与被验判官不共享同一套系统性偏差；决定论对齐器（无 LLM，专有名词加权词汇重叠）作为第三票，强项是二分类 covered/dropped，弱项是 headline/noteworthy 这种更细的语气/位置判断
   - 失效条件：判官模型换代或被评对象生成模型换代之后（self-preference 的具体形状可能变化），或分歧率显著高于本例的 31%（说明该任务的判定边界比 covered/dropped 更模糊，需要重新设计判定粒度而不是简单加多标注器）
@@ -1635,7 +1635,7 @@
   - 受约束 → [每条事实必须能指回「哪篇文章第几句」，报告要留全部原句](nodes/invariant-citation-resolvable.md)
   - 入边 `supersedes` ← [简报 v3 已于 2026-09-15 部署上线，至 09-17 已出三期；部署时用的是未提交的工作树代码](nodes/decision-brief-v3-deployed.md)
 - [eval 按 dataset/solver/scorer/judge 四层定契约,借 Inspect 的概念但不引入框架](nodes/decision-eval-module-contracts.md) · `accepted` · `decision-eval-module-contracts`
-  - 范围：scripts/eval/cluster-to-brief 整个模块;不含生产代码
+  - 范围：eval/cluster-to-brief 整个模块;不含生产代码
   - 来源性质：local_record
   - 条件：判官是 Claude Code 的 subagent,零 API 费;引入 Inspect 会把它改成付费 API 调用；生成侧全在 JS,Inspect 的 solver 需 shell 调 JS,多一层边界
   - 失效条件：判官需要无人值守跑(进 CI/定时),或有第三方要复现这套 eval——那时再评估引入 Inspect

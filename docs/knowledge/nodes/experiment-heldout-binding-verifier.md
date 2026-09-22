@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错","提高链路健壮性"],
   "scope":"用户授权打开预留c28/c51来源；30正常/30人工注入错误短语60控制；来源heldout但非独立盲写标签或自然错误金标，非生产验收",
-  "source":"scripts/eval/cluster-to-brief/out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md",
+  "source":"eval/cluster-to-brief/out/atomic-evidence/heldout-v0.19.1/HELDOUT-RESULT.md",
   "conditions":["核验组件逐项与v0.19.1回归冻结hash相同，先precommit再读来源再编写冻结60条；不按结果改prompt/schema/factor/routing，不删失败题，不重试语义错误", "每簇hash固定取15文章，原文半径2未截断，5风险类型目标均衡，997234无早期数量时调用前记录改归因，最终quantity5/actor7/polarity6/state6/scope6；未按规则coverage筛选", "glm-4.7-flash真Workers AI REST+Gateway skip-cache、thinking关闭、max_tokens5000、temperature0/合同修复0.1，batch2，35逻辑70HTTP110000tokens/单请求60秒，最多5单条修复，无远程judge", "主Codex本地先读所有源窗口再读全部60保留raw审计，结果与逐raw hash绑定；标签不进入请求。底层Pentagon战争等事件与开发文章可能相关，30文章不等于30独立事件；c28/c51现在已消费不得再称未接触heldout"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

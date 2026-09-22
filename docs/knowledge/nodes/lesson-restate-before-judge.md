@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错"],
   "scope": "glm-4.7-flash 上的句级核验；材料为已消耗 heldout 与已调优开发题，未在未接触材料上复验",
-  "source": "scripts/eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
+  "source": "eval/cluster-to-brief/out/atomic-evidence/reframe-probe-v0.20/REFRAME-PROBE-RESULT.md",
   "conditions": ["结论限定在单候选句对单证据句（+半径 2 窗口）的题型；跨文章取舍与漏报未测"],
   "evidence_origin": "local_record",
   "relations": [

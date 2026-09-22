@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["演化组合架构", "设计验收门"],
   "scope": "dev 五簇(1/7/36/37/43),全部来自同一次生产运行 cron-brief-1789477249362(2026-09-15)。无跨日期证据,heldout 已消耗",
-  "source": "Neon reports.id=94 与 brief_stories(workflow_id=cron-brief-1789477249362);臂产出在 scripts/eval/cluster-to-brief/out/",
+  "source": "Neon reports.id=94 与 brief_stories(workflow_id=cron-brief-1789477249362);臂产出在 eval/cluster-to-brief/out/",
   "conditions": [
     "**这是本仓第一次把原型与被替换对象放进同一把尺**。此前「原型更好」建立在原型互比上,生产的 18.3% 错误率是另一条流水线(M2 run,语料 id 90xxxx)手工标注的,与原型读数不可比",
     "五个原型臂盲判(代号洗牌),**生产无法盲判** —— 它一句出处都没有,判官一眼认得出,可能有偏向",

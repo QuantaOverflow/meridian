@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "排序键 `importance + COVERAGE_WEIGHT·log2(1+独立源数)`，importance 来自当时的 story-validation LLM 4 维 CoT rubric；这把尺量的是**已退役**的排序键，不代表当前生产排序公式，见 [[lesson-selection-formula-never-measured]]",
-  "source": "scripts/eval/selection/BASELINE.md；commit 0b43902（2026-06-06，feat(eval): 选择层工具转正 + NDCG 基线 0.958 + 防回归闸）；commit 4ebd969（feat(brief): importance 升级为 4 维 CoT rubric + 选择层 prompt eval 工具）",
+  "source": "eval/selection/BASELINE.md；commit 0b43902（2026-06-06，feat(eval): 选择层工具转正 + NDCG 基线 0.958 + 防回归闸）；commit 4ebd969（feat(brief): importance 升级为 4 维 CoT rubric + 选择层 prompt eval 工具）",
   "conditions": [
     "gold 来源：5 run，2026-06-03~2026-06-04，gold 类型是「silver 派生」（人工快标而非独立精标），BASELINE.md 自陈「绝对值略乐观」",
     "gold 共 47 条 rel≥2 的强相关样本",

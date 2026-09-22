@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "dev 五簇的核心层 21 条(占清单 141 条的 14.9%);次层 24 条与尾层 96 条未校核",
-  "source": "scripts/eval/cluster-to-brief/{audit-checklist.mjs,apply-audit.mjs,compare-audits.mjs} 与 out/_checklist-audit/",
+  "source": "eval/cluster-to-brief/{audit-checklist.mjs,apply-audit.mjs,compare-audits.mjs} 与 out/_checklist-audit/",
   "conditions": [
     "两个校核者读同一份证据包(全簇检索 top-6 + 每篇支持文章各自最匹配的一句),互不可见",
     "唯一变量是模型(opus / sonnet),指令逐字相同",

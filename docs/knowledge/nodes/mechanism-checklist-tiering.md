@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["设计验收门"],
   "scope": "cluster-to-brief 的慢档覆盖轴;dev 五簇 + heldout 两簇都在用,核心层内容经过一次双模型校核,分层本身未验",
-  "source": "scripts/eval/cluster-to-brief/build-checklist.mjs 的 computeTiers 与 expectations.json 的 coreTierRule",
+  "source": "eval/cluster-to-brief/build-checklist.mjs 的 computeTiers 与 expectations.json 的 coreTierRule",
   "conditions": [
     "核心层门槛必须是相对的:绝对 >=6 篇在 6 篇的簇上算不出来、在 116 篇的簇上形同虚设;按簇规模取比例则让大簇核心层恒为空(簇越大文章越分散到更多事件)",
     "口径只在 computeTiers 里定义一次,score-slow 读清单里写好的 coreMin,不自己算"

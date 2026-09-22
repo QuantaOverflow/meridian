@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错", "提高链路健壮性"],
   "scope":"新20事件/文章40正常错误对照，整句模型语义门+机械引用接口+不变数量窄规则；非完整分解核验链路、非独立可靠性或生产验收",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EXPANDED-DEV-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/EXPANDED-DEV-RESULT.md",
   "conditions":["模型只输出slot/status/errorSpan/quote字符串/reason，代码分配ID/claim/来源编号/偏移，exact quote唯一来源文档，不猜未知歧义；逐条隔离故障，具体字段错误单条有限self-heal", "引用150字符硬限制；sourceIndex不再由模型生成。先保存v0.15真实raw离线绑定回归8/8，旧合同未强制150字符事实保留，无新增调用及语义修正", "开发20新文章均未在旧60或v0.15八题使用，每事件保留正常/一错误短语成组；主Codex自编非盲，半径2未截断上下文本地读原文确认足够，标签不进入请求或影响路由，运行中不修改冻结组件材料", "glm-4.7-flash Workers AI REST及Gateway，thinking关闭，max_tokens5000，温度0/修复0.1；10初始batch/最多10单条修复，20逻辑/40HTTP/60000已知token停止阈值/每请求60秒；远程只被测模型无judge，最终heldout c28/c51未读"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构", "提高链路健壮性"],
   "scope": "mechanical-rest-v0.5，4既有候选+3源句TARGET，完整执行前置转换链，非端到端核验或独立验证",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REST-SCHEME-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REST-SCHEME-RESULT.md",
   "conditions": ["真实Workers AI REST/现有Wrangler会话，固定glm/thinking off，角色模型转换、受限字段机械生成，无远程judge/heldout", "每次最多一次全部错误反馈；规则冻结，无中途修订或后续扩采样", "引用要求唯一但schema缺occurrence，不支持报告词整句失败，自动对应/整句聚合尚未实现"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

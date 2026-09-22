@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["设计验收门"],
   "scope": "cluster-to-brief 慢档；已随一次真实的守则变更跑通（6 份旧判定被自动隔离）",
-  "source": "scripts/eval/cluster-to-brief/scorer-id.mjs、build-judge-pack.mjs、score-slow.mjs、scratch/selftest-slow.mjs",
+  "source": "eval/cluster-to-brief/scorer-id.mjs、build-judge-pack.mjs、score-slow.mjs、scratch/selftest-slow.mjs",
   "conditions": [
     "grading instructions 必须抽成独立模块才算得出指纹 —— build-judge-pack.mjs 是脚本、有顶层副作用",
     "自测覆盖三种失效：缺指纹 / 包被改过 / 尺改了但包没重建，期望 exit 2"

@@ -6,8 +6,8 @@
   "date": "2026-07-07",
   "status": "recorded",
   "tasks": ["设计验收门"],
-  "scope": "验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 scripts/eval/coverage-judge/",
-  "source": "scripts/eval/coverage-judge/README.md「三尺三角测量」节 + commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）",
+  "scope": "验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 eval/coverage-judge/",
+  "source": "eval/coverage-judge/README.md「三尺三角测量」节 + commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）",
   "conditions": [
     "前提：被验判官（qwen-long）与被评对象（简报生成也用 qwen 家族）同家族，self-preference 风险正是要验的东西",
     "第二标注器必须是异家族模型（这里用 GPT/codex），理由是与被验判官不共享同一套系统性偏差",

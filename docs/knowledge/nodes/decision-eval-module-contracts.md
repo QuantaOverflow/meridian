@@ -6,8 +6,8 @@
   "date": "2026-09-20",
   "status": "accepted",
   "tasks": ["设计验收门"],
-  "scope": "scripts/eval/cluster-to-brief 整个模块;不含生产代码",
-  "source": "scripts/eval/cluster-to-brief/CONTRACTS.md;docs/adr/0005-eval-bootstrap-and-ruler-recalibration.md",
+  "scope": "eval/cluster-to-brief 整个模块;不含生产代码",
+  "source": "eval/cluster-to-brief/CONTRACTS.md;docs/adr/0005-eval-bootstrap-and-ruler-recalibration.md",
   "conditions": [
     "判官是 Claude Code 的 subagent,零 API 费;引入 Inspect 会把它改成付费 API 调用",
     "生成侧全在 JS,Inspect 的 solver 需 shell 调 JS,多一层边界"

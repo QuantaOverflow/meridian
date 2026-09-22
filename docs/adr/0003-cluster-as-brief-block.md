@@ -18,7 +18,7 @@
 
 切分层：删除。每个簇送一次 LLM，同时回答「这簇是不是一件事」与「这件事叫什么」（`/meridian/cluster/judge`），产出直接作为简报里的一条。
 
-两窗产品口径实测（`<3 篇的簇与事件都不计`，打分器 `scripts/eval/clustering/product-score.ts`）：
+两窗产品口径实测（`<3 篇的簇与事件都不计`，打分器 `eval/clustering/product-score.ts`）：
 
 |  | 交付率 | 簇纯度 | 题材袋率 | 跨簇数 | 完整率 |
 |---|---|---|---|---|---|
@@ -86,7 +86,7 @@ members+related 口径下五个数与本 ADR 的原始实测**精确复现**（�
 
 ## 相关
 
-- 打分器与金标：`scripts/eval/clustering/`（`product-score.ts` 产品口径主用、`full-score.ts` ARI/B-cubed 诊断、`gold/` 两窗人读金标、`rubric.md` 标注规范）
+- 打分器与金标：`eval/clustering/`（`product-score.ts` 产品口径主用、`full-score.ts` ARI/B-cubed 诊断、`gold/` 两窗人读金标、`rubric.md` 标注规范）
 - 判据的四变体实测：`services/meridian-ai-worker/src/prompts/cluster-judge.ts` 文件头
 - 参数来历与前沿曲线：`services/meridian-ml-service/src/clustering.py` 的 `ClusteringConfig` 注释
 - 被删那层的负结果：`docs/engineering-notes/prototype-findings-dedup-storyline.md`

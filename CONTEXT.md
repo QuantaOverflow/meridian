@@ -40,7 +40,7 @@ _Avoid_: 误报(口语可,正式用"误拦"统一)
 [[投票占比 (Vote share)]] 这些已有定义的照旧不动。
 
 **Sample**:
-一个待测单元。在 `scripts/eval/cluster-to-brief/` 里，**一个簇就是一个 sample**——input 是该簇全量原文，target 是从原文独立抽的事件清单。
+一个待测单元。在 `eval/cluster-to-brief/` 里，**一个簇就是一个 sample**——input 是该簇全量原文，target 是从原文独立抽的事件清单。
 说"n=5 个簇"不如说"**dataset 只有 5 个 sample**"：后者一眼看得出样本量有多小。
 
 **Dataset**:
@@ -89,7 +89,7 @@ _Avoid_: 包（说"包"时对方不知道指整份还是指其中的守则）
 不一致率是**信度**，可以靠改 instructions、投票压下去；效度是结构决定的，改措辞改不动。所以取检索。
 事实性评测文献一致的做法也是证据由评分方检索（AlignScore 切块取最高、SummaC 全句对 NLI、
 MiniCheck 句级分类器），与生成方引了谁无关。
-实现在 `scripts/eval/cluster-to-brief/retrieval.mjs`（本地 e5-small，top-8，零远程调用）。
+实现在 `eval/cluster-to-brief/retrieval.mjs`（本地 e5-small，top-8，零远程调用）。
 
 **`citedSentenceSuffices`**:
 与四档并列的第二维：**成稿引的那句自身够不够**支撑这句话的全部成分。只看声称的出处，不看检索证据。
@@ -147,7 +147,7 @@ _Avoid_: 把两层混在一轮里做——25%→10% 曾被误当架构改善，�
 
 **候选 / 臂 (Candidate / arm)**:
 一个**完整的**「簇原文 → 带出处成稿」实现，不是其中某一层。**在 eval 语境下这个对象叫 [[Solver]]**——
-同一个东西，这里的名字强调它是搜索空间里的一个点、可能被淘汰。考场只认输入与输出，中间拆几步、传什么表示、调几次模型都不管（契约见 `scripts/eval/cluster-to-brief/README.md`）。
+同一个东西，这里的名字强调它是搜索空间里的一个点、可能被淘汰。考场只认输入与输出，中间拆几步、传什么表示、调几次模型都不管（契约见 `eval/cluster-to-brief/README.md`）。
 _Avoid_: 把某一层的组件叫候选——局部指标不能代替端到端判定
 
 **单变量设计变更 (Mutation)**:

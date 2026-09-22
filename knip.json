@@ -35,7 +35,7 @@
       "ignore": ["drizzle/**"]
     },
 
-    "scripts/eval/*": {
+    "eval/*": {
       "entry": ["**/*.{ts,mjs}"],
       "project": ["**/*.{ts,mjs}"],
       "ignore": ["out/**", "scratch/**", "fixtures/**", "datasets/**"]

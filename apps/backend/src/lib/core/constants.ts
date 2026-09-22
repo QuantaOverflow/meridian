@@ -42,7 +42,7 @@ export const BRIEF_CLUSTERING_OPTIONS = {
   // 2026-09-05:UMAP+HDBSCAN → 不降维 + 余弦阈值凝聚(average linkage)。
   //
   // 读数不在这里存:这里存过一份三个多月没人核对、与 ADR 实测对不上的读数表,是本身
-  // 就会过期的陷阱。现场跑 scripts/eval/clustering/product-score.ts 拿读数,权威口径
+  // 就会过期的陷阱。现场跑 eval/clustering/product-score.ts 拿读数,权威口径
   // 与两窗金标结果见 docs/adr/0003-cluster-as-brief-block.md。
   //
   // umapParams/hdbscanParams 保留:算法开关切回 'umap_hdbscan' 时它们仍是生效参数(回滚路径)。
@@ -69,7 +69,7 @@ export const BRIEF_CLUSTERING_OPTIONS = {
 // 簇内候选分组阈值(全链余弦)。story-validation 的判定单位由「整簇」改为「几何候选组」后引入,
 // 见 lib/core/candidate-grouping.ts 的算法说明。
 //
-// 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径(scripts/eval/story-validation/rubric.md)复验:
+// 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径(eval/story-validation/rubric.md)复验:
 //   0.85(原型初值,随手定) 严精度 58-60%,配复核后 85-87%,前15精度 33-53%
 //   0.87                  严精度 70%
 //   0.90                  严精度 76-84%,配复核后 89-92%,**前15精度两天都是 93.3%**

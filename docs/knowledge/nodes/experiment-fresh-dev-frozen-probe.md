@@ -7,7 +7,7 @@
   "status":"recorded",
   "tasks":["治事实关系错", "提高链路健壮性"],
   "scope":"四未使用开发文章/事件八正常错误对照的新整句基线与不变数量规则，三独立报告抽取诊断；非完整分解原型端到端、非独立可靠性验证",
-  "source":"scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FRESH-DEV-RESULT.md",
+  "source":"eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/FRESH-DEV-RESULT.md",
   "conditions":["相对旧60题缓存回放冻结组件代码/请求hash，改材料；开发文章1000985/1003362/1004976/1001409未在原练习使用，主Codex自编非盲，heldout c28/c51未读", "ContextStore半径2未截断，主Codex本地检查上下文足够，参考不进入请求；Workers AI仅被测模型，无远程judge", "glm-4.7-flash REST及Gateway，thinking关闭，max_tokens5000，温度0/修复0.1，每失败至多一次修复；最大5逻辑/10HTTP/18000token停止阈值/每请求60秒", "实际路由继承整批失败转复核；事后逐句6/8接口通过不追认放行，不修改冻结输出或用本地答案替代模型"],
   "evidence_origin":"local_record",
   "relations":[{"type":"yields","to":"lesson-relation-factor-observability"}],

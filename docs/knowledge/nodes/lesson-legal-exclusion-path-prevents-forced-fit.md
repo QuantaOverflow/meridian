@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治故事过拆", "设计验收门"],
   "scope": "任何让 LLM 对一组候选项做分组/归类判断、且存在『部分候选项其实不该被分进任何组』这种可能性的任务 schema 设计",
-  "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19（旧 single_story/collection_of_stories 二分支设计的结构性缺陷说明）；scripts/eval/story-validation/rubric.md（HEAD 版本，见 experiment-story-validation-architecture-error-taxonomy 的 source 说明）第 1 节 umbrella/wrongPair 实测",
+  "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19（旧 single_story/collection_of_stories 二分支设计的结构性缺陷说明）；eval/story-validation/rubric.md（HEAD 版本，见 experiment-story-validation-architecture-error-taxonomy 的 source 说明）第 1 节 umbrella/wrongPair 实测",
   "conditions": [
     "旧架构（『整簇丢给模型自己判 single_story/collection_of_stories 并划出所有子故事』）的 outliers 数组只存在于 single_story 分支——collection_of_stories 分支没有任何合法位置安放『不属于任何故事的成员』",
     "2026-08-18 生产实测：这一结构性缺陷下，352/967 篇进簇文章走的是『默默不提』这条路——模型选择的三条路径（硬配对/整簇丢弃/默默不提）全部是错误应对",

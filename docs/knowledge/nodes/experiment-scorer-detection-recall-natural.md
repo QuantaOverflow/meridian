@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "金标来自 brief-v3-prod 的 M2 run（老 v3 写作层，自然错误率 18.3%），**不是** cluster-to-brief 的任何一个臂；召回不能直接外推到那批臂",
-  "source": "scripts/eval/scorer-recall/（gold/natural-errors.jsonl 入库；语料在 apps/backend/prototypes/brief-v3-prod/out，本地不入 git）",
+  "source": "eval/scorer-recall/（gold/natural-errors.jsonl 入库；语料在 apps/backend/prototypes/brief-v3-prod/out，本地不入 git）",
   "conditions": [
     "grading instructions 与 cluster-to-brief 的判定包逐字同源（含「判不准的归属类错误标 ok」那条）",
     "该流水线不标逐句出处，所以只判事实正确性一件事，没有覆盖维、没有引用维",

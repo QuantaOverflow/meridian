@@ -7,7 +7,7 @@
   "status": "candidate",
   "tasks": ["演化组合架构", "治事实关系错"],
   "scope": "direct-raw exec 臂;窗口 30k 字符、每窗最多 12 条重点、每条最多 4 个出处;glm-4.7-flash",
-  "source": "scripts/eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(DIRECT_RAW_WRITE_AT_END)",
+  "source": "eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs(DIRECT_RAW_WRITE_AT_END)",
   "conditions": ["簇内全量原文可读,不做 30 篇截断", "窗口步与写作步用同一个模型"],
   "evidence_origin": "local_record",
   "relations": [

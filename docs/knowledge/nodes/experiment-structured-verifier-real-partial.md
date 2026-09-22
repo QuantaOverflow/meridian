@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "glm-4.7-flash，structured-v0.2/context-v2，p12-u完整与p11-u部分；计划6题未跑满，非盲开发诊断",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/REAL-RESULT.md",
   "conditions": ["用户要求真实LLM后审批通过，候选/证据独立转换；无参考图/标签入模型，无远程judge", "一次AI binding连接丢失后审计重启并最多恢复一次，未知usage留预算reserve；预算停止后服务关闭"],
   "evidence_origin": "local_record",
   "relations": [{"type": "yields", "to": "lesson-relation-factor-observability"}],

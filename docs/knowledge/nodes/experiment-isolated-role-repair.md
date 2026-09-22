@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["治事实关系错", "提高链路健壮性"],
   "scope": "v0.6七开发目标真实调用与v0.6.1离线原输出回放，非端到端或独立验证",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/ISOLATED-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/structured-verifier/ISOLATED-RESULT.md",
   "conditions": ["固定Workers AI REST/glm，角色模型转换与代码字段处理，无heldout或远程judge", "v0.6一次全部错误反馈；v0.6.1不改原始真实输出，新增直接相邻精确命题定位与declined/refused窄词面守卫", "每行为隔离错误/未支持义务，保留原输出和失败历史，完整语义覆盖未知"],
   "evidence_origin": "local_record",
   "relations": [{"type":"yields","to":"lesson-relation-factor-observability"}],

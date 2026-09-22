@@ -7,7 +7,7 @@
   "status": "superseded",
   "tasks": ["治事实关系错", "演化组合架构"],
   "scope": "practice-v1 已知错误输出的回顾；不是对模型内部过程或通用能力的结论",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/RELATION-ANALYSIS.md",
   "conditions": ["旧输出只保存锚点、引用、状态和理由，不单独保存两侧关系抽取"],
   "evidence_origin": "local_record",
   "relations": [{"type": "cautions", "to": "attempt-practice-risk-slots", "attributes": {"scope": "增加检查项不保证覆盖第二断言或保证跨字段关系一致；正确拒绝不保证理由接地"}}],

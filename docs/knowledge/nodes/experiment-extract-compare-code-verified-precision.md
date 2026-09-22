@@ -9,7 +9,7 @@
   "scope": "extract-compare.ts 的 LLM 抽取（逐字引用、禁算术）+ 代码比对（区间相交判冲突）通道；对照对象是 intel-grounding 金标集（真实）与另一份合成集",
   "source": "services/meridian-ai-worker/src/services/extract-compare.ts:10-12；services/meridian-ai-worker/src/services/faithfulness-check.ts:18-19（门 F 条款 C 引用同一读数：「精度 0.833~1.0」）",
   "conditions": [
-    "真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 scripts/eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）",
+    "真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）",
     "0.833~1.0 是两个数据集上精度的区间描述，不是单一精确值——本节点原样保留区间，不折算成单点"
   ],
   "evidence_origin": "local_record",

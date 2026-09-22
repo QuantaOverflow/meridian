@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门", "治事实关系错"],
   "scope": "依据为四个簇 83 句的非盲单人判定；自然错误率区间宽，结论是判据层级而非具体阈值",
-  "source": "scripts/eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
+  "source": "eval/cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md",
   "conditions": ["有效样本 4 个簇；形状分布来自单一日期快照，季节性未知"],
   "evidence_origin": "local_record",
   "relations": [

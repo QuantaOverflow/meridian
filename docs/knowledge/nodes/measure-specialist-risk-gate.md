@@ -4,7 +4,7 @@
   "title": "八个风险样本上，人工单问题核验零误杀；自由全维度对齐误杀两个正常事实，自动问题规划尚未验证",
   "date": "2026-09-17",
   "status": "live",
-  "source": "scripts/eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
+  "source": "eval/cluster-to-brief/arms/atomic-evidence/RISK-RESULT.md",
   "invalidates_when": "自动问题规划遗漏必要风险或引入错误前提，或未见样本上专门核验再次漏判和误杀",
   "type": "lesson",
   "tasks": [

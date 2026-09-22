@@ -6,8 +6,8 @@
   "date": "2026-07-08",
   "status": "recorded",
   "tasks": ["设计验收门", "改报告层结构"],
-  "scope": "scripts/eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径",
-  "source": "commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）；commit 52acb84（2026-07-07，feat(brief-gen): 合成漏报修复(覆盖契约)+A/B双尺复测 dropped 13.4%→6.2%）；commit 232b15e（2026-07-08，feat(brief-gen): 两遍法覆盖补录(coverage repair)——合成漏报 0/112 硬保证）；scripts/eval/coverage-judge/disagreements.md（35 条分歧样本明细）；scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节",
+  "scope": "eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径",
+  "source": "commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）；commit 52acb84（2026-07-07，feat(brief-gen): 合成漏报修复(覆盖契约)+A/B双尺复测 dropped 13.4%→6.2%）；commit 232b15e（2026-07-08，feat(brief-gen): 两遍法覆盖补录(coverage repair)——合成漏报 0/112 硬保证）；eval/coverage-judge/disagreements.md（35 条分歧样本明细）；eval/coverage-judge/README.md「结果（2026-07-03 首验）」节",
   "conditions": [
     "母集团：到达合成层的 story（brief_stories.selected_for_intel=true 且 intel_report_r2_key 非空），取自 error-analysis 路2 用过的 8 条真实 brief（admin-brief-*），共 112 story-disposition 组",
     "gold 构成：77 三尺一致 + 16 grounded（简报正文实体检索坐实）+ 2 人裁 + 17 headline↔noteworthy 多数决",
@@ -33,7 +33,7 @@
 d2b6f09 的 commit message 明确写道，这次 κ 验证「是 error-analysis 路2『合成漏报占缺陷 68%』
 头号结论的依据」。这个 68% 数字本身**已经蒸馏进本仓的其他已入库文档**，不在本节点重复：
 `docs/ROADMAP.md:151`、`docs/adr/0004-brief-writer-v3.md:53`、
-`scripts/eval/error-analysis/README.md`「背景」节都记着这个数字，且 ROADMAP 明确写
+`eval/error-analysis/README.md`「背景」节都记着这个数字，且 ROADMAP 明确写
 "合成漏报已于 2026-07-08 收口（dropped 13.4% → 0.0%）"——与本节点的 A/B 结果一致。
 用户的私人 memory 里也已经有 `error-analysis-path2-attribution` 这条节点记录了逐层归因
 的聚合表，并诚实标注"逐条 open-code 明细已丢，只剩聚合百分比"。

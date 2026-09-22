@@ -1,0 +1,45 @@
+{
+  "id": "scrape-quality-v1",
+  "version": 1,
+  "created": "2026-07-01",
+  "movedHere": "2026-09-23",
+  "targetOf": "product",
+  "split": "test",
+  "labels": "labels.jsonl",
+  "labelField": "gold_cat",
+  "cases": 73,
+  "labelBalance": {
+    "A": 38,
+    "VIDEO": 16,
+    "BLOCK": 6,
+    "C": 5,
+    "NONART": 4,
+    "LOGIN": 1,
+    "SITEBOIL": 1,
+    "TRUNC": 1,
+    "RATELIMIT": 1
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "content.jsonl",
+    "kind": "raw_source",
+    "note": "证据是抓取到的文章正文本身，与判定同批快照。判的是「这段正文是不是抓取失败」，参照系就是正文，不依赖任何系统中间产物。"
+  },
+  "provenance": {
+    "labeledBy": "owner",
+    "method": "开放编码（先看数据归纳类别，不预设标签集）",
+    "systemUnderTest": "apps/backend/src/lib/core/extraction-quality.ts 的 looksLikeExtractionFailure + looksLikeNonArticleUrl"
+  },
+  "labelScope": "这段抓取正文是否属于抓取/解析失败，以及失败的具体形态",
+  "usableFor": [
+    "考产品：判定对象是抓取正文本身（输入的性质），换任何抓取实现都仍然成立"
+  ],
+  "limitations": [
+    "类别极不平衡：A（真文章）38 条占一半，七个稀有类各只有 1-6 条。按类别分别算召回没有统计意义，只能合并成「真失败 30 条」这一档看",
+    "开放编码由一人完成，没有第二标注人，没有 inter-rater κ",
+    "73 条来自某一段时间的源池，源池变了（新增站点、站点改版）之后失败形态可能不在这批里"
+  ],
+  "distilled": [
+    "memory: scrape-extraction-eval"
+  ]
+}

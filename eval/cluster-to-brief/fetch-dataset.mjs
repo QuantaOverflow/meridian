@@ -67,7 +67,7 @@ function resolveSnapshot() {
   const cache = `${dir.replace(/content\/$/, '')}clustering-snapshot.json`;
   if (!existsSync(cache)) {
     mkdirSync(cache.replace(/\/[^/]+$/, ''), { recursive: true });
-    const backendDir = `${HERE}../../../apps/backend`;
+    const backendDir = `${HERE}../../apps/backend`;
     console.log(`从 R2 拉聚类快照 ${key} → ${cache}`);
     execFileSync(
       './node_modules/.bin/wrangler',

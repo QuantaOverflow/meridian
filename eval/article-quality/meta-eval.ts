@@ -17,7 +17,7 @@
 //   ⚠️ 这只是 harness 默认占位阈值；真正的接受阈值由用户在裁定环里依据业务容忍度定（见 README）。
 //
 // 用法：
-//   pnpm meta [gold.jsonl]        # 默认 gold/quality-gold.example.jsonl
+//   pnpm meta [gold.jsonl]        # 默认 ../_data/article-quality-v1/labels.example.jsonl
 //   env: AI_WORKER_URL, KAPPA_MIN(0.6), RECALL_MIN(0.7), CONCURRENCY(4), SPLIT(dev|heldout|all)
 // ============================================================================
 
@@ -101,7 +101,7 @@ async function scoreGold(items: GoldItem[]): Promise<ScoredGold[]> {
 }
 
 async function main() {
-  const goldPath = process.argv[2] || 'gold/quality-gold.example.jsonl';
+  const goldPath = process.argv[2] || '../_data/article-quality-v1/labels.example.jsonl';
   console.log(
     `[quality-meta-eval] gold=${goldPath} split=${SPLIT} κ_min=${KAPPA_MIN} recall_min=${RECALL_MIN}`
   );

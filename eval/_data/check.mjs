@@ -68,19 +68,53 @@ for (const set of sets) {
     if (typeof m.cases === 'number' && m.cases !== rows.length) {
       fail(`manifest.cases=${m.cases}，但 ${labelsFile} 实际 ${rows.length} 行`);
     }
-    // labelBalance 与实际标签对账。κ 只有配上正负比例才能解释，所以这个数不许手填错。
-    if (m.labelBalance) {
+    // labelBalance 与实际标签对账。κ / agreement 只有配上类别分布才能解释，所以这个数不许手填错。
+    //
+    // 各份金标的标签字段名不一样（gold / gold_cat / category / 两个维度各一列），
+    // 所以由 manifest 的 labelField 声明：字符串 = 单维，数组 = 多维（labelBalance 按维度嵌套）。
+    // 不是逐条分类的金标（例如聚类的 events 金标，单位是事件不是标签）声明 labelField: null，
+    // 此时不对账，但仍要求 labelBalance 存在并写明 labelBalanceSource——数字必须有来历。
+    if (m.labelBalance && m.labelField !== null) {
+      const fields = Array.isArray(m.labelField) ? m.labelField
+        : m.labelField ? [m.labelField]
+        : null;
       const actual = {};
+      let parsed = true;
       for (const line of rows) {
         let r;
-        try { r = JSON.parse(line); } catch { fail(`${labelsFile} 有一行不是合法 JSON`); break; }
-        const v = r.gold ?? r.verdict ?? r.label;
-        if (v === undefined) { fail(`${labelsFile} 有一行没有 gold / verdict / label 字段`); break; }
-        actual[v] = (actual[v] || 0) + 1;
+        try { r = JSON.parse(line); } catch { fail(`${labelsFile} 有一行不是合法 JSON`); parsed = false; break; }
+        if (fields) {
+          for (const f of fields) {
+            if (!(f in r)) { fail(`${labelsFile} 有一行缺 labelField 声明的 ${f}`); parsed = false; break; }
+            (actual[f] ??= {});
+            const v = String(r[f]);
+            actual[f][v] = (actual[f][v] || 0) + 1;
+          }
+          if (!parsed) break;
+        } else {
+          const v = r.gold ?? r.verdict ?? r.label;
+          if (v === undefined) {
+            fail(`${labelsFile} 有一行没有 gold / verdict / label 字段 —— ` +
+              '标签字段名不是这三个就在 manifest 里声明 labelField');
+            parsed = false; break;
+          }
+          actual[v] = (actual[v] || 0) + 1;
+        }
       }
-      const a = JSON.stringify(actual, Object.keys(actual).sort());
-      const d = JSON.stringify(m.labelBalance, Object.keys(m.labelBalance).sort());
-      if (a !== d) fail(`labelBalance 对不上实际标签：manifest ${d}，实际 ${a}`);
+      if (parsed) {
+        const norm = o => JSON.stringify(o, Object.keys(o).sort().concat(
+          Object.values(o).flatMap(v => (v && typeof v === 'object') ? Object.keys(v).sort() : [])));
+        const flat = fields && fields.length === 1 ? actual[fields[0]] : actual;
+        if (norm(flat) !== norm(m.labelBalance)) {
+          fail(`labelBalance 对不上实际标签：manifest ${JSON.stringify(m.labelBalance)}，` +
+            `实际 ${JSON.stringify(flat)}`);
+        }
+      }
+    }
+
+    if (m.labelField === null && !m.labelBalanceSource) {
+      fail('labelField 声明为 null（不逐条分类）时必须写 labelBalanceSource —— ' +
+        '不对账的数字更要说明它是怎么来的');
     }
   }
 

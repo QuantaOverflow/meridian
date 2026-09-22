@@ -14,7 +14,7 @@
 //   - worklist/<batch>.blind.jsonl   {id,title,content,url,strata, gold_content_quality:'', gold_completeness:''}  ← 给标注者
 //   - worklist/<batch>.pred.jsonl    {id, pred_content_quality, pred_completeness, pred_gate}                      ← 旁车，仅 critic 对比
 //
-// 标注者照 ./rubric.md 在 blind 表上填 gold 两维度 → 汇总裁定 → gold/quality-gold.jsonl → pnpm meta。
+// 标注者照 ./rubric.md 在 blind 表上填 gold 两维度 → 汇总裁定 → ../_data/article-quality-v1/labels.jsonl → pnpm meta。
 //
 // 用法：
 //   pnpm worklist <candidates.jsonl>
@@ -157,7 +157,7 @@ async function main() {
   console.log(`  scorer 预测门分布(分层依据，非 gold): ${Object.entries(byGate).map(([k, v]) => `${k}=${v}`).join(' ')}`);
   console.log(`  盲标表 → ${blindPath}（给标注者，照 rubric.md 填两维度 gold）`);
   console.log(`  scorer 旁车 → ${predPath}（仅 critic 对比）`);
-  console.log(`\n下一步：标注者填 gold → 汇总裁定 → gold/quality-gold.jsonl → pnpm meta`);
+  console.log(`\n下一步：标注者填 gold → 汇总裁定 → ../_data/article-quality-v1/labels.jsonl → pnpm meta`);
 }
 
 main().catch((e) => {

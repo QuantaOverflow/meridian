@@ -11,9 +11,9 @@
 //
 // 跑法（`_shared` 没有自己的 package.json，借任一 harness 的 tsx，与 metrics.test.ts 同）：
 //   cd eval/faithfulness
-//   npx tsx ../_shared/cost.ts dumps ../../../apps/backend/prototypes/brief-writer-v3/out/runs/M3-1789131192155
+//   npx tsx ../_shared/cost.ts dumps ../../apps/backend/prototypes/brief-writer-v3/out/runs/M3-1789131192155
 //   npx tsx ../_shared/cost.ts window --since=2026-09-11T11:00:00Z --until=2026-09-11T13:00:00Z
-//   npx tsx ../_shared/cost.ts wrap -- node ../../../apps/backend/prototypes/foo/run.ts
+//   npx tsx ../_shared/cost.ts wrap -- node ../../apps/backend/prototypes/foo/run.ts
 //
 // 单价 $0.011 / 1,000 neurons（2026-08 核实，无任何折扣；见 memory workers-ai-pricing-no-discounts）。
 // 免费额度是**账单周期池**（10,000 × 周期天数）不是每日作废，所以单次实验的「毛成本」就是它的边际成本。

@@ -4,18 +4,22 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  looksLikeExtractionFailure,
-  looksLikeNonArticleUrl,
-} from '../../../apps/backend/src/lib/core/extraction-quality.js';
+// 默认导入后解构，不用具名导入：apps/backend/package.json 没有 "type": "module"，
+// 那边的模块在这里按 CJS 解析，具名导入拿不到（只有 default）。给 backend 加 type
+// 会影响 worker 构建，所以从这一侧适配。
+import extractionQuality from '../../apps/backend/src/lib/core/extraction-quality.js';
+const { looksLikeExtractionFailure, looksLikeNonArticleUrl } = extractionQuality as unknown as {
+  looksLikeExtractionFailure: (text: string) => { fail: boolean; reason?: string };
+  looksLikeNonArticleUrl: (rawUrl: string) => string | null;
+};
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const readJsonl = (p: string) =>
   readFileSync(resolve(__dirname, p), 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 
 interface GoldRow { id: number; url: string; pipeline_q: string; gold_cat: string; is_extraction_failure: boolean; }
-const gold: GoldRow[] = readJsonl('gold/gold.jsonl');
-const content: Record<number, string> = Object.fromEntries(readJsonl('gold/content.jsonl').map((r: any) => [r.id, r.text]));
+const gold: GoldRow[] = readJsonl('../_data/scrape-quality-v1/labels.jsonl');
+const content: Record<number, string> = Object.fromEntries(readJsonl('../_data/scrape-quality-v1/content.jsonl').map((r: any) => [r.id, r.text]));
 
 // 生产同款判定:URL 结构规则 + 内容签名
 function detect(row: GoldRow): { fail: boolean; by: string } {

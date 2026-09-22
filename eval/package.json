@@ -1,0 +1,6 @@
+{
+  "name": "@meridian/eval-root",
+  "private": true,
+  "type": "module",
+  "//": "只为声明 type: module。eval/ 下的脚本都是 ESM 写法，但 _shared/ 与没有自带 package.json 的 harness 会沿目录向上找模块类型，一路找到仓库根的 package.json（没有 type 字段）从而被当成 CJS——具名导入拿不到，报 'does not provide an export named X'。2026-09-23 迁移时发现 article-quality 的 meta-eval 与 scrape-quality 的 score 都因此跑不起来，而且与本次迁移无关，是一直如此。"
+}

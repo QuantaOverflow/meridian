@@ -10,6 +10,7 @@
 
 node_modules/
 out/
+eval-reports/
 scratch/
 worklist/
 traces/

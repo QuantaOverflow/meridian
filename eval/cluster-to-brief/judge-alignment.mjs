@@ -93,7 +93,7 @@ function main() {
   }
   const runDir = String(args.run).replace(/\/$/, '');
   // `--gold=` 只为自测换路径用:自测要喂伪造的金标,而它**不能写进真金标目录**
-  const goldF = args.gold ? String(args.gold) : `${HERE}gold/${axis}.json`;
+  const goldF = args.gold ? String(args.gold) : `${HERE}../_data/ctb-${axis}-v1/labels.json`;
   const judgesDir = args.judges ? String(args.judges) : `${HERE}judges`;
 
   let gold, verdicts, curPromptId;

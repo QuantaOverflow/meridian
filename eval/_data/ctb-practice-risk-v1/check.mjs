@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { loadCluster, sentenceOf } from '../../lib.mjs';
+import { loadCluster, sentenceOf } from '../../cluster-to-brief/lib.mjs';
 
 const read = name => readFileSync(new URL(name, import.meta.url), 'utf8');
 const rows = name => read(name).trim().split('\n').map(line => JSON.parse(line));

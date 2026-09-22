@@ -58,16 +58,19 @@ node eval/_data/check.mjs
 | `article-quality-v1` | judge | 73 | raw_source | meta-eval 实调 LLM，读数不可复现 |
 | `scrape-quality-v1` | product | 73 | raw_source | 判定是确定性代码，读数可复现 |
 | `scorer-recall-v1` | judge | 15 | retired_intermediate | 语料已丢，只能读不能跑 |
+| `ctb-citation-support-v1` | judge | 60 | retired_intermediate | 29 pass / 31 fail，带完整对齐读数 |
+| `ctb-practice-risk-v1` | judge | 60 | raw_source | 练习集，不作验收 |
 
-## 不在这里的：cluster-to-brief
+## 不在这里的：cluster-to-brief 的 datasets/
 
-`eval/cluster-to-brief/` 的 `datasets/` 与 `gold/` **有意留在原地**，不是漏了。
+`eval/cluster-to-brief/datasets/` **有意留在原地**，不是漏了。
 
-它已经有一套更完整的机制：`datasets/<id>.json` 有自己的 schema（`clusters` / `articles` /
+它和判官金标不是一回事：那是**产品数据集**，有自己的 schema（`clusters` / `articles` /
 `dropped` / `consumed`）、`validateManifest` 校验、以及 `sampleView` 视图层。
 本目录的 `check.mjs` 是那套的简化版，搬过去等于用弱的换强的。
 
-而且它是最活跃的 harness，直接对应现产线写作层，「随 harness 被删」的风险几乎为零。
+该 harness 的**判官金标**已经迁过来了（`ctb-citation-support-v1` 与 `ctb-practice-risk-v1`）——
+那两份和这里其余六份同类，形状一致。
 
 契约见 `eval/cluster-to-brief/CONTRACTS.md` §1。两套 manifest 要不要合并是一轮独立的
 设计工作，没有塞进这次搬家。

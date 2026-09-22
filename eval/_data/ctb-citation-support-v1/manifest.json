@@ -1,0 +1,49 @@
+{
+  "id": "ctb-citation-support-v1",
+  "version": 1,
+  "created": "2026-09-21",
+  "movedHere": "2026-09-23",
+  "targetOf": "judge",
+  "split": "test",
+  "axis": "citation-support",
+  "labels": "labels.json",
+  "labelField": null,
+  "labelBalanceSource": "由 labels.json 的 .labels[].label 统计。文件是 JSON 不是 JSONL（标注挂在 .labels 数组下，同层还有 provenance 与 alignment），所以 check.mjs 不逐行对账。",
+  "cases": 60,
+  "labelBalance": { "pass": 29, "fail": 31 },
+  "evidence": {
+    "mode": "rebuildable",
+    "rebuild": "标注指向 out/<runId> 下的成稿与引句。跑 `node eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs --dataset=fixtures-r94` 重建，再用 --epoch 对齐到标注那一稿。",
+    "kind": "retired_intermediate",
+    "note": "证据是 v6 写作层在 fixtures-r94 上的产出成稿。写作层还在生产，但具体那三次跑的产物是中间产物，靠 runId + epoch 定位；跨 epoch 比对会把另一稿的标注算进来，而这不报错（judge-alignment.mjs 有 epoch 筛）。"
+  },
+  "provenance": {
+    "sample": "v6 on fixtures-r94，3 次跑共 87 句，固定种子随机抽 60",
+    "annotators": ["A=sonnet", "B=haiku", "C=codex"],
+    "protocol": "三方独立标注；18 条分歧由人裁决；从 42 条一致里随机抽 15 条人工复核，未发现共盲",
+    "adjudicator": "user + opus 复核"
+  },
+  "alignment": {
+    "measuredAt": "2026-09-21",
+    "judge": "sonnet（Claude subagent），promptId f657f9cd6f4eaa26，spec judges/citation-support.md",
+    "n": 60,
+    "tpr": 0.871,
+    "tnr": 1.0,
+    "precision": 1.0,
+    "agreement": 0.933,
+    "note": "完整读数与 caveats 在 labels.json 的 .alignment 里，这里只是摘要"
+  },
+  "labelScope": "这句话的出处标注是否真的支撑它所引的内容",
+  "usableFor": [
+    "考判官：量 citation-support 这把尺的真阳率 / 真阴率（node judge-alignment.mjs --axis=citation-support --run=out/<runId>）"
+  ],
+  "notUsableFor": [
+    "测 codex：它 17/18 与裁决一致、且参与了 42 条一致投票，等于对着自己的答案打分。要测 codex 需另标一批它没参与的金标"
+  ],
+  "limitations": [
+    "判官漏掉的 4 条全是「隐含关系」类：因果被强加、动机被嫁接、语义方向相反、代词归因。它对显式缺失（数字 / 人名 / 地名没出现）抓得准，对关系被悄悄加上抓不到",
+    "sonnet 既是金标的标注者之一（A）又是被测判官，读数偏高。缓解证据：它在 18 条分歧里只对了 10 条，金标最终与它分歧 8 条",
+    "精度与真阴率都是 1.000 —— 60 条上出现两个满分通常意味着样本不够难，真实部署不应期待此数"
+  ],
+  "whyItExists": "2026-09-20 那轮三个临时判官在一天生产数据上判了 51 篇 / 248 句、报出 72 条旗标；人工复核第二遍发现只有约 22% 是读者可见的错，其余是「出处挂错位置」被判成了编造——判官真阳率约 0.22，而当时没人知道。CONTRACTS.md §5 由此写死：没与人工对齐过的判官，它报的比例只能当量级参考，不能进对比表。"
+}

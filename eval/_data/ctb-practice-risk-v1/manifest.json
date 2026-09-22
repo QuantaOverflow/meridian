@@ -1,0 +1,51 @@
+{
+  "id": "ctb-practice-risk-v1",
+  "version": 1,
+  "created": "2026-09-17",
+  "movedHere": "2026-09-23",
+  "targetOf": "judge",
+  "split": "practice",
+  "purpose": "practice_only_not_validation",
+  "labels": "labels.jsonl",
+  "labelField": "expected",
+  "cases": 60,
+  "labelBalance": { "supported": 30, "unsupported": 30 },
+  "riskBalance": {
+    "speaker_identity": 12,
+    "action_strength": 10,
+    "attribution": 8,
+    "modality": 8,
+    "named_object_identity": 8,
+    "quantity": 6,
+    "temporal": 6,
+    "causality": 2
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "inputs.jsonl",
+    "kind": "raw_source",
+    "note": "每条 input 自带 text / sources / evidence —— 判定所需的证据包与题面在同一份文件里，不依赖任何外部产物。"
+  },
+  "provenance": {
+    "labeledBy": "codex 造题 + 人裁",
+    "method": "手工分层的行为用例：30 对（一条 supported 改写 + 一条同源 mutation）",
+    "origin": { "codex_authored_supported_paraphrase": 30, "codex_authored_mutation": 30 },
+    "blind": false,
+    "independentAnnotators": "见 labels.jsonl 行内字段"
+  },
+  "labelScope": "claim 是否被随附的证据包支撑，不是全局真值、也不是簇相关性",
+  "usableFor": [
+    "练习与冒烟：判官 prompt 改动后快速看行为有没有变（node check.mjs）"
+  ],
+  "notUsableFor": [
+    "验收：`purpose` 就写着 practice_only_not_validation。30 组配对证据不是 60 次独立试验，人工构造的 mutation 也不是自然发生的模型错误，算出来的比例不代表真实错误率"
+  ],
+  "limitations": [
+    "30 对配对证据不是 60 次独立试验",
+    "一个事件可能跨多篇文章，eventGroupId 只是最小泄漏分组，不构成独立性证明",
+    "人工构造的 mutation 不是自然发生的模型错误",
+    "标注是一次非盲的 Codex 复核，不是多标注者金标",
+    "完全归属的陈述按「报道行为」判，不判被归属命题的真假",
+    "部分复合负例有两个显式枚举的 error span"
+  ]
+}

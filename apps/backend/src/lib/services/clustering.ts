@@ -17,6 +17,144 @@ import type { AIWorkerEnv } from './ai-services';
  */
 export const NOISE_CLUSTER_ID = -1;
 
+/**
+ * ml 侧响应顶层的镜像身份字段名（ml-service `src/main.py` 的 `BUILD_IDENTITY_FIELD` 同名）。
+ *
+ * 为什么必须有它：`configUsed` 只是 ml 侧把请求方传进去的 config 原样回显
+ * （clustering.py:738-751），旧镜像只要还认识字段名就回显一样的值，所以
+ * configSent/configUsed 比对永远相等，一次都拦不住"镜像没推成功"。
+ * 2026-09-15 至 09-19 连续五天生产跑的是旧聚类算法（NO_EVENT 从 2% 涨到 52-54%，
+ * 平均篇数 5.5→9.8），全程 brief_runs.status = COMPLETED。
+ */
+export const ML_BUILD_IDENTITY_FIELD = 'build_identity';
+
+/** ml 侧"没注入"的占位值（与 main.py 的 BUILD_NOT_INJECTED 同值）。 */
+const ML_BUILD_NOT_INJECTED = 'not-injected';
+
+/**
+ * 期望的 ml 镜像 SHA 从哪读。
+ *
+ * 注意：`MERIDIAN_ML_EXPECTED_BUILD_SHA` 还没在 `apps/backend/wrangler.toml` 的 [vars]
+ * 与 `AIWorkerEnv` 里声明（这两个文件本轮不由本改动负责），所以这里走一次显式 cast 读。
+ * 未配置时断言仍然有效，只是降一档：只能判"字段缺失 / 没注入"，判不了"不是本次部署的镜像"。
+ */
+function readExpectedBuildSha(env: AIWorkerEnv): string | undefined {
+  const raw = (env as unknown as Record<string, unknown>).MERIDIAN_ML_EXPECTED_BUILD_SHA;
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
+}
+
+/**
+ * 镜像身份断言结果。
+ *
+ * - `missing`     响应里根本没有 build_identity 字段 → 跑的是加这个字段之前的旧镜像，
+ *                 即"镜像没推成功"本身。**这是这道闸唯一必须抓到的东西**，零配置生效。
+ * - `not_injected` 有字段但 injected=false（本地 `uv run` 直起服务，镜像里连构建戳都没有），
+ *                 或者配了期望 SHA 而 ml 侧只回了构建时刻、没法比对。不等于故障，
+ *                 但也不构成"这是本次部署的镜像"的证据。
+ * - `mismatch`    有字段、SHA 有效，但与 MERIDIAN_ML_EXPECTED_BUILD_SHA 不符 → 镜像是新的，
+ *                 但不是本次部署的那个。
+ * - `ok`          有字段且已注入：配了期望 SHA 时表示 SHA 相符；没配时只表示"不是旧镜像"
+ *                 （build_sha 可能仍是占位符，构建时刻来自镜像层构建戳）。
+ */
+export type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected' | 'mismatch';
+
+export interface BuildIdentityAssertion {
+  status: BuildIdentityStatus;
+  /** true 仅当 status === 'ok'；调用方可以只看这一位做门禁。 */
+  verified: boolean;
+  reportedSha?: string;
+  reportedBuildTime?: string;
+  reportedBuildTimeSource?: string;
+  expectedSha?: string;
+  /** 人读的判据说明，直接落观测文件用。 */
+  detail: string;
+}
+
+/**
+ * 从 ml 响应顶层解析并断言镜像身份。
+ *
+ * 关键：**字段缺失必须是一个可判别的状态**，不能 `?? 'unknown'` 吞掉——那等于把这道闸拆了。
+ * 这个函数只产出信号，不决定 DEGRADED（status 赋值归 workflow）。
+ */
+export function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityAssertion {
+  if (raw === undefined || raw === null) {
+    return {
+      status: 'missing',
+      verified: false,
+      expectedSha,
+      detail:
+        `ml 响应缺少顶层 ${ML_BUILD_IDENTITY_FIELD} 字段：运行的是加该字段之前构建的旧镜像` +
+        `（镜像未推成功 / 未重建），与请求参数无关——configUsed 在这种情况下仍会正常回显。`,
+    };
+  }
+
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return {
+      status: 'missing',
+      verified: false,
+      expectedSha,
+      detail: `ml 响应的 ${ML_BUILD_IDENTITY_FIELD} 不是对象（实际 ${typeof raw}）：当作旧镜像/不可信身份处理。`,
+    };
+  }
+
+  const obj = raw as Record<string, unknown>;
+  const sha = typeof obj.build_sha === 'string' ? obj.build_sha : undefined;
+  const buildTime = typeof obj.build_time === 'string' ? obj.build_time : undefined;
+  const buildTimeSource = typeof obj.build_time_source === 'string' ? obj.build_time_source : undefined;
+  const injected = obj.injected === true;
+  const shaUsable = !!sha && sha !== ML_BUILD_NOT_INJECTED;
+
+  const base = {
+    reportedSha: sha,
+    reportedBuildTime: buildTime,
+    reportedBuildTimeSource: buildTimeSource,
+    expectedSha,
+  };
+
+  if (!injected) {
+    return {
+      ...base,
+      status: 'not_injected',
+      verified: false,
+      detail:
+        `ml 侧 ${ML_BUILD_IDENTITY_FIELD}.injected=false：构建标识没注入（本地直起服务，或构建时没带 ` +
+        `--build-arg MERIDIAN_ML_BUILD_SHA/TIME）。本次跑的镜像身份不可证。`,
+    };
+  }
+
+  if (expectedSha && !shaUsable) {
+    return {
+      ...base,
+      status: 'not_injected',
+      verified: false,
+      detail:
+        `已配置期望 SHA (${expectedSha})，但 ml 侧只回了构建时刻（build_sha=${sha ?? 'undefined'}）：` +
+        `无法比对镜像身份，构建时请带 --build-arg MERIDIAN_ML_BUILD_SHA。`,
+    };
+  }
+
+  if (expectedSha && shaUsable && sha !== expectedSha) {
+    return {
+      ...base,
+      status: 'mismatch',
+      verified: false,
+      detail:
+        `ml 镜像 SHA 不符：期望 ${expectedSha}，实际 ${sha}（build_time=${buildTime ?? 'unknown'}）。` +
+        `镜像是新的，但不是本次部署的那个。`,
+    };
+  }
+
+  return {
+    ...base,
+    status: 'ok',
+    verified: true,
+    detail: expectedSha
+      ? `ml 镜像身份符合期望：${sha}（build_time=${buildTime ?? 'unknown'}）。`
+      : `ml 镜像已带构建标识：sha=${sha}，build_time=${buildTime ?? 'unknown'}（来源 ${buildTimeSource ?? 'unknown'}）；` +
+        `未配置 MERIDIAN_ML_EXPECTED_BUILD_SHA，故只验到"不是旧镜像"，没验"是本次部署的镜像"。`,
+  };
+}
+
 // 数据类型定义 - 与intelligence-pipeline.test.ts保持一致
 export interface ArticleDataset {
   articles: Array<{
@@ -70,6 +208,16 @@ export interface ClusteringResult {
   clusteringStats?: Record<string, any>;
   /** ml 侧 model_info 原样保留：排查"跑的到底是哪个镜像/哪个模型"。 */
   modelInfo?: Record<string, any>;
+  /**
+   * ml 侧 build_identity 原样保留（可能为 undefined —— 缺失本身就是信号，见 buildIdentityCheck）。
+   * 与 configUsed 分开：这是镜像身份，不是配置。
+   */
+  buildIdentity?: Record<string, any>;
+  /**
+   * 镜像身份断言结果。**恒有值**（缺字段时 status='missing'），调用方不必判 undefined。
+   * 这里只暴露信号，是否把 run 判成 DEGRADED 由 workflow 决定。
+   */
+  buildIdentityCheck: BuildIdentityAssertion;
 }
 
 export interface ClusteringServiceResponse {
@@ -244,6 +392,18 @@ export class ClusteringService {
             [key: string]: unknown;
           };
           model_info?: Record<string, unknown>;
+          /**
+           * 镜像身份。**声明成可选是因为旧镜像真的不会回传它**——这正是要抓的信号，
+           * 所以下面不允许用 `?? 'unknown'` 之类把缺失抹平（2026-09 教训：解析时挑漏字段，
+           * 配置漂了三个半月无人发现；这次连"字段在不在"都是判据）。
+           */
+          build_identity?: {
+            build_sha?: string;
+            build_time?: string;
+            build_time_source?: string;
+            injected?: boolean;
+            [key: string]: unknown;
+          };
         };
         
 
@@ -292,8 +452,23 @@ export class ClusteringService {
           // 不能拿来替换 statistics。
           configUsed: mlResult.config_used,
           clusteringStats: mlResult.clustering_stats,
-          modelInfo: mlResult.model_info
+          modelInfo: mlResult.model_info,
+          // 镜像身份：与 configUsed 分开。configUsed 是请求回显（旧镜像也能回显得一模一样），
+          // 这个字段的值来自 ml 镜像构建时注入的环境变量，源码里没有字面量。
+          buildIdentity: mlResult.build_identity,
+          buildIdentityCheck: assertBuildIdentity(
+            mlResult.build_identity,
+            readExpectedBuildSha(this.env)
+          )
         };
+
+        if (!clusteringResult.buildIdentityCheck.verified) {
+          // 只打日志 + 往上报结构化信号，不在这里改流程：status 归 workflow。
+          console.warn(
+            `[Clustering] ml 镜像身份未通过断言 status=${clusteringResult.buildIdentityCheck.status} ` +
+            `detail=${clusteringResult.buildIdentityCheck.detail}`
+          );
+        }
 
         return {
           success: true,
@@ -351,16 +526,37 @@ export class ClusteringService {
   /**
    * 健康检查
    */
-  async healthCheck(): Promise<{ success: boolean; error?: string }> {
+  async healthCheck(): Promise<{
+    success: boolean;
+    error?: string;
+    /** /health 也带镜像身份：不跑聚类就能先探"镜像是不是旧的"（部署后冒烟用）。 */
+    buildIdentity?: Record<string, any>;
+    buildIdentityCheck?: BuildIdentityAssertion;
+  }> {
     try {
       const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/health`, {
         headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
       });
 
       const response = await fetch(request);
-      
+
       if (response.ok) {
-        return { success: true };
+        let buildIdentity: Record<string, any> | undefined;
+        let parsedBody = true;
+        try {
+          const body = await response.json() as { build_identity?: Record<string, any> };
+          buildIdentity = body?.build_identity;
+        } catch {
+          // /health 体解析失败：不能据此断言"镜像旧"，否则把解析问题伪装成部署问题。
+          parsedBody = false;
+        }
+        return {
+          success: true,
+          buildIdentity,
+          buildIdentityCheck: parsedBody
+            ? assertBuildIdentity(buildIdentity, readExpectedBuildSha(this.env))
+            : undefined,
+        };
       } else {
         return { 
           success: false, 

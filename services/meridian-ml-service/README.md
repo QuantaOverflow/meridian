@@ -5,7 +5,7 @@ An AI-driven intelligent clustering and embedding generation service designed fo
 ## 🌟 Key Features
 
 - **Multi-language Embedding Generation**: Uses `intfloat/multilingual-e5-small` model for high-quality text embeddings
-- **Intelligent Clustering**: UMAP dimensionality reduction + HDBSCAN clustering algorithms with automatic parameter optimization
+- **Intelligent Clustering**: agglomerative clustering on raw cosine distance (average linkage, no dimensionality reduction) as the production algorithm, with the original UMAP + HDBSCAN pipeline kept as a rollback path (see `clustering.py`)
 - **AI Worker Integration**: Perfect compatibility with Meridian backend data formats
 - **Production Ready**: Docker containerized with health checks and monitoring support
 - **Flexible API**: Auto-detects input data formats and provides multiple endpoint options
@@ -68,7 +68,9 @@ docker run -d \
                               │
                        ┌─────────────────┐
                        │   Clustering    │
-                       │   UMAP+HDBSCAN  │
+                       │ Agglomerative   │
+                       │ (UMAP+HDBSCAN   │
+                       │  as rollback)   │
                        └─────────────────┘
 ```
 
@@ -79,14 +81,16 @@ The system is structured into several logical components:
 - **Core ML Service**: FastAPI application exposing ML functionalities via RESTful APIs
 - **ML Pipeline**: Modular processing pipeline with data extraction, clustering, and content analysis stages
 - **Embedding Engine**: Handles loading and computation of text embeddings using transformer models
-- **Clustering Engine**: Implements UMAP + HDBSCAN with automatic parameter optimization
+- **Clustering Engine**: Implements agglomerative clustering on cosine distance (`agglomerative_cosine`, production default) plus the original UMAP + HDBSCAN pipeline (`umap_hdbscan`, rollback path only), with automatic parameter optimization for the latter
+
+> **Note (history)**: commit `12a0f06` (2026-09-05) switched the caller default to `agglomerative_cosine`, but the ml-service container image failed to push, so production kept running the old `umap_hdbscan` code from 2026-09-15 through 2026-09-19 despite the code default having changed — evidenced by the cluster-judge NO_EVENT rate jumping from a normal ~2% to 52-54% during that window. This is why the docs kept describing UMAP+HDBSCAN long after it stopped being the intended default: for five days it actually was production behavior, just not what the code default said.
 - **AI Worker Integration**: Seamless compatibility with existing AI Worker data formats
 
 ### Technology Stack
 
 - **Web Framework**: FastAPI + Uvicorn
 - **AI Models**: Transformers + PyTorch (CPU)
-- **Clustering**: UMAP + HDBSCAN + Scikit-learn
+- **Clustering**: Scikit-learn agglomerative clustering (production) + UMAP + HDBSCAN (rollback path)
 - **Data Validation**: Pydantic v2
 - **Containerization**: Docker + Docker Compose
 - **Reverse Proxy**: Nginx (production)
@@ -230,9 +234,8 @@ The service processes data through a modular pipeline:
    - Extracts and validates pre-computed embeddings
    - Preserves original texts and metadata
 5. **Clustering Stage**:
-   - Applies UMAP for dimensionality reduction
-   - Performs HDBSCAN clustering with density-based grouping
-   - Optimizes parameters using DBCV metric (if enabled)
+   - Production default: agglomerative clustering directly on the cosine distance matrix (average linkage), no dimensionality reduction
+   - Rollback path (`umap_hdbscan`): applies UMAP for dimensionality reduction, then HDBSCAN density-based clustering, optimizing parameters using the DBCV metric (if enabled)
 6. **Content Analysis Stage**:
    - Combines clustering results with original content
    - Identifies representative content for each cluster
@@ -533,7 +536,7 @@ test/
 - **`schemas.py`**: Request/response models and data format detection utilities
 - **`dependencies.py`**: Shared resources and authentication management
 - **`embeddings.py`**: Transformer model loading and text-to-vector conversion
-- **`clustering.py`**: UMAP + HDBSCAN implementation with parameter optimization
+- **`clustering.py`**: agglomerative cosine-distance clustering (production default, `agglomerative_cosine`) plus the UMAP + HDBSCAN implementation (rollback path, `umap_hdbscan`) with parameter optimization
 - **`pipeline.py`**: Modular processing workflow with configurable stages
 
 ## 🔗 Integration Points

@@ -258,6 +258,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     publishDate: string;
     url: string;
     summary: string;
+    /**
+     * 正文取用结果。OK 之外都是失败。
+     * 以前这里把「取不到」「取到空」「抛异常」一律糊成空字符串返回，调用方无法分辨，
+     * 而同一件事在初始数据质量门那边（processArticleContent）是显式分因上报的——
+     * 按严格那版统一口径，失败不再吞。
+     */
+    contentStatus: 'OK' | 'MISSING_CONTENT_KEY' | 'R2_CONTENT_MISSING' | 'EMPTY_R2_CONTENT' | 'R2_FETCH_ERROR';
   }>> {
       console.log(`[AutoBrief] 开始并行获取 ${articleIds.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
   
@@ -270,29 +277,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
   
   // 并行处理函数
   const processArticle = async (lightweightArticle: typeof validArticleInfos[0], index: number) => {
+    const base = {
+      id: lightweightArticle.id,
+      title: lightweightArticle.title,
+      publishDate: lightweightArticle.publishDate,
+      url: lightweightArticle.url,
+      summary: lightweightArticle.summary,
+    };
+    if (!lightweightArticle.contentFileKey) {
+      console.warn(`[AutoBrief] 取正文失败 MISSING_CONTENT_KEY (ID: ${lightweightArticle.id})`);
+      return { ...base, content: '', contentStatus: 'MISSING_CONTENT_KEY' as const };
+    }
     try {
       const contentObject = await this.env.ARTICLES_BUCKET.get(lightweightArticle.contentFileKey);
-      const content = contentObject ? await contentObject.text() : '';
-      
-      return {
-        id: lightweightArticle.id,
-        title: lightweightArticle.title,
-        content: content,
-        publishDate: lightweightArticle.publishDate,
-        url: lightweightArticle.url,
-        summary: lightweightArticle.summary
-      };
+      if (!contentObject) {
+        console.warn(`[AutoBrief] 取正文失败 R2_CONTENT_MISSING (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
+        return { ...base, content: '', contentStatus: 'R2_CONTENT_MISSING' as const };
+      }
+      const content = await contentObject.text();
+      if (!content.trim()) {
+        console.warn(`[AutoBrief] 取正文失败 EMPTY_R2_CONTENT (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
+        return { ...base, content: '', contentStatus: 'EMPTY_R2_CONTENT' as const };
+      }
+      return { ...base, content, contentStatus: 'OK' as const };
     } catch (error) {
-      console.warn(`[AutoBrief] 获取文章内容失败 (ID: ${lightweightArticle.id}):`, error);
-      // 使用空内容作为回退
-      return {
-        id: lightweightArticle.id,
-        title: lightweightArticle.title,
-        content: '',
-        publishDate: lightweightArticle.publishDate,
-        url: lightweightArticle.url,
-        summary: lightweightArticle.summary
-      };
+      console.warn(`[AutoBrief] 取正文失败 R2_FETCH_ERROR (ID: ${lightweightArticle.id}):`, error);
+      return { ...base, content: '', contentStatus: 'R2_FETCH_ERROR' as const };
     }
   };
 
@@ -303,7 +313,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     processArticle
   );
   
-  console.log(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇`);
+  const contentFailures = articlesWithContent.filter(a => a.contentStatus !== 'OK');
+  console.log(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇（取正文失败 ${contentFailures.length} 篇）`);
+  if (contentFailures.length > 0) {
+    const byReason: Record<string, number> = {};
+    for (const a of contentFailures) byReason[a.contentStatus] = (byReason[a.contentStatus] ?? 0) + 1;
+    console.warn(`[AutoBrief] 取正文失败分因: ${JSON.stringify(byReason)}`);
+  }
     return articlesWithContent;
   }
   
@@ -1191,7 +1207,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           cappedBlocks, droppedArticles, judgeTitleCapped, crossClusterMerges };
       });
 
-      await observability.logStep('story_validation', 'completed', {
+      // NO_EVENT 率断言。簇判定大面积判「不是单一事件」是上游退化的可判别信号，
+      // 而 2026-09-15~09-19 连续五天它一半的簇判成 NO_EVENT（簇退化成单词标题、平均篇数翻倍、
+      // 简报质量真实下降），brief_runs.status 却全程 COMPLETED、error 全空，数据只躺在 R2 里没人去看。
+      // 阈值 0.15 的依据（生产实测分布，正常与故障之间空得很宽）：
+      //   09-15  judgeCalls 73  NO_EVENT 38  52%   旧聚类（镜像没推成功）
+      //   09-17  judgeCalls 79  NO_EVENT 43  54%   同上
+      //   09-20  judgeCalls 51  NO_EVENT  1   2%   新聚类
+      //   09-21  judgeCalls 50  NO_EVENT  1   2%   同上
+      //   09-22  judgeCalls 32  NO_EVENT  1   3%   同上
+      const NO_EVENT_RATE_ALERT = 0.15;
+      const noEventRate = validatedStories.judgeCalls > 0
+        ? validatedStories.pocketFlagged / validatedStories.judgeCalls
+        : 0;
+      const noEventRateDegraded = noEventRate > NO_EVENT_RATE_ALERT;
+      if (noEventRateDegraded) {
+        console.error(
+          `[AutoBrief] NO_EVENT 率超阈值：${(noEventRate * 100).toFixed(1)}%` +
+            `（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls} 簇，阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%，正常 2-3%）。` +
+            `簇判定大面积判不是单一事件，通常意味着聚类退化或 ml-service 跑的不是预期算法` +
+            `（先核 ml-service 版本与聚类参数，再看本次 R2 observability 的簇篇数分布）。本次 run 记 DEGRADED。`
+        );
+      }
+
+      await observability.logStep('story_validation', noEventRateDegraded ? 'degraded' : 'completed', {
+        noEventRate: Number(noEventRate.toFixed(4)),
+        noEventRateThreshold: NO_EVENT_RATE_ALERT,
         validStoriesCount: validatedStories.stories.length,
         rejectedClustersCount: validatedStories.rejectedClusters.length,
         judgeCalls: validatedStories.judgeCalls,
@@ -1707,18 +1748,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
       type BlockOutcome = { block: WrittenBlock } | { failure: { idx: number; title: string; reason: string } };
 
+      // 取正文失败的跨块合计，按原因分因（进 brief_blocks 的 logStep）。
+      // 正常值全 0；非 0 说明块是拿不全的材料写出来的。
+      const blockContentFailures: Record<string, number> = {};
+      const countContentFailures = (items: Array<{ contentStatus: string }>) => {
+        const byReason: Record<string, number> = {};
+        for (const a of items) {
+          if (a.contentStatus === 'OK') continue;
+          byReason[a.contentStatus] = (byReason[a.contentStatus] ?? 0) + 1;
+          blockContentFailures[a.contentStatus] = (blockContentFailures[a.contentStatus] ?? 0) + 1;
+        }
+        return byReason;
+      };
+
       const writeOneBlock = async (story: any, idx: number): Promise<BlockOutcome> => {
         try {
           const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
-          const withBody = clusterArticles.filter((a) => String(a.content ?? '').trim().length > 0);
+          const withBody = clusterArticles.filter((a) => a.contentStatus === 'OK');
+          const failuresByReason = countContentFailures(clusterArticles);
           if (withBody.length === 0) {
-            return { failure: { idx, title: story.title, reason: '簇内没有一篇文章取到正文' } };
+            return { failure: { idx, title: story.title, reason: `簇内没有一篇文章取到正文（${JSON.stringify(failuresByReason)}）` } };
           }
           if (withBody.length < clusterArticles.length) {
             // 取不到正文的被丢掉，而块只能从剩下的里写。不留痕就只剩"这块怎么少了半件事"。
             console.warn(
               `[AutoBrief] 块材料不全 (idx=${idx}, "${story.title}"): ` +
-              `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文`
+              `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文，失败分因 ${JSON.stringify(failuresByReason)}`
             );
           }
           const aiw = createAIServices(this.env, workflowId).aiWorker;
@@ -1838,6 +1893,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         written: writtenBlocks.length,
         failedCount: blockFailures.length,
         failures: blockFailures,
+        /** 取正文失败分因合计（正常全 0）；空串不再当"取到了" */
+        contentFetchFailures: blockContentFailures,
         tiers: { lead: tierCount('lead'), more: tierCount('more'), brief: tierCount('brief') },
         anchors: writtenBlocks.reduce((n, b) => n + b.anchors, 0),
         windows: writtenBlocks.reduce((n, b) => n + b.windows, 0),
@@ -2126,14 +2183,24 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       // 观测性：标记 brief_runs 完成状态并填充全部统计。
-      // 有可对账的局部失败（块生成选中 N 只产出 M<N）→ DEGRADED 而非 COMPLETED，
-      // 使"头条静默消失"这类在 DB status 层就可见（不只在 R2 step metrics），便于监控/巡检。
+      // 有可对账的局部失败 → DEGRADED 而非 COMPLETED，使"头条静默消失""簇大面积判不是事件"
+      // 这类在 DB status 层就可见（不只在 R2 step metrics），便于监控/巡检。
+      // ⚠️ 新的降级信号一律并进 degradedReasons，**不要再开第二处 status 赋值**，否则口径分叉。
+      const degradedReasons = [
+        ...(blockFailures.length > 0 ? [`块生成失败 ${blockFailures.length} 个（选中 ${storiesForIntelligence.length}）`] : []),
+        ...(noEventRateDegraded
+          ? [`NO_EVENT 率 ${(noEventRate * 100).toFixed(1)}%（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls}）超阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%`]
+          : []),
+      ];
+      if (degradedReasons.length > 0) {
+        console.error(`[AutoBrief] 本次 run 记 DEGRADED：${degradedReasons.join('；')}`);
+      }
       await step.do('persist:brief_run_complete', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
         await db
           .update($brief_runs)
           .set({
-            status: blockFailures.length > 0 ? 'DEGRADED' : 'COMPLETED',
+            status: degradedReasons.length > 0 ? 'DEGRADED' : 'COMPLETED',
             finished_at: new Date(),
             report_id: reportId,
             total_articles: briefResult.stats.total_articles,

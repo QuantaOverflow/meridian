@@ -3,12 +3,14 @@ Meridian ML Service - 精简核心版本
 专注于AI Worker集成和聚类分析的核心功能
 """
 
+import os
 import time
 import asyncio
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import settings
 from .dependencies import ModelDep, verify_token
@@ -75,6 +77,56 @@ async def trace_id_logger(request: Request, call_next):
     return await call_next(request)
 
 # ============================================================================
+# 构建身份（build identity）
+# ============================================================================
+# 独立于请求参数的镜像身份。
+#
+# 为什么不能靠 config_used：clustering.py 的 config_used 只是把请求方传进来的
+# config 原样回显，旧镜像只要还认识字段名就会回显出一模一样的值，所以 backend 拿
+# configSent / configUsed 比对永远相等。2026-09-15 至 09-19 连续五天生产跑的是旧
+# 聚类算法（镜像没推成功，源码却是新的），全程 brief_runs.status = COMPLETED。
+#
+# 为什么不能是代码里的字面量（如 version="3.0.0"）：字面量跟着源码走，而故障的形状
+# 恰恰是"源码是对的、镜像是旧的"。所以值只从构建时注入的环境变量读
+# （Dockerfile 的 ARG → ENV），代码里只有"没注入"的占位值。
+BUILD_IDENTITY_FIELD = "build_identity"
+BUILD_NOT_INJECTED = "not-injected"
+
+
+def _read_build_stamp() -> str:
+    """读镜像里 Dockerfile 那层写下的构建时刻（兜底，见 Dockerfile）。读不到返回空串。"""
+    path = (os.getenv("MERIDIAN_ML_BUILD_STAMP_FILE") or "").strip()
+    if not path:
+        return ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def get_build_identity() -> Dict[str, Any]:
+    """返回当前运行镜像的构建身份。缺环境变量不报错，返回可判别的占位值。"""
+    sha = (os.getenv("MERIDIAN_ML_BUILD_SHA") or "").strip()
+    built_at = (os.getenv("MERIDIAN_ML_BUILD_TIME") or "").strip()
+    stamp = _read_build_stamp()
+    if built_at:
+        time_source = "build_arg"
+    elif stamp:
+        time_source = "image_layer"
+    else:
+        time_source = BUILD_NOT_INJECTED
+    return {
+        "build_sha": sha or BUILD_NOT_INJECTED,
+        "build_time": built_at or stamp or BUILD_NOT_INJECTED,
+        "build_time_source": time_source,
+        # injected=False 只剩一种来源：本地 `uv run` 直起服务（镜像里至少有 .build_stamp）。
+        # 调用方据此区分"没注入"与"注入了但不是本次部署的那个"。
+        "injected": bool(sha or built_at or stamp),
+    }
+
+
+# ============================================================================
 # 健康检查和基础端点
 # ============================================================================
 
@@ -83,7 +135,9 @@ async def read_root():
     """服务根端点"""
     return {
         "service": "Meridian ML Service",
+        # version 是源码字面量，**不能**当作镜像身份用；镜像身份看 build_identity。
         "version": "3.0.0",
+        BUILD_IDENTITY_FIELD: get_build_identity(),
         "status": "running",
         "features": {
             "embeddings": "生成文本嵌入向量",
@@ -110,6 +164,7 @@ async def health_check():
         health_status = {
             "status": "healthy",
             "timestamp": time.time(),
+            BUILD_IDENTITY_FIELD: get_build_identity(),
             "embedding_model": settings.embedding_model_name,
             "clustering_available": CLUSTERING_AVAILABLE,
             "optimization_available": CLUSTERING_AVAILABLE
@@ -176,7 +231,10 @@ async def generate_embeddings(
 # 核心端点 2: AI Worker集成聚类
 # ============================================================================
 
-@app.post("/ai-worker/clustering", response_model=BaseClusteringResponse)
+# response_model 去掉的原因：BaseClusteringResponse 里没有 build_identity 字段，
+# FastAPI 会按 response_model 过滤掉它。响应仍然先构造 BaseClusteringResponse（形状校验
+# 不变），再 model_dump + 挂上顶层 build_identity 返回。schemas.py 本轮不动。
+@app.post("/ai-worker/clustering")
 async def ai_worker_clustering(
     items: List[Dict[str, Any]],
     config: BaseClusteringConfig = None,
@@ -235,7 +293,14 @@ async def ai_worker_clustering(
             response.reduced_embeddings = None
         
         print(f"[AIWorkerClustering] 处理完成，发现 {len(response.clusters)} 个聚类")
-        return response
+
+        # build_identity 挂在响应顶层，与 config_used 明确分开：config_used 是"配置"，
+        # 它是"镜像身份"。旧镜像不会有这个字段，调用方据此识别"镜像没推成功"。
+        # mode="json" 出来的就是 JSON 安全类型（与原先 response_model 的序列化口径一致），
+        # 不再多过一遍 jsonable_encoder。
+        payload = response.model_dump(mode="json")
+        payload[BUILD_IDENTITY_FIELD] = get_build_identity()
+        return JSONResponse(content=payload)
         
     except Exception as e:
         print(f"[AIWorkerClustering] 处理错误: {e}")
@@ -248,7 +313,9 @@ async def ai_worker_clustering(
 # 核心端点 3: 智能自动检测聚类
 # ============================================================================
 
-@app.post("/clustering/auto", response_model=BaseClusteringResponse)
+# response_model 去掉的原因同 /ai-worker/clustering（要能带上顶层 build_identity）。
+# 这个端点 backend 侧当前零调用，但归属另一次决策，本轮只给它补上同样的标识字段。
+@app.post("/clustering/auto")
 async def auto_detect_clustering(
     request: FlexibleClusteringRequest,
     _: None = Depends(verify_token),
@@ -307,8 +374,11 @@ async def auto_detect_clustering(
             response.reduced_embeddings = None
         
         print(f"[AutoClustering] 智能处理完成，发现 {len(response.clusters)} 个聚类")
-        return response
-        
+
+        payload = response.model_dump(mode="json")
+        payload[BUILD_IDENTITY_FIELD] = get_build_identity()
+        return JSONResponse(content=payload)
+
     except Exception as e:
         print(f"[AutoClustering] 处理错误: {e}")
         raise HTTPException(

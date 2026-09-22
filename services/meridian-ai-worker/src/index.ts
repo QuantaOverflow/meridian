@@ -18,6 +18,8 @@ import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
 import { getStoryMergeConfirmPrompt, getStoryMergeTitlePrompt, type MergeCandidate } from './prompts/storyMerge'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
+import { RANK_TOP_N, type RankCandidate } from './prompts/story-rank'
+import { rankStories } from './services/story-rank'
 import type { BlockSectionContext } from './prompts/briefSkeleton'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { recordSpan } from './services/span-log'
@@ -776,6 +778,91 @@ app.post('/meridian/cluster/judge', async (c) => {
     return c.json<APIResponse<null>>({
       success: false,
       error: 'Failed to judge cluster',
+      metadata: { details: error.message },
+    }, 500)
+  }
+})
+
+/**
+ * 故事重要性排序：一次请求内跑三轮洗牌 + Borda 聚合，返回前 12。
+ * 判据与三形态对照写在 prompts/story-rank.ts，聚合与失败策略写在 services/story-rank.ts。
+ */
+app.post('/meridian/stories/rank', async (c) => {
+  try {
+    const body = await c.req.json()
+    const candidates = body?.candidates as RankCandidate[] | undefined
+    if (!Array.isArray(candidates) || candidates.length < RANK_TOP_N) {
+      return c.json<APIResponse<null>>(
+        { success: false, error: `candidates must be an array of >= ${RANK_TOP_N} items` },
+        400
+      )
+    }
+    // articles 是必填而不是可选：离线读数都是带它测出来的，缺了排序会变形
+    // （见 prompts/story-rank.ts 的 RankCandidate.articles）。宁可 400 也不静默用默认值。
+    if (
+      candidates.some(
+        x =>
+          !Number.isInteger(x?.id) ||
+          typeof x?.title !== 'string' ||
+          x.title.trim().length === 0 ||
+          !Number.isFinite(x?.articles)
+      )
+    ) {
+      return c.json<APIResponse<null>>(
+        { success: false, error: 'every candidate needs an integer id, a non-empty title and a numeric articles count' },
+        400
+      )
+    }
+    if (new Set(candidates.map(x => x.id)).size !== candidates.length) {
+      return c.json<APIResponse<null>>({ success: false, error: 'candidate ids must be unique' }, 400)
+    }
+
+    // 这里**故意没有** cluster/judge 那样的运行时泛化断言。同一个目标（判据不许写死具体
+    // 案例）换了落点：那道闸放在改 prompt 的环节（离线迭代时从全部候选标题抽专名集合，
+    // 指令段命中任何一个即作废，见 prompts/story-rank.ts 顶部）。
+    //
+    // 不放运行时的理由是实测的：复用 cluster/judge 的正则会被 `casualty` 命中——「伤亡
+    // 规模」是本判据第三个维度的定义词，是合法通用词汇。而任何基于通用词的正则都必然误杀
+    // （标题里出现 "Judge blocks ..." 就会撞上指令段的 "Judge on a global scale"），
+    // 误杀的代价是整期简报排序失败。闸放在人改 prompt 的那一步，收益同样、风险没有。
+    const aiGateway = new AIGatewayService(c.env)
+    const trace = readTraceContext(c.req.raw)
+    let callIndex = 0
+    const result = await rankStories(
+      candidates,
+      async (prompt: string) => {
+        const res = await callLLM(aiGateway, c.env, trace, 'story_rank', [{ role: 'user', content: prompt }], {
+          callIndex: callIndex++,
+        })
+        return ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+      },
+      (text: string) => parseJSONFromResponse(text)
+    )
+
+    // 三轮全败才算整步失败。**不回退成机械序**：那会让「排序没生效」与
+    // 「排序生效了但结果一样」无法分辨，调用方必须能看见这次失败。
+    if (result.roundsOk === 0) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'story rank produced no usable round',
+        metadata: { rounds: result.rounds },
+      }, 500)
+    }
+
+    return c.json<APIResponse<typeof result>>({
+      success: true,
+      data: result,
+      metadata: {
+        candidates: candidates.length,
+        rounds_ok: result.roundsOk,
+        intersection_size: result.intersectionSize,
+      },
+    })
+  } catch (error: any) {
+    console.error('Story rank error:', error)
+    return c.json<APIResponse<null>>({
+      success: false,
+      error: 'Failed to rank stories',
       metadata: { details: error.message },
     }, 500)
   }

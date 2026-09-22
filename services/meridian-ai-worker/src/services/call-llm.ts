@@ -65,6 +65,11 @@ export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   faithfulness_revise: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200, skipCache: true },
+  // 故事排序：一次看当期全部候选标题（46-51 条约 1400 词），输出前 12 + 5 条落选。
+  // maxTokens 3000 沿用离线实测值（两期各 3 轮，6 次调用 completion 全部在预算内，无截断）。
+  // skipCache 必须为 true：三轮洗牌虽然 prompt 不同不会互相命中，但跨期若有相同候选集
+  // 会静默复用旧排序——Gateway 默认缓存曾把一次 eval 的样本量退化成 1。
+  story_rank: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000, skipCache: true },
   // 报告层 v3：抽取（每批 ≤20 句）、去重分组、各方与分歧三种调用。maxTokens 与 frequency_penalty
   // 沿用原型实测值（各方那次要读整簇原文、产出最长，故按最大的给，单次调用再按需覆盖）。
   report_v3: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.2 },

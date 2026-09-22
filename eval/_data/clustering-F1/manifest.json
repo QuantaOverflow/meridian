@@ -1,0 +1,55 @@
+{
+  "id": "clustering-F1",
+  "version": 1,
+  "created": "2026-09-05",
+  "movedHere": "2026-09-23",
+  "targetOf": "product",
+  "split": "dev",
+  "consumed": "已耗尽。F1 是调参集，反复用于选阈值，读数不再是未见过数据上的表现。",
+  "labels": "events.jsonl",
+  "labelField": null,
+  "labelBalanceSource": "由 events.jsonl 直接统计：事件数、成员数、带标记的事件数、主题数。这份金标的单位是事件（每条带 members 文章列表），不是逐条分类，所以没有类别分布可对账。",
+  "cases": 119,
+  "labelBalance": {
+    "events": 119,
+    "members": 531,
+    "topics": 97,
+    "multi_label": 2,
+    "unverifiable": 1,
+    "exclude_from_primary": 0,
+    "with_related": 8
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "titles.tsv",
+    "kind": "raw_source",
+    "note": "证据是那个时间窗内 1142 篇文章的标题清单。判的是「这两篇讲不讲同一件事」，参照系是文章本身，与任何聚类实现无关。"
+  },
+  "window": ["2026-08-30T02:00:00Z", "2026-09-01T02:00:00Z"],
+  "articles": 1142,
+  "provenance": {
+    "labeledBy": "三个标注者 A / B / C 独立通读全部 1142 条",
+    "consensus": "成员级多数决（≥2 人认为两篇同组则连边，取连通分量）",
+    "criterion": "rubric.md（含三·五主题层）；全覆盖划分，未被事件认领的自动为单元素组",
+    "interAnnotatorARI": {
+      "event": { "AB": 0.965, "AC": 0.906, "BC": 0.907 },
+      "topic": { "AB": 0.929, "AC": 0.872, "BC": 0.868 }
+    }
+  },
+  "extras": {
+    "non_article": "meta-extra.json 里的 16 条非文章（三人一致）",
+    "duplicate_pairs": "meta-extra.json 里的 4 对重复文章",
+    "audit_2026_09_05": "meta-extra.json 里的双向双通道漏连审计：读了 175 篇，补 2 条漏连"
+  },
+  "labelScope": "两篇文章是否讲同一件事（事件层），以及所属主题（主题层）；不是文章内容真假",
+  "usableFor": [
+    "考产品：判定对象是文章之间的关系（输入的性质），换任何聚类实现都仍然成立"
+  ],
+  "limitations": [
+    "F1 已被反复用于调参，不再是 holdout。要报「未见过数据上的表现」用 clustering-F2",
+    "审计只覆盖余弦 ≥0.88 或共享 ≥2 专名的候选对，余弦 <0.88 且无专名共享的漏连对没查过",
+    "标注者三人的 event 层 ARI 最低 0.906、topic 层最低 0.868——topic 层一致性明显低于 event 层，按主题打的分要留余量",
+    "原 meta-F1.json 的 fixture 字段写的是 titles-F2.tsv，是错的（F1 是 1142 篇对应 titles-F1.tsv，F2 是 1252 篇）。该字段没有代码读取，所以一直没暴露；迁移时已按实际修正"
+  ],
+  "distilled": ["docs/adr/0003-cluster-as-brief-block.md"]
+}

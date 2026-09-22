@@ -1,0 +1,45 @@
+{
+  "id": "scorer-recall-v1",
+  "version": 1,
+  "created": "2026-09-19",
+  "movedHere": "2026-09-23",
+  "targetOf": "judge",
+  "split": "test",
+  "labels": "labels.jsonl",
+  "labelField": "category",
+  "cases": 15,
+  "labelBalance": {
+    "actor": 9,
+    "time": 3,
+    "quantity": 1,
+    "state": 1,
+    "epistemic": 1
+  },
+  "evidence": {
+    "mode": "rebuildable",
+    "rebuild": "语料在 apps/backend/prototypes/brief-v3-prod/out/raw/（gitignored，本机没有则无法重建）。重建脚本见 eval/scorer-recall/corpus.mjs",
+    "kind": "retired_intermediate",
+    "note": "证据是 v3 写作层的产出正文，那一层已退役。标注本身（哪句话错、错在哪）仍可读，但无法再跑判官去复现召回率。"
+  },
+  "provenance": {
+    "labeledBy": "owner",
+    "method": "在 12 个 block / 82 句可判定候选句里人工找出 15 条真实事实错——不是注入题",
+    "judgeUnderTest": "cluster-to-brief 的现役判官（与 build-judge-pack.mjs 逐字同源）"
+  },
+  "labelScope": "这句话相对情报报告是不是事实错，以及错的形状（actor / time / quantity / state / epistemic）",
+  "usableFor": [
+    "读：设计新判官时翻出来看真实错误长什么样，尤其占 60% 的 actor 类"
+  ],
+  "notUsableFor": [
+    "跑：语料不在 git 里且原机之外无法重建，召回率算不出来"
+  ],
+  "limitations": [
+    "样本极小（15 条），按形状分之后每类只有 1-9 条，分类别的召回没有统计意义",
+    "证据是已退役的 v3 写作层产物，属 retired_intermediate —— 这份是消耗品，读数已蒸馏，语料留着只为看例子",
+    "harness 脚本留在 eval/scorer-recall/ 但跑不起来（README 自陈）。留着是因为它们记录了重建方法"
+  ],
+  "distilled": [
+    "docs/knowledge/nodes/experiment-scorer-detection-recall-natural.md",
+    "docs/knowledge/nodes/lesson-source-stripping-undetected.md"
+  ]
+}

@@ -3,10 +3,10 @@
   "2026-08-26T00:00:00Z",
   "2026-08-28T00:00:00Z"
  ],
- "fixture": "titles-F2.tsv",
+ "fixture": "titles.tsv",
  "n_articles": 1252,
  "built": "2026-09-05",
- "role": "holdout（冻结判据见 HOLDOUT-F2-FROZEN.md）",
+ "role": "holdout（冻结判据见 HOLDOUT-FROZEN.md）",
  "criterion": "rubric.md（含三·五主题层）；全覆盖划分，未被事件认领的自动为单元素组",
  "consensus": "三个标注者 A/B/C 独立通读全部 1252 条，全程未查看任何聚类输出；成员级多数决（≥2 人认为两篇同组则连边，取连通分量）",
  "inter_annotator_ARI": {

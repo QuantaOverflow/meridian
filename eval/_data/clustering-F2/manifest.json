@@ -1,0 +1,51 @@
+{
+  "id": "clustering-F2",
+  "version": 1,
+  "created": "2026-09-05",
+  "movedHere": "2026-09-23",
+  "targetOf": "product",
+  "split": "test",
+  "consumed": "holdout，截至 2026-09-23 只用过一次。冻结判据见 HOLDOUT-FROZEN.md——跑一次就不再是未见过的数据，再跑要记在这里。",
+  "labels": "events.jsonl",
+  "labelField": null,
+  "labelBalanceSource": "由 events.jsonl 直接统计：事件数、成员数、带标记的事件数、主题数。单位是事件（每条带 members 文章列表），不是逐条分类，没有类别分布可对账。",
+  "cases": 130,
+  "labelBalance": {
+    "events": 130,
+    "members": 524,
+    "topics": 106,
+    "multi_label": 2,
+    "unverifiable": 2,
+    "exclude_from_primary": 1,
+    "with_related": 16
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "titles.tsv",
+    "kind": "raw_source",
+    "note": "证据是那个时间窗内 1252 篇文章的标题清单。判的是「这两篇讲不讲同一件事」，参照系是文章本身，与任何聚类实现无关。"
+  },
+  "window": ["2026-08-26T00:00:00Z", "2026-08-28T00:00:00Z"],
+  "articles": 1252,
+  "provenance": {
+    "labeledBy": "三个标注者 A / B / C 独立通读全部 1252 条，**全程未查看任何聚类输出**",
+    "consensus": "成员级多数决（≥2 人认为两篇同组则连边，取连通分量）",
+    "criterion": "rubric.md（含三·五主题层）；全覆盖划分，未被事件认领的自动为单元素组",
+    "interAnnotatorARI": {
+      "event": { "AB": 0.961, "AC": 0.978, "BC": 0.95 },
+      "topic": { "AB": 0.923, "AC": 0.943, "BC": 0.949 }
+    },
+    "rawRounds": "rounds/ 下是三人两轮的原始独立标注（wip = 第一轮，wip2 = 第二轮加了 dupes 判定）。上面的 ARI 就是从这些算出来的，删了 ARI 就无法复核"
+  },
+  "labelScope": "两篇文章是否讲同一件事（事件层），以及所属主题（主题层）；不是文章内容真假",
+  "usableFor": [
+    "考产品：判定对象是文章之间的关系（输入的性质），换任何聚类实现都仍然成立",
+    "报「未见过数据上的表现」——但只剩有限次数，用一次记一次"
+  ],
+  "limitations": [
+    "holdout 的价值随使用次数递减。已用过一次，再用前先看 consumed 字段",
+    "标注者全程未看聚类输出，这一点比 F1 更干净；但仍是同三人，标注者层面的系统偏差两份共享",
+    "topic 层 ARI（0.923–0.949）低于 event 层（0.95–0.978），按主题打的分要留余量"
+  ],
+  "distilled": ["docs/adr/0003-cluster-as-brief-block.md"]
+}

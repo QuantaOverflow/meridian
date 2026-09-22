@@ -22,7 +22,7 @@ if (!args.verdicts) { console.error('用法: node score-recall.mjs --verdicts=<�
 const VDIR = String(args.verdicts).replace(/\/$/, '');
 if (!existsSync(VDIR)) { console.error(`缺目录 ${VDIR}`); process.exit(2); }
 
-const gold = readFileSync(`${HERE}gold/natural-errors.jsonl`, 'utf8').trim().split('\n').map(l => JSON.parse(l));
+const gold = readFileSync(`${HERE}../_data/scorer-recall-v1/labels.jsonl`, 'utf8').trim().split('\n').map(l => JSON.parse(l));
 const blocks = loadBlocks();
 
 // 金标按文本定位到句号。**不能按句号对**:生产那套 splitter 与 lib.mjs 不同构,

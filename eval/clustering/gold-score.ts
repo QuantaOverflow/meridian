@@ -4,7 +4,7 @@
  *   npx tsx gold-score.ts <labels.json> [labels.json ...]
  *
  * labels.json 形状：{ "labels": { "<articleId>": <clusterId 或 -1> }, ... }
- * 金标：gold/events-F1.jsonl + gold/meta-F1.json（判据与已知偏差见 rubric.md）
+ * 金标：_data/clustering-F1/events.jsonl + meta-extra.json（判据与已知偏差见 rubric.md）
  *
  * ## 为什么同时报两族指标
  *
@@ -69,12 +69,12 @@ interface GoldEvent {
 /** 单篇事件的纯度低于此值即判「被吞进大簇」。阈值是拍的，未经验证——只当信号别当门。 */
 const SWALLOWED_PURITY = 0.2;
 
-export function loadGold(dir = join(HERE, 'gold')) {
-  const events: GoldEvent[] = readFileSync(join(dir, 'events-F1.jsonl'), 'utf-8')
+export function loadGold(dir = join(HERE, '../_data/clustering-F1')) {
+  const events: GoldEvent[] = readFileSync(join(dir, 'events.jsonl'), 'utf-8')
     .split('\n')
     .filter(Boolean)
     .map(l => JSON.parse(l));
-  const meta = JSON.parse(readFileSync(join(dir, 'meta-F1.json'), 'utf-8'));
+  const meta = JSON.parse(readFileSync(join(dir, 'meta-extra.json'), 'utf-8'));
 
   // 规则 3：重复对只留 id 较小的一条
   const drop = new Set<number>((meta.duplicate_pairs ?? []).map((p: number[]) => Math.max(...p)));
@@ -97,7 +97,7 @@ interface GoldTopic {
  * 事件层回答「同一件事的报道有没有聚在一起」，主题层回答「同一主题的事件有没有聚在一起」——
  * 两层用同一份 labels 打两次分，一个聚类结果可能在一层好、另一层差（那是粒度问题不是杂讯）。
  */
-export function loadTopics(dir = join(HERE, 'gold')): GoldTopic[] | null {
+export function loadTopics(dir = join(HERE, '../_data/clustering-F1')): GoldTopic[] | null {
   const p = join(dir, 'topics-F1.jsonl');
   if (!existsSync(p)) return null;
   return readFileSync(p, 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l));

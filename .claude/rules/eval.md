@@ -1,7 +1,6 @@
 ---
 paths:
   - "eval/**"
-  - "eval/**"
 ---
 
 # eval 硬规矩

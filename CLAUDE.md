@@ -77,7 +77,8 @@
 |---|---|---|
 | 产品代码 | `<package>/src/` | ✅ |
 | 单元/集成测试 | `<package>/test/`（跟包走，**不设顶层 tests/**——monorepo 惯例） | ✅ |
-| eval harness / 金标 / rubric | `eval/<domain>/`（`.ts` + `gold/*.jsonl` + `*.md`） | ✅ |
+| eval harness（脚本） | `eval/<domain>/`（`.ts` / `.mjs` + `*.md`） | ✅ |
+| 人工标注金标（标签 + 证据 + rubric + manifest） | `eval/_data/<set>/`，跑 `node eval/_data/check.mjs` 校验 | ✅ |
 | eval 中间产物（worklist / packet / dump） | 留 `eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
 | eval 运行报告 | 该 harness 目录下的 `out/`（`.gitignore` 已挡） | ❌ |
 | 原型 / 探索实验（含 fixtures 与产物） | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | ❌ 只留本地（根 `.gitignore` 整目录挡） |
@@ -103,7 +104,7 @@
 
 | 文件 | 触发路径 | 内容 |
 |---|---|---|
-| `eval.md` | `eval/**`、`eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
+| `eval.md` | `eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
 | `local-verification.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | wrangler dev 单端点与联调、R2 注意事项、typecheck 的两个坑 |
 | `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 

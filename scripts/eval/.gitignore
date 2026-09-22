@@ -1,0 +1,28 @@
+# eval 目录级忽略规则。
+#
+# 为什么在这一层加：每个 harness 原本自带 .gitignore 挡住自己的产物目录，但删除一个
+# 已退役的 harness 时那份 .gitignore 也跟着删了，于是它遗留在磁盘上的 out/、worklist/、
+# .r2cache/ 等产物突然变成「未跟踪的新文件」——2026-09-22 清理时一次 `git add -A`
+# 暴露了 140 个这类文件、15,179 行。
+#
+# 按目录名挡在 eval 这一层，删任何 harness 都不会再让它的残留产物冒出来。
+# 各 harness 自己的 .gitignore 保持不变，这份是兜底。
+
+node_modules/
+out/
+scratch/
+worklist/
+traces/
+sources/
+fixtures/
+.cache/
+.r2cache/
+*.log
+_rescore-cache.json
+
+# 例外：入库的金标、数据集与说明书不受上面规则影响。
+!*/gold/
+!*/gold/**
+!*/datasets/
+!*/datasets/**
+!*/*.md

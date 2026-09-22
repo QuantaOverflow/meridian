@@ -1,0 +1,53 @@
+{
+  "id": "intel-grounding-v1",
+  "version": 1,
+  "created": "2026-07-05",
+  "movedHere": "2026-09-23",
+  "targetOf": "judge",
+  "split": "test",
+  "labels": "labels.jsonl",
+  "cases": 100,
+  "labelBalance": {
+    "supported": 88,
+    "unsupported": 4,
+    "contradicted": 8
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "sources.jsonl",
+    "kind": "raw_source",
+    "coverage": "39/39",
+    "note": "证据是原始 RSS 文章全文，不是系统的中间产物。换任何写作架构，「这句话在这簇原文里有没有支撑」这个判定都仍然成立。"
+  },
+  "companions": {
+    "human-adjudicated.jsonl": "24 条人裁终裁，对应 rubric §7",
+    "synthetic-contradicted.jsonl": "26 条人工构造的反例（全部 contradicted），用于补少数类",
+    "claude-secondlabel.jsonl": "100 条异家族第二标注（Claude），用于查 self-preference 泄漏",
+    "agreement-audit.jsonl": "一致性审计记录",
+    "labels.example.jsonl": "格式样例"
+  },
+  "provenance": {
+    "labeledBy": "owner",
+    "systemVersion": "报告层 v2（已于 2026-09 随 brief-block-v6 上线退役）",
+    "claimSource": "情报分析输出（qwen-long 生成）",
+    "judgeUnderTest": "qwen-max"
+  },
+  "labelScope": "claim 相对该簇输入 RSS 文章是否成立，不是相对真实世界",
+  "usableFor": [
+    "考判官：换任何判官模型，拿这批重测 κ 与少数类召回，仍然有效"
+  ],
+  "notUsableFor": [
+    "考产品：这些 claim 由已退役的报告层写出，不代表当前系统会产出什么样的句子"
+  ],
+  "limitations": [
+    "严重不平衡：88/100 是 supported，少数类总共只有 12 条。判官全答 supported 即得 88% 准确率，κ 在这个分布上方差很大——不要把单个 κ 数字当硬读数，必须同时看少数类召回",
+    "全部 100 条 split=heldout，没有 dev 切片；judge prompt 调参无处可做而不污染读数",
+    "rubric §6 要求过采稀有类，本批没做到（见上一条）",
+    "self-preference 泄漏：被评对象由 qwen-long 生成、judge 是 qwen-max，同家族。claude-secondlabel.jsonl 是为此做的对照",
+    "Claude judge 的 κ=0.779 是离线核算，真 API 复验从未留痕；out/judge-meta/ 七份产物里没有任何一份 judge_model=claude-*。真实 API 重跑过的只有 qwen-max（κ=0.407 FAIL）与 deepseek-v3（同样 FAIL）"
+  ],
+  "distilled": [
+    "docs/knowledge/nodes/experiment-intel-grounding-judge-selection.md",
+    "docs/knowledge/nodes/lesson-intel-grounding-readme-stale.md"
+  ]
+}

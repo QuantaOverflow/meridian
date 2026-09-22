@@ -7,7 +7,7 @@
   "status": "recorded",
   "tasks": ["设计验收门"],
   "scope": "仅 eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平",
-  "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；eval/intel-grounding/gold/judge-gold.jsonl（100 条）、gold/human-adjudicated.jsonl（24 条）、gold/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
+  "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；eval/_data/intel-grounding-v1/labels.jsonl（100 条）、eval/_data/intel-grounding-v1/human-adjudicated.jsonl（24 条）、eval/_data/intel-grounding-v1/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
   "conditions": [
     "judge-gold.jsonl 共 100 条 factual claim，终裁后 factual=88 supported / 4 unsupported / 8 contradicted；其中 7 条经用户二次人裁终裁（缺口类断言、日期可源内推算类归为 contradicted、复合 claim 逐成分核源，政策写进 rubric.md 的「人裁终裁政策」节）",
     "human-adjudicated.jsonl 24 条是另一批人裁样本，用于交叉核验",

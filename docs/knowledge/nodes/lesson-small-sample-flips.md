@@ -4,7 +4,7 @@
   "type": "lesson",
   "title": "三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异",
   "date": "2026-09-19",
-  "status": "recorded",
+  "status": "superseded",
   "tasks": ["演化组合架构", "设计验收门"],
   "scope": "cluster-to-brief 的 dev 五簇；七簇全部取自同一次生产运行，不是独立抽样",
   "source": "docs/knowledge/nodes/experiment-frontier-dev5-blind.md",

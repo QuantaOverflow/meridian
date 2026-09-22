@@ -4,7 +4,7 @@
   "type": "lesson",
   "title": "scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质",
   "date": "2026-09-19",
-  "status": "recorded",
+  "status": "superseded",
   "tasks": ["设计验收门", "演化组合架构"],
   "scope": "cluster-to-brief harness；证据来自 c1 的四变体对照与 dev 五簇的多臂读数，均非人工金标",
   "source": "docs/knowledge/nodes/experiment-scorer-evidence-width-c1.md 与 experiment-crossover-routed-storyline-dev.md",

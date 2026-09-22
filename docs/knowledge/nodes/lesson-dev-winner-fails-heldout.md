@@ -4,7 +4,7 @@
   "type": "lesson",
   "title": "dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信",
   "date": "2026-09-19",
-  "status": "recorded",
+  "status": "superseded",
   "tasks": ["演化组合架构", "设计验收门"],
   "scope": "direct-raw 与 direct-raw-routed-storyline 在 dev 五簇与 heldout 两簇上的对照;同尺同判官模型",
   "source": "docs/knowledge/nodes/experiment-heldout-replacement-candidate.md 与 experiment-production-baseline-same-scorer.md",

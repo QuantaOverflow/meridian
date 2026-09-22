@@ -900,6 +900,92 @@
       "content": "results hash 90108a75742981d87c196eb5ecb66ecf6153198b38e16a455042f5d037aea861。产物在scripts/eval/cluster-to-brief/out/atomic-evidence/binding-retest-v0.19.1。新事件、别名、作用域、跨句、自然错误及整句LLM未覆盖因素未验证；不能推广事件特定窄grammar到生产，也不能用这次修补零漏放取代之前扩大失败事实。下一步冻结当前机制，换不参与修补的跨事件材料检验，而不是继续补已知文章刷零。"
     },
     {
+      "id": "experiment-block-consistency-tuning",
+      "type": "experiment",
+      "title": "块间数值一致性传感器：第 75 期实测精度 3/4，加块标题后召回涨但精度从 2/2 掉到 3/6，补地点消歧才回到 3/4",
+      "date": "2026-09-01",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错"
+      ],
+      "scope": "block-consistency.ts，分段写（b′）架构下的块间数值互相矛盾检测；纯字符串处理，零 LLM 调用；覆盖 money/killed/missing/injured/rescued/percent/magnitude 七类量纲",
+      "source": "services/meridian-ai-worker/src/utils/block-consistency.ts:1-22（文件头注释）",
+      "conditions": [
+        "n=75 指的是仅第 75 期简报一天的数据，样本量极小，文件注释自陈『精度实测 3/4，别当成准确率』",
+        "PLACES 是在这一天数据上手工调出来的固定地名词表（nepal/tibet/china/...），换一天的新闻话题会漂",
+        "该传感器 mark-only：只报不改，不接入拦截"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "第 75 期简报正文，按 `<u>**title**</u>` 切回块，抽取金额/伤亡/百分比/震级四类量化表达做块间配对比对",
+      "evaluation": "人工核对该期检出的冲突条目，统计精度；同时记录每次调参（加块标题进主题键、补地点消歧）前后的召回与精度变化",
+      "result": "首轮实测 6 处检出、3 处误报，全部因未做地点消歧（同一场灾害跨辖区，如尼泊尔 644 失踪 vs 西藏 558 失踪，被误判为同一数字冲突）。把块标题并入主题键以提升召回后，精度从 2/2 掉到 3/6。补地点消歧后精度回到 3/4。最终态：精度 3/4，覆盖四类量纲，漏检不代表没冲突。",
+      "cost": "零 LLM 调用，纯字符串处理，无额外成本",
+      "record_completeness": "summary_only",
+      "file": "experiment-block-consistency-tuning.md",
+      "content": "## 读数原文\n\n`block-consistency.ts:14-21`：\n\n> ⚠️ 已知局限，别当成准确率：\n>   · 只覆盖四类量纲，漏检不代表没冲突\n>   · 精度实测 3/4（第 75 期一天的数据，n 很小）\n>   · PLACES 是在那一天的数据上调出来的固定词表，换一天会漂——地点消歧靠它，\n>     词表没覆盖的辖区会退化成误报（不是漏检）。mark-only 下误报只是噪声。\n>\n> 调这把尺时的教训：加块标题进主题键后召回涨、精度从 2/2 掉到 3/6，补地点消歧才回到 3/4。\n> **召回涨了就收工是错的。**\n\n## 关联\n\n产生 [[lesson-block-consistency-structural-blind-spot]]。与\n[[lesson-llm-oversplits-single-large-event]] 描述的是同一类『同一事件跨地域/跨辖区报道』\n现象在不同环节的表现：那条经验讲的是聚类/故事切分层面的碎片化，这里讲的是写作层\n分段写之后，同一场灾害的两个辖区各自数字被写作模块误判为『自相矛盾』。"
+    },
+    {
+      "id": "experiment-candidate-grouping-prompt-model-scan",
+      "type": "experiment",
+      "title": "整簇送 LLM 切子故事：7 个 prompt 变体召回全落 16-23/31（不改基线 22 分最高），3 个高档模型硬配对全中、deepseek-v4-pro 最严重 52%",
+      "date": "2026-08-21",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "改聚类/切分链路"
+      ],
+      "scope": "story-validation 旧形态（整簇送 LLM，模型自己在 ~100 篇的簇里划出所有子故事），2026-08-20/21 两天扫描；prompt 变体与模型对照均在同一批数据上做",
+      "source": "commit 9bef77b（2026-08-21，feat(story-validation): 几何候选组 + 判官/复核两段式,替换整簇送 LLM）提交说明第二段；apps/backend/src/lib/core/candidate-grouping.ts:5-7",
+      "conditions": [
+        "『31』是本次评测口径下的真实事件总数，『22』是『什么都不改』的基线召回，7 个变体（含加穷尽契约、加 unassigned 出口）无一超过 22",
+        "『硬配对』指模型把不属于同一事件的成员强行配成一对/一组——三个模型（gpt-oss-120b / deepseek-v4-pro / kimi-k2.6）在同一批数据上全部出现这个失败，deepseek-v4-pro 最严重、发生率 52%",
+        "commit message 未逐一列出 7 个 prompt 变体的具体差异，只说明其中包含『加穷尽契约』『加 unassigned 出口』两类；候选组内的病灶另见 storyValidation.ts 旧版关于 outliers 数组只存在于 single_story 分支的记录（该文件已随本次架构替换删除）",
+        "根因判定引用了 kimi-k2.6 的思维链原文：'This implies that for collection_of_stories, you may NOT exclude articles... Thus pure_noise is correct.'——即模型在没有『部分覆盖』这个合法出口时，会把整簇判成全对或全错，这解释了为什么单纯加 unassigned 出口这个 prompt 变体也没能救回召回"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "failed",
+      "inputs": "同一批含约 31 个真实事件的簇数据；7 个 story-validation prompt 变体（原版 + 6 个改动，含穷尽契约与 unassigned 出口两类）；3 个高档模型（gpt-oss-120b / deepseek-v4-pro / kimi-k2.6）与原判官模型的硬配对对照",
+      "evaluation": "人工核对模型输出的事件划分是否与真实事件对应（召回=正确识别的事件数/31）；硬配对率=模型把不同事件的成员错误配对的发生率",
+      "result": "prompt 层面：7 个变体召回全部落在 16-23/31 区间，无一超过『什么都不改』的基线 22——说明问题不是某个 prompt 细节缺失。模型层面：三个比原判官更高档的模型全部出现硬配对错误，其中 deepseek-v4-pro 最严重（52% 发生率）——说明问题也不是模型档次不够。两条对照共同排除了『prompt 问题』与『模型档次问题』两个最直接的假设，指向任务形态本身：让 LLM 对一个数十元素的集合做穷尽切分，是这个任务类型做不到的，不是某个实现细节的问题。",
+      "cost": "未知（commit message 未记录本次扫描的调用量或费用）",
+      "record_completeness": "summary_only",
+      "file": "experiment-candidate-grouping-prompt-model-scan.md",
+      "content": "## 读数原文\n\ncommit 9bef77b 提交说明：\n\n> 这不是 prompt 或模型档次问题，已实测排除：七个 prompt 变体（含加穷尽契约、加 unassigned\n> 出口）召回全落在 16-23/31，无一超过「什么都不改」的 22；gpt-oss-120b / deepseek-v4-pro /\n> kimi-k2.6 三个高档模型硬配对全中，deepseek 最强也最严重（52%）。\n\n`candidate-grouping.ts:5-7` 头注释是同一结论的精简复述，措辞把「deepseek 最强也最严重」\n简化成「deepseek 最严重」——本节点以提交说明（更完整的原文）为准。\n\n## 为什么两条对照要放在一起看\n\n单独看任何一条都可能被解释成局部问题（『这个 prompt 没写好』或『模型不够强』），\n只有两条同时失败、且都在同一批数据上做过对照，才能排除这两个最容易被想到的补救方向。\n这正是排除替代解释的方法：先把最省成本的两种修法（改 prompt、换模型）都实测过、\n都不起效，才有理由往『任务形态本身不适合 LLM』这个更深的结论走——否则很容易在\n『再试一个 prompt』『再换一个模型』上无限打转。\n\n## 关联\n\n产生 [[lesson-llm-cannot-partition-event-sets]]。这条实验解决的『整簇送 LLM 切子故事』\n架构问题，其替换方案（几何候选组 + 逐组判定）带来的『人工严口径精度 41.7%→89-92%』\n已经在 [[experiment-story-validation-architecture-error-taxonomy]] 与\n[[experiment-story-validation-verify-stage-tradeoff]] 中记录，本节点不重复那个数字，\n只记录『为什么必须换架构』这一步的排除性证据。"
+    },
+    {
+      "id": "experiment-claim-proposal-reframe",
+      "type": "experiment",
+      "title": "写作层判断声明：问『你还缺什么』模型答成『报告里还缺哪些事实』，8 问全在要细节、成稿变事实堆叠、分析消失；改问『你打算下什么判断』后 4/4 都是可证伪的判断",
+      "date": "2026-09-08",
+      "status": "recorded",
+      "tasks": [
+        "改写作层结构",
+        "治事实关系错"
+      ],
+      "scope": "brief 写作层（简报正文生成）针对单个 story block 的『判断声明』调用（getClaimProposalPrompt / CLAIM_SCHEMA），不是环 1（RSS 原文→情报报告）的生成任务；对照为同一写作层内『第一版问法』与『改问法后』两版 prompt",
+      "source": "services/meridian-ai-worker/src/prompts/briefEvidence.ts:15-22, 36, 56-60, 300-320；commit 6128998（2026-09-08，feat(brief): 写作层接证据链——声明判断、检索、自检找漏、重写）提交说明",
+      "conditions": [
+        "第一版问法原文为 'what you still need'（你还需要什么），模型的理解落点是『报告里还缺哪些事实』——8 个问题里全部在追问开枪细节、法律论点这类具体信息，其中 2 个问的还是报告里已经写明的内容",
+        "『致命错归零不是学会了有据分析，是不分析了』——这是本条读数最关键的判读：第一版拿回一堆事实性材料之后，成稿变成事实堆叠，分析性内容整体消失，这不是修复而是回避",
+        "改版后的问法是『先声明你要下的判断，程序去查有没有支撑』（CLAIM_SCHEMA 的 claim 字段要求 'One judgement you intend to make... why this matters, what a party is really after, what it costs whom, what follows from it, or what a reader would otherwise miss'），实测 4 条判断全部是判断、且可证伪（即存在被检索证否的可能性，不是空洞断言）",
+        "触发这次调用重设计的根因是环境性的：报告结构上不收纳分析性材料，见本节点『为什么需要这一层』一节",
+        "MAX_CLAIMS 从初版可能更多收紧到 4——briefEvidence.ts:36 记录『8 条会逼模型凑数，实测 8 条里 4 条逐字相同』，即字段命名虽是 claims 但去重/上限调参与本次问法重设计是同一轮改动里的相邻决定，不是本条读数的直接证据"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "同一批 story block 的写作调用，先后用两版判断声明 prompt（'what you still need' vs '声明你要下的判断'）产出的 claim 列表",
+      "evaluation": "人工判读产出的 claim 是事实性问题还是可证伪的判断；统计致命事实错误数量",
+      "result": "第一版：8 个问题全部落在『报告里还缺哪些事实』，其中 2 个问的是报告已有内容；成稿变成事实堆叠，此前的分析性致命错误（如把地理位置或法律状态说错）确实归零，但代价是分析这个维度整体消失，不是被治好。第二版（本条实验）：4 条判断全部是真正的判断（关于『为什么这件事重要』『某方真实意图是什么』『代价落在谁身上』『会带来什么后果』），且每条都可能被检索证否——即任务重新定义之后模型才恢复了『下判断』这个行为，同时保留了『判断要可核验』这个约束。",
+      "cost": "未知（commit message 未记录本次改动的调用量或费用对比）",
+      "record_completeness": "summary_only",
+      "file": "experiment-claim-proposal-reframe.md",
+      "content": "## 为什么需要这一层：报告结构上不收纳分析性材料\n\n`briefEvidence.ts:1-11`：\n\n> 报告讲的是 WHAT HAPPENED，而简报的写作风格（briefSkeleton.ts 的 VOICE）要求\n> \"why it matters strategically, the likely motivations, second-order effects\"——\n> 这类材料**报告结构上不收**。实测簇 82：原文里 Ellison 说「Abbott 有法律义务却选择无视\n> 法律」、Moriarty 说「他要是跑了责任在一个人身上」、Abbott 发言人说「把联邦法院征用来\n> 接管州长职权」，报告里 0 条、检索片段里 0 条。模型被要求写分析、手里只有事实性引语，\n> 就只能自己造——「他位于 rio grande 对岸」（人在美国境内）、「面临严重联邦指控」\n> （联邦检察官只是在考虑起诉）两条致命错都是这么来的。\n\n这是驱动整个『写作层自己检索』设计的前提：不是写作层的分析能力不够，是它被要求做分析、\n手里却没有分析所需的材料（评价性引语只存在于原文，报告的抽取契约不收纳这类内容），\n于是模型用世界知识和推测去填补——这与环 1 报告生成阶段的幻觉根因是同一形状（『被要求\n做手里没材料支撑的事，就会编』），但发生在流水线的不同环节：环 1 是『生成报告时被问\n事实性问题、世界知识替补空白』，这里是『生成正文时被要求分析、手边只有事实性引语、\n无从分析只能编』。两者都指向『先让模型说清楚自己要做什么判断，再去核验』这个共同的\n修法方向，但不是同一个实验、不是同一段代码、也不是同一批数据——不应互相替代引用。\n\n## 读数原文（问法对照）\n\n`briefEvidence.ts:15-18`：\n\n> 第一版问的是 \"what you still need\"，模型理解成「报告里还缺哪些事实」，8 个问题全在问开枪\n> 细节、法律论点，两个问的还是报告里已有的东西；拿回一堆事实之后成稿变成事实堆叠、分析整个\n> 消失——致命错归零不是学会了有据分析，是不分析了。改成「先声明你要下的判断，程序去查有没有\n> 支撑」之后，4 条判断全是判断，且可证伪。\n\n## 与本仓其他『改问法』经验的关系（不重复，仅对照）\n\n本地会话记忆中另记录过一次不同层面、不同任务的『改问法』经验（环 1 RSS 原文→情报报告生成\n阶段，把问法从『X 是什么』改成『据这些文章所说，X』，unsupported 56%→6%）。那次改动解决的\n是『生成报告时模型用世界知识替补源里没有的信息』，本节点解决的是『写作时被要求做分析但手边\n没有分析材料，就自己编』——两者是流水线不同环节上各自独立测过的『改任务定义 > 加约束』\n实例，共享同一条更抽象的机制（见 [[lesson-ask-for-judgement-not-facts]]），但**不是同一次\n实验、不是同一段代码、样本也不同**，因此不合并、只在此处交代关系。\n\n## 关联\n\n产生 [[lesson-ask-for-judgement-not-facts]]。与 [[experiment-gap-check-independent-call]]\n是 briefEvidence.ts 同一轮写作层重设计（2026-09-08~09-12）里的两个不同调用：本节点讲『写作\n之前声明判断』这一步，另一节点讲『写完之后找漏』这一步；两者共享『把任务从「诊断已有问题」\n改造成「先定义要做什么、再验证」这一类结构』这一更高层的方向。"
+    },
+    {
       "id": "experiment-claude-knowledge-harness-compatibility",
       "type": "experiment",
       "title": "Claude Code知识库harness兼容性诊断：底座可共享，规则入口与Stop注册尚待适配",
@@ -926,6 +1012,37 @@
       "record_completeness": "complete",
       "file": "experiment-claude-knowledge-harness-compatibility.md",
       "content": "结论是小范围客户端入口适配而非知识库迁移。支持同时使用Codex与Claude，维护同一份nodes/schema和校验程序。指纹缓存只证明当前结构/生成文件检查成功，不证明记录完备、语义正确或Claude规则已经执行。\n\n本轮仅将兼容性诊断入库；未实施建议，未对Claude现有会话、插件或组织管理设置做写入。未来的客户端真实触发测试应与这次本地单元测试分开记录。"
+    },
+    {
+      "id": "experiment-coverage-judge-kappa-n112",
+      "type": "experiment",
+      "title": "覆盖对账判官（reconcileCoverage）在 112 条三角测量金标上 κ=0.965 通过，dropped precision=1.000；随后用它验证两遍法把合成漏报从 13.4% 压到 0%",
+      "date": "2026-07-08",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门",
+        "改报告层结构"
+      ],
+      "scope": "scripts/eval/coverage-judge/ 验的是 reconcileCoverage 这一个判官（判候选 story 在成品简报里的去向 headline/noteworthy/dropped），gold 取自 8 期真实 admin-brief workflow；不代表其他判官或其他简报生成路径",
+      "source": "commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）；commit 52acb84（2026-07-07，feat(brief-gen): 合成漏报修复(覆盖契约)+A/B双尺复测 dropped 13.4%→6.2%）；commit 232b15e（2026-07-08，feat(brief-gen): 两遍法覆盖补录(coverage repair)——合成漏报 0/112 硬保证）；scripts/eval/coverage-judge/disagreements.md（35 条分歧样本明细）；scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节",
+      "conditions": [
+        "母集团：到达合成层的 story（brief_stories.selected_for_intel=true 且 intel_report_r2_key 非空），取自 error-analysis 路2 用过的 8 条真实 brief（admin-brief-*），共 112 story-disposition 组",
+        "gold 构成：77 三尺一致 + 16 grounded（简报正文实体检索坐实）+ 2 人裁 + 17 headline↔noteworthy 多数决",
+        "三尺方法论见 [[mechanism-coverage-judge-triangulation]]：judge=qwen-long（三分类）/ codex=GPT（异家族第二标注）/ det=无 LLM 专有名词加权词汇重叠对齐器（dropped/covered 强、headline/noteworthy 弱）",
+        "忠实点：顺序对齐生产（R2 key idx 昇序=intel step 顺=生产 reports[] 顺）、label 用 executiveSummary.replace(/\\s+/g,' ').trim().slice(0,160)（与 runtime reconcileCoverage 完全一致）、判定兜底（漏判/非法 disposition→dropped）与生产一致",
+        "A/B 复测前置条件：8 期生产简报的原始生成时间早于 bc3f8a9（RARR+输入修复），不能直接当对照，因此两臂（baseline/treatment）都在同一份代码 HEAD 上重放生成，唯一变量是 prompt",
+        "两遍法（232b15e）的 repairCoverage 不经 LLM：程序化从 dropped story 的 executiveSummary 逐字取首句补插 noteworthy，by-construction 不引入新编造；对账失败则跳过（best-effort，不拖垮主流程）"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "112 条 story-disposition 三角测量金标（详见 conditions）",
+      "evaluation": "Cohen's κ（三分类 headline/noteworthy/dropped，以及决策级二分类 covered/dropped）+ dropped 类 precision/recall；gate：κ≥0.6 且 dropped precision≥0.8",
+      "result": "PASS。三分类 κ=0.965，决策级(covered/dropped) κ=0.968，dropped precision=1.000（判官喊的 18 条 dropped 全部真实为 dropped，不会虚增「合成漏报」计数），dropped recall=0.947（19 条真实漏报中抓到 18，漏 1 条为边界例）。错配仅 2/112，方向均为判官偏松（over-covered），与 qwen 同家族 self-preference 的方向一致——说明用这把尺算出的漏报数是偏保守而非偏高估计。随后用这把已验证的判官做了一次真实生产修复的 A/B：13.4%(旧 prompt 基线) → 6.2%(仅改 prompt) → 0.0%(两遍法程序化补录, 19 条 gold 漏报全救回)。忠实度门同步复测：twopass 批 contradicted 与基线相当(7 vs 6)，unsupported 全场最低(1.1%)。",
+      "cost": "未知——commit message 未记录 LLM 调用量与费用；112 条金标 × 三个标注源 + 35 条人裁 + 两轮 A/B（每轮 8 期简报重新生成）的总成本未留痕",
+      "record_completeness": "summary_only",
+      "file": "experiment-coverage-judge-kappa-n112.md",
+      "content": "## 与 error-analysis 「合成漏报占缺陷 68%」的关系（不重复记录）\n\nd2b6f09 的 commit message 明确写道，这次 κ 验证「是 error-analysis 路2『合成漏报占缺陷 68%』\n头号结论的依据」。这个 68% 数字本身**已经蒸馏进本仓的其他已入库文档**，不在本节点重复：\n`docs/ROADMAP.md:151`、`docs/adr/0004-brief-writer-v3.md:53`、\n`scripts/eval/error-analysis/README.md`「背景」节都记着这个数字，且 ROADMAP 明确写\n\"合成漏报已于 2026-07-08 收口（dropped 13.4% → 0.0%）\"——与本节点的 A/B 结果一致。\n用户的私人 memory 里也已经有 `error-analysis-path2-attribution` 这条节点记录了逐层归因\n的聚合表，并诚实标注\"逐条 open-code 明细已丢，只剩聚合百分比\"。\n\n本节点记录的是**验证 judge 本身可信度**这一步（κ=0.965），它是让\"dropped=漏报\"这个消费\n口径立得住的前提，而不是重新推导 68% 这个数字——两者是因果链上相邻但独立的两件事：\n先有本节点的 κ 验证，\"dropped 计数可信\"这个结论才立得住；68% 的归因数字则来自另一批\nopen-code 人工判读（error-analysis 路2），不是从这 112 条 gold 里算出来的。\n\n## 三尺分歧率本身也是一个读数\n\n112 条里 35 条（约 31%）三尺不一致、需要人裁，说明即便是\"story 去向\"这种看起来客观的\n判断，三个独立信号源的自然分歧率也不低。这个比例可以作为以后设计类似三角测量时的参照——\n如果新任务的分歧率远高于 31%，大概率意味着判定粒度本身需要重新设计，而不是简单加标注器\n就能收敛（见 [[mechanism-coverage-judge-triangulation]] 的 invalidates_when）。"
     },
     {
       "id": "experiment-crossover-routed-storyline-dev",
@@ -1062,6 +1179,33 @@
       "content": "旧0/4原始父句状态及旧60缓存零漏放不能代表新材料可靠性；新接口与材料同时变化，不做纯材料/纯提示因果归因。冻结plan hash d30f135f7fa33b1bdd71592b5f0aa5b2000838c9725f4d6f14a050f115db6d9a；results hash 710987358b3e52f4a803a2aeba09953c392d988a9df6eebdbfa586e25e6c418d，完整产物在out/atomic-evidence/expanded-dev-v0.16.1。\n\n来源绑定/故障扩散已修，但原文引用忠实转换7最终失败和整句语义错放并存。只精确引用并不证明蕴含：同一个错误句可以引用正确的not/to be/at least/president内容却被模型标supported。下一步应对语义维度做忠实独立字段转换、代码比较及覆盖门，再另验组合，而非补漏点词规则刷到零。尚不采用该工作点，也不扩实验直到预算耗完。"
     },
     {
+      "id": "experiment-extract-compare-code-verified-precision",
+      "type": "experiment",
+      "title": "代码坐实的数字/日期硬冲突（extract-compare 通道）精度实测 0.833~1.0，真金标修 3 弄坏 0",
+      "date": "2026-07-11",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "extract-compare.ts 的 LLM 抽取（逐字引用、禁算术）+ 代码比对（区间相交判冲突）通道；对照对象是 intel-grounding 金标集（真实）与另一份合成集",
+      "source": "services/meridian-ai-worker/src/services/extract-compare.ts:10-12；services/meridian-ai-worker/src/services/faithfulness-check.ts:18-19（门 F 条款 C 引用同一读数：「精度 0.833~1.0」）",
+      "conditions": [
+        "真金标集与合成集的具体样本量、来源脚本未在本文件中给出，标记未知（extract-compare.ts 注释指向 scripts/eval/intel-grounding/extract-compare-eval.ts，本轮未核实该脚本是否仍存在）",
+        "0.833~1.0 是两个数据集上精度的区间描述，不是单一精确值——本节点原样保留区间，不折算成单点"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "intel-grounding 真金标集 + 一份合成金标集，跑 extract-compare 通道产出的硬冲突判定",
+      "evaluation": "对比通道判定的硬冲突数与金标标注冲突数，统计『修对多少条、弄坏多少条』（fix/break）与精度",
+      "result": "真金标：修 3 条弄坏 0 条；contradicted 召回从 0.25 升到 0.625；supported 精度同时反升（说明修正不是靠放宽标准换来的）。合成集：修 3 条弄坏 0 条，精度保持 1.0。综合精度实测区间 0.833~1.0。",
+      "cost": "未知",
+      "record_completeness": "summary_only",
+      "file": "experiment-extract-compare-code-verified-precision.md",
+      "content": "## 读数原文\n\n`extract-compare.ts:10-12`：\n\n> 只在代码坐实硬冲突且抽取自报 high confidence 时产出 conflict（单向信号，只用于把\n> 判定推向 contradicted，绝不反向\"洗白\"）。离线验证（2026-07-11，intel-grounding 金标）：\n> 真金标修 3 弄坏 0（contra 召回 0.25→0.625、supported 精度反升），合成集修 3 弄坏 0、\n> 精度保 1.0。\n\n`faithfulness-check.ts:18-19`（门 F 条款 C 引用同一批读数作为单票否决的依据）：\n\n> 硬冲突（extract-compare 通道），确定性证据允许单票否决——离线实测修 6 弄坏 0、\n> 精度 0.833~1.0，恢复 6-25 双阈牺牲掉的孤条真矛盾灵敏度\n\n注：两处引用的「修 3 弄坏 0」（真金标+合成集分别各 3 条，合计 6）与门 F 条款 C 引用的\n「修 6 弄坏 0」对得上（两个数据集的修复条数相加）。\n\n## 为什么这条不随架构死\n\n这条读数说的是一种通用模式：**当判定依据能被拆成「LLM 只做检索/抽取（不判断、不算术）+\n代码做确定性比对」时，比对结果的精度可以远高于让 LLM 直接给判决**。这里的分工反转\n（LLM 找『同一事实的对应值』，代码做区间相交判断）之所以有效，是因为它把 LLM 最弱的环节\n（数值心算/大小比较）整个移出了判定链路。这个思路不依赖 faithfulness 这一具体场景，\n换任何『LLM 判断两个数值是否冲突』的任务都能复用。\n\n## 关联\n\n与 [[experiment-faithfulness-single-vote-veto-risk]] 一起产生\n[[lesson-veto-power-must-match-evidence-certainty]]：同样是单票否决，这里的确定性证据配得上，\n纯 LLM 判决配不上。"
+    },
+    {
       "id": "experiment-factor-choice-dev",
       "type": "experiment",
       "title": "v0.17引用选择接口40新对照：漏放10%，忠实诊断失败15%",
@@ -1088,6 +1232,61 @@
       "record_completeness": "complete",
       "file": "experiment-factor-choice-dev.md",
       "content": "plan hash 4e06a78fe19239d9d23dc7262f4b89a92288ead77bdf59c63add7962cde0a094；results hash b8b05c918ac70bb7f7b4a836b3219fa3943799cd189e949285c27aca0254cbf3。原始请求、原文、对照、审计和score在scripts/eval/cluster-to-brief/out/atomic-evidence/factor-dev-v0.17。旧v0.16.1六漏点窄因子离线回放均能定位且无新增正常误拦，回放不是新材料证据。"
+    },
+    {
+      "id": "experiment-faithfulness-judge-alignment-kappa",
+      "type": "experiment",
+      "title": "忠实度判官与人工的一致性：事实通道 κ=0.76 可用，分析通道 κ=0.27（contradicts_facts 召回仅 0.30）不可用",
+      "date": "2026-06-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "judge 模型 qwen-max（与标定同模型，换模型会让本结果与下游 0.15/4、0.05/2 阈值一并失效）；判定对象是 faithfulness-check.ts 的两条判决通道——factual（supported/unsupported/contradicted）与 analytical（consistent/contradicts_facts）",
+      "source": "services/meridian-ai-worker/src/services/faithfulness-check.ts:30-32（文件头注释：【红线】段落）",
+      "conditions": [
+        "样本量、评分者数量、具体 meta-eval 脚本路径未在本文件中给出，本节点只转述注释里的结论数字，标记为未知",
+        "analytical 通道的召回具体指 contradicts_facts 这一类判定的召回，即 judge 把 70% 的『虚构前提』analytical claim 误判为 consistent"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "同一批 brief 产出的 factual claim 判决与 analytical claim 判决，与人工复核标注对照（meta-eval，2026-06-16）",
+      "evaluation": "Cohen's κ（judge verdict vs 人工标注），并单独统计 analytical 通道 contradicts_facts 这一判定值的召回率",
+      "result": "事实通道（factual：supported/unsupported/contradicted）κ=0.76，可信。分析通道（analytical：consistent/contradicts_facts）κ=0.27，且 contradicts_facts 召回仅 0.30——即 70% 的『分析建立在虚构前提上』的真阳性被 judge 放过判成 consistent。",
+      "cost": "未知（注释未记录调用次数或费用）",
+      "record_completeness": "summary_only",
+      "file": "experiment-faithfulness-judge-alignment-kappa.md",
+      "content": "## 读数原文\n\n`faithfulness-check.ts:30-32`：\n\n> 【红线】analytical verdict 永不可用于 gate/revision。2026-06-16 meta-eval 实测分析通道\n> κ=0.27（contradicts_facts 召回仅 0.30，judge 放过 70% 虚构前提）——这把尺不可信。事实\n> 通道 κ=0.76 可信，门拦截只键在事实。\n\n## 这条结论已经产生的直接后果\n\n代码层面的结论已经落地：`FaithfulnessVerdict` 里 `analytical_consistent` /\n`analytical_contradicting` 字段明确注释为「次级信号，warning-only」（同文件 109-111 行），\n`gateDecision()`（同文件 490-521 行）完全不读 analytical 判决，只用 factual 通道的\ncontradicted / unsupported 计数决定 block。\n\n## 与 [[lesson-analytical-verdict-not-gateable]] 的关系\n\n本实验是该经验的直接证据来源。经验条目把这条读数从「这一版忠实度门的表现」提升为\n「判断可验证事实 vs 判断分析性论断，是两个难度完全不同的人机对齐任务」这一更一般的结论。"
+    },
+    {
+      "id": "experiment-faithfulness-single-vote-veto-risk",
+      "type": "experiment",
+      "title": "单条 claim 一票否决整篇简报：12 条 held-out 实测误拦 2/12，两条都是单条 claim 的判定噪声",
+      "date": "2026-06-25",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "旧门 F 判据（改动前）：contradicted >= 1 即拦（单票否决），judge=qwen-max；评测对象是完整的 20K 字简报级 block/pass 决策，不是单条 claim 级判决",
+      "source": "services/meridian-ai-worker/src/services/faithfulness-check.ts:24-28（【2026-06-25 改】段落）；同文件 490-521 行 gateDecision() 为改动后的实现",
+      "conditions": [
+        "12 条 held-out 样本的来源、抽样方法未在本文件中给出，标记未知",
+        "RUNS=5 确定型（原文用语）：同一 brief 判定被重复跑 5 次以核实是否稳定复现同一误拦结果，具体复现率未给出数字，只给出定性结论「确定型」",
+        "两条误拦案例的性质：数字子量消歧、转述归属——均属于事实通道内部的边界判定分歧，不是判官完全离谱的误判"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "failed",
+      "inputs": "12 条 held-out 简报，套用旧判据（contradicted claim 计数 >=1 即 block）",
+      "evaluation": "人工复核每条被 block 的简报，判定该次拦截是否为误拦（简报本身忠实，拦截由判官对单条 claim 的噪声判定触发）",
+      "result": "12 条里 2 条被误拦，误拦原因均为单条 claim 被判 contradicted，且该判定不稳定（RUNS=5 下仍复现，属于系统性偏见而非随机抖动）；两条误拦案例分别是数字子量消歧和转述归属边界情况。据此把门判据从『contradicted>=1 即拦』改为『占比>=0.05 且 count>=2』的双阈。",
+      "cost": "未知",
+      "record_completeness": "summary_only",
+      "file": "experiment-faithfulness-single-vote-veto-risk.md",
+      "content": "## 读数原文\n\n`faithfulness-check.ts:24-28`：\n\n> 【2026-06-25 改】(A) 从「contradicted >= 1 单条即拦」改为占比+count>=2 双阈（FActScore/RAGAS\n> 占比聚合 + RefChecker 三标签分别算 rate 的业界共识）。动因：12 条 held-out 实测误拦 2/12，两条\n> 都是单条 claim（数字子量消歧 / 转述归属）否决整篇 20K 字简报，且 RUNS=5 确定型。一票否决 = 放大器。\n\n## 这条实验证明了什么\n\n不是『这批 judge 判得不准』，而是**任何基于单条 LLM 判决的一票否决机制，都会把该判决的噪声\n放大成整个产出的生杀权**——12 条里 17%（2/12）因为一条边界判定就被拦掉一份 20K 字的合格简报，\n放大倍数是「一条 claim 的错误」→「整篇被拒」。改双阈之后代价是「单条真矛盾暂时漏判」\n（文件同段落原文承认），这是精度换鲁棒性的取舍，不是免费修复。\n\n## 关联\n\n产生 [[lesson-veto-power-must-match-evidence-certainty]]；与\n[[experiment-extract-compare-code-verified-precision]] 的『确定性证据单票不牺牲精度』\n形成对照——同样是单票否决，代码坐实的硬冲突配得上单票，LLM 单条判决配不上。"
     },
     {
       "id": "experiment-fresh-dev-frozen-probe",
@@ -1175,6 +1374,36 @@
       "record_completeness": "complete",
       "file": "experiment-full-practice-leak-replay.md",
       "content": "旧3/29指标来自共同有效子集，本次完整错误点32含一个接口失败，不能跨分母宣称准确率提升。宽策略29放行依赖旧模型，严格策略无人放行故零漏放不代表能力增强。三原漏点均已参与开发，下一步冻结规则再对未用于修补的新开发事件做有限真实实验，未采用或部署该工作点。"
+    },
+    {
+      "id": "experiment-gap-check-independent-call",
+      "type": "experiment",
+      "title": "写作时的隐式取舍不是篇幅或合理编辑：材料到位 11/14，三份稿全写出的只有 4/14；102 份成稿 finish_reason 全是 stop、均输出 458/2500 token 有余量；核心事件采纳率仅 38–56%。独立一次『找漏』调用把四簇期望覆盖率从 41.1% 提到 51.9%",
+      "date": "2026-09-08",
+      "status": "recorded",
+      "tasks": [
+        "改写作层结构",
+        "治合成漏报"
+      ],
+      "scope": "brief 写作层单个 story block 的生成与『找漏』独立调用对照；四簇 × 3 份成稿的离线原型对照（apps/backend/prototypes/block-writer，产出与原型均只本地留存，未入 git）",
+      "source": "services/meridian-ai-worker/src/prompts/briefEvidence.ts:24-29；commit 6128998（2026-09-08）提交说明",
+      "conditions": [
+        "『材料到位 11/14、三份稿全写只有 4/14』——分母 14 与分子的具体口径（14 条候选要点里有 11 条本身检索得到支撑材料，其中只有 4 条被三次独立生成的稿件全部写出）未在源头进一步拆解，只有这一组聚合数字",
+        "『102 份成稿 finish_reason 全是 stop』是本条实验用来排除『篇幅不够，模型没写完』这个替代解释的关键证据：如果是篇幅问题，应该观察到 finish_reason=length（被截断）或输出接近 token 上限；实测输出均值只有上限的 18.3%（458/2500），且全部正常收尾，说明模型是主动决定不写，不是写不下",
+        "核心事件定义为『≥6 篇报道』的事件；38–56% 的采纳率同样是聚合区间，未见逐条明细留存",
+        "『期望单份覆盖 41.1%（初稿）→ 51.9%（补漏后）』是四簇样本上的离线对照结果，增益 15 格（即多覆盖到的信息点数量）、只丢 1 格（补漏引入的新遗漏）——这组数字直接来自 apps/backend/prototypes/block-writer 原型的产出，原型本身已按约定只留本地",
+        "找漏调用后续经历了至少两次重设计（两段式候选抽取+覆盖判定、再到『读者视角』第三版），本节点只记录『独立调用这件事本身有没有用』这个最初的对照，不是最终版找漏 prompt 的效果——最终版的效果见 briefEvidence.ts 内其余未在本次任务范围内蒸馏的注释"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "四簇的 story block 生成材料；每簇 3 份独立生成的成稿；102 份成稿的 finish_reason 与输出 token 统计",
+      "evaluation": "人工核对材料到位却未写入成稿的比例；统计 finish_reason 分布与输出 token 均值排除篇幅解释；单独跑一次『找漏』调用后统计期望覆盖率变化（覆盖率定义为一份成稿覆盖到的信息点数占应覆盖信息点总数的比例）",
+      "result": "写作时的材料取舍确实存在（11/14 材料到位、全写出的只有 4/14），但可以排除两个最直接的替代解释：不是篇幅不够（102 份成稿全部正常收尾，平均只用了 18.3% 的 token 上限）,也不是合理的编辑取舍（核心事件——≥6 篇报道的事件——采纳率只有 38–56%，重要性与是否被写进成稿之间没有对应关系）。把『找漏』做成写作之后的独立一次调用（而不是写作时的额外约束），四簇上的离线对照显示期望覆盖率从 41.1% 提升到 51.9%，代价很小（15 格增益只丢 1 格）。",
+      "cost": "未知（commit message 未记录本次离线对照的调用量或费用）",
+      "record_completeness": "summary_only",
+      "file": "experiment-gap-check-independent-call.md",
+      "content": "## 读数原文\n\n`briefEvidence.ts:24-29`：\n\n> 自检是独立任务，不是同一次调用里的约束。写作时模型在一大堆材料里做隐式取舍，\n> 实测材料到位 11/14、三份稿全写只有 4/14——三分之二的材料白给。而 102 份成稿\n> `finish_reason` 全是 stop、平均输出 458 token（上限 2500），**篇幅有余量**；\n> 核心事件（≥6 篇报道）采纳率只有 38–56%，**也不是合理取舍**。\n> 单独一次「找漏」调用的注意力分配跟「写一篇好稿」完全不同，不参与显著性竞争。\n> 实测四簇：期望单份覆盖 41.1%（初稿）→ 51.9%（补漏后），增益 15 格、只丢 1 格。\n\ncommit 6128998 提交说明用『注意力分配跟\"写一篇好稿\"完全不同，不参与显著性竞争』\n这句话概括了本条读数最核心的机制解释。\n\n## 值得复用的方法：用 finish_reason + token 均值排除『合理取舍』这个替代解释\n\n这条读数最值钱的不是『覆盖率从 41.1% 提到 51.9%』这个数字（数字绑定在这一版 prompt、\n这一批四簇样本上，换 prompt 或换数据会变），而是**论证『取舍不合理』时用的排除法**：\n\n面对『模型漏写了很多材料』这个观察，最自然的两个反驳是『可能是篇幅写不下』和『可能是\n模型在做合理的编辑取舍，重要的都写了』。这两个反驳都可以被独立、廉价的信号直接检验，\n不需要人工重新通读每一份成稿去猜模型的意图：\n\n- **篇幅够不够，看 finish_reason 和 token 用量就够**：如果模型是被空间逼着漏写，\n  应该看到大量 `finish_reason=length` 或输出逼近 token 上限；102 份成稿全部正常收尾\n  且只用了不到两成的预算，直接排除了『写不下』这个解释，不需要猜。\n- **是不是合理取舍，看『重要的事件有没有被优先写』**：如果模型在按重要性排序取舍，\n  越重要（报道篇数越多）的事件采纳率应该越高；核心事件（≥6 篇报道）采纳率只有\n  38–56%，说明写与不写跟事件本身的重要性没有对应关系，排除了『合理取舍』这个解释。\n\n两个替代解释都被现成的、不需要额外标注的信号排除之后，剩下的解释——『写作时的注意力\n分配本身就是不可靠的，需要一个独立的、专门检查覆盖的步骤』——才立得住。**这种『先用\n低成本信号排除自然会被想到的替代解释，再接受更深的结论』的论证方式，本身比这批具体\n数字更值得在其他场景复用**：任何观察到『模型输出遗漏了本该覆盖的内容』时，都可以先\n问『是不是空间不够』『是不是在做合理筛选』，用现成的元数据（finish_reason、token 用量、\n重要性排序）先排除掉这两条，而不是直接假设『需要加约束』或『需要加篇幅』。\n\n## 关联\n\n产生 [[lesson-self-check-needs-separate-call]]。与 [[experiment-claim-proposal-reframe]]\n是同一轮写作层重设计的两个不同调用，见该节点『关联』一节的说明。与本地会话记忆中记录的\n『两遍法补漏』经验（合成层的漏报修复：覆盖契约 + 程序化补录，dropped 13.4%→0%）任务层级\n不同——那次修的是『整份简报该收哪些故事』的漏报，本节点修的是『单个 story block 内该覆盖\n哪些信息点』的漏报，是同一个『先写、后查漏、再补』的结构原则在两个不同粒度上的独立应用，\n不是同一次实验，不应合并。"
     },
     {
       "id": "experiment-heldout-binding-verifier",
@@ -1854,6 +2083,37 @@
       "content": "写作层从未见过原句，只看改写后的事实句；而原句自足率约九成、只长 1.3–1.9 倍\n\n这是迁移时建立的证据摘要，不是新增执行。原始结论正文仍在 measure-writer-input-anatomy；模型配置、prompt/code/data 版本和调用次数若未记载，均为未知。"
     },
     {
+      "id": "experiment-intel-grounding-judge-selection",
+      "type": "experiment",
+      "title": "intel-grounding 判官选型：Claude κ=0.779 通过（离线，未过真 API 复验）；qwen 现场重跑 κ=0.407 FAIL",
+      "date": "2026-07-10",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "仅 scripts/eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平",
+      "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；scripts/eval/intel-grounding/gold/judge-gold.jsonl（100 条）、gold/human-adjudicated.jsonl（24 条）、gold/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 scripts/eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
+      "conditions": [
+        "judge-gold.jsonl 共 100 条 factual claim，终裁后 factual=88 supported / 4 unsupported / 8 contradicted；其中 7 条经用户二次人裁终裁（缺口类断言、日期可源内推算类归为 contradicted、复合 claim 逐成分核源，政策写进 rubric.md 的「人裁终裁政策」节）",
+        "human-adjudicated.jsonl 24 条是另一批人裁样本，用于交叉核验",
+        "synthetic-contradicted.jsonl 26 条为确定性最小扰动生成（negation 7、number/direction 等），双重逐字校验（扰动词在 claim 里、source_quote 在源里）后入库，不猜语义",
+        "meta-eval.ts 的 gate：κ≥0.6（KAPPA_MIN）且幻觉类（unsupported/contradicted）召回≥0.7（RECALL_MIN）",
+        "qwen 侧 judge_model=qwen-max，走真实 DashScope API（本地 out/judge-meta/meta-1783664090586.json，checked_at 2026-07-10T06:14:50Z，与 commit message 的 κ0.407 完全对得上）",
+        "Claude 侧 commit message 称「Claude判官离线κ0.779/unsup0.75/contra0.875三闸全过（待真API重验）」——**离线**指未必经过 llm.ts 里真正打 Anthropic API 的 meta-eval.ts 流程；本地 out/judge-meta/ 现存的 7 份产物里 judge_model 只有 qwen-max 与 deepseek-v3，没有任何一份 judge_model=claude-*，说明这次真 API 复验从未发生或未留痕",
+        "同批还有 judge_model=deepseek-v3 的两次本地真跑（2026-07-11），judge-gold.jsonl 上 κ=0.285、synthetic-contradicted.jsonl 上 κ=0，两者都远低于 0.6 门槛，Deepseek 未被 commit message 提及，可能是同一轮里顺手加测的第三家判官，结果同样 FAIL"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "mixed",
+      "inputs": "judge-gold.jsonl 100 条 + human-adjudicated.jsonl 24 条 + synthetic-contradicted.jsonl 26 条，均为情报报告 claim 对其 RSS 源文章的 supported/unsupported/contradicted 三分类",
+      "evaluation": "meta-eval.ts：Cohen's κ（chance-corrected）+ per-class TPR/TNR + gate（κ≥0.6 且幻觉类召回≥0.7）；dev 集调参、heldout 集报数，防过拟合",
+      "result": "Claude 判官（离线核算）：κ=0.779，unsupported 召回 0.75，contradicted 召回 0.875，三闸全过——但这组数字**未经过真实 API 调用复验**，commit message 自己标注「待真API重验」，本地找不到对应的真跑记录。qwen-max 判官（真实 API 现场重跑）：κ=0.407 < 0.6，FAIL；在 synthetic-contradicted 26 条上召回 14/26=0.538，其中 entity 类 0/3、direction 类 1/4、9/26 被误判成 supported——构成可定量描述的盲区签名。deepseek-v3（真实 API，同批本地产物，commit message 未提及）：judge-gold 上 κ=0.285，synthetic-contradicted 上 κ=0，同样 FAIL。",
+      "cost": "未知——commit message 未记录调用量与费用；judge-gold 100 条 + synthetic 26 条 + human-adjudicated 24 条的多轮标注、多模型验证成本未留痕",
+      "record_completeness": "summary_only",
+      "file": "experiment-intel-grounding-judge-selection.md",
+      "content": "## 为什么这组读数值钱\n\n这是本仓少数几次**真正跑过 κ 验收**的判官选型实测：三个候选家族（Claude / qwen-max /\ndeepseek-v3）在同一份人工终裁金标上，只有 Claude 过闸，另外两个都 FAIL，且失败模式不同——\nqwen 在 entity/direction 类合成扰动上几乎瞎猜，deepseek 干脆在 synthetic 集上 κ=0（全猜\nsupported 或某个众数类）。这是判官选型问题的一个具体反例：**同一套 rubric、同一份金标，\n换判官模型，κ 从 0.779 掉到 0.407 甚至 0**——选错判官比选错 prompt 更致命，且很难靠调\nprompt 补救（qwen 与 deepseek 都没有再调过 prompt 重跑的记录，commit message 直接给出\n\"换非 Qwen 家族 judge\" 的结论方向，与 README「还差什么」节写的路线一致）。\n\n以后任何要接 LLM-judge 的 harness，都会重新面对「用哪家模型当判官」这个问题，这组读数是\n可以直接引用的先例：**不要默认判官模型能通用**，尤其当被评对象本身也是由同家族模型生成时\n（情报报告由 qwen-long 生成，若判官也用 qwen 家族，self-preference 风险更高，这也是\ncommit message 与 README「还差什么」节共同指出的方向）。\n\n## Claude 的 0.779 比看起来脆弱\n\ncommit message 原文把 Claude 判官的结果标注为「离线」且「待真API重验」，这两个词组合起来\n的含义是：κ=0.779 这个数字**不是**通过 `meta-eval.ts` 打真实 Anthropic API 跑出来的，而是\n某种离线核算（很可能是当时的 Claude Code session 自己模拟/复核判定，而非独立调用）。\n本地 `out/judge-meta/` 目录里现存的全部 7 份 meta 产物（2026-07-08～07-11，均是 gitignored\n的运行报告，不在 git 里）逐一核对过 `judge_model` 字段，只有 `qwen-max` 和 `deepseek-v3`，\n一份 `claude-*` 的记录都没有。也就是说，从 commit 36e186a 之后，**这次「待复验」从未兑现过**\n——无论是因为真的没有再跑，还是跑过没有落盘。在没有找到反证之前，Claude κ=0.779 应该被当作\n「一次未经独立 API 复验的乐观读数」，不能等同于 qwen/deepseek 那两组有真实 API 调用记录支撑\n的失败读数。\n\n## 金标构成与人裁终裁\n\njudge-gold.jsonl 的 100 条不是一次性标注定案的：commit 36e186a 是对其中 7 条争议样本做\n第二轮人工终裁（用户本人裁定，带 note 留痕），终裁后 factual 类别分布是 88 supported /\n4 unsupported / 8 contradicted。这次终裁同时把裁定标准写进了 `rubric.md` 的「人裁终裁\n政策」节——起因是两个 session 对同一批样本裁出过相反结果，根因是当时 rubric 没有明确写\n「缺口类断言算什么」「日期能不能源内推算」「复合 claim 要不要逐成分核」，堵上这个口子后\n才有了可复现的终裁标准。这段方法论（分歧样本人裁、把裁定标准回写进 rubric）本身也值得\n被后续判官选型工作复用，但本节点只记录数字读数，方法论部分见协作机制类节点（如后续需要，\n可另开 [[mechanism-coverage-judge-triangulation]] 一类节点做跨 harness 的对比）。"
+    },
+    {
       "id": "experiment-isolated-role-repair",
       "type": "experiment",
       "title": "角色接口修复：机械定位重复词、隔离坏行为并保留漏项义务",
@@ -2378,6 +2638,66 @@
       "content": "**先前的倾向是「窗口取值 0% 漂移、检索取值 6% 漂移，所以窗口更好」。这个比较把信度与效度混在一起了。**\n\n窗口锚在成稿引的那一句上，所以引得宽的臂天然拿到更多证据，而各臂每句出处实测 1.03~1.73 不等\n——这个差距会原样搬进正确性读数，scorer 量的成了引用行为。**信度可以靠改守则、投票压下去；\n效度是结构决定的，改措辞改不动。** 所以取检索，再把信度压回去；实测压到 0%，比窗口取值还低。\n\n事实性评测文献一致的做法也是证据由评分方检索（AlignScore 切块逐句取最高、SummaC 全句对 NLI、\nMiniCheck 句级分类器）。但不能换成整簇一次直读——见 [[measure-detection-ceiling]]，整簇判官召回只有 26%。\n\n### 反向检验的结论要说准\n\n它证明的是**收益侧是假的**：逐句接地「硬错 5 → 1」那个优势在新尺上为 0。\n它**没有**证明代价侧是新发现的——c37 核心层覆盖 0/3 在旧清单上同样成立，\n旧尺的两个通道当时就给出了互相矛盾的信号，而被写进结论当主指标的是硬错那一条。\n\n### 判官主动报出的真缺陷（尚未修）\n\n- 事件清单第 29 条把施事从 settler 写成 forces、并加了原句没有的地名（四个判官里三个独立报出）\n- 清单有重复条目：#4/#26 是同一次打击、#23/#38 是同一名孕妇、#45/#46 同出一句——分母虚高\n- 固定 k=8 会拿不相干句子填满证据位，判官容易读成「查过了没有支持」\n- 语料污染：`992068:4` 的 `kill 500 NAZA` 里 NAZA 是片名，词元被替换过"
     },
     {
+      "id": "experiment-selection-ndcg-baseline",
+      "type": "experiment",
+      "title": "选择层排序 NDCG@10=0.958（新 CoT importance rubric + 覆盖度对数加权），rubric 贡献 +0.068、覆盖度只贡献 +0.018",
+      "date": "2026-06-06",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "排序键 `importance + COVERAGE_WEIGHT·log2(1+独立源数)`，importance 来自当时的 story-validation LLM 4 维 CoT rubric；这把尺量的是**已退役**的排序键，不代表当前生产排序公式，见 [[lesson-selection-formula-never-measured]]",
+      "source": "scripts/eval/selection/BASELINE.md；commit 0b43902（2026-06-06，feat(eval): 选择层工具转正 + NDCG 基线 0.958 + 防回归闸）；commit 4ebd969（feat(brief): importance 升级为 4 维 CoT rubric + 选择层 prompt eval 工具）",
+      "conditions": [
+        "gold 来源：5 run，2026-06-03~2026-06-04，gold 类型是「silver 派生」（人工快标而非独立精标），BASELINE.md 自陈「绝对值略乐观」",
+        "gold 共 47 条 rel≥2 的强相关样本",
+        "W(COVERAGE_WEIGHT)=1.0 处于最优平台，W∈[0.25,1.0] 区间 NDCG 完全相同，未做进一步校准",
+        "0.958 由 rescore.ts 实时重打分算得（非离线冻结 CSV 分数），每次跑约 117 次 LLM 调用",
+        "单点存疑：UK-Rwanda 遣返协议终止一条（gold rel=2），新 rubric 打 imp=2（对应文中 d=1001），全 47 条 rel≥2 里仅此 1 条不一致，n=1 无统计意义，BASELINE.md 明确写「不要动 rubric」",
+        "回归闸用法：`tsx rescore.ts --baseline 0.958 --tolerance 0.02`，NDCG<0.938 时非零退出，用于防止 storyValidation.ts 的 importance prompt 回归"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "5 run（2026-06-03~04）产出的候选 story 列表，人工快标 47 条 rel≥2 强相关金标（silver）",
+      "evaluation": "NDCG@10 宏平均，对照三档排序键：纯旧 importance(W=0)、旧 importance+覆盖度、新 CoT rubric importance+覆盖度",
+      "result": "纯旧 importance（无覆盖度）NDCG@10=0.872；旧 importance+覆盖度=0.890；新 CoT rubric importance+覆盖度（当时的当前配置）=**0.958**。分解贡献：rubric 本身贡献 +0.068（0.890→0.958 之外，需对照同一基线；BASELINE.md 原文直接给出这两个增量数字，rubric 是大头），覆盖度贡献 +0.018（0.872→0.890）。",
+      "cost": "每次跑约 117 次 LLM 调用（rescore.ts 实时重打分），单次调用成本未记录",
+      "record_completeness": "summary_only",
+      "file": "experiment-selection-ndcg-baseline.md",
+      "content": "## 这把尺量的是什么、不量什么\n\nNDCG@10=0.958 这个数字对应的排序键是 `importance + COVERAGE_WEIGHT·log2(1+独立源数)`，\n其中 `importance` 来自 `storyValidation.ts` 的 LLM 4 维 CoT rubric（1-10 分）。这套排序键\n在 2026-06 是生产配置。**它现在不是了**——见 [[lesson-selection-formula-never-measured]]。\n\n## 贡献分解怎么读\n\nBASELINE.md 给的三行对照表本身没有显式标出「相对谁的增量」，但按数值可以还原：\n0.872（纯 importance）→0.890（+覆盖度，增量 +0.018）→0.958（旧 importance 换成新 CoT\nrubric，同时保留覆盖度，增量 +0.068）。**rubric 换代的收益是覆盖度加权的将近 4 倍**，\n这也是为什么 BASELINE.md 强调\"大头是被删掉的那个\"——见下一节点里 storyline.ts 代码注释\n对这句话的呼应。\n\n## 局限：这是 silver gold、单点样本量为 1\n\n47 条 rel≥2 里只有 1 条 rubric 打分与 gold 不一致（UK-Rwanda 遣返协议），BASELINE.md\n自己的结论是\"n=1 无统计意义，不要因为这一条调 rubric\"——这是一个值得记住的反面例子：\n**单点分歧不构成调整依据**，尤其是在 gold 本身是\"人工快标\"而非独立精标、作者自陈\"绝对值\n略乐观\"的前提下。"
+    },
+    {
+      "id": "experiment-set-partition-literature-review",
+      "type": "experiment",
+      "title": "一手来源调研：BERTopic / TopicGPT / ClusterLLM / Event Registry / EventX(Story Forest) / EpiMine / GraphRAG 没有一个让 LLM 决定集合怎么切或相邻组要不要合并——几何/图论/统计负责切分，LLM 只对切好的组逐条判定或摘要",
+      "date": "2026-09-02",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "改聚类/切分链路"
+      ],
+      "scope": "两份独立的一手文献调研：docs/engineering-notes/exhaustive-assignment-and-singleton-events.md（查『LLM 能否对集合做穷尽分配』，2026-08-20 前后）与 docs/engineering-notes/cluster-to-story-segmentation.md（查『topic cluster 切成 sub-event/story 该用几何还是语义』，2026-09-02，commit 79b468d）。两份笔记均标注了每条论断是【实验】还是【设计主张】，查不到的一手来源在文中明确写『没找到』",
+      "source": "docs/engineering-notes/exhaustive-assignment-and-singleton-events.md:46-49（本地文件，未入 git）；docs/engineering-notes/cluster-to-story-segmentation.md:27-38, 430-460（本地文件，未入 git，由 commit 79b468d 引入后于 2026-09-12 前后随『调研笔记只留本地』的决定移出 git，可用 `git show 79b468d:docs/engineering-notes/cluster-to-story-segmentation.md` 恢复历史版本）；apps/backend/src/lib/core/candidate-grouping.ts:8-10 是这条结论的精简复述",
+      "conditions": [
+        "两份调研查的问题不完全相同：exhaustive-assignment 笔记的核心问题是『LLM 能否对一个 ~100 元素的集合做穷尽分配』（对应 story-validation 旧形态整簇送 LLM 的失败），cluster-to-story-segmentation 笔记的核心问题是『topic→event/story 的切分判据谁用几何谁用语义、切分深度怎么自适应』（更早于候选分组架构定型前的独立调研）；两者在『切分动作该不该交给 LLM』这一点上结论重合，本节点只记录重合部分",
+        "调研方法为检索 arXiv/ACL Anthology/官方文档/开源项目源码并逐条标注读取深度（[已读全文]/[仅摘要]/『没找到』），不是本仓自己复现这些系统的实验，因此 evidence_origin 为外部文献",
+        "candidate-grouping.ts 注释里点名的 BERTopic / TopicGPT / ClusterLLM / Event Registry / TDT 五个系统来自 exhaustive-assignment 笔记；cluster-to-story-segmentation 笔记额外核实了 EventX(Story Forest 核心)、EpiMine、Microsoft GraphRAG 三个系统，同样是零 LLM 切分",
+        "两份笔记都明确指出：『几何粗切 + LLM 决定相邻组是否合并』这个具体模式，在检索到的所有一手来源里都没有先例（EpiMine、In-Context Clustering 综述、GraphRAG、TopicGPT、ClusterFusion、LITA、ClusterLLM 均查过，均未找到）——即本仓『候选组内再问 LLM』这一步本身也不是在照抄业界标准做法",
+        "⚠️ 一条重要的附带发现，candidate-grouping.ts 的注释没有提到：cluster-to-story-segmentation 笔记 §7.1 同时指出，本仓 CANDIDATE_GROUP_THRESHOLD=0.90 这种『两两相似度阈值一刀切』的取值方式，在查到的所有一手来源里同样没有先例——EventX 用固定统计阈值（共现次数/条件概率）、Event Registry 用 BIC 这类模型选择准则，没有一个系统是『两两 cosine 一刀切』。这条不是对现有 0.90 取值的否定，而是标注了它的适用边界：0.90 是本仓自己拍的判据，不是业界验证过的判据形式"
+      ],
+      "evidence_origin": "external_literature_not_reproduced",
+      "kind": "literature_review",
+      "outcome": "observed",
+      "inputs": "对 BERTopic、TopicGPT、ClusterLLM、Event Registry、TDT、EventX/Story Forest、EpiMine、Microsoft GraphRAG 等系统的论文正文/官方文档/源码检索",
+      "evaluation": "定性核实：每个系统的『切分』动作由什么承担（几何/图论/统计 vs LLM），LLM（如果参与）出现在流程的哪一步",
+      "result": "所有查到的一手来源里，集合切分动作本身全部是几何/图论/统计方法（BERTopic 的 HDBSCAN+c-TF-IDF、TopicGPT 的逐篇分类、ClusterLLM 的成对/三元组约束聚类、Event Registry 的 bisecting k-means(k=2)+BIC、EventX 的图社区发现+SVM、EpiMine 的层次聚类、GraphRAG 的 Leiden 模块度递归），LLM 只在切分完成之后对已切好的组做逐条判定、命名或摘要，没有一个系统让 LLM 自己决定『这个集合该怎么划分』或『相邻两组要不要合并』。这与 experiment-candidate-grouping-prompt-model-scan 的排除性实测结论互相印证：一个是『做了会失败』的直接证据，一个是『没人这么做过』的间接证据。",
+      "cost": "未知（文献检索本身未记录耗时；两份笔记提到调研工作由子 agent 完成，另有一次引文真实性抽验，抽验结论是『书目全部真实，具体数字只验到摘要级』）",
+      "record_completeness": "summary_only",
+      "file": "experiment-set-partition-literature-review.md",
+      "content": "## 读数原文\n\n`exhaustive-assignment-and-singleton-events.md:46-49`：\n\n> 让 LLM 穷尽分配一个 ~100 元素的集合，没有任何一手来源支持它可行；最接近的同构任务\n> （BERTopic 源码、TopicGPT、ClusterLLM、Event Registry、TDT/Story Forest）\n> 没有一个让 LLM 去切分集合——几何负责分配，LLM 只做逐条判定或命名。\n\n`cluster-to-story-segmentation.md:27-33`（⓪ 六句话结论第 1 条）：\n\n> \"topic → event/story\"这条切分链，业界查到的每一个一手来源，切分动作本身都是纯几何/图论/\n> 统计，LLM（如果有）只出现在切完之后：EventX（Story Forest 的核心算法）两层都是\n> betweenness centrality 图社区发现 + SVM，零 LLM；Event Registry 用 bisecting k-means(k=2)+BIC；\n> EpiMine 用层次聚类（HAC）切 episode，LLM 只做逐个摘要/过滤；Microsoft GraphRAG 用 Leiden\n> 模块度社区发现递归切社区，LLM 只对切好的社区独立摘要。没有一个系统让 LLM 决定\"要不要切\"\n> 或\"切完的相邻两组要不要合并\"。\n\n`cluster-to-story-segmentation.md:441-446`（§7.1 表格结论）指出本仓自己的候选分组设计\n在文献里『架构上说得通（几何做切分），但阈值选取方式（只按组内纯度调）在文献里没有先例』。\n\n## 为什么这条读数不随架构死\n\n这不是『这次调研查到了几个系统』的清单，而是一条关于任务分工的结构性事实：**集合切分\n（决定一个数十到上百元素的集合该分成几份、边界在哪）是一个几何/组合优化问题，不是一个\n语言理解问题**；LLM 的价值在切分之后的『这个子集是不是一件事』这种逐条判定上。换任何\nprompt 范式、换任何模型、甚至换到完全不同的领域（新闻聚类之外的话题建模、社区发现），\n业界的选择都指向同一个分工边界。这个边界不会因为本仓换掉 story-validation 的具体实现\n而改变。\n\n## 失效条件\n\n若未来出现专门为『精确执行给定约束的集合划分』设计并验证过的模型或方法（例如结合了\n约束求解器的 LLM 系统），或本仓在换用这类新方法后重新实测『整体切分交给模型』的召回\n显著超过几何基线，则『LLM 不适合做集合切分』这一结论需要针对该新方法重新验证——目前的\n证据只覆盖 2026-08/09 检索到的系统与本仓 2026-08 用过的模型/prompt。\n\n## 关联\n\n与 [[experiment-candidate-grouping-prompt-model-scan]] 共同产生\n[[lesson-llm-cannot-partition-event-sets]]。0.90 阈值『两两一刀切无先例』这条附带发现，\n与 [[lesson-candidate-group-threshold-090]] 记录的阈值扫描数据是同一个判据的两个侧面：\n后者记录『0.90 在本仓数据上怎么标定出来的』，本节点记录『这种标定方式本身在文献里\n站不站得住』——留作候选组阈值未来若要换成自适应判据（cluster-to-story-segmentation.md\n§7.2 建议的 BIC 或 Leiden 路线）时的背景依据。"
+    },
+    {
       "id": "experiment-specialist-eight",
       "type": "experiment",
       "title": "人工窄问题与全维度检查：八例对照",
@@ -2400,6 +2720,63 @@
       "record_completeness": "complete",
       "file": "experiment-specialist-eight.md",
       "content": "specialist 漏判 0/4、误杀 0/4；alignment 漏判 0/4、误杀 2/4"
+    },
+    {
+      "id": "experiment-story-validation-architecture-error-taxonomy",
+      "type": "experiment",
+      "title": "故事切分错误类型随分解策略完全反转：整簇自由划错误 86% 是 umbrella，几何预分组后错误 80–100% 是 wrongPair",
+      "date": "2026-08-20",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "设计验收门"
+      ],
+      "scope": "story-validation 环节的 7 个架构臂对照，244 条产出标注，按成员集去重后 113 个唯一成员集人工严口径标注（correct/umbrella/wrongPair/borderline 四分类）",
+      "source": "scripts/eval/story-validation/rubric.md（HEAD 版本，随本轮清理被删除，可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或 commit b7ab0ea 恢复查看）第 1 节与第 6 节；commit b7ab0ea 提交信息本身",
+      "conditions": [
+        "7 个架构臂具体是哪些未在 rubric.md 中逐一列出，只区分『整簇自由划』与『几何预分组』两大类",
+        "umbrella 定义：故事内有真核（≥2 篇确实同一发生）但混入了别的发生；wrongPair 定义：压根没有真核，成员是题材/地域/人物相似的不同发生被硬凑",
+        "commit b7ab0ea 的提交说明文字写的是『几何预分组错误 76-82% 是 wrongPair』，与 rubric.md 文件正文『80–100%』不一致——本节点采用文件正文（读原文优先于转述）",
+        "113 个唯一成员集的总体分布：correct 51 / wrongPair 37 / umbrella 25（合计 113，未按架构臂拆分，是全部去重后的汇总分布）"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "observed",
+      "inputs": "7 个 story-validation 架构臂在同一批文章数据上的产出，244 条候选故事，人工按 rubric 去重后标注 113 个唯一成员集",
+      "evaluation": "人工严口径四分类标注（correct/umbrella/wrongPair/borderline），umbrella 与 wrongPair 分开统计（rubric.md 明确要求：『两者的修法完全不同』）",
+      "result": "整簇自由划的架构臂，错误里 86% 是 umbrella（有真核但混入别的发生）。先做几何预分组的架构臂，umbrella 基本消灭，错误里 80–100% 是 wrongPair（压根没有真核，题材/地域/人物相似的不同发生被硬凑）。即：几何预分组解决了『混进别的发生』，代价是把语义相近但非同一发生的两篇文章送到了判官面前，判官若不能拒绝就会被迫强配。",
+      "cost": "未知（未记录标注工时或 LLM 调用成本）",
+      "record_completeness": "summary_only",
+      "file": "experiment-story-validation-architecture-error-taxonomy.md",
+      "content": "## 读数原文\n\n`rubric.md`（HEAD 版本）第 1 节：\n\n> `umbrella` 与 `wrongPair` 必须分开统计：两者的修法完全不同。实测（2026-08-20，7 个架构臂 244 条）：\n> - **让 LLM 在整簇里自由划**的臂，错误 86% 是 `umbrella`\n> - **先做几何预分组**的臂，`umbrella` 基本消灭，错误 80–100% 是 `wrongPair`\n>\n> 即几何预分组解决「混进别的发生」，代价是把语义近但非同一发生的两篇送到判官面前。\n\n## 为什么这条读数值得单独立一条实验节点\n\n它是 [[lesson-llm-oversplits-single-large-event]] 之外、同一批标注体系下的另一条独立发现，\n此前未被蒸馏：故事切分的『错误率』这个单一数字会掩盖『错误的性质』——同样是失败，\n一种失败（umbrella，漏掉了本该拆开的事）和另一种失败（wrongPair，硬凑了本不该在一起的事）\n需要完全不同的修法。不分开统计，看到『精度提升』时无法判断到底是把哪种错误治好了。\n\n## 关联\n\n产生 [[lesson-legal-exclusion-path-prevents-forced-fit]]。与\n[[experiment-story-validation-verify-stage-tradeoff]] 是同一次架构替换\n（2026-08-21，见 services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19）\n里的两个不同侧面：本节点讲『判官单独一段』相对『整簇自由划』的错误类型转变，\n另一节点讲『判官+复核两段式』相对『判官单独一段』的召回/精度取舍。"
+    },
+    {
+      "id": "experiment-story-validation-verify-stage-tradeoff",
+      "type": "experiment",
+      "title": "复核（二审）步骤拿召回换精度：103 个故事削到 74 个，事件召回 98%→76%，严精度 75.7%→89.2%，前 15 条精度 53.3%→93.3%",
+      "date": "2026-08-20",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "设计验收门"
+      ],
+      "scope": "story-validation 两段式架构（判官 getStoryJudgePrompt + 复核 getStoryVerifyPrompt）里，加入复核步骤前后的对照；人工严口径标注（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）",
+      "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:182-188；services/meridian-ai-worker/src/services/story-validation.ts:65-73",
+      "conditions": [
+        "『严精度』指 rubric.md 的人工严口径（故事内不能混入别的发生才算 correct），区别于机械尺 event_recall2.mjs 的宽口径（故事内有真核即算对，2026-08-20 实测宽口径 75% vs 严口径仅 41.7%，差距全在伞状）",
+        "下游 maxStoriesToGenerate 只放 15 条进情报分析，所以『进简报的真故事条数』这个口径（8 条→14 条）比『总故事数量』（103→74）更贴近实际收益",
+        "两天独立复验（08-18 与 08-20）里，『进简报的前 15 条精度 93.3%』的结论保持一致（storyValidation.ts:19 与 story-validation.ts:73 均写『两天相同』）"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "probe",
+      "outcome": "passed",
+      "inputs": "同一批候选组产出的判官结果（103 个故事）vs 判官+复核两步结果（74 个故事）",
+      "evaluation": "人工严口径四分类标注，分别统计『事件召回』『严精度（全部故事）』『前 15 条精度（按 blockImportance/CoT rubric 排序后取前 15）』三个指标",
+      "result": "复核步骤把 103 个故事削到 74 个：事件召回从 98% 降到 76%（漏掉了约 24% 原本判官找出的真实事件），但严精度从 75.7% 升到 89.2%，前 15 条精度从 53.3% 大幅升到 93.3%。按『实际进简报的真故事条数』折算是 8 条升到 14 条——复核这一步净赚，因为下游只消费前 15 条，牺牲的召回主要发生在本就进不了前 15 的低分故事上。",
+      "cost": "未知（复核步骤本身的调用量见 story-validation.ts:22-23：全量 57 簇 1254 篇场景下约 195 次复核调用，单次复核中位耗时 2.3s，但该成本数字来自另一次全量运行，非本实验的直接成本记录）",
+      "record_completeness": "summary_only",
+      "file": "experiment-story-validation-verify-stage-tradeoff.md",
+      "content": "## 读数原文\n\n`storyValidation.ts:182-188`：\n\n> 这一步是拿召回换精度：08-20 实测它把 103 个故事削到 74 个，事件召回 98%→76%，\n> 但严精度 75.7%→89.2%、**前 15 条精度 53.3%→93.3%**。\n> 下游 maxStoriesToGenerate 只放 15 条进情报分析，所以按「实际进简报的真故事条数」算\n> 是 8 条 → 14 条，复核这一步是净赚的。\n\n`story-validation.ts:65-73`（架构总述，两天复验一致的总体精度）：\n\n> 人工严口径（scripts/eval/story-validation/rubric.md，08-18 与 08-20 两天独立复验）：\n> 生产原形态 41.7% → 本形态 89-92%；进简报的前 15 条精度 93.3%（两天相同）。\n\n## 为什么净赚判断依赖『下游只取前 15』这个前提\n\n这条『净赚』结论不是无条件成立的——它成立是因为下游 `maxStoriesToGenerate` 只消费\n排序后的前 15 条。若下游改成消费全部验证通过的故事（例如某天新闻量小、故事数不足 15），\n复核步骤丢掉的 22 个百分点召回（98%→76%）会直接转化成漏报的真实事件，『净赚』的前提\n就不再成立。这是这条读数的一个隐含适用边界，源文件本身没有单独提示。\n\n## 关联\n\n产生 [[lesson-story-validation-verify-precision-recall-tradeoff]]。与\n[[experiment-story-validation-architecture-error-taxonomy]] 是同一次架构替换的两个侧面：\n后者讲『判官单独一段』相对『整簇自由划』的错误类型转变（umbrella→wrongPair），\n本节点讲『判官+复核两段式』相对『判官单独一段』在同一批 wrongPair/umbrella 候选里\n进一步做的精度/召回取舍。"
     },
     {
       "id": "experiment-structure-router-c36",
@@ -3044,6 +3421,95 @@
       "content": "## 两个把闸变成噪声的做法\n\n**一、期望值取错基准。** 若把期望 SHA 填成 **repo HEAD** 而不是\n**「最近一次镜像构建的 SHA」**，那么任何只部署调用侧、不重建镜像的改动\n（这类改动是多数）都会让期望走在镜像前面，**从此永久 mismatch**。\n一道天天响的闸，最终必然被无视——它不是「偏严」，它是**零信息**。\n\n**二、把渐进 rollout 期的瞬时不一致当故障。** CF Containers 的渐进 rollout 会让\n新旧镜像同时在跑，断言在这段窗口内必然时真时假。\n\n## 接线原则\n\n**首轮只记不降级。** 先只落日志/观测，攒够「正常时它响几次」的读数，\n再决定要不要让它影响流程。先降级后观测，等于用生产流量给一个没标定过的判据背书。"
     },
     {
+      "id": "lesson-analytical-verdict-not-gateable",
+      "type": "lesson",
+      "title": "判『分析性断言是否忠实于源』和判『事实性断言是否忠实于源』不是同一难度的任务——前者判官与人对不齐，后者能对齐",
+      "date": "2026-06-16",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "任何用 LLM 判官核验『生成文本是否忠实于源材料』的场景，只要判定对象里混有『可对源逐条核实的事实陈述』（数字/日期/命名实体/直接引语）与『解读/评价/推断/前瞻』两类断言",
+      "source": "services/meridian-ai-worker/src/services/faithfulness-check.ts:30-32, 83-88, 109-111, 490-521",
+      "conditions": [
+        "analytical 判定的定义是「前提是否与源一致」而非「是否字面出现在源中」（ANALYTICAL_PROMPT 明确允许推断超出字面事实），即便放宽到这个更宽松的标准，κ 依然低",
+        "本结论来自单次 meta-eval（judge=qwen-max），未做跨模型复测"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "diagnostic_observation",
+      "invalidates_when": "换判官模型或换 analytical 判定的 prompt/schema 后，重新做人机对齐核验，若 κ 能稳定到可用区间（经验上事实通道给出的锚点是 κ≥0.6，见文件头注 8-9 行「事实通道 κ≥0.6 且幻觉类召回≥0.7」的门槛），此前『analytical 不可门控』的结论对新 judge 失效，需重新验证才能恢复其门控资格",
+      "file": "lesson-analytical-verdict-not-gateable.md",
+      "content": "## 为什么这条不随架构死\n\n这不是「这一版忠实度门的分析通道表现差」，而是任务本身的难度边界：**判断一句话『符不符合源里的事实』是一个有确定答案的核验任务（找得到/找不到对应的数字、日期、命名实体），判断一句话『的前提站不站得住』是一个需要推理链条的解读任务**——后者要求判官先自己重构出claim隐含的前提，再判断这个前提是否被源支持或反驳，中间每一步都可能与人工标注者的隐含推理路径分叉。\n\n`faithfulness-check.ts` 的三层判据设计已经证明这不是能靠换 prompt/加投票修好的噪声问题：\n文件头注释记录了从单票否决（2026-06 之前）到占比+计数双阈（2026-06-25 改）到确定性代码通道\n（extract-compare，2026-07-11）的三轮迭代，每一轮都在为**事实通道**的噪声做减震，\n但 analytical 通道从一开始就被排除在 gate 之外，且没有后续迭代尝试把它拉回来——\n这本身就是一个信号：分析性判断的对齐难度不是这类工程手段能解决的。\n\n## 适用范围\n\n换任何模型、任何架构，只要设计『LLM 判官核验生成文本忠实度』这类系统，都会在\n「可验证事实」与「解读性论断」的边界上撞到同一道难度墙。下次设计判官时，\n应默认把判定对象先按这条边界分流，而不是假设一个判官能同时胜任两类判断\n——除非先做过与本节点同等的人机对齐核验并给出可用的 κ。\n\n## 关联\n\n被 [[mechanism-tiered-veto-gate]] 采纳为其中一层：analytical 通道整体不参与门控，\n只作为 warning-only 的次级信号记录。证据见 [[experiment-faithfulness-judge-alignment-kappa]]。"
+    },
+    {
+      "id": "lesson-ask-for-judgement-not-facts",
+      "type": "lesson",
+      "title": "问法决定模型理解的任务：问『你还缺什么』会被模型读成『还缺哪些事实』，得到事实堆叠而非分析；要模型下判断，必须直接问『你要下什么判断』",
+      "date": "2026-09-08",
+      "status": "recorded",
+      "tasks": [
+        "改写作层结构",
+        "治事实关系错"
+      ],
+      "scope": "任何要求模型产出『分析/判断/评价』类内容、又想让这些判断可核验的生成任务；不限于新闻简报写作，适用条件是任务存在『事实性内容』与『评价性/推断性内容』两个不同的产出维度",
+      "source": "services/meridian-ai-worker/src/prompts/briefEvidence.ts:15-22",
+      "conditions": [
+        "证据来自单一场景（brief 写作层判断声明调用）单次问法替换的前后对照，未做跨模型或跨任务复测",
+        "『关键词要記者会怎么写』这条配套设计规则同样来自 briefEvidence.ts（CLAIM_SCHEMA 的 keywords 字段要求逐字短语、供下游程序做字面匹配），与本条『问法决定任务理解』的核心机制是同一次改动里的配套约束，不是独立验证过的另一条经验——下游用逐字匹配当支撑判据这件事本身要求模型给原话而非转述，否则匹配结构性地失败"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "task_framing",
+      "invalidates_when": "换模型或换任务后，'what you still need' 式的问法不再被系统性地理解成『缺事实』（例如模型本身已具备区分『信息缺口』与『分析缺口』的稳定能力），或者『先问判断』这种问法在新场景下同样只问出事实性内容——目前的证据只覆盖 briefEvidence.ts 这一处调用与其对应的模型",
+      "file": "lesson-ask-for-judgement-not-facts.md",
+      "content": "## 结论\n\n**问法本身携带任务定义，模型会忠实执行问法暗示的任务，而不是使用者心里想要的任务。**\n问『你还需要什么（what you still need）』，模型的默认理解落点是『信息缺口』——这是一个\n在大多数训练数据里更常见、更容易被模式匹配到的问题形状，于是产出全部落在『报告里还缺\n哪些事实细节』，而不是使用者真正想要的『你打算做出什么判断、评价、推断』。改成直接问\n『声明你要下的判断』之后，模型才把『判断』当成要产出的对象——问法的转变本身就是任务\n定义的转变，不需要额外加约束去纠正模型往事实方向偏的倾向。\n\n## 一个容易被误判的假象：致命错误归零 ≠ 修复成功\n\n第一版问法带来一个看起来像是修复了的假象：模型不再犯『把地理位置或法律状态说错』这类\n致命事实错误。但真实原因是模型停止做分析了——没有分析内容，自然也就没有『分析出错』\n这个错误类型可犯。**『错误数量归零』如果同时伴随『某类内容整体消失』，需要先检查是不是\n后者导致了前者，而不是直接把错误数字当成质量提升的证据。** 这是一个比『改问法有效』\n更值得记住的检验方法：任何『某类错误被治好了』的读数，都要顺手确认『产出这类内容的\n行为本身还在不在』，否则治好的可能只是『不做了』。\n\n## 为什么不随架构死\n\n这条经验的对象是『提问方式如何塑造模型对任务的理解』，与写作层具体用什么 schema、\n什么模型、什么下游检索机制都无关。任何要求 LLM 产出『判断类』内容（而不是纯粹复述\n或抽取事实）的场景，都可能在提问时无意识地把任务问成了『找信息缺口』——这是措辞层面\n最容易踩、也最难通过读输出发现的偏差（因为『事实堆叠』本身读起来并不像一个明显的\n错误，只是『不够有见地』）。下次设计类似的『声明判断』式 prompt 时，第一步应该检查\n问句本身是不是在问『你需要什么』这种容易被理解成信息缺口的形状。\n\n## 与其他『改问法』经验的关系（不合并、只对照）\n\n本地会话记忆记录过环 1（RSS 原文→情报报告生成）的一次类似修法：把『X 是什么』改成\n『据这些文章所说，X』，解决的是模型用世界知识替补源材料空白的问题，unsupported\n56%→6%。那次和本条经验共享『改任务定义比加约束有效』这个更抽象的方向，但**任务、\n调用、代码、数据都不同**——那次是『防止模型编造报告里没有的事实』，本条是『防止模型\n把\"下判断\"的任务做成\"列事实\"』。两次独立验证不构成同一条经验的重复记录，因此本节点\n只在此处交代关联，不引用为同一实验的证据，也不合并数字。\n\n## 关联\n\n由 [[experiment-claim-proposal-reframe]] 产生。与\n[[lesson-self-check-needs-separate-call]] 同属 briefEvidence.ts 这一轮写作层重设计\n（2026-09-08）产生的两条经验，分别对应『写之前问什么』与『写之后怎么查漏』两个环节。"
+    },
+    {
+      "id": "lesson-block-consistency-structural-blind-spot",
+      "type": "lesson",
+      "title": "逐 claim 对源判定的忠实度判官，结构上看不见『文档自己跟自己打架』；且调检测器时只看召回涨了就收工是错的",
+      "date": "2026-09-01",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错"
+      ],
+      "scope": "任何『把生成文本拆成独立单元、逐单元核对源材料』的验证范式（忠实度判官、RAG 幻觉检测等同构任务）；以及任何按『先调召回、再调精度』顺序迭代规则/词表型检测器的场景",
+      "source": "services/meridian-ai-worker/src/utils/block-consistency.ts:8-9, 20-21",
+      "conditions": [
+        "该盲区特指『两处表述各自都能在源里找到支撑，但两处之间互相矛盾』这一类错误（如同一场灾害两个数字来自分段写的两次独立 LLM 调用）",
+        "调参教训部分的证据只有一次迭代记录（加标题词→补地点消歧），样本量小，结论的定性部分（『召回涨了就收工是错的』）比具体数字更可靠"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failure_mechanism",
+      "invalidates_when": "若验证范式改为『整篇一次性核对自身一致性』而非『逐单元对源核对』，该结构性盲区不复存在（问题形式已经变了，不需要专门的块间传感器）；调参教训部分不会因架构变化失效，只要还在手工调规则型检测器就适用",
+      "file": "lesson-block-consistency-structural-blind-spot.md",
+      "content": "## 两条独立的经验，来源同一段注释\n\n### 1. 结构性盲区：判官的问题形式看不见『自相矛盾』\n\n`block-consistency.ts:8-9`：\n\n> 为什么判官抓不到：忠实度判官逐 claim 对**源**判。$17.1B 和 $18B 各自都能在源里找到\n> → 都判 supported。「整篇自己跟自己打架」不在判官的问题形式里，它结构上看不见。\n\n这不是判官不够聪明或 prompt 没写好，而是**问题形式本身排除了这类错误**：逐 claim\n核对源的验证范式，天然只能发现『claim vs source』这一维的矛盾，发现不了『claim A vs\nclaim B』这一维的矛盾——除非额外加一层专门比较『同一份产出内部』的传感器。分段写\n（b′：每块一次独立 LLM 调用，没有跨块仲裁者）把这类错误从『理论可能』变成『实测常见』\n（第 75 期一天就有 3 处），但盲区本身在分段写出现之前就已经存在于『逐 claim 对源判』\n这个验证范式里——只是单次整体生成时，同一模型上下文内的自我一致性天然较高，\n错误率低到不容易被观察到。\n\n**为什么不随架构死**：只要验证范式还是『拆单元逐条核对源』，这个盲区就还在。\n换任何写作架构（单次生成、分段写、多 agent 协作），只要存在『多次独立生成的片段\n拼成一篇』这个前提，就需要一个独立于『逐条对源』判官之外的『整篇自查』传感器。\n\n### 2. 调检测器时，召回涨了不代表调对了\n\n`block-consistency.ts:20-21`：\n\n> 调这把尺时的教训：加块标题进主题键后召回涨、精度从 2/2 掉到 3/6，补地点消歧才回到 3/4。\n> **召回涨了就收工是错的。**\n\n这是一条方法论教训：迭代一个规则/词表型检测器时，任何『扩大匹配范围以提升召回』的改动\n（这里是把块标题并入主题键，让更多数值对被视为『同一主题』从而被拿去比较）都会同时扩大\n误报候选池。只验证召回涨了就停手，等于只看了收益没看代价——必须每次改动后都重新核一遍\n精度，才能判断这次调整是不是净赚。\n\n## 关联\n\n来自 [[experiment-block-consistency-tuning]]。与\n[[lesson-llm-oversplits-single-large-event]] 相关但不同层：那条经验讲聚类/切分层面的\n碎片化，这里讲写作层分段生成后的『自相矛盾』检测盲区。"
+    },
+    {
+      "id": "lesson-candidate-group-threshold-090",
+      "type": "lesson",
+      "title": "候选分组阈值 0.90 的来历：0.85→0.87→0.90→0.91 四点扫描，0.91 起掉崖丢真事件；全链凝聚在 0.90 上组中位数 2 篇、最大 16 篇；标定方法文件已随本轮清理移出 git",
+      "date": "2026-08-21",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "改聚类/切分链路"
+      ],
+      "scope": "apps/backend/src/lib/core/candidate-grouping.ts 的 completeLinkage 函数与 CANDIDATE_GROUP_THRESHOLD 常量；判据为簇内文章 embedding 两两余弦相似度；标定样本为 2026-08-20/21 两天独立数据 + 人工严口径（scripts/eval/story-validation/rubric.md 定义的 correct/umbrella/wrongPair/borderline 四分类）复验",
+      "source": "apps/backend/src/lib/core/constants.ts:69-77（CANDIDATE_GROUP_THRESHOLD 常量头注释）；apps/backend/src/lib/core/candidate-grouping.ts:13-14, 26-32；commit 9bef77b 提交说明",
+      "conditions": [
+        "阈值作用在文章 embedding 之间（簇内两两余弦），不是在故事质心之间——与 measure-story-merge-threshold-094（0.94，作用于故事质心）是不同层的同名机制，两者标定时间相近（08-21 vs 08-30）但样本、判据对象都不同，不要混为一谈",
+        "算法选全链凝聚（complete-linkage）而非单链：单链任意一对超阈值就并、会串联成巨团；全链要求组内所有对都超阈值。candidate-grouping.ts 头注释明确记录『本仓上游的 candidate-grouping.ts 早就是全链，story-dedup 那一层是漏网的』（见 lesson-single-link-merge-falsified 的 conditions）——即本仓两处独立引入的聚合层，候选分组这一处从一开始就选对了算法，story-dedup 那一处后来才补上",
+        "『严精度』『前 15 条精度』的定义与人工标注方法论，见 scripts/eval/story-validation/rubric.md——该文件本轮清理已删除（git status 显示为待提交的 D），可用 `git show HEAD:scripts/eval/story-validation/rubric.md` 或对应引入提交 b7ab0ea 恢复查看。⚠️ 该文件是标注方法论说明（什么算『同一发生』、umbrella/wrongPair 怎么区分），不包含本节点记录的阈值扫描数字表——扫描数字唯一的留存位置是 constants.ts 的头注释和 commit 9bef77b 的提交说明，两者互为印证",
+        "0.90 这一行的『严精度 89-92%』『前 15 条精度 93.3%』与 experiment-story-validation-verify-stage-tradeoff 记录的『严精度 75.7%→89.2%』『前 15 条精度 53.3%→93.3%』是同一批复验数据（判官+复核两段式相对旧架构的整体表现），本节点不重复该实验的完整记录，只摘录阈值扫描本身的对照表"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "observation",
+      "invalidates_when": "换 embedding 模型后重新扫描阈值-精度曲线；或按 docs/engineering-notes/cluster-to-story-segmentation.md §7.2（本地文件，未入 git）建议的方向换成自适应判据（BIC 式模型选择或基于图模块度的 Leiden 递归终止），不再依赖固定的两两阈值一刀切——见 experiment-set-partition-literature-review 记录的『0.90 这种取值方式本身在文献里没有先例』",
+      "file": "lesson-candidate-group-threshold-090.md",
+      "content": "## 阈值扫描原文\n\n`constants.ts:69-77`：\n\n> 0.90 来自 2026-08-20/21 两天独立数据的扫描 + 人工严口径（scripts/eval/story-validation/rubric.md）复验：\n>   0.85（原型初值，随手定） 严精度 58-60%，配复核后 85-87%，前15精度 33-53%\n>   0.87                  严精度 70%\n>   0.90                  严精度 76-84%，配复核后 89-92%，**前15精度两天都是 93.3%**\n>   0.91 起掉崖：一次丢 4 个人工确认的真事件（4 篇的 Face the Nation 当期综述、3 篇的官员回应等）\n> 上限卡在 0.90 的理由是「0.91 开始丢真事件」，不是「组太大」——0.90 下组中位 2 篇、最大 16 篇。\n\n## 掉崖的具体样本\n\n0.91 一次性丢掉的 4 个人工确认真事件里，明确记录了两个具体样本：一个是 4 篇报道同一期\nFace the Nation 节目的综述，一个是 3 篇报道官员回应的组。这两个样本的共同特征是**成员数\n偏多但确实是同一发生**（例如 §2.4 的规范：节目当期综述算合法成员），说明 0.91 这一档\n开始把『成员多但真实』的组也当成过度合并切碎——阈值的上限不是被『组变得太大』卡住的，\n而是被『继续收紧就开始误伤真实的多成员事件』卡住的。\n\n## 全链凝聚为什么选这个算法\n\n`candidate-grouping.ts:26-32`：\n\n> 算法选全链(complete-linkage)不选单链：单链任意一对超阈值就并，会串联成巨团；\n> 全链要求组内**所有**对都超阈值，不串联。实测在 0.90 上组中位数 2 篇、最大 16 篇。\n\n这与 [[lesson-single-link-merge-falsified]] 记录的 story-dedup 层『单链→全链』修复是\n同一个算法原理的两次独立应用：单链只要链上任意相邻一对过线就会传递合并，容易把 A-B、\nB-C 都过线但 A-C 不过线的三者串成一团；全链要求组内所有两两对都过线，构造上不可能出现\n这种串联。候选分组这一层从设计之初就选了全链，没有经历 story-dedup 那次『先用错、\n再改对』的过程。\n\n## 这批读数比现存节点多出的部分\n\n`experiment-story-validation-verify-stage-tradeoff` 已经记录了 0.90 这一档的头条精度数字\n（严精度 89.2%、前 15 条精度 93.3%），但没有记录：\n- 0.85/0.87 两档更宽松阈值下的对照精度（58-60%、70%）；\n- 0.91 起的悬崖及其具体丢失样本；\n- 全链凝聚在 0.90 下的组规模分布（中位 2、最大 16）。\n\n这三块是本节点补上的、此前未蒸馏的部分。\n\n## 关联\n\n阈值取值方式本身的文献适用边界（『两两一刀切无先例』），见\n[[experiment-set-partition-literature-review]]。全链算法原理与另一层聚合的对照见\n[[lesson-single-link-merge-falsified]]，故事质心层另一个同名机制的独立标定见\n[[measure-story-merge-threshold-094]]。头条精度数字的完整实验记录见\n[[experiment-story-validation-verify-stage-tradeoff]]。"
+    },
+    {
       "id": "lesson-container-image-deploy-gap",
       "type": "lesson",
       "title": "CF Container 部署的壳与镜像是两个产物：deployments list 只反映壳，判镜像要看 containers info 的 version 与 LAST MODIFIED",
@@ -3112,7 +3578,7 @@
       "type": "lesson",
       "title": "dev 上覆盖最高的臂在 heldout 上不合格——反复调过的集合选出来的第一名不可信",
       "date": "2026-09-19",
-      "status": "recorded",
+      "status": "superseded",
       "tasks": [
         "演化组合架构",
         "设计验收门"
@@ -3194,6 +3660,28 @@
       "content": "7 簇里 4 个是按难度挑进来的(题材袋 c43、超大题材袋 c51、少数派标题 c37、受污染 c36),\n难例占一大半;生产真实一天里这类占三分之一。**在手挑集合上得到的任何比例,方向和数值都会偏。**\n\n这一轮的具体表现:\n- 在 7 簇上我只肉眼挑可疑句,报了 4.6% 的「下限」;真实一天逐句核是 6.5% 读者可见 + 22% 出处挂错。\n  不是「真实分布更差」,是**手挑集合上从没量准过**。\n- 反过来,简单簇在手挑集合里几乎不存在:真实一天里 c14 三次运行零缺陷、c12/c19 各只有 1 句。\n  失败率随簇形态差异巨大,不分层看就是一锅粥。\n\n**可操作**:手挑集合只用来快速迭代(跑得快、难例密度高、能快速暴露新改动的破绽);\n**上线与否只看不挑选的一整天**,并按簇形态分层报。"
     },
     {
+      "id": "lesson-intel-grounding-readme-stale",
+      "type": "lesson",
+      "title": "算出来的验收结果不会自动同步进 README 状态行——intel-grounding 的「judge 未验证」在有 κ 数字之后仍挂了两个多月",
+      "date": "2026-09-22",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "本仓 scripts/eval/ 下所有依赖 README 顶部「状态行」传达验收进度的 harness；不特指某一次代码缺陷",
+      "source": "scripts/eval/intel-grounding/README.md:12（截至 2026-09-22 仍写「本线状态：harness ready，judge 未验证...不得把本线的任何读数当可信」）对照 commit 36e186a（2026-07-10）message 里已经给出的 κ 数字；README.md:68-77「还差什么才算 eval 真正完成」节列出的三步（建真人金标/填充合成批/跑 κ 验收闸）在 commit 时间线上其实已经做完前两步、第三步也已经跑出过结果",
+      "conditions": [
+        "README 的「未验证」警告写于更早的 commit（本节点未逐一定位哪一条 commit 首次写下这句话，只确认它在 36e186a 之后的 HEAD 仍然存在，未被更新）",
+        "36e186a 之后该目录还有 e31fbf9（补 skipCache）、61a3bcc（判官客户端收敛）等 6 次后续 commit，没有一次修改 README 的状态行",
+        "对照组：coverage-judge 的 README 在验完 κ 后确实把「结果」小节写回了 README（见 scripts/eval/coverage-judge/README.md「结果（2026-07-03 首验）」节），状态描述与实际验收结果保持同步——同一个仓库里两种做法并存，intel-grounding 是反例，coverage-judge 是正例"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "observation",
+      "invalidates_when": "本仓引入了「验收结果自动回写 README/状态文件」的机制（例如 stop-hook 类似的校验），使得代码里的验收状态与文档描述不可能出现这种漂移",
+      "file": "lesson-intel-grounding-readme-stale.md",
+      "content": "**观察**：intel-grounding 的 README 顶部写着一条醒目警告——「harness ready，judge 未验证，\n在用户完成金标+κ验收前，不得把本线任何读数当可信」。但对照 commit 历史，36e186a\n（2026-07-10）这次提交已经完成了 README「还差什么」节列出的前两步（真人金标 100+24 条、\n合成扰动批 26 条），并且跑出了具体的 κ 数字（qwen 0.407 FAIL，Claude 0.779 通过但离线未复验，\ndeepseek 更差）。换句话说，**README 描述的「差什么」在事实上已经部分做完，但 README 本身\n从未更新**，截至本次蒸馏（2026-09-22）它依然原样挂着「未验证」的警告。\n\n**根因不是代码 bug，是习惯性遗漏**：这类 harness 的验收状态默认写在 README 的自然语言里，\n没有任何机制强制「κ 算出来之后必须回写 README」。对照同一批 eval 里的 coverage-judge——\n它在验完之后专门在 README 加了一节「结果（2026-07-03 首验）」，把 κ/precision/recall\n写回文档——说明这不是不能做，只是这次没做。\n\n**为什么值得记**：下次任何人（人或 agent）读到一个 harness 的 README 说\"未验证/占位/待办\"，\n不能直接采信为当前状态，要去比对该目录的 commit 历史和 gitignored 的 `out/` 产物——\n文档状态行可能已经过期。这个仓库两周前（2026-09-20）刚定下 eval 四层契约\n（见 [[decision-eval-module-contracts]]），但契约管的是 dataset/solver/scorer/judge\n的职责边界，不管\"验收结果要不要回写文档\"这件事——**这次教训指向的是文档维护习惯，\n不是架构缺陷**，机制化的解法（比如让 knowledge 校验脚本顺带检查 README 状态行与最近\ncommit 的时间差）目前还不存在。"
+    },
+    {
       "id": "lesson-judge-needs-alignment",
       "type": "lesson",
       "title": "没与人工对齐的判官把缺陷数虚高 4 倍——混淆「出处挂错」与「编造」",
@@ -3212,6 +3700,51 @@
       "invalidates_when": "判官在 ≥30 条人工标注上量过真阳率/真阴率,且比例与人工一致",
       "file": "lesson-judge-needs-alignment.md",
       "content": "判官标了 72 条「不合格」,逐条回查后**只有 16 条(22%)是读者可见的真错**,其余 55 条是\n「事实在簇内别处有原文、只是被引的那句没写到」。两者的修法完全不同:一个要换模型,一个写代码补出处。\n\n**根因是证据范围没写死**:判官被要求「只拿被引的那句判」,于是把所有「这句撑不住」都归成编造。\n它自己也判错过——c5「当地男子把猫送到庇护所」被判为与原文矛盾,而同一篇文章里就有这句话。\n\n**做成机制**(`judges/<axis>.md`):`citation-support` 只许读被引的那句,其余四轴必须读全簇,\n两轴的唯一区别就是证据范围;每份规格都写死这一条并附上本次的 4 倍虚高作为理由。\n\n**另一个同期失败**:一个 agent 自报完成、输出文件根本没落盘,报的比例差点被直接采用。\n现在由 `collect-verdicts.mjs` 拿退出码拦(文件、schema、覆盖、promptId 四项),不过就不采用。\n\n**可操作**:任何新判官进对比表之前,先在 ≥30 条人工标注上量真阳率/真阴率;\n没量过的判官,其比例只能当量级参考。"
+    },
+    {
+      "id": "lesson-legal-exclusion-path-prevents-forced-fit",
+      "type": "lesson",
+      "title": "分类/分组任务里如果模型没有『合法排除某成员』的出口，就会被逼着硬凑（伞状糊）而不是正确地拒绝",
+      "date": "2026-08-20",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "设计验收门"
+      ],
+      "scope": "任何让 LLM 对一组候选项做分组/归类判断、且存在『部分候选项其实不该被分进任何组』这种可能性的任务 schema 设计",
+      "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:1-19（旧 single_story/collection_of_stories 二分支设计的结构性缺陷说明）；scripts/eval/story-validation/rubric.md（HEAD 版本，见 experiment-story-validation-architecture-error-taxonomy 的 source 说明）第 1 节 umbrella/wrongPair 实测",
+      "conditions": [
+        "旧架构（『整簇丢给模型自己判 single_story/collection_of_stories 并划出所有子故事』）的 outliers 数组只存在于 single_story 分支——collection_of_stories 分支没有任何合法位置安放『不属于任何故事的成员』",
+        "2026-08-18 生产实测：这一结构性缺陷下，352/967 篇进簇文章走的是『默默不提』这条路——模型选择的三条路径（硬配对/整簇丢弃/默默不提）全部是错误应对",
+        "新架构给判官加了『部分覆盖是合法输出，不属于任何事件的文章直接不列』的显式出口后，同一批错误类型的分布从 86% umbrella 变成对照组（几何预分组）下 80–100% wrongPair——即『没有出口』被消灭后，模型确实停止了硬凑同一批文章的行为"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "failure_mechanism",
+      "invalidates_when": "换模型或换 prompt 后，若模型在有合法排除出口的情况下仍然倾向于强行归组（即『给出口没用』），说明这条机制对新模型不适用，需要用新的实测数据重新验证——目前的证据只覆盖 kimi-k2.6 与本项目使用的判官模型",
+      "file": "lesson-legal-exclusion-path-prevents-forced-fit.md",
+      "content": "## 现象与根因\n\n旧版 story-validation prompt 只给模型两个分支：`single_story`（一个故事，允许有 `outliers`\n排除不相关成员）和 `collection_of_stories`（一堆故事，但**没有**类似 `outliers` 的合法出口）。\n`storyValidation.ts:7-11` 引用 kimi-k2.6 的思维链原文点破了这一点：\n\n> \"This implies that for collection_of_stories, you may NOT exclude articles... Thus\n> pure_noise is correct.\"\n\n模型发现自己被架构逼进了死角——面对『这堆文章里有几篇不属于任何故事』的真实情况，\nschema 里没有表达这个事实的合法位置——于是只剩三条路，**全部是错误应对**：硬配对、\n整簇丢弃、或默默不提（2026-08-18 生产实测 352/967 篇走的是这条路）。\n\n新架构给判官加了显式规则「A group may hold more than one event」「An article that\nshares no event with any other article here is simply left out」（同文件 128-136 行），\numbrella 错误率随之从 86% 降到基本消灭（[[experiment-story-validation-architecture-error-taxonomy]]）。\n\n## 为什么这条不随架构死\n\n这不是『story-validation 这一版 prompt 写得好』，而是一条更一般的 prompt/schema 设计原则：\n**当任务的真实分布里存在『某些候选项本就不该被归入任何类别』这种情况时，输出 schema\n必须提供一个成本对称的『合法排除』出口**——否则模型不会神奇地『知道该拒绝』，\n它会被迫在几个同样错误的选项里选一个看起来损失最小的（这里是硬凑成伞状标签，\n因为『编不出故事』比『留白』在表面上更像完成了任务）。这个原则适用于任何让 LLM\n做分组/分类/抽取的任务，跟具体是新闻聚类还是别的领域无关。\n\n## 代价没有消失，只是换了形状\n\n给出口不是免费的：几何预分组这条路径消灭了 umbrella，但把错误类型换成了 wrongPair\n（[[experiment-story-validation-architecture-error-taxonomy]] 里 80–100% 的新架构错误\n属于这一类）——语义相近但非同一发生的候选组被硬凑，是几何相似度筛选本身引入的新噪声，\n不是 prompt 设计能单独解决的。这条经验只解释了『为什么消灭了 umbrella』，不代表新架构\n没有自己的错误来源。"
+    },
+    {
+      "id": "lesson-llm-cannot-partition-event-sets",
+      "type": "lesson",
+      "title": "让 LLM 对一个数十到上百元素的集合做穷尽切分，换 prompt、换更强模型都救不了，业界也没人这么用——这是任务形态的边界，不是某个实现的成绩",
+      "date": "2026-08-21",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "改聚类/切分链路"
+      ],
+      "scope": "『集合切分』特指：给模型一个数十到上百个元素的集合，要求它一次性决定这个集合该分成几份子集、每份的边界在哪（即 story-validation 旧形态『整簇送 LLM，模型自己划出所有子故事』）。不覆盖『集合已经切好之后，判断某个子集是不是一件事』这类逐条判定任务——后者是本仓现行架构里 LLM 仍在做的事，被这条经验认为是合适的分工",
+      "source": "apps/backend/src/lib/core/candidate-grouping.ts:1-14",
+      "conditions": [
+        "证据由两条独立来源共同支撑：直接排除性实测（7 个 prompt 变体召回 16-23/31 均低于基线、3 个高档模型硬配对全部失败）+ 一手文献调研（检索到的所有同构系统都不让 LLM 做这一步）",
+        "『没人这么做』不是『不能这么做』的证明，只是『没有先例、若坚持这么做就是在做没人验证过的事』——这条边界本身也可能被未来专门设计的方法打破，见 invalidates_when"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "task_boundary",
+      "invalidates_when": "出现专门为『在给定约束下精确执行集合划分』设计并验证过的模型或方法（例如结合约束求解器/程序化后处理的 LLM 系统），或本仓换用新方法后重新实测『整体切分交给模型』的召回显著超过几何基线；目前的证据只覆盖 2026-08 检索到的系统与本仓当时用过的模型/prompt/数据规模（~31 个真实事件、~100 篇量级的簇）",
+      "file": "lesson-llm-cannot-partition-event-sets.md",
+      "content": "## 结论\n\n**集合切分是几何/组合优化问题，不是语言理解问题。** 本仓的实测（见\n[[experiment-candidate-grouping-prompt-model-scan]]）与同期的一手文献调研（见\n[[experiment-set-partition-literature-review]]）从两个独立方向指向同一个结论：\n\n- 直接实测：7 个 prompt 变体（含穷尽契约、unassigned 出口）召回全部低于『什么都不改』；\n  换成三个比原判官更高档的模型（gpt-oss-120b / deepseek-v4-pro / kimi-k2.6），硬配对错误\n  一个没少，deepseek-v4-pro 反而最严重（52%）。\n- 文献调研：BERTopic、TopicGPT、ClusterLLM、Event Registry、TDT、EventX(Story Forest)、\n  EpiMine、Microsoft GraphRAG——检索到的每一个同构系统，切分动作本身都是几何/图论/统计，\n  LLM（如果参与）只在切分完成之后对已经分好的组做逐条判定、命名或摘要。\n\n两条证据互补：前者说明『做了会怎样失败』，后者说明『为什么没人这么做』。\n\n## 为什么这条不随架构死\n\n无论 story-validation 之后换成哪种具体实现（几何候选组、storyline 两段式命名、或未来\n任何新设计），这条边界都规定了 LLM 该被放在流程的哪一步：**几何/统计负责决定『这堆东西\n该怎么分』，LLM 负责回答『这个已经分好的子集是不是一件事』**。下一次任何设计想让模型\n去做『把一批东西划分成组』或『把一个大集合拆成互不重叠的子集』这类任务时，都会撞上\n同一堵墙——这正是本条经验要被复用的场景，不是本仓的聚类/切分链路专属。\n\n## 什么仍然不确定\n\n- 7 个 prompt 变体的具体差异未在源头逐一记录，只知道其中包含『加穷尽契约』与\n  『加 unassigned 出口』两类；如果未来要在这条边界内部继续找 prompt 层面的改进空间，\n  这批变体的具体设计已经丢失，需要重新构造。\n- 结论覆盖的模型集合（gpt-oss-120b / deepseek-v4-pro / kimi-k2.6 三个高档模型 + 原判官）\n  和当时的簇规模（~100 篇量级），不能自动外推到量级差异很大的场景（例如个位数元素的\n  小集合，LLM 的容量退化曲线在小规模下可能根本没有触发）。\n\n## 关联\n\n由 [[experiment-candidate-grouping-prompt-model-scan]] 与\n[[experiment-set-partition-literature-review]] 共同产生。与\n[[lesson-legal-exclusion-path-prevents-forced-fit]]、\n[[experiment-story-validation-architecture-error-taxonomy]]、\n[[experiment-story-validation-verify-stage-tradeoff]] 是同一次架构替换\n（2026-08-21，commit 9bef77b）留下的不同侧面记录：那几条讲『换成几何候选组 + 判官/复核\n两段式之后表现如何』，本节点讲『为什么必须换掉整簇送 LLM 这个架构』。三者共享同一个\n『41.7% → 89-92%』的头条数字，本节点不重复。"
     },
     {
       "id": "lesson-llm-oversplits-single-large-event",
@@ -3305,7 +3838,7 @@
       "type": "lesson",
       "title": "核验因素诊断需区分断言覆盖、关系配对与解释忠实性",
       "date": "2026-09-17",
-      "status": "recorded",
+      "status": "superseded",
       "tasks": [
         "治事实关系错",
         "演化组合架构"
@@ -3366,7 +3899,7 @@
       "type": "lesson",
       "title": "scorer 的缺陷会把架构搜索牵到错方向：门在卡引用质量、覆盖率在惩罚正确剔杂质",
       "date": "2026-09-19",
-      "status": "recorded",
+      "status": "superseded",
       "tasks": [
         "设计验收门",
         "演化组合架构"
@@ -3382,6 +3915,52 @@
       "invalidates_when": "scorer 改成证据由评分方检索、且事件清单剔除杂质文章之后，在未接触簇上重测这两条",
       "file": "lesson-scorer-steers-search.md",
       "content": "**核心：凡是 scorer 看不见的缺陷，演化搜索就不会去修；凡是 scorer 错算的东西，搜索会主动往那个方向走。**\n\n四条已确认的缺陷，前两条会主动误导搜索，后两条只是看不见：\n\n**（a）`hard ≤ 1` 这道门实际在卡引用质量。** 判官只看成稿引的那一句，缺的成分常在紧邻句里。\nc1 实测：**真没依据 0 条、引错句子 9 条（18%）**，这 9 条在旧四档里全被算成错误。\n后果是最有效的过门手段变成「引得更宽更准」而不是「写得更准」——而各臂在这条路径上已有明显差距：\n每句平均出处 crossover 1.73、direct-raw 1.60、structure-router 1.03。\n\n**（b）覆盖率的分母混进了杂质事件。** c1 的 18 条事件里 4 条（22%）出处全部来自杂质文章。\ncrossover 正确剔掉科索沃，次层覆盖因此 4/6 → 2/6 —— **因为做对了事而被扣分**。\n核心层（设门那一层）无污染，6 条全干净。\n\n**（c）没有块内冗余这一维。** 实测 direct-raw 每 10 句就有 1 句重复同块内说过的事，\ncrossover 6%。四个判官都主动报了，没有任何指标记录它。\n\n**（d）没有观点/分歧这一维。** 事件清单每条只有 `{event, articleIds, nArticles, nSources}`。\n\n### 这个病已经骗过一次\n\n[[attempt-structured-verifier-interface]] 那条线之外，本仓的逐句接地臂（direct-raw + 局部接地过滤）\n在旧尺上硬错 5 → 1，看着是赢。但它赢的机制是**把引用不当的候选整条丢掉**，正好迎合了 (a)。\n同轮用检测器指标一算：为清掉 5 条硬错毁了 66 条判官判为正确的句子，**精度 6%、召回 100%**。\n只看三维判据会把它当成功经验固化下来。\n\n### 可操作的推论\n\n- 同一段接地检查放在 solver 里叫机制、放在 scorer 里叫判据，**两边要用不同的指标族**：\n  前者用精度/召回，后者用三维判据。只看一侧会得出相反结论。\n- 判官会主动报 grading prompt 的缺陷，这个机制有效：本轮 7 个判官里 6 个报了\n  （守则表被 `---` 腰斩、剥标记留标点残渣、近重复句、引证错配、事件清单截断、检索漏召）。\n  「发现文件缺陷要说出来」这条指令值得固化进判官守则。\n- 尺永远不完美，目标不是完美的尺，是**缺陷不会把搜索带到危险方向**。(a)(b) 必须修，(c)(d) 属扩目标可以欠着。\n\n---\n\n### 2026-09-19：`invalidates_when` 已触发\n\n本条的 `invalidates_when` 写的是「scorer 改成证据由评分方检索、且事件清单剔除杂质文章之后，\n在未接触簇上重测这两条」。这三件事当天全部做完了（[[decision-scorer-retrieval-evidence]]、\n[[experiment-heldout-replacement-candidate]]）。重测结果：\n\n- **(a) 门在卡引用质量** → 已修。证据改由全簇检索，引用质量拆成 `citedSentenceSuffices` 单列。\n  逐句接地的「硬错 5→1」被证伪，见 [[lesson-grounding-is-citation-quality]]\n- **(b) 覆盖率分母混进杂质事件** → 已修（`--depurify`，机械判据：出处全为杂质文章的事件数 = 0）\n- **(c) 没有块内冗余这一维** → 已补（快档机械读数，同块两句引同一条原句）\n- **(d) 没有观点/分歧这一维** → **仍缺**。事件清单已加 `variants` 存口径分歧，\n  但「简报有没有告诉读者这里存在分歧」还没有判据\n\n本条的**诊断部分仍然成立**（凡是 scorer 看不见的缺陷，演化搜索就不会去修），\n作废的只是 (a)(b) 的现状描述与逐句接地那条归因。"
+    },
+    {
+      "id": "lesson-selection-formula-never-measured",
+      "type": "lesson",
+      "title": "生产选择层现在跑的是零 LLM 纯公式 blockImportance，但 NDCG=0.958 这把尺量的是已退役的 storyValidation LLM importance——纯公式这一档从未被任何 harness 测过",
+      "date": "2026-09-22",
+      "status": "live",
+      "tasks": [
+        "设计验收门",
+        "改报告层结构"
+      ],
+      "scope": "apps/backend/src/lib/core/storyline.ts 的 blockScore/blockImportance；对照对象是 scripts/eval/selection/BASELINE.md 的 NDCG 基线（见 [[experiment-selection-ndcg-baseline]]）",
+      "source": "apps/backend/src/lib/core/storyline.ts:104-136（blockScore 与 blockImportance 函数上方的代码注释，作者本人在 2026-09-02 左右写下并自陈「纯公式这一档从未被测过」「机制：广泛报道 ≠ 重要」「接受这个降级是明确决定，不是没看见」）",
+      "conditions": [
+        "blockScore(distinctSources, articleCount) = log2(1+源数) + 0.5·log2(1+篇数)，纯公式、零 LLM，取代 story-validation 的 LLM importance(1-10)",
+        "blockImportance 是 blockScore 的取整钳位版本，仅供下游 storyThreads 的 latest_importance>mean_importance 升温判断与 ORDER BY importance 使用，代码注释明确写「排序不要用它——排序用 blockScore 原值」",
+        "storyValidation.ts（services/meridian-ai-worker/src/prompts/ 与 services/meridian-ai-worker/src/services/story-validation.ts）仍存在于代码库并被 apps/backend/src/workflows/auto-brief-generation.ts 等处引用，但用于选择层排序的 LLM importance 路径已被 blockScore 取代——storyValidation.ts 是否还被用于其他用途（例如别的字段校验）未在本节点核实，不确认其「已完全退役」，只确认「排序键已经换成纯公式」",
+        "2026-09-02 那次实测（零 LLM 重排真实数据）具体换人：挤进前 15 的包括航母停靠泰国(9源16篇)、图派克案宣判(7源15篇)等；被挤出去的包括刚果埃博拉死亡超3000(3源4篇)、习近平访埃及(3源5篇)等——这次「换人」实测本身也没有对应的 NDCG/recall 读数，只是定性列出了排序结果差异"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "gap",
+      "invalidates_when": "有人针对 blockScore/blockImportance 这一档排序键补做了 NDCG 或等价的排序质量评估（哪怕是复用 selection/BASELINE.md 同一批金标重新跑一次），之后这条「未测」的记录应当被新的实验结果取代，而不是继续引用本节点",
+      "file": "lesson-selection-formula-never-measured.md",
+      "content": "**这是一个尚未解决的缺口，不是一次失败的实验**——没有任何 harness 跑过、也没有任何 gold\n标注过 `blockScore`/`blockImportance` 这一档排序键的效果好坏。记录它的理由是：如果不写\n下来，删掉 `scripts/eval/selection/` 之后，\"NDCG=0.958 这把尺\"和\"生产实际在跑的排序公式\"\n之间的错位关系就彻底没人知道了——将来有人翻出 BASELINE.md 的历史版本（或翻到这条知识节点），\n可能会想当然地把 0.958 当成当前排序质量，这是错的。\n\n## 时间线\n\n1. 2026-06-06（commit 0b43902）：NDCG@10=0.958 基线建立，排序键是\n   `LLM importance + COVERAGE_WEIGHT·log2(1+源数)`（见 [[experiment-selection-ndcg-baseline]]）。\n2. 某个时间点（本节点未追踪具体 commit）：生产排序键换成了零 LLM 的 `blockScore`，\n   代码注释里明确写这是\"有代价的降级，不是等价替换\"，并且列出了旧基线里两个组成部分各自\n   的贡献（rubric +0.068、覆盖度 +0.018），暗示换成纯公式大概率会丢掉 rubric 那部分收益——\n   但这只是作者基于旧数据做的**推断**，不是新的实测。\n3. 到 2026-09-22（本次蒸馏时点）：纯公式这一档排序键依然没有对应的 NDCG 或任何排序质量\n   读数。`scripts/eval/selection/` 这套 harness（BASELINE.md、rescore.ts、gold-worklist-\n   2026-06-05.csv 等）本身面临被删除——一旦删除，连\"曾经有把尺能测这个\"的痕迹都会消失，\n   除非有意识地把这个缺口写进知识库。\n\n## 为什么这个缺口值得显式标注为未决事项\n\n- **换排序键是明确决定，但决定没有配对验证。** 代码注释说\"接受这个降级是明确决定，不是\n  没看见\"——这句话本身说明作者知道有风险，但目前项目里没有任何地方记录\"这个风险后来\n  兑现了没有\"。\n- **旧基线不能直接拿来推断新公式的表现。** 0.958 的大头贡献来自 LLM rubric（+0.068），\n  而新公式恰恰砍掉了这部分，仅保留覆盖度那一档小贡献（+0.018）的思路（对数加权源数/\n  篇数）。类推的方向是\"新公式可能接近甚至低于 0.872（纯旧 importance 都没有）那一档\"，\n  但这只是基于历史分解数字做的合理怀疑，不是实测，不能当结论使用。\n- **重新测的成本相对可控。** `gold-worklist-2026-06-05.csv`（140 行）和 BASELINE.md 描述的\n  方法论如果在删除前完整入库或至少被本节点引用路径记录下来，之后想补测时不需要从零设计\n  金标格式。"
+    },
+    {
+      "id": "lesson-self-check-needs-separate-call",
+      "type": "lesson",
+      "title": "自检必须是独立任务，不能是同一次调用里的约束：写作时的隐式取舍不参与显著性竞争，只能靠专门一次『找漏』调用补；判断这不是篇幅/合理取舍问题，要先用 finish_reason 与重要性排序排除替代解释",
+      "date": "2026-09-08",
+      "status": "recorded",
+      "tasks": [
+        "改写作层结构",
+        "治合成漏报"
+      ],
+      "scope": "任何『生成一份内容，同时要求内容尽量完整覆盖给定材料』的任务；核心机制是生成时的隐式取舍与专门检查覆盖的注意力分配不同，不限于新闻简报写作",
+      "source": "services/meridian-ai-worker/src/prompts/briefEvidence.ts:24-29",
+      "conditions": [
+        "证据来自单一场景（brief 写作层单个 story block）四簇样本的离线对照，覆盖率数字（41.1%→51.9%）绑定在这一批样本与这一版找漏 prompt 上，会随架构改动变化",
+        "论证方法（排除替代解释）比具体数字更稳固：只要能拿到 finish_reason/token 用量与按某种客观指标排序的『重要性』标签，这套排除法就能复用于判断『遗漏是不是取舍不当』"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "structural_principle",
+      "invalidates_when": "出现某种生成范式使得『一次调用内同时写作与自检』的注意力分配不再互相竞争（例如显式的多阶段规划被模型稳定执行），或本仓换掉写作+找漏两段式架构后，重新测得单次调用内置覆盖检查也能达到相当的覆盖率——目前的证据只支持『在这一版 prompt/模型组合下，独立调用显著更好』",
+      "file": "lesson-self-check-needs-separate-call.md",
+      "content": "## 结论\n\n**写作时的『覆盖检查』和『写一篇好稿』是两个不同的任务，塞进同一次调用会让前者输给\n后者**。写作调用的主要目标是产出流畅、有分析深度的正文，覆盖检查只是众多约束之一；\n在生成过程中，模型对『要不要多提一句某个次要信息点』的决策会被『这句话是否让稿件更好』\n主导，而不是『这个信息点客观上该不该被覆盖』——这是一种隐式的、不透明的取舍，观察者\n只能看到结果（漏了什么），看不到决策过程。把『检查覆盖』单独做成一次调用，让模型的\n唯一任务就是『找出材料里有、稿件里没有的东西』，才能让这个判断摆脱『是否让稿件更好』\n这个竞争性目标的干扰。\n\n## 判断『这是不是合理取舍』的方法：排除替代解释，不要直接假设\n\n观察到模型漏写了材料时，直觉上有两个最省事的解释：『篇幅写不下』和『模型在做合理的\n编辑取舍』。这两个解释都可以用生成过程本身产生的、不需要额外标注的信号直接排除：\n\n- **篇幅够不够**：看 `finish_reason` 是否为 `length`（被截断）以及输出 token 相对上限\n  的占用比例。全部正常收尾（`stop`）且只用了不到两成预算，就排除了『写不下』。\n- **是不是合理取舍**：看某个可独立度量的重要性指标（例如报道篇数）与是否被写入之间\n  有没有对应关系。如果重要性高的内容采纳率也不高（本例核心事件采纳率仅 38–56%），\n  就排除了『按重要性合理筛选』。\n\n只有把这两个最容易被想到的解释都排除掉，『需要一个独立步骤补漏』这个更贵的结论\n（需要多一次调用、多一份成本）才站得住——否则很容易在『可能只是篇幅问题』或\n『模型的取舍其实没错』上打转，迟迟不引入额外机制。**这个排除替代解释的方法，比\n『41.1%→51.9%』这个具体覆盖率数字更值得在其他场景复用**：任何观察到生成内容有遗漏\n时，都可以先用现成的元数据信号（完成原因、长度用量、独立于生成过程的重要性排序）\n挡掉『空间不够』和『合理筛选』这两个最常见的辩护，再决定要不要引入额外的检查步骤。\n\n## 为什么不随架构死\n\n『生成任务里的隐式约束会输给主要目标』是任何多目标生成场景的通用现象，不是新闻简报\n写作专属——概括语言模型的注意力分配特性，而不是某一版 prompt 的具体表现。换任何模型、\n换任何具体的『补漏』实现，这条关于『竞争性目标会互相压制』的机制预期仍然成立；会变的\n只是压制的具体数字。\n\n## 与其他补漏经验的关系（不合并、只对照）\n\n本地会话记忆记录的『两遍法』修法（合成层漏报 13.4%→0%，先去编造再补漏，且补录内容不\n经 LLM、程序化拼装）解决的是**故事级**遗漏（整份简报该收哪些候选故事），本条经验解决的\n是**信息点级**遗漏（单个 story block 内该覆盖材料里的哪些点）。两者共享『生成与检查\n分离、且顺序要先处理更严重的失真类问题再补遗漏』这一更高层的结构原则，但任务粒度、\n实现代码、验证数据都不同，是该原则在两个层面各自独立验证的实例，不构成重复。\n\n## 关联\n\n由 [[experiment-gap-check-independent-call]] 产生。与\n[[lesson-ask-for-judgement-not-facts]] 同属 briefEvidence.ts 这一轮写作层重设计\n（2026-09-08）产生的两条经验。"
     },
     {
       "id": "lesson-single-link-merge-falsified",
@@ -3410,7 +3989,7 @@
       "type": "lesson",
       "title": "三个簇上看到的机制差异，补到五个簇就消失了——n=5 只能分辨量级差异",
       "date": "2026-09-19",
-      "status": "recorded",
+      "status": "superseded",
       "tasks": [
         "演化组合架构",
         "设计验收门"
@@ -3445,6 +4024,28 @@
       "invalidates_when": "在跨日期簇上重测，消息源剥离类的判定不再出现，或出现大量误判",
       "file": "lesson-source-stripping-undetected.md",
       "content": "**怎么发现的**：定向抽查 direct-raw 的高危句时，c43 有一句把\n`according to the Venice Film Festival's official synopsis` 去掉，把一方的说法写成了陈述。\n判官标 `ok`——**而按当时的四档定义它没判错**：`ok` 档明写「正确的推断、**合理省略**、明示的判断语，\n都不扣分」，四档里没有任何一档说剥掉消息源是缺陷。\n\n**所以这不是检出能力问题，是守则的定义缺口。** 判官召回 80%（见\n[[experiment-scorer-detection-recall-natural]]），它看得见，只是守则没让它扣分。\n\n### 补的那一条\n\n```\n消息源剥离：原句写「X 说」「据 Y 简介」「据称」，成稿去掉归属、直接当事实陈述。\n至少判 distortion；若该说法在证据里被另一方否认、无人证实、或同一消息源自相矛盾，\n读者形成的假信念更强 → 判 hard。\n这一类不算「合理省略」—— 省掉的恰恰是读者判断可信度的依据。\n```\n\n### 效果\n\n补之前 fatal/hard 在所有测过的格子上**全是 0**，正确性那道门形同虚设，\n实际在筛臂的只有覆盖率一条轴。补之后立刻抓到实质的东西：\n\n- `direct-raw-routed` c7：「这一说法由美国太空军作出」——证据里是 `reports indicated` 这类无主来源，**凭空安上一个官方机构**\n- `direct-raw-routed` c43：「被炸死的两人是哈马斯工程师」——这是**以色列方的单方指认**，独立记述只称「两名巴勒斯坦人」\n- `direct-raw-routed-storyline` c36：把「伊朗单方面说」的推迟原因写成既定陈述（2 条）\n\n**一条守则就把一条退化的轴救活了。** 它抓的正是「简报骗读者」的典型方式——\n不是编造事实，是把一方的说法写成公认的事实。"
+    },
+    {
+      "id": "lesson-story-validation-verify-precision-recall-tradeoff",
+      "type": "lesson",
+      "title": "故事验证的精度与召回是硬取舍：拆得越严去伪存真越准，漏掉的真实事件也越多，不存在两头都好的免费操作",
+      "date": "2026-08-20",
+      "status": "recorded",
+      "tasks": [
+        "治故事过拆",
+        "设计验收门"
+      ],
+      "scope": "任何『候选生成 → 二审收紧』两段式的验证/过滤管线，尤其是候选生成阶段本就允许过召回（宁可多召回，交给下一段收紧）",
+      "source": "services/meridian-ai-worker/src/prompts/storyValidation.ts:182-188；services/meridian-ai-worker/src/services/story-validation.ts:65-73",
+      "conditions": [
+        "『净赚』的判断依赖下游只消费排序后的前 K 条这一前提，见 experiment-story-validation-verify-stage-tradeoff 的适用边界说明——下游若改为消费全部通过项，结论会反转",
+        "本节点讨论的是 story-validation 自身『二审严格到什么程度』这一维度上的取舍，与聚类阶段该不该追求高召回是两个不同的环节职责（聚类阶段的职责边界见用户 memory clustering-recall-first-metrics：聚类该量覆盖率和事件完整率，甄别是 story-validation 的活；本节点讨论的正是『甄别』这一环节内部的取舍，不与该分工原则冲突）"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "tradeoff",
+      "invalidates_when": "若能找到一种收紧方式在同一批数据上同时提升事件召回与严精度（而不是此消彼长），则『二审必然拿召回换精度』这一结论对该收紧方式失效，需要具体到那种方式重新验证；目前的证据只支持『复核这一特定二审 prompt 设计』存在此取舍",
+      "file": "lesson-story-validation-verify-precision-recall-tradeoff.md",
+      "content": "## 数字本身随架构死，取舍关系不死\n\n[[experiment-story-validation-verify-stage-tradeoff]] 给出的具体数字\n（103→74、98%→76%、75.7%→89.2%、53.3%→93.3%）绑定在这一版复核 prompt 与这一批数据上，\n换 prompt、换判官模型，这些数字会变。但它们共同指向的关系——**候选生成阶段刻意放宽召回，\n把『去伪』的责任交给专门的二审步骤，二审步骤越严格，精度提升的同时召回必然下降**——\n是这类『生成→收紧』两段式管线的结构性质，不是某一版实现的偶然表现。\n\n道理很直接：候选生成阶段判官本身允许一定误判空间（宽松找出所有可能的『同事件子集』），\n二审的任务定义就是『抓住第一遍的过度合并』（storyValidation.ts 原文：「first pass is\nknown to over-merge... catch exactly that」）。既然二审的判定标准比第一遍更严，\n它必然会把一部分第一遍判对的真实事件也当成误判撤销掉——严格标准不可能只筛掉假阳性\n而不误伤真阳性，除非这个二审判官对『同一事件』的判断能力是完美的。这个结构在任何\n『先宽后严』的两段式过滤管线里都成立，跟具体是新闻聚类还是别的领域无关。\n\n## 什么时候『拿召回换精度』是净赚，什么时候不是\n\n`storyValidation.ts` 给出的『净赚』结论是有前提的：下游 `maxStoriesToGenerate` 只消费\n排序后的前 15 条，所以复核阶段召回的损失（98%→76%）主要落在本就进不了前 15 的低分故事上，\n而前 15 条本身的精度反而从 53.3% 大幅提升到 93.3%。**如果下游改成消费全部通过项**\n（例如某天新闻量小、通过的故事数不足 15），复核阶段丢掉的近四分之一真实事件就会\n直接变成漏报，'净赚'的判断就会反转。这个前提本身也不是架构无关的常量，任何要复用\n这条经验的场景都需要先确认自己的下游消费方式是否也是『只取排序后前 K 条』。\n\n## 关联\n\n来自 [[experiment-story-validation-verify-stage-tradeoff]]。本节点对\n[[lesson-llm-oversplits-single-large-event]] 有一条警示关系——不要把本节点的『收紧=精度换召回』\n误读为『拆得越细越好』，单一大事件的大簇上过细拆分本身就是失败模式，与这里讨论的\n『二审严格度』不是同一个维度。用户 memory 中的 `storyvalidation-known-issues`\n另记录了同一环节三个尚未修复的问题（伞状糊/maxTokens 打满复读/调用失败伪装成\nNO_STORIES），与本节点讨论的精度/召回取舍是互补但独立的问题。"
     },
     {
       "id": "lesson-storyline-filter-holds-on-superbag",
@@ -3485,6 +4086,28 @@
       "invalidates_when": "新机制或样本改变后，需重新比较覆盖与事实错",
       "file": "lesson-three-arm-tradeoff.md",
       "content": "direct-raw 6/7 核心、hard=4；structure-router 1/7、hard=0；evidence-graph 0/7、hard=0。局部优势只构成机制提炼假设，不能由整体对照直接归因到单一组件。"
+    },
+    {
+      "id": "lesson-veto-power-must-match-evidence-certainty",
+      "type": "lesson",
+      "title": "单票否决权要配得上证据的确定性：LLM 单条判决不配，代码坐实的硬冲突才配",
+      "date": "2026-07-11",
+      "status": "recorded",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "任何『多条独立判定汇总成一个整体通过/拒绝决策』的验收门场景，判定来源既包含 LLM 判官又包含确定性代码比对",
+      "source": "services/meridian-ai-worker/src/services/faithfulness-check.ts:14-19, 24-28, 128-138",
+      "conditions": [
+        "本结论的两条证据分别来自不同性质的判定：LLM 单条 claim 判决（noisy，held-out 12 条误拦 2/12）与代码坐实的数值/日期区间比对（deterministic，精度 0.833~1.0）",
+        "『单票否决』特指某一类判定只要出现 1 次就否决整个产出，不区分该判定的置信度来源"
+      ],
+      "evidence_origin": "local_record",
+      "kind": "tradeoff",
+      "invalidates_when": "换一种判定来源后，若能证明某类『非确定性』判定的单条错误率也能压到与确定性证据同一量级（本节点的参照锚点是 extract-compare 通道的 0.833~1.0 精度），则该类判定也可以被给予单票否决权——需要新的精度实测支撑，不能凭直觉放开",
+      "file": "lesson-veto-power-must-match-evidence-certainty.md",
+      "content": "## 两条独立证据指向同一个设计原则\n\n[[experiment-faithfulness-single-vote-veto-risk]]：LLM 单条 claim 判决用于一票否决时，\n12 条 held-out 里 2 条被误拦（17%），且误拦可稳定复现（RUNS=5 确定型）——单条噪声判决\n被放大成整篇简报的生杀权。\n\n[[experiment-extract-compare-code-verified-precision]]：同样是『单条即拦』，但依据换成\nLLM 只做抽取（逐字引用、禁算术）+ 代码做确定性比对（区间相交）产出的硬冲突后，\n精度实测 0.833~1.0，且两个数据集上都是『修 3 弄坏 0』——单票否决在这里没有放大噪声，\n因为被否决的依据本身噪声很低。\n\n## 为什么这是一条不随架构死的设计原则\n\n差别不在『单票否决』这个机制本身好不好，而在于**否决权的强度必须匹配它所依据的证据的\n确定性**。LLM 给出的单条判决，即便来自『可信通道』（factual κ=0.76），个体判决仍然带有\n不可忽略的噪声，不能单独承担整体否决的责任；只有当证据来源本身是确定性的（代码比对，\n没有『判官抽风』这个自由度）时，单票否决才不会把噪声放大成误伤。这个原则适用于任何\n『LLM 判官 + 汇总门槛』的验收系统设计，与具体是不是忠实度检查无关。\n\n`faithfulness-check.ts` 的门 F 判据正是这条原则的具体实现：(A)(B) 两条给 LLM 判决用占比\n+绝对量双阈做减震（`GATE_CONTRADICTED_RATE=0.05`、`GATE_CONTRADICTED_MIN_COUNT=2`、\n`GATE_UNSUPPORTED_RATE=0.15`、`GATE_UNSUPPORTED_MIN_COUNT=4`，见同文件 129-135 行），\n(C) 单独给代码坐实的硬冲突开单票口子（`GATE_CODE_CONFLICT_MIN_COUNT=1`）。\n\n## 关联\n\n被 [[mechanism-tiered-veto-gate]] 采纳为核心设计依据。"
     },
     {
       "id": "lesson-workers-ai-structured-output-pitfalls",
@@ -4059,6 +4682,30 @@
       "content": "**两个确定性修复,合起来算一个机制**:\n\n1. **补出处**:句中数字/引语若不在被引原句里,去材料池找字面包含它的原句补进 sources。\n   只增不删、只认字面包含,所以不会把出处改错。真实一天 51 篇里补了 19 处,\n   数字缺出处从每批 2–8 句降到 3/248,引语降到 1/248。\n2. **代词句带上前一句**:材料里若某条原句以代词开头或含「he added」这类无主名引述,\n   自动把同篇前一句一起给写作层。治的是 c1 那次把分析师的话安到 Andersson 名下(v6 唯一硬错),\n   加了之后同类错误在后续 18 篇里没再出现。\n\n**为什么值得单独记**:这两条是零 LLM、可判定的,和「靠 prompt 压」形成对照——\n同期用 prompt 禁止编造关系,三次运行仍然出现;而机械补出处的读数是稳定的。"
     },
     {
+      "id": "mechanism-coverage-judge-triangulation",
+      "type": "mechanism",
+      "title": "三尺三角测量：judge + 异家族第二标注 + 决定论对齐器共同标注，分歧交人裁，避免 LLM-judge 自证",
+      "date": "2026-07-07",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门"
+      ],
+      "scope": "验 LLM-judge 本身是否可信的方法论，不限于 coverage-judge 这一个 harness；实例来自 scripts/eval/coverage-judge/",
+      "source": "scripts/eval/coverage-judge/README.md「三尺三角测量」节 + commit d2b6f09（2026-07-07，feat(eval): 覆盖对账判官 κ 验证 harness）",
+      "conditions": [
+        "前提：被验判官（qwen-long）与被评对象（简报生成也用 qwen 家族）同家族，self-preference 风险正是要验的东西",
+        "第二标注器必须是异家族模型（这里用 GPT/codex），理由是与被验判官不共享同一套系统性偏差",
+        "决定论对齐器（无 LLM，专有名词加权词汇重叠）作为第三票，强项是二分类 covered/dropped，弱项是 headline/noteworthy 这种更细的语气/位置判断"
+      ],
+      "evidence_origin": "local_record",
+      "input": "N 条待判样本（此例为 story-disposition 组合），每条同时喂给三个独立标注器：(a) 被验的 LLM judge，(b) 异家族第二 LLM 标注器，(c) 一个不依赖 LLM 的决定论对齐器",
+      "output": "三票一致的样本直接进暂定 gold；三票不一致的样本进 disagreements 清单，由人以「仁慈独裁者」身份裁定后写回 gold.jsonl；最终 gold 按来源分层记录（三尺一致 / 决定论强项区间内的 grounded 复核 / 人裁 / 多数决），供 κ、precision/recall 等指标计算",
+      "limits": "决定论对齐器只在强类别（此例是 covered/dropped 二分类）可信，弱类别（headline/noteworthy）分歧大，不能当作独立第三票用于细粒度判断；异家族第二标注器仍是 LLM，本身可能有系统性偏差，只是与被验判官的偏差方向大概率不同，不是真正独立于「LLM 判断」这件事本身；三角构造成本是 3 次标注 + 1 次人裁，比单判官直接用要贵，只在「这把尺会被长期依赖、错了代价大」时值得做；人裁分歧样本量占比高时（此例 35/112 ≈ 31%）说明这把尺本身的判定边界模糊，仲裁本身也需要写清楚的裁定标准，不能只凭直觉",
+      "invalidates_when": "判官模型换代或被评对象生成模型换代之后（self-preference 的具体形状可能变化），或分歧率显著高于本例的 31%（说明该任务的判定边界比 covered/dropped 更模糊，需要重新设计判定粒度而不是简单加多标注器）",
+      "file": "mechanism-coverage-judge-triangulation.md",
+      "content": "**做法**：coverage-judge 要验证的是\"简报覆盖对账\"判官（`reconcileCoverage`，qwen-long）\n能否可信地把候选 story 判成 headline / noteworthy / dropped 三类，其中 `dropped` 是\n\"合成层漏报\"这个结论的直接依据。因为判官与被评对象（简报生成）同属 qwen 家族，直接拿这个\n判官自己的判定当 gold 有明显的 self-preference 风险——它可能系统性地偏向判自己的生成结果\n\"没问题\"。\n\n解法是三角测量而不是单纯找人工全标：三个独立标注源里，两个是模型（被验判官本身 + 异家族\n的 GPT/codex 做第二标注），第三个完全不用 LLM（决定论的专有名词加权词汇重叠对齐器）。\n三者一致的样本（本例 77/112）可以放心暂定为 gold；不一致的样本（35/112）才需要人工介入，\n而且人工只需要裁「三个信号打架的那一部分」，不需要从零标注全部 112 条——这是这个方法论\n省人力的地方。\n\n**为什么可复用**：这个结构不依赖\"覆盖对账\"这个具体任务，任何要验证 LLM-judge 可信度、\n又担心 judge 与被评对象同源导致自证的场景都能套：找一个异家族模型做第二标注、找一个（哪怕\n弱一点的）非 LLM 信号做第三票、只对三票不一致的子集做人裁。它的成本模型也值得记下——\n不是\"标一遍就完事\"，是\"跑三遍 + 裁一部分\"，比单判官 pipeline 贵，需要判断这把尺是否\n重要到值得这个成本（详见 [[experiment-coverage-judge-kappa-n112]] 里这把尺后续被用来\n验证一次真实的生产修复，值回了成本）。"
+    },
+    {
       "id": "mechanism-dominant-storyline-filter",
       "type": "mechanism",
       "title": "按合并后的主导主线筛文章，再交给下游生成",
@@ -4310,6 +4957,30 @@
       "verification": "development_signal_only",
       "file": "mechanism-support-ranking.md",
       "content": "支持度不是事实真伪；单源受证据完整支持的事实不应被直接淘汰"
+    },
+    {
+      "id": "mechanism-tiered-veto-gate",
+      "type": "mechanism",
+      "title": "分层门控：按证据确定性分级——LLM 噪声判定用占比+绝对量双阈，确定性证据才给单票否决",
+      "date": "2026-07-11",
+      "status": "historical",
+      "tasks": [
+        "治事实关系写错",
+        "设计验收门"
+      ],
+      "scope": "faithfulness-check.ts 的门 F（gateDecision()）；线上默认 mode=code_only，只走确定性通道；mode=full 才会产出 LLM 判决但仍不改变门槛设计",
+      "source": "services/meridian-ai-worker/src/services/faithfulness-check.ts:14-19, 128-138, 490-521（gateDecision 实现）",
+      "conditions": [
+        "阈值具体数值（0.05/2、0.15/4、code_verified 单票门槛 1）是在 judge=qwen-max 下标定的，换模型需要重新标定，见 lesson-analytical-verdict-not-gateable 的 invalidates_when",
+        "2026-07-11 之后线上默认 mode=code_only：LLM 判官整体撤出线上门控，只在离线批跑当预筛；本机制描述的是判据设计本身，不代表当前线上是否真的会触发 (A)(B) 两条（code_only 下 unsupported 恒 0，判据实际由 (C) 主导，见文件 21-22 行）"
+      ],
+      "evidence_origin": "local_record",
+      "input": "一组判定结果，每条判定附带证据确定性标签——分析性判定（analytical，LLM 判官，噪声高、不可对齐）/ 事实性判定（factual，LLM 判官，噪声中等）/ 代码坐实判定（code_verified，确定性比对，噪声低）",
+      "output": "block / pass 二元决策 + block_reasons 明细；analytical 判定完全不参与决策，只作为 warning-only 附带信息",
+      "limits": "① 只解决『同一批判定内部证据确定性不均』的问题，不能替代提高单条判定本身的精度；② 三档阈值都是对当前判官模型的经验标定，不是可推导的理论值，模型或 prompt 换了必须重新标定，否则会继续用旧阈值放行新模型下已经变了性质的判定分布；③ 依赖存在一条可信的确定性证据子通道（如 extract-compare）——没有这条子通道时，分层门控退化为『LLM 判定用双阈、没有单票口子』，仍然优于统一单票，但灵敏度会打折（文件 27 行原文承认『单条真矛盾暂会漏判』）",
+      "invalidates_when": "换判官模型或判定 schema 后，若能证明 LLM 单条判决的精度已经接近确定性证据的量级（本节点参照的锚点区间是 0.833~1.0），分层的必要性下降，可以考虑合并阈值；反之若确定性子通道本身精度下滑到接近 LLM 判决水平，该子通道的单票资格需要撤销重新走双阈",
+      "file": "mechanism-tiered-veto-gate.md",
+      "content": "## 设计的三层结构\n\n1. **analytical 通道**：完全不参与门控（[[lesson-analytical-verdict-not-gateable]] 的直接应用）——判定难度本身对不齐人工，给它否决权只会放大对齐误差。\n2. **factual 通道（LLM 判官）**：占比+绝对量双阈——`contradicted`（矛盾）用 `count>=2 且 rate>=0.05`，`unsupported`（无源脑补）用 `count>=4 且 rate>0.15`。双阈的作用是防止单条噪声判决单独触发拦截（见 [[experiment-faithfulness-single-vote-veto-risk]]）。\n3. **code_verified 通道（代码坐实）**：单票即拦（`count>=1`）。因为这条证据的精度（0.833~1.0，见 [[experiment-extract-compare-code-verified-precision]]）已经高到不需要靠聚合来减震。\n\n## 为什么值得作为可复用机制单独记录\n\n这不是一份\"忠实度检查专用配方\"，而是**任何『多来源判定汇总成一个通过/拒绝决策』的系统**\n都会遇到的结构：不同判定来源的置信度天然不齐（人工规则、LLM 判官、确定性代码比对），\n把它们塞进同一个阈值会让高置信度证据被过度稀释、低置信度证据被过度信任。分层给不同\n确定性等级配不同的否决权重，是这类系统的通用做法（业界对应的是集成学习里\"按基学习器\n置信度加权\"的思路，这里简化成了三档离散权重）。\n\n## 局限：这是标定结果，不是可推导的公式\n\n三个阈值数字本身完全是标定出来的经验值，换模型、换判定粒度都需要重新走一遍\n[[experiment-faithfulness-single-vote-veto-risk]] 那样的 held-out 实测流程才能定下新阈值——\n机制可复用的是\"分三层、按证据确定性配否决权\"这个结构，不是 `0.05/2`、`0.15/4` 这两组具体数字。"
     },
     {
       "id": "mechanism-truncated-sentence-detector",
@@ -5070,6 +5741,21 @@
       "to": "lesson-relation-factor-observability"
     },
     {
+      "from": "experiment-block-consistency-tuning",
+      "type": "yields",
+      "to": "lesson-block-consistency-structural-blind-spot"
+    },
+    {
+      "from": "experiment-candidate-grouping-prompt-model-scan",
+      "type": "yields",
+      "to": "lesson-llm-cannot-partition-event-sets"
+    },
+    {
+      "from": "experiment-claim-proposal-reframe",
+      "type": "yields",
+      "to": "lesson-ask-for-judgement-not-facts"
+    },
+    {
       "from": "experiment-crossover-routed-storyline-dev",
       "type": "yields",
       "to": "lesson-scorer-steers-search"
@@ -5095,9 +5781,24 @@
       "to": "lesson-relation-factor-observability"
     },
     {
+      "from": "experiment-extract-compare-code-verified-precision",
+      "type": "yields",
+      "to": "lesson-veto-power-must-match-evidence-certainty"
+    },
+    {
       "from": "experiment-factor-choice-dev",
       "type": "yields",
       "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-faithfulness-judge-alignment-kappa",
+      "type": "yields",
+      "to": "lesson-analytical-verdict-not-gateable"
+    },
+    {
+      "from": "experiment-faithfulness-single-vote-veto-risk",
+      "type": "yields",
+      "to": "lesson-veto-power-must-match-evidence-certainty"
     },
     {
       "from": "experiment-fresh-dev-frozen-probe",
@@ -5118,6 +5819,11 @@
       "from": "experiment-full-practice-leak-replay",
       "type": "yields",
       "to": "lesson-relation-factor-observability"
+    },
+    {
+      "from": "experiment-gap-check-independent-call",
+      "type": "yields",
+      "to": "lesson-self-check-needs-separate-call"
     },
     {
       "from": "experiment-heldout-binding-verifier",
@@ -5265,6 +5971,11 @@
       "to": "measure-writer-input-anatomy"
     },
     {
+      "from": "experiment-intel-grounding-judge-selection",
+      "type": "yields",
+      "to": "lesson-intel-grounding-readme-stale"
+    },
+    {
       "from": "experiment-isolated-role-repair",
       "type": "yields",
       "to": "lesson-relation-factor-observability"
@@ -5375,9 +6086,29 @@
       "to": "lesson-source-stripping-undetected"
     },
     {
+      "from": "experiment-selection-ndcg-baseline",
+      "type": "yields",
+      "to": "lesson-selection-formula-never-measured"
+    },
+    {
+      "from": "experiment-set-partition-literature-review",
+      "type": "yields",
+      "to": "lesson-llm-cannot-partition-event-sets"
+    },
+    {
       "from": "experiment-specialist-eight",
       "type": "yields",
       "to": "measure-specialist-risk-gate"
+    },
+    {
+      "from": "experiment-story-validation-architecture-error-taxonomy",
+      "type": "yields",
+      "to": "lesson-legal-exclusion-path-prevents-forced-fit"
+    },
+    {
+      "from": "experiment-story-validation-verify-stage-tradeoff",
+      "type": "yields",
+      "to": "lesson-story-validation-verify-precision-recall-tradeoff"
     },
     {
       "from": "experiment-structure-router-c36",
@@ -5491,6 +6222,14 @@
       "to": "mechanism-image-build-stamp-assertion",
       "attributes": {
         "scope": "该机制的第二档（戳值比对）如果把期望填成 repo HEAD，就会变成永久 mismatch，闸最终必然被无视"
+      }
+    },
+    {
+      "from": "lesson-candidate-group-threshold-090",
+      "type": "cautions",
+      "to": "lesson-single-link-merge-falsified",
+      "attributes": {
+        "scope": "补充说明：本仓两处独立的聚合层（候选分组 vs story-dedup）里，候选分组这一处从设计之初就是全链，不是 lesson-single-link-merge-falsified 记录的那次『单链→全链』修复所覆盖的对象；两者共享『全链优于单链』这个算法原理，但不是同一次实验"
       }
     },
     {
@@ -5632,6 +6371,14 @@
       "to": "mechanism-scorer-evidence-retrieval",
       "attributes": {
         "scope": "证据换成检索并不会自动让「剥掉消息源」被扣分，那要靠 grading instructions 里单独写一档"
+      }
+    },
+    {
+      "from": "lesson-story-validation-verify-precision-recall-tradeoff",
+      "type": "cautions",
+      "to": "lesson-llm-oversplits-single-large-event",
+      "attributes": {
+        "scope": "把这条『收紧验证提升精度』的取舍外推成『验证越严越好、拆分越细越好』时，在单一大事件的大簇上会撞见完全不同的失败模式——过细的拆分本身就是缺陷（91 篇报道被切成 22 个故事），不是可以无限换取的精度"
       }
     },
     {
@@ -5818,6 +6565,11 @@
       "to": "lesson-judge-needs-alignment"
     },
     {
+      "from": "mechanism-coverage-judge-triangulation",
+      "type": "based_on",
+      "to": "experiment-coverage-judge-kappa-n112"
+    },
+    {
       "from": "mechanism-dominant-storyline-filter",
       "type": "justified_by",
       "to": "lesson-scorer-steers-search"
@@ -5879,6 +6631,16 @@
       "from": "mechanism-support-ranking",
       "type": "justified_by",
       "to": "lesson-three-arm-tradeoff"
+    },
+    {
+      "from": "mechanism-tiered-veto-gate",
+      "type": "justified_by",
+      "to": "lesson-veto-power-must-match-evidence-certainty"
+    },
+    {
+      "from": "mechanism-tiered-veto-gate",
+      "type": "justified_by",
+      "to": "lesson-analytical-verdict-not-gateable"
     },
     {
       "from": "mechanism-write-once-at-end",

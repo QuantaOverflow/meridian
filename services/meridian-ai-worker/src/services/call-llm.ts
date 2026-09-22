@@ -40,23 +40,9 @@ export interface PhaseDefault {
 // executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
 export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   story_validation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000, skipCache: true },
-  // frequency_penalty：复读退化是本仓最常发作的模型失效（已四次：storyValidation maxTokens
-  // 打满、写作层初稿 12,407 字符、RARR 66 条 edit 去重后剩 3 条、2026-09-10 情报报告 Facts
-  // 同一行复读 400 次）。这条路径此前**完全没有防护**——2026-09-10 实测大簇六次"超时"
-  // （每次 ~230 秒才失败）全是复读在烧 token，加上这个参数后同一个簇 54 秒跑完。
-  // 它是缓解不是解药（实测降低概率但没治住），真正挡住要靠解析处的重复检测。
-  // maxTokens 8192 → 16384（2026-09-10）：prompt 现在要求"列出所有被引述的人和机构，
-  // 不只是主角"，16 篇的簇产出比旧 schema 长得多。8192 处截断的后果是**残缺报告直接落 R2**
-  // ——iter0 那次就是在 8192 打满后复读。截断没有报错路径，只有下游"这段怎么少了半句"。
-  intelligence_analysis: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 16384, skipCache: true, frequencyPenalty: 0.4 },
   // 去重确认 + 起标题：输出只有一个布尔加一句标题，300 token 绰绰有余。
   // temperature 0 —— 同一组故事每次都该得到同一个判定，这是判定不是创作。
   story_merge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 300, skipCache: true },
-  // 环1 RARR 接地校验：与情报分析同模型（需长上下文喂全部源），但 temp 0（edit-list 要确定性）。
-  // maxTokens 维持 4000——2026-08-15 run 实测未截断响应的 completion_tokens 是 217..1853（21 条 edit
-  // 已是最长的一份），4000 有 2 倍余量。**打满 4000 的那 4 份不是"清单太长"而是复读退化**
-  // （span 去重后只剩 1/1/3/3 条，最高一条重复 64 次），加预算只会让循环跑更久，故不加。
-  intel_grounding_verify: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 4000, skipCache: true },
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；

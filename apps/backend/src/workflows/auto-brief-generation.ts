@@ -1481,16 +1481,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 旧的 intelligence_analysis 随报告层一并退役。
       // =====================================================================
 
-      // ⚠️ 已无引用：报告层退役后没有调用点。留着不删（回滚旧链路时要用）。
-      // 情报分析按「每故事一个 step」拆开，所以这份配置是**单个故事**的量级，不再是整批。
-      // timeout 10 分钟：实测单次 ai-worker 调用 p95 约 2.7 分钟、最慢 6.5 分钟(2026-08-26 生产数据)，留一倍余量。
-      // retries 提到 2：拆开后重试只重跑一个故事、一次 LLM 调用，不再是整批 25 个重来，
-      // 所以可以多给一次机会——这正是治 2026-08-26 那次整期丢失的关键。
-      const perStoryIntelStepConfig: WorkflowStepConfig = {
-        retries: { limit: 2, delay: '10 seconds', backoff: 'linear' },
-        timeout: '10 minutes',
-      };
-
       // story 去重层（story-dedup）与「去重后再分主线」的两段式都已退役：文章级划分下
       // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。相关代码留在
       // lib/core/story-dedup.ts 里未删（跨期线索合并仍可能用到），但不在简报主链路上。

@@ -23,7 +23,6 @@ Meridian AI Worker 是一个基于 Cloudflare Workers 的 AI 网关服务，采�
 │         Service Layer              │
 │  ┌─────────────────────────────────┐ │
 │  │    AIGatewayService             │ │
-│  │    IntelligenceService          │ │
 │  │    AuthenticationService        │ │
 │  │    RetryService                 │ │
 │  │    Logger                       │ │

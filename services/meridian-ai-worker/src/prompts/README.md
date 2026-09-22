@@ -14,10 +14,6 @@
   - 用于验证文章聚类是否构成一个连贯的故事
   - 被 `/meridian/story/validate` 端点使用
 
-- **`intelligenceAnalysis.ts`** - 情报分析提示词
-  - 用于深度分析故事聚类，生成结构化情报报告
-  - 被 `IntelligenceService.analyzeStory()` 方法使用
-
 ### 简报生成 Prompts
 
 - **`briefGeneration.ts`** - 简报生成提示词集合

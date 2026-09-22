@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { AIGatewayService } from './services/ai-gateway'
-import { IntelligenceService } from './services/intelligence'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
@@ -15,7 +14,6 @@ import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/artic
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
 import { CloudflareEnv, ChatResponse } from './types'
 import { APIResponse, ArticleItem } from './types/api'
-import { StorySchema } from './types/intelligence-types'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
 type HonoEnv = {
@@ -252,71 +250,6 @@ app.post('/meridian/article/analyze', async (c) => {
   }
 })
 
-
-// ============================================================================
-// Intelligence Analysis - 符合 intelligence-pipeline.test.ts 契约
-// ============================================================================
-
-
-app.post('/meridian/intelligence/analyze-single-story', async (c) => {
-  try {
-    const body = await c.req.json()
-
-    // story 形状必须在边界处运行时校验：跨 service 调用走 JSON，TS 类型已被抹掉。
-    // 缺字段(曾经的 articleIds 丢失)若不在此拦下，会潜到 service 里变成 undefined.length 的 TypeError。
-    const storyParse = StorySchema.safeParse(body?.story)
-    if (!storyParse.success) {
-      const detail = storyParse.error.issues.map(i => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
-      return c.json<APIResponse<null>>({
-        success: false,
-        error: `Invalid story payload: ${detail}`
-      }, 400)
-    }
-    // articleData 保持轻校验(非空数组)：不套严格 ArticleSchema，避免 publishDate/url 格式差异误拒真实数据。
-    if (!Array.isArray(body.articleData) || body.articleData.length === 0) {
-      return c.json<APIResponse<null>>({
-        success: false,
-        error: 'articleData (Article[]) is required and must be a non-empty array'
-      }, 400)
-    }
-
-    console.log(`[Intelligence] 分析单个故事: ${storyParse.data.title}`)
-
-    // selfCorrect = 报告层 RARR 接地校验。**默认关**（报告是中间产物，成稿那步有自己的 RARR）——
-    // 见 services/intelligence.ts 的注释。要做对照实验就显式传 selfCorrect: true。
-    // skipCache 默认 false（生产照常走缓存）；eval 重问同一 story 须传 true 保证独立采样。
-    const intelligenceService = new IntelligenceService(c.env, readTraceContext(c.req.raw), {
-      selfCorrect: body.selfCorrect,
-      skipCache: body.skipCache === true,
-    })
-    const result = await intelligenceService.analyzeSingleStory(storyParse.data, body.articleData)
-    
-    if (result.success) {
-      return c.json<APIResponse<any>>({
-        success: true,
-        data: result.data,
-        metadata: {
-          story_title: body.story.title,
-          article_count: body.articleData.length,
-          analysis_method: 'single_story_analysis_v2'
-        }
-      })
-    } else {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: result.error || 'Single story analysis failed'
-      }, 500)
-    }
-    
-  } catch (error: any) {
-    console.error('Single story analysis error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to analyze single story',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
 
 /**
  * 簇判定：一个聚类簇 = 简报里的一条。一次调用同时回答「这簇是不是一件事」与「这件事叫什么」。

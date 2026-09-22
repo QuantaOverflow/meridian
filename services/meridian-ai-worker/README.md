@@ -13,7 +13,6 @@ Meridian AI Worker adopts a clear layered architecture with well-defined respons
 │                  Service Layer                │  (Core business logic, AI capability coordination, provider calls)
 │  ┌───────────────────────────────────────────┐│
 │  │ AIGatewayService (Core AI request dispatch & enhancement) ││
-│  │ IntelligenceService (Intelligence analysis workflow)      ││
 │  │ BriefGenerationService (Brief generation workflow)       ││
 │  │ StoryValidationService (Story validation workflow)       ││
 │  │ AuthenticationService (Authentication & authorization)    ││
@@ -174,7 +173,6 @@ Called by other production workflows (article ingestion, not the brief pipeline)
 Still present in code but **not called by any production workflow** (retired report-layer pipeline; see notice above):
 - `POST /meridian/story/validate` - Validate article clusters as stories
 - `POST /meridian/intelligence/analyze-stories` - Analyze multiple stories
-- `POST /meridian/intelligence/analyze-single-story` - Analyze single story
 - `POST /meridian/generate-final-brief` - Generate comprehensive brief
 
 Utility:

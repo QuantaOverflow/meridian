@@ -2092,7 +2092,7 @@
         "设计验收门"
       ],
       "scope": "仅 eval/intel-grounding/ 这把「情报报告是否忠实于其输入 RSS 文章」的判官；不代表 faithfulness/coverage-judge 等其他判官，也不代表情报层本身的忠实度水平",
-      "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；eval/intel-grounding/gold/judge-gold.jsonl（100 条）、gold/human-adjudicated.jsonl（24 条）、gold/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
+      "source": "commit 36e186a（2026-07-10，fix(eval): 环1金标7条争议人裁终裁+政策入rubric+合成contradicted扩至26条）；eval/_data/intel-grounding-v1/labels.jsonl（100 条）、eval/_data/intel-grounding-v1/human-adjudicated.jsonl（24 条）、eval/_data/intel-grounding-v1/synthetic-contradicted.jsonl（26 条）；本地 gitignored 产物 eval/intel-grounding/out/judge-meta/*.json（2026-07-08~11，7 份，仅 qwen-max 与 deepseek-v3 两个 judge_model，无 claude-* 记录）",
       "conditions": [
         "judge-gold.jsonl 共 100 条 factual claim，终裁后 factual=88 supported / 4 unsupported / 8 contradicted；其中 7 条经用户二次人裁终裁（缺口类断言、日期可源内推算类归为 contradicted、复合 claim 逐成分核源，政策写进 rubric.md 的「人裁终裁政策」节）",
         "human-adjudicated.jsonl 24 条是另一批人裁样本，用于交叉核验",
@@ -2111,7 +2111,7 @@
       "cost": "未知——commit message 未记录调用量与费用；judge-gold 100 条 + synthetic 26 条 + human-adjudicated 24 条的多轮标注、多模型验证成本未留痕",
       "record_completeness": "summary_only",
       "file": "experiment-intel-grounding-judge-selection.md",
-      "content": "## 为什么这组读数值钱\n\n这是本仓少数几次**真正跑过 κ 验收**的判官选型实测：三个候选家族（Claude / qwen-max /\ndeepseek-v3）在同一份人工终裁金标上，只有 Claude 过闸，另外两个都 FAIL，且失败模式不同——\nqwen 在 entity/direction 类合成扰动上几乎瞎猜，deepseek 干脆在 synthetic 集上 κ=0（全猜\nsupported 或某个众数类）。这是判官选型问题的一个具体反例：**同一套 rubric、同一份金标，\n换判官模型，κ 从 0.779 掉到 0.407 甚至 0**——选错判官比选错 prompt 更致命，且很难靠调\nprompt 补救（qwen 与 deepseek 都没有再调过 prompt 重跑的记录，commit message 直接给出\n\"换非 Qwen 家族 judge\" 的结论方向，与 README「还差什么」节写的路线一致）。\n\n以后任何要接 LLM-judge 的 harness，都会重新面对「用哪家模型当判官」这个问题，这组读数是\n可以直接引用的先例：**不要默认判官模型能通用**，尤其当被评对象本身也是由同家族模型生成时\n（情报报告由 qwen-long 生成，若判官也用 qwen 家族，self-preference 风险更高，这也是\ncommit message 与 README「还差什么」节共同指出的方向）。\n\n## Claude 的 0.779 比看起来脆弱\n\ncommit message 原文把 Claude 判官的结果标注为「离线」且「待真API重验」，这两个词组合起来\n的含义是：κ=0.779 这个数字**不是**通过 `meta-eval.ts` 打真实 Anthropic API 跑出来的，而是\n某种离线核算（很可能是当时的 Claude Code session 自己模拟/复核判定，而非独立调用）。\n本地 `out/judge-meta/` 目录里现存的全部 7 份 meta 产物（2026-07-08～07-11，均是 gitignored\n的运行报告，不在 git 里）逐一核对过 `judge_model` 字段，只有 `qwen-max` 和 `deepseek-v3`，\n一份 `claude-*` 的记录都没有。也就是说，从 commit 36e186a 之后，**这次「待复验」从未兑现过**\n——无论是因为真的没有再跑，还是跑过没有落盘。在没有找到反证之前，Claude κ=0.779 应该被当作\n「一次未经独立 API 复验的乐观读数」，不能等同于 qwen/deepseek 那两组有真实 API 调用记录支撑\n的失败读数。\n\n## 金标构成与人裁终裁\n\njudge-gold.jsonl 的 100 条不是一次性标注定案的：commit 36e186a 是对其中 7 条争议样本做\n第二轮人工终裁（用户本人裁定，带 note 留痕），终裁后 factual 类别分布是 88 supported /\n4 unsupported / 8 contradicted。这次终裁同时把裁定标准写进了 `rubric.md` 的「人裁终裁\n政策」节——起因是两个 session 对同一批样本裁出过相反结果，根因是当时 rubric 没有明确写\n「缺口类断言算什么」「日期能不能源内推算」「复合 claim 要不要逐成分核」，堵上这个口子后\n才有了可复现的终裁标准。这段方法论（分歧样本人裁、把裁定标准回写进 rubric）本身也值得\n被后续判官选型工作复用，但本节点只记录数字读数，方法论部分见协作机制类节点（如后续需要，\n可另开 [[mechanism-coverage-judge-triangulation]] 一类节点做跨 harness 的对比）。"
+      "content": "## 为什么这组读数值钱\n\n这是本仓少数几次**真正跑过 κ 验收**的判官选型实测：三个候选家族（Claude / qwen-max /\ndeepseek-v3）在同一份人工终裁金标上，只有 Claude 过闸，另外两个都 FAIL，且失败模式不同——\nqwen 在 entity/direction 类合成扰动上几乎瞎猜，deepseek 干脆在 synthetic 集上 κ=0（全猜\nsupported 或某个众数类）。这是判官选型问题的一个具体反例：**同一套 rubric、同一份金标，\n换判官模型，κ 从 0.779 掉到 0.407 甚至 0**——选错判官比选错 prompt 更致命，且很难靠调\nprompt 补救（qwen 与 deepseek 都没有再调过 prompt 重跑的记录，commit message 直接给出\n\"换非 Qwen 家族 judge\" 的结论方向，与 README「还差什么」节写的路线一致）。\n\n以后任何要接 LLM-judge 的 harness，都会重新面对「用哪家模型当判官」这个问题，这组读数是\n可以直接引用的先例：**不要默认判官模型能通用**，尤其当被评对象本身也是由同家族模型生成时\n（情报报告由 qwen-long 生成，若判官也用 qwen 家族，self-preference 风险更高，这也是\ncommit message 与 README「还差什么」节共同指出的方向）。\n\n## Claude 的 0.779 比看起来脆弱\n\ncommit message 原文把 Claude 判官的结果标注为「离线」且「待真API重验」，这两个词组合起来\n的含义是：κ=0.779 这个数字**不是**通过 `meta-eval.ts` 打真实 Anthropic API 跑出来的，而是\n某种离线核算（很可能是当时的 Claude Code session 自己模拟/复核判定，而非独立调用）。\n本地 `out/judge-meta/` 目录里现存的全部 7 份 meta 产物（2026-07-08～07-11，均是 gitignored\n的运行报告，不在 git 里）逐一核对过 `judge_model` 字段，只有 `qwen-max` 和 `deepseek-v3`，\n一份 `claude-*` 的记录都没有。也就是说，从 commit 36e186a 之后，**这次「待复验」从未兑现过**\n——无论是因为真的没有再跑，还是跑过没有落盘。在没有找到反证之前，Claude κ=0.779 应该被当作\n「一次未经独立 API 复验的乐观读数」，不能等同于 qwen/deepseek 那两组有真实 API 调用记录支撑\n的失败读数。\n\n## 第二个脆弱点：88/12 的分布让 κ 只是个点估计（2026-09-23 补）\n\n上一节说的是「这个数没经过真 API 复验」。这一节说的是：**就算复验了，它也不该被当成硬读数。**\n\n100 条里 88 条是 `supported`，少数类（4 unsupported + 8 contradicted）总共 **12 条**。\n\n- 一个什么都不判、对所有条目都答 `supported` 的假判官，在这批上拿 **88% 准确率**\n- κ 会校正这种偶然一致，所以 κ 比准确率诚实。但它的分母里少数类只有 12 条——\n  判官在这 12 条上多对一条少对一条，κ 就大幅摆动。**0.779 是点估计，置信区间很宽**，\n  而本节点原先只记了那个点\n\nHamel Husain 对 LLM-as-judge 的说法可以直接套在这里：agreement 是**陷阱指标**，\n样本不平衡时判官把少数类全判错也能拿高一致率，**而少数类恰恰是你在乎的失败**——\n这里就是幻觉（unsupported + contradicted）。\n\n所以引用这组读数时：\n\n1. 不要把 κ=0.779 引用到小数点后三位当结论\n2. 该看的是**少数类那一侧的召回**（原记录有：unsupported 0.75、contradicted 0.875，\n   分母分别是 4 和 8——同样是极小样本上的比例）\n3. 三个判官之间的**排序**（Claude ≫ qwen ≫ deepseek）比任何单个数字可信，\n   因为排序在这个分布下仍然稳健\n\n顺带：这份金标自己的 `rubric.md` §6 明确要求「分层并过采稀有类，否则全是 supported，\n幻觉类召回算不出来」。**本批没做到**——这是标注流程没执行到位，不是判官的问题。\n分布与限制现已写进 `eval/_data/intel-grounding-v1/manifest.json` 的 `labelBalance`\n与 `limitations`，`check.mjs` 会对账那个分布，手填错一个数就非零退出。\n\n## 金标构成与人裁终裁\n\njudge-gold.jsonl 的 100 条不是一次性标注定案的：commit 36e186a 是对其中 7 条争议样本做\n第二轮人工终裁（用户本人裁定，带 note 留痕），终裁后 factual 类别分布是 88 supported /\n4 unsupported / 8 contradicted。这次终裁同时把裁定标准写进了 `rubric.md` 的「人裁终裁\n政策」节——起因是两个 session 对同一批样本裁出过相反结果，根因是当时 rubric 没有明确写\n「缺口类断言算什么」「日期能不能源内推算」「复合 claim 要不要逐成分核」，堵上这个口子后\n才有了可复现的终裁标准。这段方法论（分歧样本人裁、把裁定标准回写进 rubric）本身也值得\n被后续判官选型工作复用，但本节点只记录数字读数，方法论部分见协作机制类节点（如后续需要，\n可另开 [[mechanism-coverage-judge-triangulation]] 一类节点做跨 harness 的对比）。"
     },
     {
       "id": "experiment-isolated-role-repair",
@@ -4752,6 +4752,33 @@
       "content": "八句局部有效、扩展失败；隔离不是充分语义安全保证"
     },
     {
+      "id": "mechanism-gold-survival-by-evidence-frame",
+      "type": "mechanism",
+      "title": "判金标能否跨架构存活：看证据的参照系是外部素材还是系统中间产物——后者随那一层退役即作废",
+      "date": "2026-09-23",
+      "status": "recorded",
+      "tasks": [
+        "设计验收门",
+        "做 eval"
+      ],
+      "scope": "判定「一份已有金标在被测系统换架构之后还能不能用」，以及建新金标时该怎么存证据；不判定金标的标注质量，也不判定它测得准不准",
+      "source": "2026-09-23 金标统一迁进 eval/_data/ 时逐份判定的结果；实例为 eval/_data/intel-grounding-v1/（存活）与已删的 eval/faithfulness/gold/（作废）；判据已落成 eval/_data/check.mjs 的 evidence.kind 字段",
+      "conditions": [
+        "适用前提：金标的形式是 (claim, 证据) → 判定。判定只有在证据在手时才能复现，所以问题等价于「那份证据还在不在、还能不能产生」",
+        "不适用：target 直接是输入自身性质的金标（例如「这两篇文章讲不讲同一件事」），那类天然不依赖系统产物，恒久有效——它们是本判据的平凡情形",
+        "判定所需材料：打开证据快照文件看里面存的是什么。不能只看字段名或 README 声称"
+      ],
+      "evidence_origin": "local_record",
+      "input": "一份已有金标：标签文件 + 它的证据快照（或重建方式）",
+      "output": "二分类 evidence.kind —— raw_source（证据是外部素材，换任何架构仍成立，长期保留）或 retired_intermediate（证据是系统某一层的中间产物，那一层退役即作废，属消耗品）。判定结果决定该份金标是资产还是消耗品，以及它是否还配继续占着维护注意力",
+      "limits": "字段是自报的，脚本只校验取值合法、不校验内容真伪——有人把中间产物标成 raw_source，校验一样放行。曾考虑加弱检测（标成 raw_source 但证据里一个外部 URL 都没有则告警），否决了：会误判，而一个会误判的检查比没有检查更糟，它训练人忽略告警。这个字段的价值不在验证，在两处：(a) 逼写的人在创建金标时回答一次这个问题——faithfulness 当初就没人问；(b) 它决定哪些别的字段变成必填（retired_intermediate 必须同时写重建方式或明说无法重建）",
+      "invalidates_when": "若出现一份金标，它的证据虽然是系统中间产物、但那一层被证明会长期稳定存在（例如冻结成契约、或有独立的兼容性保证），则二分类不够用，需要第三档「中间产物但受保护」。另一种失效：若将来能把证据重建做成确定性且零成本的（例如中间产物可由原始素材确定性复算），raw_source 与 retired_intermediate 的区别就退化成「重建贵不贵」，判据应改为按重建成本分档",
+      "verification": "两个真实实例上判定正确，均为回溯判定（2026-09-23 对已有金标做），不是预先设计后验证",
+      "cost": "每份金标一次人工检查（打开证据文件看内容、数覆盖率），本轮 8 份共约半小时；之后是一个 JSON 字段，读取成本为零",
+      "file": "mechanism-gold-survival-by-evidence-frame.md",
+      "content": "## 判据\n\n金标的本质是 `(claim, 证据) → 判定`。判定只有在证据在手时才能复现。\n所以「这份金标还能不能用」等价于「它的证据还在不在」。\n\n| 参照系 | 结果 |\n|---|---|\n| **外部素材**（原始 RSS 文章、抓取到的正文） | 换任何架构都还在。金标长期有效 |\n| **系统的中间产物**（情报报告、某版写作层输出） | 那一层退役即消失。金标作废 |\n\n## 两个实例\n\n**`intel-grounding` 活下来。** 它的 `sources.jsonl` 里存的是\n`## [标题](url) (#74312)` 加正文——带外部 URL 的原始新闻，39 个 brief 全覆盖。\n换写作架构之后，「这句话在这簇原文里有没有支撑」照样成立，100 条判定仍可重跑。\n\n**`faithfulness` 作废。** 它判的是「brief 的句子忠不忠于情报报告」，参照系是情报报告；\n报告层随 brief-block-v6 上线退役后，那种东西不再产生。而且它的 `sources.jsonl` 里\n存的是 `You are an elite intelligence analyst...`——**是 prompt，不是报告**，\n109 条判定只覆盖 3 篇简报。语料已于 2026-09-23 删除，读数先蒸馏进了知识库。\n\n## 关键的一点：第三类不是天生的，是做错了\n\n`faithfulness` 不是「天生该死」。如果当初快照时存的是**那些情报报告本身**而不是 prompt，\n它今天就和 `intel-grounding` 一样能用来考判官——失去的只是「代表当前产品」这一层含义，\n不是「能不能跑」。\n\n所以判定的不是三个类别，是**两个类别加一个失误**：\n\n```\nraw_source              外部素材，恒久\nretired_intermediate    中间产物，消耗品——但这是可以做对的：\n                        快照时存「判定依据的那份材料」，不是「生成它的 prompt」\n```\n\n这把「宿命」变成了一个可以做对的操作，也是这条机制真正的可操作部分。\n\n## 与 targetOf 的关系\n\n`targetOf`（考产品还是考判官）与 `evidence.kind` 是**两个正交的维度**，都必填：\n\n- `targetOf` 管**这份金标的分数说的是什么**——判官金标的 claim 由旧架构写出，\n  不管接到哪个 task 上都不代表当前产品会产出什么\n- `evidence.kind` 管**这份金标还能不能跑**\n\n两者都可能因架构变更而失效，但失效方式不同：前者失去意义，后者失去可执行性。\n一份 `targetOf: judge` + `evidence.kind: raw_source` 的金标（intel-grounding 即是）\n不能报产品成绩，但可以无限期用来考判官。\n\n## 落成机制\n\n判据写进 `eval/_data/check.mjs`，每份金标必须声明 `evidence.kind`，取值非法当场非零退出；\n`retired_intermediate` 强制要求同时写 `evidence.rebuild` 或明说无法重建\n（`scorer-recall-v1` 因此被迫写出「语料在本地 gitignored 目录，原机之外无法重建」）。\n\n此前这个判断只能靠人打开文件看，本轮 8 份逐个做了一遍；\n做完才发现它可判定、且早该是个字段。"
+    },
+    {
       "id": "mechanism-image-build-stamp-assertion",
       "type": "mechanism",
       "title": "镜像内构建戳做部署身份断言：RUN date 层排在 COPY ./src 之后，源码变它必变",
@@ -6578,6 +6605,11 @@
       "from": "mechanism-evidence-isolation",
       "type": "justified_by",
       "to": "measure-evidence-bundle-isolation"
+    },
+    {
+      "from": "mechanism-gold-survival-by-evidence-frame",
+      "type": "based_on",
+      "to": "experiment-intel-grounding-judge-selection"
     },
     {
       "from": "mechanism-image-build-stamp-assertion",

@@ -96,6 +96,4 @@ export const articleAnalysisSchema = z.object({
   content_focus: z.array(z.string()),
 });
 
-export type ArticleAnalysisResult = z.infer<typeof articleAnalysisSchema>;
-
 export { getArticleAnalysisPrompt }; 

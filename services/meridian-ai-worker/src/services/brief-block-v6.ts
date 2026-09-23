@@ -65,7 +65,7 @@ const CALL_INDEX_BASE = 600;
  */
 const CALL_INDEX_PER_STORY = 100;
 
-export interface BriefBlockV6ArticleInput {
+interface BriefBlockV6ArticleInput {
   id: number;
   title: string;
   content: string;
@@ -84,7 +84,7 @@ export interface BriefBlockV6Input {
   tier?: V6Tier | string;
 }
 
-export interface BriefBlockV6Trace {
+interface BriefBlockV6Trace {
   articles: number;
   windows: number;
   anchors: number;

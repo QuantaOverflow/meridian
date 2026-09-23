@@ -82,7 +82,7 @@ export interface RankCandidate {
 export const RANK_TOP_N = 12;
 
 /** 落选名单条数。它是唯一能看见模型判据的窗口，便宜，别省。 */
-export const RANK_NEAR_MISS_N = 5;
+const RANK_NEAR_MISS_N = 5;
 
 export function getStoryRankPrompt(candidates: RankCandidate[]): string {
   // 渲染成 JSON 数组、缩进 2——与离线迭代逐字节相同。换成 `[id] title` 纯文本试过，

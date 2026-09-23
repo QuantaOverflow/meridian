@@ -110,28 +110,17 @@ Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列
 | `/observability/trends` | 跨 run 的指标趋势 |
 | `/observability/health/summary` | 健康摘要 |
 
-### 5. 新组件接观测：`traced()`（ai-worker，2026-09）
+### 5. 请求级观测：`observeMiddleware`（ai-worker，2026-09）
 
-ai-worker 里写新组件时，**每个主要步骤包一行**，其余自动：
+步骤级 wrapper `traced()` / `annotate()` 从未有调用方，已删（2026-09）。现在只有请求级这一层：
 
-```ts
-import { annotate, traced } from './observe';
-
-const material = await traced('render', async () => {
-  const m = renderReportForWriter(report);
-  annotate({ chars: m.length });          // 可选：业务读数
-  return m;
-});
-```
-
-- **自动记**：步骤的父子关系（`AsyncLocalStorage`，不用手传 parent）、耗时、成败、异常；步骤里经 `callLLM` / `loggedChat` 的 LLM 调用自动挂到该步骤下（prompt、原始输出、finish_reason、usage）
+- **自动记**：请求本身成一个 span（耗时、成败、异常）；请求内经 `callLLM` / `loggedChat` 的 LLM 调用自动挂到它下面（prompt、原始输出、finish_reason、usage），父子关系靠 `AsyncLocalStorage`，不用手传 parent
 - **去向按请求头选**（`services/observe.ts` 的 `observeMiddleware`）：
   - `x-observe: inline` → 记录随 JSON 响应的 `observation` 字段带回，**不写 R2**。开发 / 验收脚本用（本地 `wrangler dev` 直连生产桶，写了就是污染）
-  - 只有 `x-trace-id` → 步骤写 R2 `observability/spans/`（与 `span-log.ts` 同一套 schema）；LLM I/O 仍由 `llm-call-logger` 落 `llm-calls/`
+  - 只有 `x-trace-id` → 只有 kind=step 的 span 会写 R2 `observability/spans/`，目前没有代码产生，所以实际不写；LLM I/O 仍由 `llm-call-logger` 落 `llm-calls/`
   - 都没有 → 不记，函数照常执行
 - **跨请求**（backend → ai-worker、Workflow step 重试）仍靠 `x-trace-id` 头传；ALS 只在一次请求内有效
 - **没经过 `loggedChat` 的 LLM 调用记不到**（如 `/meridian/chat` 直接调 `aiGateway.chat`）
-- 防漏包：验收脚本可以检查「每条 LLM 调用都挂在某个步骤下」，挂不上说明有步骤没包（样例见 `apps/backend/prototypes/brief-writer-v3/verify.ts` 的 `observed` 门）
 - 设计依据：`docs/engineering-notes/llm-observability-integration-patterns.md`。旧写作链 `brief-generation.ts` 的手写 `recordSpan` 未迁移
 
 ## 监控指标说明

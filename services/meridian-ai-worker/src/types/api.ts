@@ -21,20 +21,6 @@ export interface ArticleItem {
   status: string
 }
 
-export interface StoryAnalysis {
-  overview: string
-  key_developments: string[]
-  stakeholders: string[]
-  implications: string[]
-  outlook: string
-}
-
-export interface BriefContent {
-  title: string
-  content: string
-  tldr?: string
-}
-
 // 请求元数据
 export interface RequestMetadata {
   requestId: string

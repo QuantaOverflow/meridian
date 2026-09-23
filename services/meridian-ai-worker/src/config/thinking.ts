@@ -16,7 +16,7 @@
  *   （2026-08-13 A/B，23 篇生产文章 ×2 轮：thinking OFF 时 content 非空 0/23，
  *    而 reasoning 里是完整的 9 字段 JSON 23/23）
  */
-export const THINKING_OFF_MODELS = ['@cf/zai-org/glm-', '@cf/qwen/qwen3-']
+const THINKING_OFF_MODELS = ['@cf/zai-org/glm-', '@cf/qwen/qwen3-']
 
 /** 该模型是否由我们显式关闭了思维链 */
 export function isThinkingDisabled(modelName: string): boolean {

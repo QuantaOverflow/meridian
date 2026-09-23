@@ -866,6 +866,3 @@ export class AIGatewayService {
     return provider.config.models
   }
 }
-
-// Default export for module compatibility
-export default AIGatewayService

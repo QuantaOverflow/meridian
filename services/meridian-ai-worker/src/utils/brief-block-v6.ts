@@ -52,7 +52,7 @@ export interface V6Sentence {
 /** 窗口字符预算（原型 DIRECT_RAW_WINDOW_CHARS 默认值）。 */
 export const WINDOW_CHARS = 30_000;
 /** 相邻窗口按文章重叠几篇（原型 DIRECT_RAW_OVERLAP_ARTICLES 默认值）。 */
-export const OVERLAP_ARTICLES = 1;
+const OVERLAP_ARTICLES = 1;
 /** 窗口步每条重点的出处上限。REPAIR_FULL=false 这条路径下推导值是 4。 */
 export const ANCHOR_SOURCES = 4;
 /** 写作步：exec 档 3–5 句、每句出处上限 8。 */
@@ -76,10 +76,10 @@ export const V6_TIERS: V6Tier[] = ['lead', 'more', 'brief'];
  */
 export const normalizeTier = (t: unknown): V6Tier => (V6_TIERS.includes(t as V6Tier) ? (t as V6Tier) : 'more');
 /** 必写档的放宽量。MUST_SLACK 在这条路径下的推导值是 0（原型 60–64 行：试过 1，已撤回）。 */
-export const MUST_SLACK = 0;
+const MUST_SLACK = 0;
 
 /** 句子定位：{articleId, sentence} → 原句文本。越界返回 undefined。 */
-export function sentenceOf(sentences: SentenceTable, articleId: number, sentence: number): string | undefined {
+function sentenceOf(sentences: SentenceTable, articleId: number, sentence: number): string | undefined {
   const ss = sentences[String(articleId)];
   if (!ss) return undefined;
   if (!Number.isInteger(sentence) || sentence < 1 || sentence > ss.length) return undefined;
@@ -87,7 +87,7 @@ export function sentenceOf(sentences: SentenceTable, articleId: number, sentence
 }
 
 // ── 窗口切分 ────────────────────────────────────────────────────────────
-export function rawArticle(a: V6Article): string {
+function rawArticle(a: V6Article): string {
   const lines = a.sentences.map((s, i) => `[${a.id}:${i + 1}] ${s}`).join('\n');
   return `## ${a.title}\narticleId=${a.id} published=${a.publishDate} source=${a.sourceId ?? '-'}\n${lines}`;
 }
@@ -130,13 +130,13 @@ export function makeWindows(articles: V6Article[], budget = WINDOW_CHARS, overla
 
 // ── 校验 ────────────────────────────────────────────────────────────────
 /** 出处标签 [articleId:sentence] 不许出现在成稿里（快档 verify.mjs 同一条判据） */
-export const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
+const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
 
 /**
  * 模型常把引用标签写进句尾（实测 c28 五句全带 [986133:3, 1006787:2]），标签对读者无意义、出处已在 sources。
  * 确定性剥掉整组标签，剥不干净的残留再由 MARKER 拒收重试。
  */
-export const stripMarkers = (t: string): string =>
+const stripMarkers = (t: string): string =>
   t.replace(/\s*\[\s*\d{3,}\s*:\s*\d+(?:\s*[,;]\s*\d{3,}\s*:\s*\d+)*\s*\]/g, '');
 
 export function anchorOk(obj: any, sentences: SentenceTable, allowed: Set<number>): boolean {
@@ -152,13 +152,6 @@ export function anchorOk(obj: any, sentences: SentenceTable, allowed: Set<number
   );
 }
 
-export interface V6Written {
-  verdict: 'written' | 'not_a_single_event';
-  reason: string;
-  title: string;
-  sentences: V6Sentence[];
-}
-
 export function cleanWrite(x: any): any {
   if (!x || !Array.isArray(x.sentences)) return x;
   return {
@@ -172,7 +165,7 @@ export function cleanWrite(x: any): any {
  * 句末标点。2026-09-19 生产那三句坏句全是断在半句上（`assured the incident ` /
  * `abetment of [` / `transferred,`），收尾字符就是它们与其余 105 句的分界。
  */
-export const TERMINAL_PUNCT = /[.!?"”’)]\s*$/;
+const TERMINAL_PUNCT = /[.!?"”’)]\s*$/;
 
 /**
  * 写作步的确定性校验。返回**失败原因列表**，空数组 = 通过。
@@ -275,7 +268,7 @@ export function mustCover(anchors: V6Anchor[], slack = 0): Set<string> {
 
 /** 写作材料：每条重点只给话题标签 + 它指向的**原句**（不给任何上一步写出的转述）。 */
 // 说话人藏在前一句的原句：代词开头，或含 "he added / she said" 这类无主名的引述
-export const PRONOUN_LED = /^\W*(he|she|they|his|her|their|it)\b|\b(he|she|they) (added|said|says|told|wrote|noted|warned|stressed)\b/i;
+const PRONOUN_LED = /^\W*(he|she|they|his|her|their|it)\b|\b(he|she|they) (added|said|says|told|wrote|noted|warned|stressed)\b/i;
 
 /** 需要带上下文的原句 → 它的前一句（同篇）。写作材料与补出处都用它。 */
 export function contextOf(sentences: SentenceTable, s: V6Source): V6Source | null {
@@ -315,7 +308,7 @@ export function writeMaterial(
 
 // ── 数字 / 引语核对（移植自 eval/cluster-to-brief/lib.mjs）────────
 /** 句中出现的数字，去掉千分位。日期类（1900-2100 的四位整数）不算，它们常被正确推算出来。 */
-export function numbersIn(text: unknown): Set<string> {
+function numbersIn(text: unknown): Set<string> {
   const out = new Set<string>();
   for (const m of String(text ?? '').match(/\d[\d,]*(?:\.\d+)?/g) ?? []) {
     const x = m.replace(/,/g, '');
@@ -330,7 +323,7 @@ export function numbersIn(text: unknown): Set<string> {
  * 句中引号内的原话（双引号 "" “” 与弯单引号 ‘’，以及前后是空格/标点的直单引号 'x y'）。
  * 只取 ≥2 个词的片段：单词引语（如 'hoax'）太短，落在任何句子里都可能碰巧对上。
  */
-export function quotesIn(text: unknown): string[] {
+function quotesIn(text: unknown): string[] {
   const t = String(text ?? '');
   const out: string[] = [];
   for (const re of [/"([^"]+)"/g, /“([^”]+)”/g, /‘([^’]+)’/g, /(?:^|[\s(])'([^']+?)'(?=[\s.,;:!?)]|$)/g]) {
@@ -340,7 +333,7 @@ export function quotesIn(text: unknown): string[] {
 }
 
 /** 引语比对用的归一：小写、去标点与引号、压空白。模型改大小写或丢逗号不算改原话。 */
-export function normQuote(s: unknown): string {
+function normQuote(s: unknown): string {
   return String(s ?? '')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')

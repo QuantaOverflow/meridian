@@ -79,7 +79,7 @@ export interface WriteLen {
   text: string;
 }
 
-export const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
+const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
   lead: {
     max: 7,
     sources: WRITE_MAX_SOURCES,
@@ -120,7 +120,7 @@ export const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
  * 就是 exec 档（= 现在的 `more`）。`lead` 这轮改长了，默认若跟着它走，
  * 会把唯一有实测读数的那条路径静默换掉，所以默认在这里钉死在 `more`。
  */
-export const writeLenOf = (tier?: V6Tier | string): WriteLen =>
+const writeLenOf = (tier?: V6Tier | string): WriteLen =>
   WRITE_LEN[V6_TIERS.includes(tier as V6Tier) ? (tier as V6Tier) : 'more'];
 
 const writeSchemaOf = (len: WriteLen) => ({

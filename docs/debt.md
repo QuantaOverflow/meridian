@@ -80,6 +80,8 @@
 - 位置：`services/meridian-ml-service/src/main.py:318`，调用方仅 `services/meridian-ml-service/test/*`。backend 侧客户端已删。
 - 待裁决：删端点连同测试，还是保留作手工调试口。
 
+- 裁决（2026-09-23）：已解决，删除。连同删掉的还有同样无调用方的 `GET /`、`/metrics`、`/config`，整个 `test/` 目录（8 个手动脚本，未接入任何 runner，其中 3 个调用的路由早已不存在），以及 vulture 核实过的死代码与恒为 null/空的响应字段（`optimization_result`、`clustering_stats.silhouette_score`、`clusters[].keywords` / `summary`）。现存路由只剩 backend 在用的 `GET /health`、`POST /embeddings`、`POST /ai-worker/clustering`。
+
 ### D11. 过时文档 `apps/backend/docs/clustering-service-usage.md`
 - 现象：通篇介绍已删的 `analyzeArticleClusters` / `MLService` 与不存在的 `MockClusteringService`。
 - 待裁决：删除，还是按现行 `ClusteringService` 重写。

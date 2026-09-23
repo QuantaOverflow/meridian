@@ -46,12 +46,12 @@ def download_model():
         # 测试离线加载
         print("测试离线模式加载...")
         try:
-            test_tokenizer = AutoTokenizer.from_pretrained(
+            AutoTokenizer.from_pretrained(
                 model_name,
                 trust_remote_code=True,
                 local_files_only=True
             )
-            test_model = AutoModel.from_pretrained(
+            AutoModel.from_pretrained(
                 model_name,
                 trust_remote_code=True,
                 local_files_only=True

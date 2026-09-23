@@ -17,8 +17,6 @@ from .dependencies import ModelDep, verify_token
 from .schemas import (
     # 核心请求/响应模型
     EmbeddingRequest, EmbeddingResponse,
-    AIWorkerEmbeddingClusteringRequest, 
-    FlexibleClusteringRequest,
     BaseClusteringResponse,
     
     # 配置模型
@@ -129,31 +127,6 @@ def get_build_identity() -> Dict[str, Any]:
 # ============================================================================
 # 健康检查和基础端点
 # ============================================================================
-
-@app.get("/")
-async def read_root():
-    """服务根端点"""
-    return {
-        "service": "Meridian ML Service",
-        # version 是源码字面量，**不能**当作镜像身份用；镜像身份看 build_identity。
-        "version": "3.0.0",
-        BUILD_IDENTITY_FIELD: get_build_identity(),
-        "status": "running",
-        "features": {
-            "embeddings": "生成文本嵌入向量",
-            "clustering": "智能聚类分析",
-            "ai_worker_integration": "完美集成AI Worker数据格式"
-        },
-        "endpoints": {
-            "embeddings": "/embeddings",
-            "ai_worker_clustering": "/ai-worker/clustering",
-            "auto_detect_clustering": "/clustering/auto"
-        },
-        "models": {
-            "embedding": settings.embedding_model_name,
-            "clustering": "UMAP + HDBSCAN"
-        }
-    }
 
 @app.get("/health")
 async def health_check():
@@ -308,118 +281,3 @@ async def ai_worker_clustering(
             status_code=500,
             detail=f"AI Worker聚类失败: {str(e)}"
         )
-
-# ============================================================================
-# 核心端点 3: 智能自动检测聚类
-# ============================================================================
-
-# response_model 去掉的原因同 /ai-worker/clustering（要能带上顶层 build_identity）。
-# 这个端点 backend 侧当前零调用，但归属另一次决策，本轮只给它补上同样的标识字段。
-@app.post("/clustering/auto")
-async def auto_detect_clustering(
-    request: FlexibleClusteringRequest,
-    _: None = Depends(verify_token),
-):
-    """
-    智能聚类端点 - 自动检测数据格式
-    
-    支持所有数据格式的自动检测和处理：
-    - AI Worker格式（简化、扩展、完整）
-    - 标准向量格式
-    - 纯文本格式
-    """
-    print(f"[AutoClustering] 收到智能检测请求：{len(request.items)} 个数据项")
-    
-    try:
-        from .schemas import DataFormatConverter
-        
-        # 自动检测数据格式
-        detected_format = DataFormatConverter.detect_format(request.items)
-        print(f"[AutoClustering] 自动检测到格式: {detected_format}")
-        
-        # 选择适当的模型组件
-        model_components = None
-        if detected_format == 'text_item':
-            # 只有纯文本需要生成嵌入
-            from .dependencies import get_embedding_model
-            model_components = await get_embedding_model()
-        
-        # 使用统一管道处理
-        result = await process_clustering_request(
-            items=request.items,
-            config=request.config,
-            optimization=request.optimization,
-            content_analysis=request.content_analysis,
-            model_components=model_components,
-            data_type=detected_format
-        )
-        
-        # 构建响应
-        response = BaseClusteringResponse(**result)
-        
-        # 添加自动检测的元数据
-        if request.include_ai_worker_metadata:
-            response.model_info = {
-                **(response.model_info or {}),
-                "auto_detected_format": detected_format,
-                "intelligent_processing": True,
-                "original_format_preserved": request.preserve_original_format
-            }
-        
-        # 处理可选数据
-        if not request.return_embeddings:
-            response.embeddings = None
-        
-        if not request.return_reduced_embeddings:
-            response.reduced_embeddings = None
-        
-        print(f"[AutoClustering] 智能处理完成，发现 {len(response.clusters)} 个聚类")
-
-        payload = response.model_dump(mode="json")
-        payload[BUILD_IDENTITY_FIELD] = get_build_identity()
-        return JSONResponse(content=payload)
-
-    except Exception as e:
-        print(f"[AutoClustering] 处理错误: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"智能聚类失败: {str(e)}"
-        )
-
-# ============================================================================
-# 监控和配置端点
-# ============================================================================
-
-@app.get("/metrics")
-async def get_metrics():
-    """获取系统指标"""
-    return {
-        "embedding_model": settings.embedding_model_name,
-        "clustering_algorithm": "UMAP + HDBSCAN",
-        "supported_formats": [
-            "ai_worker_embedding",
-            "ai_worker_embedding_extended", 
-            "ai_worker_article",
-            "vector_item",
-            "text_item"
-        ],
-        "optimization_available": True,
-        "content_analysis_available": True
-    }
-
-@app.get("/config")
-async def get_config():
-    """获取当前配置"""
-    return {
-        "embedding_model": settings.embedding_model_name,
-        "expected_embedding_dimensions": getattr(settings, 'expected_embedding_dimensions', 384),
-        "default_clustering_config": {
-            "umap_n_components": 10,
-            "umap_n_neighbors": 15,
-            "umap_min_dist": 0.0,
-            "umap_metric": "cosine",
-            "hdbscan_min_cluster_size": 5,
-            "hdbscan_min_samples": 3,
-            "hdbscan_metric": "euclidean"
-        }
-    } 

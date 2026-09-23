@@ -1,11 +1,8 @@
 import openGraph from './routers/openGraph.router';
-import reportsRouter from './routers/reports.router';
-import sourcesRouter from './routers/sources.router';
 import durableObjectsRouter from './routers/durableObjects.router';
 import eventsRouter from './routers/events.router'; // 导入新的路由
 import adminRouter from './routers/admin'; // 导入admin路由
 import observabilityRouter from './routers/observability'; // 导入可观测性路由
-import debugRouter from './routers/debug'; // 导入debug路由
 import { Env } from './index';
 import { hasValidAuthToken } from './lib/core/utils';
 import { Hono } from 'hono';
@@ -16,23 +13,21 @@ export type HonoEnv = { Bindings: Env };
 const app = new Hono<HonoEnv>()
   .use(trimTrailingSlash())
   .get('/favicon.ico', async c => c.notFound()) // disable favicon
-  .route('/reports', reportsRouter)
-  .route('/sources', sourcesRouter)
   .route('/openGraph', openGraph)
   .route('/do', durableObjectsRouter)
   .route('/events', eventsRouter) // 添加新的路由
   // /admin/* 是破坏性面：触发简报生成(烧 LLM 额度)、增删改 RSS 源、重跑文章管线。
   // worker 挂在公网 *.workers.dev 上，此前这 12 条路由一条鉴权都没有。挡在挂载处而不是
-  // 逐 handler 加(sources/reports/do 是逐 handler 的写法)，是为了让以后新增的 admin 路由
+  // 逐 handler 加(do 是逐 handler 的写法)，是为了让以后新增的 admin 路由
   // 默认就在门后面——漏加一个 handler 的代价是重开一个洞。令牌与其余路由共用 API_TOKEN。
   .use('/admin/*', async (c, next) => {
     if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/admin', adminRouter) // 添加admin路由
-  // /observability/* 与 /admin 同样挡在挂载处。它虽全是 GET，但两条参数化读取
-  // (/workflows/:key 与 /llm-calls/*) 把 URL 里的 key 直接喂给 ARTICLES_BUCKET.get()，
-  // /workflows/:key 无任何前缀校验 → 公网可读同一 bucket 内任意对象(文章正文、情报报告)。
+  // /observability/* 与 /admin 同样挡在挂载处。它虽全是 GET，但参数化读取把 URL 里的 key
+  // 直接喂给 ARTICLES_BUCKET.get()：当时的 /workflows/:key(2026-09 已删)无任何前缀校验 →
+  // 公网可读同一 bucket 内任意对象(文章正文、情报报告)；/llm-calls/* 仍是这类读取(有 llm-calls/ 前缀校验)。
   // 实测：无 token 打 /observability/workflows/2026%2F9%2F1%2F<id>.txt 命中正文对象(500=已取出，
   // 仅因内容非 JSON 才在 parse 处崩)。列表接口也裸吐生产元数据(简报标题/24h 文章数/run 状态)。
   // 鉴权是上游根治：外部进不来，任意 key 读取与元数据泄露一并消除，胜过逐路由补前缀校验。
@@ -43,10 +38,5 @@ const app = new Hono<HonoEnv>()
   })
   .route('/observability', observabilityRouter) // 添加可观测性路由
   .get('/ping', async c => c.json({ pong: true }));
-
-// Only mount the debug router in non-production environments
-if (process.env.NODE_ENV !== 'production') {
-  app.route('/debug', debugRouter);
-}
 
 export default app;

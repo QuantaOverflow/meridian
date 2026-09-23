@@ -20,7 +20,7 @@ echo -e "${BLUE}🚀 Meridian Backend 测试启动器${NC}"
 echo "================================================="
 
 # 默认参数
-TEST_TYPE=${1:-"simple"}
+TEST_TYPE=${1:-"stats"}
 SOURCE_ID=${2:-""}
 
 # 显示使用说明
@@ -29,15 +29,10 @@ show_usage() {
     echo "  $0 [test_type] [source_id]"
     echo ""
     echo "测试类型:"
-    echo "  simple    - 简化端到端测试 (默认)"
-    echo "  full      - 完整端到端测试"
     echo "  monitor   - 仅启动数据库监控"
-    echo "  stats     - 显示数据库统计"
+    echo "  stats     - 显示数据库统计 (默认)"
     echo ""
     echo "示例:"
-    echo "  $0 simple        # 使用第一个可用RSS源进行简化测试"
-    echo "  $0 simple 1      # 使用ID为1的RSS源进行测试"
-    echo "  $0 full          # 运行完整的端到端测试"
     echo "  $0 monitor       # 启动数据库监控"
     echo "  $0 stats         # 显示数据库统计"
     echo ""
@@ -99,30 +94,6 @@ check_services() {
     
 }
 
-# 运行端到端测试
-run_e2e_test() {
-    local mode=$1
-    local source_id=$2
-    
-    echo -e "${BLUE}🚀 运行端到端测试 (模式: $mode)${NC}"
-    
-    if [ "$mode" == "full" ]; then
-        echo -e "${YELLOW}注意: 此测试会创建新的RSS源并在完成后清理${NC}"
-        read -p "是否继续? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "测试已取消"
-            exit 0
-        fi
-    fi
-    
-    if [ -n "$source_id" ]; then
-        node "$PROJECT_ROOT/apps/backend/scripts/e2e-test.js" "$mode" "$source_id"
-    else
-        node "$PROJECT_ROOT/apps/backend/scripts/e2e-test.js" "$mode"
-    fi
-}
-
 # 启动监控
 run_monitor() {
     echo -e "${BLUE}📊 启动数据库监控...${NC}"
@@ -157,12 +128,6 @@ main() {
     echo ""
     
     case "$TEST_TYPE" in
-        "simple")
-            run_e2e_test "simple" "$SOURCE_ID"
-            ;;
-        "full")
-            run_e2e_test "full" "$SOURCE_ID"
-            ;;
         "monitor")
             run_monitor
             ;;

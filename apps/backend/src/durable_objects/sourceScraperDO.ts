@@ -194,7 +194,7 @@ export class SourceScraperDO extends DurableObject<Env> {
         return;
       }
 
-      const { sourceId, url, scrapeFrequencyTier, lastChecked } = validatedState.data;
+      const { sourceId, url, scrapeFrequencyTier } = validatedState.data;
       const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
       const now = Date.now();
 
@@ -379,15 +379,6 @@ export class SourceScraperDO extends DurableObject<Env> {
     const logger = this.logger.child({ operation: 'fetch', path: url.pathname });
 
     try {
-      if (url.pathname === '/init' && request.method === 'POST') {
-        const body = await request.json() as { id: number; url: string; scrape_frequency: number };
-        await this.initialize(body);
-        return new Response(JSON.stringify({ success: true, message: 'Initialized successfully' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
       if (url.pathname === '/force-scrape' && request.method === 'POST') {
         await this.alarm();
         return new Response(JSON.stringify({ success: true, message: 'Scrape triggered' }), {

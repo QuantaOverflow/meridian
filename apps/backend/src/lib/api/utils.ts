@@ -1,4 +1,3 @@
-import type { Context } from 'hono';
 import { Logger } from '../core/logger';
 
 // 统一的API响应格式
@@ -32,7 +31,7 @@ export function createSuccessResponse<T>(
 }
 
 // 创建错误响应
-export function createErrorResponse(error: string, statusCode?: number): ApiResponse {
+export function createErrorResponse(error: string): ApiResponse {
   return {
     success: false,
     error,
@@ -68,15 +67,6 @@ export function handleDatabaseError(
   }
 
   return { error: 'Internal server error', statusCode: 500 };
-}
-
-// 分页参数验证和处理
-export function processPaginationParams(c: Context, maxLimit = 100) {
-  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10));
-  const limit = Math.min(maxLimit, Math.max(1, parseInt(c.req.query('limit') || '20', 10)));
-  const offset = (page - 1) * limit;
-  
-  return { page, limit, offset };
 }
 
 // 通用的资源存在性检查

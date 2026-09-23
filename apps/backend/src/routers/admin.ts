@@ -2,16 +2,12 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { getDb } from '../lib/database';
-import { $sources, $articles, $reports, eq, and, desc, isNotNull, gte, sql, inArray } from '@meridian/database';
-import { AutoBriefGenerationWorkflow, type BriefGenerationParams } from '../workflows/auto-brief-generation';
-import { createAIServices } from '../lib/services/ai-services';
-import { handleServiceResponse } from '../lib/services/clustering';
+import { $sources, $articles, eq, inArray } from '@meridian/database';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
   createSuccessResponse, 
   createErrorResponse, 
   handleDatabaseError,
-  processPaginationParams,
   checkResourceExists,
   validateDateRange
 } from '../lib/api/utils';
@@ -23,7 +19,7 @@ const app = new Hono<{ Bindings: Env }>();
 const logger = new Logger({ router: 'admin' });
 
 // ===== 入参校验 schema =====
-// 与其余 backend 路由(sources/reports/...)一致,用 zValidator 在边界挡畸形输入,
+// 与其余 backend 路由(do/events/...)一致,用 zValidator 在边界挡畸形输入,
 // 避免畸形 payload 潜入下游变成隐晦崩溃。可选字段保持 optional,默认值仍由各 handler 兜底。
 const sourceCreateSchema = z.object({
   name: z.string().min(1),
@@ -33,7 +29,6 @@ const sourceCreateSchema = z.object({
 });
 const sourceUpdateSchema = sourceCreateSchema.partial();
 const idParamSchema = z.object({ id: z.coerce.number().int() });
-const articlesQuerySchema = z.object({ status: z.string().optional() });
 const briefGenerateSchema = z.object({
   article_ids: z.array(z.number().int()).optional(),
   dateFrom: z.string().optional(),
@@ -50,22 +45,6 @@ const byIdsSchema = z.object({ ids: z.array(z.number().int()).optional() });
 const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
 
 // ========== RSS源管理 ==========
-app.get('/sources', async (c) => {
-  try {
-    const db = getDb(c.env.HYPERDRIVE);
-    const sources = await db.select().from($sources).orderBy($sources.id);
-    
-    return c.json(createSuccessResponse(sources, `获取了${sources.length}个RSS源`));
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Get sources', 
-      logger.child({ operation: 'get-sources' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
-});
-
 app.post('/sources', zValidator('json', sourceCreateSchema), async (c) => {
   try {
     const { name, url, category, scrape_frequency } = c.req.valid('json');
@@ -132,77 +111,6 @@ app.put('/sources/:id', zValidator('param', idParamSchema), zValidator('json', s
       error, 
       'Update source', 
       logger.child({ operation: 'update-source' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
-});
-
-app.delete('/sources/:id', zValidator('param', idParamSchema), async (c) => {
-  try {
-    const sourceId = c.req.valid('param').id;
-    const db = getDb(c.env.HYPERDRIVE);
-    const routeLogger = logger.child({ operation: 'delete-source', source_id: sourceId });
-    
-    const deleted = await db.delete($sources)
-      .where(eq($sources.id, sourceId))
-      .returning();
-
-    if (deleted.length === 0) {
-      return c.json(createErrorResponse('未找到指定的RSS源'), 404 as any);
-    }
-
-    routeLogger.info('RSS源删除成功');
-    return c.json(createSuccessResponse(deleted[0], 'RSS源删除成功'));
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Delete source', 
-      logger.child({ operation: 'delete-source' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
-});
-
-// ========== 文章管理 ==========
-app.get('/articles', zValidator('query', articlesQuerySchema), async (c) => {
-  try {
-    const { page, limit, offset } = processPaginationParams(c);
-    const status = c.req.valid('query').status;
-
-    const db = getDb(c.env.HYPERDRIVE);
-    
-    const conditions = [];
-    if (status) {
-      conditions.push(eq($articles.status, status as any));
-    }
-
-    const articles = await db.select({
-      id: $articles.id,
-      title: $articles.title,
-      url: $articles.url,
-      status: $articles.status,
-      publishDate: $articles.publishDate,
-      processedAt: $articles.processedAt,
-      sourceId: $articles.sourceId,
-      contentFileKey: $articles.contentFileKey,
-      embedding: $articles.embedding,
-    })
-    .from($articles)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc($articles.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-    return c.json(createSuccessResponse(
-      articles, 
-      `获取了${articles.length}篇文章`,
-      { page, limit, total: articles.length }
-    ));
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Get articles', 
-      logger.child({ operation: 'get-articles' })
     );
     return c.json(createErrorResponse(errorMsg), statusCode as any);
   }
@@ -304,65 +212,6 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       error, 
       'Generate brief', 
       logger.child({ operation: 'generate-brief' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
-});
-
-// ========== 系统概览 ==========
-app.get('/overview', async (c) => {
-  try {
-    const db = getDb(c.env.HYPERDRIVE);
-    const routeLogger = logger.child({ operation: 'get-overview' });
-
-    // 分别获取统计数据，使用更兼容的方式
-    
-    // 源统计
-    const allSources = await db.select({
-      id: $sources.id,
-      lastChecked: $sources.lastChecked
-    }).from($sources);
-    
-    const sourceStats = {
-      total: allSources.length,
-      active: allSources.filter(s => s.lastChecked !== null).length
-    };
-
-    // 文章统计
-    const allArticles = await db.select({
-      id: $articles.id,
-      status: $articles.status
-    }).from($articles);
-    
-    const articleStats = {
-      total: allArticles.length,
-      processed: allArticles.filter(a => a.status === 'PROCESSED').length,
-      pending: allArticles.filter(a => a.status === 'PENDING_FETCH').length,
-      failed: allArticles.filter(a => a.status && a.status.endsWith('_FAILED')).length
-    };
-
-    // 简报统计（最近30天）
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentBriefs = await db.select({
-      id: $reports.id
-    }).from($reports).where(gte($reports.createdAt, thirtyDaysAgo));
-
-    const overview = {
-      sources: sourceStats,
-      articles: articleStats,
-      briefs: {
-        last30Days: recentBriefs.length
-      },
-      lastUpdated: new Date().toISOString()
-    };
-
-    routeLogger.info('系统概览获取成功');
-    return c.json(createSuccessResponse(overview, '系统概览获取成功'));
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Get overview', 
-      logger.child({ operation: 'get-overview' })
     );
     return c.json(createErrorResponse(errorMsg), statusCode as any);
   }

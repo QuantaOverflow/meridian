@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import importedApp from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
-import { AutoBriefGenerationWorkflow } from './workflows/auto-brief-generation';
 import { Logger } from './lib/core/logger';
 import { runDailyBriefCron } from './lib/scheduled/daily-brief';
 

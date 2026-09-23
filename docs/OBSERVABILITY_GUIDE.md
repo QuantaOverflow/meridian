@@ -66,28 +66,10 @@ console.log(`平均聚类大小: ${clusterQuality.avgClusterSize}`);
 
 Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列 RESTful API 端点，使得外部系统、监控工具或前端面板能够方便地查询和展示可观测性数据。
 
-> 共 14 个路由。**以代码为准**——本文档 2025-07 只记了前 5 个，2026-09-06 补齐了按 run
-> 排错的那一组；再有新增以 `observability.ts` 里的注册顺序为准。
-
-#### `/observability/dashboard` - 实时监控面板
-- **目的**：提供Meridian系统当前运行状态的**高层次、实时概览**。
-- **返回数据**：包括系统健康状态（`status`）、过去24小时简报生成数量（`briefsLast24h`）、最新的平均处理时间（`avgProcessingTime`）、错误率（`errorRate`）以及基于这些指标的**初步建议**。
-
-#### `/observability/workflows` - 工作流执行历史
-- **目的**：获取所有历史工作流实例的**执行摘要列表**。
-- **返回数据**：每个工作流的唯一键（`key`）、上传时间（`uploaded`）、大小（`size`）和由 `WorkflowObservability` 生成的简要总结（`summary`），以及是否包含详细指标（`hasDetails`）。这有助于快速浏览系统活动。
-
-#### `/observability/workflows/:key` - 特定工作流的详细指标
-- **目的**：获取指定工作流实例的**完整、详细执行数据**，用于深度问题诊断和性能分析。
-- **返回数据**：包含工作流的`summary`、详细的`detailedMetrics`（所有步骤的原始记录）、以及经过分析的`performance`指标（如总步骤数、成功/失败步骤、平均步骤耗时和每个步骤的详细耗时分解），同时还会提供**性能优化建议**。
-
-#### `/observability/briefs/stats` - 简报生成统计
-- **目的**：提供历史简报生成过程的**统计数据和趋势分析**。
-- **返回数据**：包括总简报数（`totalBriefs`）、每份简报平均文章数（`avgArticlesPerBrief`）、文章使用率（`avgUsageRate`）、AI模型使用分布（`modelDistribution`）、简报生成频率（`briefFrequency`）以及包含文章使用率、聚类策略等信息的**质量趋势**。
-
-#### `/observability/quality/analysis` - 数据质量分析 (待实现)
-- **目的**：未来将用于提供更细粒度的、聚合的数据质量分析报告。
-- **当前状态**：目前是一个占位符，但规划中将包含文章质量分布、聚类质量得分、故事质量等详细指标。
+> 共 7 个路由。**以代码为准**——再有新增以 `observability.ts` 里的注册顺序为准。
+> 2026-09-24 删掉了无调用方的 `/workflows`、`/workflows/:key`、`/dashboard`、`/briefs/stats`、
+> 占位的 `/quality/analysis`，以及数据已不再产出的 `/runs/:workflowId/candidate-groups`、
+> `/runs/:workflowId/stories/:storyId/intel`。
 
 #### 按 run 排错的一组（2026 年新增，本节此前缺失）
 
@@ -97,9 +79,7 @@ Meridian 后端 (`apps/backend/src/routers/observability.ts`) 暴露了一系列
 |---|---|
 | `/observability/runs/:workflowId` | 这次 run 的病历袋总目录：各步骤状态、耗时、失败原因 |
 | `/observability/runs/:workflowId/clustering` | `cluster_id → article_ids` 映射。被毙的簇也在里面（簇成员是 workflow 内的临时数据，不落盘就无处可查） |
-| `/observability/runs/:workflowId/candidate-groups` | 候选组划分（几何分组时代的产物，现行链路已不产出） |
 | `/observability/runs/:workflowId/coverage` | 覆盖对账：`selected_for_intel=true` 但最终 `disposition=dropped` 的条目，用于定位合成层漏报 |
-| `/observability/runs/:workflowId/stories/:storyId/intel` | 单条故事的情报报告全文（从 R2 取，报告本身不进 workflow step） |
 | `/observability/runs/:workflowId/llm-calls` | 这次 run 的全部 LLM 调用记录（按 `{phase}-{callIndex}` 归档） |
 | `/observability/llm-calls/*` | 跨 run 直接按归档路径取单次调用 |
 
@@ -132,16 +112,13 @@ Meridian 可观测性系统收集并报告多种类型的指标，以提供全�
 
 - **总耗时** (`totalDuration`): 工作流从开始到完成的整体时间（毫秒）。通过 `WorkflowObservability.generateSummaryReport()` 计算。
 - **步骤耗时** (`stepDurations`): 每个独立工作流步骤的执行时间。在 `WorkflowObservability.logStep()` 状态为 'completed' 或 'failed' 时计算，并在 `WorkflowObservability.generateSummaryReport()` 中聚合。
-- **平均处理时间** (`avgProcessingTime`): 最近一段时间（如24小时）内工作流的平均执行时间。在 `/observability/dashboard` API 中从最新的可观测性数据中提取。
-- **错误率** (`errorRate`): 工作流中失败步骤占总步骤的比例。在 `WorkflowObservability.generateSummaryReport()` 中计算，并在 `/observability/dashboard` 中报告。
+- **错误率** (`errorRate`): 工作流中失败步骤占总步骤的比例。在 `WorkflowObservability.generateSummaryReport()` 中计算。
 
 ### 2. 质量指标
 这些指标关注数据和AI处理的产出质量。
 
-- **文章使用率** (`articleUsageRate`): 被最终选入简报的文章占总处理文章的比例。在 `/observability/briefs/stats` API 中计算，来源于数据库中 `reports` 表的 `usedArticles` 和 `totalArticles` 字段。
 - **故事选择率** (`storySelectionRate`): 通过重要性筛选的故事占候选故事的比例。通过 `WorkflowObservability.logStorySelection()` 记录。
 - **聚类一致性** (`avgCoherence`): 聚类内文章语义相似性的平均得分，衡量簇的内聚性。在 `DataQualityAssessor.assessClusterQuality()` 中计算。
-- **质量得分** (`qualityScore`): 综合数据质量评估分数，可能来源于多个维度的聚合。在 `/observability/briefs/stats` 中，通过 `clustering_params` 里的 `min_quality_score` 或其他模型特定质量参数体现。
 
 ### 3. 资源指标
 这些指标追踪系统资源的使用情况和成本。
@@ -156,58 +133,38 @@ Meridian 可观测性系统旨在支持多种日常操作和深度分析场景�
 
 ### 1. 日常健康监控
 **目的**：快速了解系统整体运行状况，识别异常波动。
-**操作**：定期访问 `/observability/dashboard` API 端点。
+**操作**：定期访问 `/observability/health/summary` API 端点。
 **示例**：
 ```bash
-curl http://localhost:8787/observability/dashboard
+curl -H "Authorization: Bearer $API_TOKEN" http://localhost:8787/observability/health/summary
 ```
-**关注点**：`systemHealth.status`（系统状态）、`briefsLast24h`（简报生成数量）、`errorRate`（错误率）和 `recommendations`（系统建议）。
 
 ### 2. 性能调优
 **目的**：识别工作流中的性能瓶颈，优化处理效率。
 **操作**：
-1.  首先通过 `/observability/workflows` 获取最近的工作流列表。
-2.  选择一个耗时较长的工作流实例的 `key`。
-3.  访问 `/observability/workflows/{workflowKey}` 端点获取详细性能分析。
-**示例**：
-```bash
-# 获取所有工作流摘要
-curl http://localhost:8787/observability/workflows
-
-# 假设最新工作流的key是 "observability/workflow_abc123_1703123456789.json"
-curl http://localhost:8787/observability/workflows/observability%2Fworkflow_abc123_1703123456789.json
-```
-**关注点**：`performance.stepBreakdown` 中各步骤的 `avgDuration`、`totalDuration` 以及最慢的步骤（通过 `WorkflowObservability.generateSummaryReport().efficiency.longestStep` 体现）。
+1.  选一个耗时较长的 run 的 `workflow_id`（`/observability/health/summary` 的最近 run 列表里有）。
+2.  访问 `/observability/runs/:workflowId`，看返回里的 `observability.summary` 与 `observability.detailedMetrics`。
+**关注点**：`observability.summary.efficiency.longestStep`（最慢的步骤）与各步骤耗时。
 
 ### 3. 质量追踪与改进
 **目的**：监控简报生成质量趋势，为算法和内容优化提供数据支持。
-**操作**：访问 `/observability/briefs/stats` API 端点。
-**示例**：
-```bash
-curl http://localhost:8787/observability/briefs/stats
-```
-**关注点**：`stats.avgUsageRate`（文章使用率）、`stats.modelDistribution`（AI模型使用情况）、`stats.qualityTrends`（简报质量趋势，如聚类策略和质量得分）。
+**操作**：访问 `/observability/trends` API 端点，看按天聚合的 run 成败与故事指标。
 
 ### 4. 问题诊断与排查
 **目的**：当工作流失败或出现异常行为时，快速定位问题根源。
 **操作**：
-1.  通过 `/observability/workflows` 找到失败的工作流实例。
-2.  访问 `/observability/workflows/{workflowKey}` 获取详细的 `detailedMetrics`，尤其是 `status` 为 'failed' 的步骤和其 `error` 信息。
-**示例**：
-```bash
-# 获取特定工作流的错误详情
-curl http://localhost:8787/observability/workflows/observability%2Fworkflow_failed_xyz789_1703123456789.json
-```
+1.  通过 `/observability/health/summary` 找到失败的 run。
+2.  访问 `/observability/runs/:workflowId`，看 `observability.detailedMetrics` 里 `status` 为 'failed' 的步骤和其 `error` 信息。
 **关注点**：`detailedMetrics` 数组中 `status === 'failed'` 的条目，以及其 `error` 字段。
 
 ### 5. AI决策透明度分析
 **目的**：理解AI（LLM）在故事识别和重要性评估中的决策过程。
-**操作**：通过 `/observability/workflows/:key` 获取工作流详细指标后，检查 `detailedMetrics` 中 `stepName` 为 `importance_evaluation_detail`、`story_selection` 以及 `story_rank`（故事重要性排序：三轮洗牌 + Borda 聚合，见 `auto-brief-generation.ts`）的数据。
+**操作**：通过 `/observability/runs/:workflowId` 获取 `observability.detailedMetrics` 后，检查其中 `stepName` 为 `importance_evaluation_detail`、`story_selection` 以及 `story_rank`（故事重要性排序：三轮洗牌 + Borda 聚合，见 `auto-brief-generation.ts`）的数据。
 **关注点**：`data.importanceAnalysis.stories` 中每个故事的 `importance`、`importanceFactors`、`reasoningExplanation` 和 `confidenceScore`。这些数据由 `ObservabilityAnalyzer` 类的 `analyzeImportanceEvaluation` 方法进行分析和报告。
 
 ### 6. 数据质量评估
 **目的**：了解数据在处理过程中各个阶段的质量状况。
-**操作**：通过 `/observability/workflows/:key` 获取工作流详细指标后，检查 `detailedMetrics` 中 `stepName` 为 `dataflow_article_fetch`、`clustering_analysis` 等步骤的 `data.qualityMetrics` 字段。这些数据由 `DataQualityAssessor` 类提供。
+**操作**：通过 `/observability/runs/:workflowId` 获取 `observability.detailedMetrics` 后，检查其中 `stepName` 为 `dataflow_article_fetch`、`clustering_analysis` 等步骤的 `data.qualityMetrics` 字段。这些数据由 `DataQualityAssessor` 类提供。
 
 ## 演示和测试
 
@@ -248,7 +205,7 @@ observability/
 
 - **实时数据**：在工作流执行期间，部分指标会暂时保存在内存中，一旦工作流完成（成功或失败），所有收集到的指标都会被及时持久化到 R2 中。
 - **历史数据**：存储在 R2 中的历史可观测性数据建议采用**周期性清理策略**，例如，保留最近30天的数据，更旧的数据可以归档或删除，以控制存储成本并保持查询效率。清理可以通过 Cloudflare Workers 的定时任务或外部脚本实现。
-- **统计数据**：`/observability/briefs/stats` 等聚合统计数据是从 R2 中的历史数据和数据库中（如 `reports` 表）的元数据实时查询和计算生成的，因此无需单独存储。
+- **统计数据**：`/observability/trends`、`/observability/health/summary` 等聚合统计数据是从数据库元数据实时查询和计算生成的，因此无需单独存储。
 
 ## 性能影响
 

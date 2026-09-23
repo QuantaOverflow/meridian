@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, List, Tuple
+from typing import Any, List
 import numpy as np
 from tqdm import tqdm
 
@@ -156,28 +156,3 @@ def validate_embeddings(embeddings: List[List[float]]) -> np.ndarray:
         print("警告: 检测到异常大的嵌入值，可能存在问题")
     
     return embeddings_array
-
-def extract_embeddings_from_items(items: List[dict]) -> Tuple[np.ndarray, List[str]]:
-    """从数据项中提取嵌入向量和文本"""
-    embeddings = []
-    texts = []
-    
-    for i, item in enumerate(items):
-        # 提取嵌入
-        if 'embedding' not in item:
-            raise ValueError(f"项目 {i} 缺少 'embedding' 字段")
-        embeddings.append(item['embedding'])
-        
-        # 提取文本
-        text = item.get('text', '')
-        if not text and 'title' in item:
-            # 对于文章类型，组合标题和内容
-            title = item.get('title', '')
-            content = item.get('content', '')
-            text = f"{title}\n{content}" if content else title
-        texts.append(text)
-    
-    # 验证嵌入
-    embeddings_array = validate_embeddings(embeddings)
-    
-    return embeddings_array, texts

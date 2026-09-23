@@ -399,9 +399,6 @@ POST /embeddings
 
 # Cluster articles
 POST /ai-worker/clustering
-
-# Auto-format clustering
-POST /clustering/auto
 ```
 
 ## 🔧 Configuration

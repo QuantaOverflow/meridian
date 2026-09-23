@@ -22,13 +22,6 @@ services/meridian-ml-service/
 │       ├── embeddings.py            # 嵌入生成与验证功能
 │       ├── pipeline.py              # 统一的ML处理管道
 │       └── clustering.py            # 聚类算法实现
-├── 📁 test/                         # 测试套件
-│   ├── test_ml_service.py           # 统一测试套件
-│   ├── run_tests.py                 # 智能测试运行器
-│   ├── mock_articles.json           # 测试数据
-│   ├── generate_mock_articles.py    # 测试数据生成
-│   ├── test_small_dataset.py        # 小数据集测试
-│   └── test_with_mock_articles.py   # 模拟文章测试
 ├── 📄 docker-compose.yml            # 统一Docker配置
 ├── 📄 Dockerfile                    # 容器镜像
 ├── 📄 start_local.sh                # 统一启动脚本
@@ -58,8 +51,8 @@ src/meridian_ml_service/
 - **核心端点**: 从15个减少到3个核心API端点，职责更明确：
     -   `/embeddings`: 生成文本嵌入向量（输入：文本列表，输出：384维嵌入向量）。
     -   `/ai-worker/clustering`: 专为AI Worker数据格式优化的聚类端点，支持多种数据格式（简化、扩展、完整格式）。
-    -   `/clustering/auto`: 智能自动检测数据格式并选择最优处理策略（支持AI Worker格式、标准向量格式、纯文本格式）。
-- **监控端点**: 保留 `/health` (健康检查)、`/metrics` (系统指标)、`/config` (配置信息)。
+- **监控端点**: 保留 `/health` (健康检查)。
+- 2026-09-23 更新：`/clustering/auto`、`GET /`、`/metrics`、`/config` 因无调用方已删除，现存路由只有上面三个。
 
 ### 2. 统一处理管道
 -   引入 `pipeline.py`，实现模块化设计，易于维护。
@@ -78,7 +71,7 @@ src/meridian_ml_service/
     -   **旧版测试**: `test_local_fixed.py`, `test_new_apis.py`
 -   减少循环依赖，清晰划分模块职责。
 
-### 5. 测试系统统一化
+### 5. 测试系统统一化（已过时：`test/` 于 2026-09-23 整目录删除，现无自动化测试）
 -   **新增** `test/run_tests.py`：智能测试运行器，可自动检测服务运行状态、管理依赖、支持交互式选择和路径无关运行。
 -   **整合** `test/test_ml_service.py`：统一测试套件，整合了旧版测试功能。
 -   支持从 `test` 目录或项目根目录直接运行测试。
@@ -121,18 +114,6 @@ src/meridian_ml_service/
 ./start_local.sh --help
 ```
 
-### 运行测试
-```bash
-# 从项目根目录
-python test/run_tests.py
-
-# 从test目录
-cd test && python3 run_tests.py
-
-# 直接运行统一测试
-python test/test_ml_service.py
-```
-
 ### 部署构建
 ```bash
 # 本地构建
@@ -159,15 +140,6 @@ POST /ai-worker/clustering
     {"id": 2, "embedding": [...], "title": "标题2"}
 ]
 ```
-**智能自动检测聚类**
-```python
-POST /clustering/auto
-{
-    "items": [...],  # 任意格式数据
-    "config": {...}, # 可选配置
-    "optimization": {"enabled": true}
-}
-```
 
 ## ✅ 验证与下一步
 
@@ -186,7 +158,6 @@ POST /clustering/auto
     EXPECTED_EMBEDDING_DIMENSIONS=384
     API_TOKEN=your_api_token
     BATCH_SIZE=32
-    MAX_TEXT_LENGTH=512
     ```
 -   **启动命令**:
     ```bash

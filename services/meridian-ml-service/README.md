@@ -147,20 +147,15 @@ This automatically configures:
 | `EMBEDDING_MODEL_NAME` | Embedding model name | `intfloat/multilingual-e5-small` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `BATCH_SIZE` | Processing batch size | `32` |
-| `MAX_TEXT_LENGTH` | Maximum text length | `512` |
 | `PYTHONUNBUFFERED` | Python output buffering | `1` |
 
 ## 🔧 API Endpoints
 
 ### Core Endpoints
 
-- `GET /` - Service information and available endpoints
 - `GET /health` - Health check with ML functionality status
-- `GET /metrics` - System metrics and supported data formats
-- `GET /config` - Current configuration settings
 - `POST /embeddings` - Generate text embeddings
 - `POST /ai-worker/clustering` - AI Worker format clustering
-- `POST /clustering/auto` - Auto-detect format clustering
 
 ### API Request Examples
 
@@ -196,32 +191,6 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
   ]'
 ```
 
-#### Auto-Format Clustering
-```bash
-curl -X POST "http://localhost:8081/clustering/auto" \
-  -H "X-API-Token: your-api-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "items": [
-      {"text": "First document to cluster"},
-      {"text": "Second document with similar content"},
-      {"text": "Third document about different topic"}
-    ],
-    "config": {
-      "min_cluster_size": 2,
-      "min_samples": 1
-    },
-    "optimization": {
-      "enabled": true,
-      "metric": "dbcv"
-    },
-    "content_analysis": {
-      "enabled": true,
-      "max_representative_content": 3
-    }
-  }'
-```
-
 ## 🔍 Data Flow and Processing Pipeline
 
 The service processes data through a modular pipeline:
@@ -245,16 +214,6 @@ The service processes data through a modular pipeline:
 ## 📊 Supported Data Formats
 
 The service automatically detects and processes multiple input formats:
-
-### Text Format
-```json
-{
-  "items": [
-    {"text": "Document content to cluster"},
-    {"text": "Another document for analysis"}
-  ]
-}
-```
 
 ### Vector Format
 ```json
@@ -448,28 +407,7 @@ sudo ufw enable
 
 ## 🧪 Testing
 
-### Running Tests
-
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run all tests
-pytest
-
-# Run specific test modules
-pytest test/test_ml_service.py
-pytest test/test_ai_worker_integration.py
-pytest test/test_small_dataset.py
-```
-
-### Test Coverage
-
-The test suite includes:
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: AI Worker format compatibility
-- **Edge Case Tests**: Small dataset handling
-- **Mock Data Tests**: Synthetic data validation
+There is no automated test suite. The former manual scripts under `test/` were removed (2026-09-23): they called routes that no longer exist and were not wired into any runner.
 
 ## 📚 API Documentation
 
@@ -521,12 +459,6 @@ scripts/
 ├── deploy-vps.sh        # VPS deployment
 ├── download_model.py    # Model pre-download
 └── test_service.py      # Service testing
-
-test/
-├── test_ml_service.py   # Main service tests
-├── test_ai_worker_integration.py  # AI Worker tests
-├── test_small_dataset.py  # Edge case tests
-└── generate_mock_articles.py  # Mock data generation
 ```
 
 ### Module Architecture

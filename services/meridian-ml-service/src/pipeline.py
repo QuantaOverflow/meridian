@@ -10,10 +10,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from .schemas import (
-    TextItem, VectorItem, ArticleItem,
     AIWorkerEmbeddingItem, AIWorkerArticleDataItem, DataFormatConverter,
     BaseClusteringConfig, OptimizationConfig, ContentAnalysisConfig,
-    ClusteringStats, OptimizationResult, ClusterInfo,
+    ClusteringStats, ClusterInfo,
     convert_to_internal_config, build_optimization_grid
 )
 from .embeddings import compute_embeddings, validate_embeddings
@@ -46,7 +45,6 @@ class MLPipeline:
     
     def __init__(self):
         self.stages: List[ProcessingStage] = []
-        self.metrics: Dict[str, Any] = {}
     
     def add_stage(self, stage: ProcessingStage) -> 'MLPipeline':
         """添加处理阶段"""
@@ -333,7 +331,6 @@ class ClusteringStage(ProcessingStage):
             print("使用标准聚类...")
             internal_config_obj = InternalClusteringConfig(**internal_config) if internal_config else None
             clustering_result = cluster_embeddings(embeddings, internal_config_obj)
-            clustering_result['optimization'] = {'used': False}
         
         # 分析簇内容
         cluster_labels = np.array(clustering_result['cluster_labels'])
@@ -385,20 +382,10 @@ class ContentAnalysisStage(ProcessingStage):
         # 构建统计信息
         stats = ClusteringStats(**data['clustering_stats'])
         
-        # 构建优化结果
-        opt_result = OptimizationResult(
-            used=data['optimization']['used'],
-            best_params=data['optimization'].get('best_params'),
-            best_score=data['optimization'].get('best_dbcv_score'),
-            search_space_size=None,  # 可以从优化过程中获取
-            evaluated_combinations=None
-        )
-        
         # 构建最终响应
         result = {
             'clusters': clusters,
             'clustering_stats': stats,
-            'optimization_result': opt_result,
             'config_used': data['config_used'],
             'reduced_embeddings': data.get('reduced_embeddings'),
             'processing_time': context.get('total_processing_time'),
@@ -446,9 +433,7 @@ class ContentAnalysisStage(ProcessingStage):
                 size=len(indices),
                 items=cluster_items,
                 centroid=centroid,
-                representative_content=representative_content,
-                keywords=[],  # 可以扩展为关键词提取
-                summary=None  # 可以扩展为AI生成摘要
+                representative_content=representative_content
             )
             
             clusters.append(cluster_info)
@@ -460,11 +445,6 @@ class ContentAnalysisStage(ProcessingStage):
         # 简化版本，适用于高性能场景
         return {
             'clustering_stats': ClusteringStats(**data['clustering_stats']),
-            'optimization_result': OptimizationResult(
-                used=data['optimization']['used'],
-                best_params=data['optimization'].get('best_params'),
-                best_score=data['optimization'].get('best_dbcv_score')
-            ),
             'config_used': data['config_used'],
             'processing_time': context.get('total_processing_time')
         }
@@ -503,17 +483,6 @@ class MLPipelineFactory:
                 .add_stage(DataExtractionStage())  # 不需要model_components
                 .add_stage(ClusteringStage(config, optimization))
                 .add_stage(ContentAnalysisStage(content_analysis)))
-    
-    @staticmethod
-    def create_fast_clustering_pipeline(
-        config: Optional[BaseClusteringConfig] = None
-    ) -> MLPipeline:
-        """创建快速聚类管道（跳过内容分析）"""
-        content_config = ContentAnalysisConfig(enabled=False)
-        return (MLPipeline()
-                .add_stage(DataExtractionStage())
-                .add_stage(ClusteringStage(config, None))
-                .add_stage(ContentAnalysisStage(content_config)))
 
 # ============================================================================
 # 统一的处理函数 - 替代原有的分散逻辑

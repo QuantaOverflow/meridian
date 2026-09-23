@@ -16,13 +16,8 @@ class Settings:
         # API配置
         self.api_token = os.getenv("API_TOKEN", "")
         
-        # 服务配置
-        self.service_name = "meridian-ml-service"
-        self.version = "3.0.0"
-        
         # 性能配置
         self.batch_size = int(os.getenv("BATCH_SIZE", "32"))
-        self.max_text_length = int(os.getenv("MAX_TEXT_LENGTH", "512"))
 
 
 # 全局设置实例

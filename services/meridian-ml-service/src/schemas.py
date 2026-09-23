@@ -3,7 +3,7 @@ Meridian ML Service - 精简核心数据模型
 专注于核心功能，移除不必要的复杂性
 """
 
-from typing import List, Optional, Dict, Any, Union, Literal
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 # ============================================================================
@@ -50,44 +50,15 @@ class OptimizationConfig(BaseModel):
     hdbscan_min_cluster_size_range: List[int] = Field(default=[3, 5, 8, 10], description="HDBSCAN最小簇大小搜索范围")
     hdbscan_min_samples_range: List[int] = Field(default=[2, 3, 5], description="HDBSCAN最小样本数搜索范围")
     hdbscan_epsilon_range: List[float] = Field(default=[0.1, 0.2, 0.3], description="HDBSCAN epsilon搜索范围")
-    
-    # 优化控制
-    max_combinations: int = Field(default=24, description="最大参数组合数")
-    early_stopping_patience: int = Field(default=5, description="早停耐心值")
 
 class ContentAnalysisConfig(BaseModel):
     """内容分析配置"""
     enabled: bool = Field(default=True, description="是否启用内容分析")
     top_n_per_cluster: int = Field(default=5, ge=1, le=20, description="每个簇返回的代表性内容数量")
-    include_keywords: bool = Field(default=False, description="是否提取关键词")
-    include_summaries: bool = Field(default=False, description="是否生成簇摘要")
 
 # ============================================================================
 # 核心数据项模型
 # ============================================================================
-
-class TextItem(BaseModel):
-    """纯文本项目"""
-    id: Union[str, int] = Field(..., description="项目唯一标识")
-    text: str = Field(..., description="文本内容")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="可选元数据")
-
-class VectorItem(BaseModel):
-    """预生成向量项目"""
-    id: Union[str, int] = Field(..., description="项目唯一标识")
-    text: str = Field(..., description="文本内容")
-    embedding: List[float] = Field(..., description="384维嵌入向量")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="可选元数据")
-
-class ArticleItem(BaseModel):
-    """文章数据项目"""
-    id: int = Field(..., description="文章ID")
-    title: str = Field(..., description="文章标题")
-    content: str = Field(..., description="文章内容")
-    url: str = Field(..., description="文章URL")
-    embedding: List[float] = Field(..., description="384维嵌入向量")
-    publishDate: str = Field(..., description="发布日期")
-    status: str = Field(..., description="处理状态")
 
 class AIWorkerEmbeddingItem(BaseModel):
     """AI Worker标准嵌入格式"""
@@ -169,32 +140,6 @@ class EmbeddingResponse(BaseModel):
     dimensions: int = Field(..., description="嵌入维度")
     processing_time: Optional[float] = Field(default=None, description="处理时间")
 
-class AIWorkerEmbeddingClusteringRequest(BaseModel):
-    """AI Worker嵌入聚类请求"""
-    items: List[AIWorkerEmbeddingItem] = Field(..., description="AI Worker嵌入数据项")
-    config: Optional[BaseClusteringConfig] = Field(default=None, description="聚类算法配置")
-    optimization: Optional[OptimizationConfig] = Field(default=None, description="参数优化配置") 
-    content_analysis: Optional[ContentAnalysisConfig] = Field(default=None, description="内容分析配置")
-    
-    # 输出控制
-    return_embeddings: bool = Field(default=False, description="是否返回原始嵌入向量")
-    return_reduced_embeddings: bool = Field(default=True, description="是否返回降维后向量")
-
-class FlexibleClusteringRequest(BaseModel):
-    """灵活的聚类请求 - 自动检测数据格式"""
-    items: List[Dict[str, Any]] = Field(..., description="数据项目列表（自动检测格式）")
-    config: Optional[BaseClusteringConfig] = Field(default=None, description="聚类算法配置")
-    optimization: Optional[OptimizationConfig] = Field(default=None, description="参数优化配置") 
-    content_analysis: Optional[ContentAnalysisConfig] = Field(default=None, description="内容分析配置")
-    
-    # 输出控制
-    return_embeddings: bool = Field(default=False, description="是否返回原始嵌入向量")
-    return_reduced_embeddings: bool = Field(default=True, description="是否返回降维后向量")
-    
-    # AI Worker 兼容选项
-    preserve_original_format: bool = Field(default=True, description="保持原始数据格式在响应中")
-    include_ai_worker_metadata: bool = Field(default=True, description="包含AI Worker兼容的元数据")
-
 # ============================================================================
 # 响应模型
 # ============================================================================
@@ -207,15 +152,6 @@ class ClusteringStats(BaseModel):
     outlier_ratio: float = Field(..., description="异常点比例")
     cluster_sizes: Dict[int, int] = Field(..., description="每个簇的大小")
     dbcv_score: Optional[float] = Field(default=None, description="DBCV质量分数")
-    silhouette_score: Optional[float] = Field(default=None, description="轮廓系数")
-
-class OptimizationResult(BaseModel):
-    """参数优化结果"""
-    used: bool = Field(..., description="是否使用了参数优化")
-    best_params: Optional[Dict[str, Any]] = Field(default=None, description="最佳参数配置")
-    best_score: Optional[float] = Field(default=None, description="最佳质量分数")
-    search_space_size: Optional[int] = Field(default=None, description="搜索空间大小")
-    evaluated_combinations: Optional[int] = Field(default=None, description="实际评估的组合数")
 
 class ClusterInfo(BaseModel):
     """聚类信息"""
@@ -224,14 +160,11 @@ class ClusterInfo(BaseModel):
     items: List[Dict[str, Any]] = Field(..., description="聚类中的项目")
     centroid: Optional[List[float]] = Field(default=None, description="聚类中心点")
     representative_content: List[str] = Field(default_factory=list, description="代表性内容")
-    keywords: List[str] = Field(default_factory=list, description="关键词")
-    summary: Optional[str] = Field(default=None, description="聚类摘要")
 
 class BaseClusteringResponse(BaseModel):
     """统一聚类响应"""
     clusters: List[ClusterInfo] = Field(..., description="聚类结果")
     clustering_stats: ClusteringStats = Field(..., description="聚类统计信息")
-    optimization_result: OptimizationResult = Field(..., description="优化结果")
     config_used: Dict[str, Any] = Field(..., description="实际使用的配置参数")
     
     # 可选数据

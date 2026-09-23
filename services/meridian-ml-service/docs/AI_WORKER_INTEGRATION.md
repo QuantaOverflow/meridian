@@ -43,8 +43,7 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
       "hdbscan_min_cluster_size": 3
     },
     "optimization": {
-      "enabled": true,
-      "max_combinations": 24
+      "enabled": true
     },
     "return_reduced_embeddings": true
   }'
@@ -55,7 +54,6 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
 {
   "clusters": [...],
   "clustering_stats": {...},
-  "optimization_result": {...},
   "config_used": {...},
   "reduced_embeddings": [[...]],
   "model_info": {
@@ -70,48 +68,6 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
   }
 }
 ```
-
-### 2. **类型安全端点**
-
-#### `/ai-worker/clustering/embedding-format` - **强类型验证**
-```typescript
-// TypeScript 类型安全调用
-interface AIWorkerEmbeddingItem {
-  id: number;
-  embedding: number[];
-  title?: string;
-  url?: string;
-}
-
-const request: AIWorkerEmbeddingClusteringRequest = {
-  items: embeddings,
-  config: {...},
-  optimization: {...}
-};
-```
-
-#### `/ai-worker/clustering/article-format` - **完整文章格式**
-```json
-{
-  "items": [
-    {
-      "id": 1,
-      "title": "文章标题",
-      "content": "文章内容...",
-      "url": "https://example.com/article",
-      "embedding": [...],
-      "publishDate": "2025-05-30T10:00:00Z",
-      "status": "PROCESSED"
-    }
-  ],
-  "include_story_analysis": true
-}
-```
-
-### 3. **智能检测端点**
-
-#### `/clustering/auto` - **自动格式检测**
-自动识别并处理所有支持的数据格式，包括 AI Worker 格式。
 
 ---
 
@@ -162,7 +118,6 @@ interface MLServiceClusteringRequest {
   };
   optimization?: {
     enabled: boolean;
-    max_combinations?: number;
   };
   content_analysis?: {
     enabled: boolean;
@@ -187,11 +142,6 @@ interface MLServiceClusteringResponse {
     n_outliers: number;
     outlier_ratio: number;
   };
-  optimization_result: {
-    used: boolean;
-    best_params?: any;
-    best_score?: number;
-  };
   config_used: any;
   reduced_embeddings?: number[][];
   model_info: {
@@ -206,31 +156,13 @@ interface MLServiceClusteringResponse {
 
 ## 🧪 **测试和验证**
 
-### **运行集成测试**
-
-```bash
-# 启动 ML Service
-cd services/meridian-ml-service
-python src/meridian_ml_service/main_v2.py
-
-# 运行 AI Worker 集成测试
-python test/test_ai_worker_integration.py
-```
-
-### **测试覆盖**
-- ✅ 健康检查和集成状态
-- ✅ AI Worker 简化格式处理
-- ✅ AI Worker 扩展格式处理  
-- ✅ AI Worker 完整文章格式
-- ✅ 自动格式检测
-- ✅ 后端兼容性验证
-- ✅ 类型安全端点测试
+没有自动化测试。原 `test/` 下的手动脚本已于 2026-09-23 删除（调用的路由已不存在，也没接入任何 runner）。
 
 ### **手动验证**
 
 ```bash
 # 1. 健康检查
-curl http://localhost:8081/
+curl http://localhost:8081/health
 
 # 2. 测试简化格式
 curl -X POST "http://localhost:8081/ai-worker/clustering" \
@@ -239,15 +171,6 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
     "items": [
       {"id": 1, "embedding": [/* 384维向量 */]},
       {"id": 2, "embedding": [/* 384维向量 */]}
-    ]
-  }'
-
-# 3. 测试自动检测
-curl -X POST "http://localhost:8081/clustering/auto" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "items": [
-      {"id": 1, "embedding": [...], "title": "测试文章"}
     ]
   }'
 ```
@@ -270,8 +193,7 @@ curl -X POST "http://localhost:8081/clustering/auto" \
     "hdbscan_min_cluster_size": 3   // 避免过小聚类
   },
   "optimization": {
-    "enabled": true,                 // 自动优化参数
-    "max_combinations": 24          // 控制搜索空间
+    "enabled": true                  // 自动优化参数
   },
   "content_analysis": {
     "enabled": false                // 高性能场景可关闭
@@ -311,7 +233,6 @@ curl -X POST "http://localhost:8081/clustering/auto" \
    ```typescript
    // 新增字段
    const clusteringStats = result.clustering_stats;
-   const optimizationResult = result.optimization_result;
    const aiWorkerCompatible = result.model_info.ai_worker_compatible;
    ```
 
@@ -331,7 +252,7 @@ curl -X POST "http://localhost:8081/clustering/auto" \
 **问题**: 数据格式检测错误
 ```bash
 # 解决方案：检查数据结构
-curl -X POST "/clustering/auto" \
+curl -X POST "/ai-worker/clustering" \
   -d '{"items": [{"id": 1, "embedding": [...]}]}'
 # 确保 embedding 字段存在且为数组
 ```

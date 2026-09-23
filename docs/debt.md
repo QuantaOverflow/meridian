@@ -99,7 +99,8 @@
 
 ### D14. ai-worker 文档大面积过时
 - `services/meridian-ai-worker/README.md` 仍列出已不存在的 `/meridian/story/validate`、`/analyze-stories`、`/generate-final-brief` 及 `StoryValidationService`；`docs/quota-limit-handling.md` 通篇以已删的 `IntelligenceService` 为例；`docs/ARCHITECTURE.md` 的服务列表同样过时。本次只删了直接指向已删代码的行。
-- 待裁决：按现状重写，还是删掉，只保留代码注释与 ADR。
+- 进展：`services/meridian-ai-worker/docs/` 11 份文档经逐份核对全部过时，已整目录删除。
+- 待裁决：README 正文（架构图、端点表、环境变量、npm 命令）按现状重写，还是删减到只剩指路。
 
 ---
 

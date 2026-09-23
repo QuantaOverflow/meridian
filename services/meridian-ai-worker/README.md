@@ -263,10 +263,3 @@ Configure the following variables in your Cloudflare Workers environment:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Architecture Documentation
-
-For detailed architecture documentation, design patterns, and integration guides, see:
-- `docs/ARCHITECTURE.md` - System architecture and design patterns
-- `docs/API_GUIDE.md` - Detailed API usage guide
-- `docs/workflow_integration.md` - End-to-end workflow integration

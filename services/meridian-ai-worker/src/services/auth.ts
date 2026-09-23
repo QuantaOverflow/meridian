@@ -1,4 +1,4 @@
-import { CloudflareEnv, AuthenticationConfig, LogEntry, LogLevel } from '../types'
+import { CloudflareEnv, AuthenticationConfig } from '../types'
 import { Logger } from './logger'
 
 export class AuthenticationService {

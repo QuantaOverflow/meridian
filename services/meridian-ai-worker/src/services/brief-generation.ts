@@ -4,55 +4,12 @@
  * 生产环境错误处理，直接抛出错误而不使用fallback
  */
 
-import { z } from 'zod';
 import { AIGatewayService } from './ai-gateway';
 import { TraceContext, LLMCallPhase } from './llm-call-logger';
-import { callLLM, PHASE_DEFAULTS } from './call-llm';
-import { getBriefTitlePrompt } from '../prompts/briefGeneration';
+import { callLLM } from './call-llm';
 import { getTldrGenerationPrompt, getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { QuotaHandler } from '../utils/quota-handler';
-
-// ============================================================================
-// 数据结构定义 - 符合测试契约
-// ============================================================================
-
-// 情报分析数据结构（输入数据）
-const TimelineEventSchema = z.object({
-  date: z.string().datetime(),
-  description: z.string(),
-  importance: z.enum(["HIGH", "MEDIUM", "LOW"]),
-});
-
-const SignificanceAssessmentSchema = z.object({
-  level: z.enum(["CRITICAL", "HIGH", "MODERATE", "LOW"]),
-  reasoning: z.string(),
-});
-
-const EntitySchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  role: z.string(),
-  positions: z.array(z.string()),
-});
-
-const SourceAnalysisSchema = z.object({
-  sourceName: z.string(),
-  articleIds: z.array(z.number()),
-  reliabilityLevel: z.enum(["VERY_HIGH", "HIGH", "MODERATE", "LOW", "VERY_LOW"]),
-  bias: z.string(),
-});
-
-const ClaimSchema = z.object({
-  source: z.string(),
-  statement: z.string(),
-  entity: z.string().optional(),
-});
-
-const ContradictionSchema = z.object({
-  issue: z.string(),
-  conflictingClaims: z.array(ClaimSchema),
-});
 
 // ============================================================================
 // 简报生成服务

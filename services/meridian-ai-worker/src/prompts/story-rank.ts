@@ -62,7 +62,7 @@
  */
 
 /** 数据块起始标记。泛化断言只扫这之前的指令段。 */
-export const RANK_DATA_BLOCK_MARK = '\n# Stories\n';
+const RANK_DATA_BLOCK_MARK = '\n# Stories\n';
 
 export interface RankCandidate {
   /** 稳定 id，回传时用它指代故事；调用方自己决定用 clusterId 还是下标 */

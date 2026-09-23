@@ -20,4 +20,3 @@ CLOUDFLARE_API_TOKEN=placeholder                # 🔐
 GATEWAY_API_KEYS=dev-local-token                # 🔐 逗号分隔
 ENVIRONMENT=development
 LOG_LEVEL=info
-ENABLE_MOCK_PROVIDERS=false

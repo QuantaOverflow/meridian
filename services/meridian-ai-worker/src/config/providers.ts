@@ -745,17 +745,3 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
 export function getProviderConfig(providerName: string): ProviderConfig | undefined {
   return PROVIDER_CONFIGS[providerName]
 }
-
-export function getAllProviders(): string[] {
-  return Object.keys(PROVIDER_CONFIGS)
-}
-
-export function getProvidersForCapability(capability: string): string[] {
-  return Object.entries(PROVIDER_CONFIGS)
-    .filter(([_, config]) => 
-      config.models.some(model => 
-        model.capabilities.includes(capability as any)
-      )
-    )
-    .map(([name, _]) => name)
-}

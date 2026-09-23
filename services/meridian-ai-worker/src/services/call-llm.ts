@@ -17,7 +17,7 @@ import { recordSensor } from './sensor-log';
 // 未收编：article_analysis（index.ts strategy-driven，provider/model/temp 每次重试换，
 // 不适合 phase-default）、/meridian/chat（外部/eval 透传口，由 eval 侧 _shared/judge-llm.ts 管）。
 
-export interface PhaseDefault {
+interface PhaseDefault {
   provider: string;
   model: string;
   temperature: number;
@@ -38,7 +38,7 @@ export interface PhaseDefault {
 // ⚠️ glm-4.7-flash 是 reasoning 模型且**默认开思维链**，thinking token 计入 max_tokens 且先于正文生成
 // ——不关的话 faithfulness 的 800 预算会被思维链吃光、正文为空。关闭动作在 ai-gateway.ts
 // executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
-export const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
+const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   story_validation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000, skipCache: true },
   // 去重确认 + 起标题：输出只有一个布尔加一句标题，300 token 绰绰有余。
   // temperature 0 —— 同一组故事每次都该得到同一个判定，这是判定不是创作。

@@ -10,17 +10,6 @@ export interface APIResponse<T> {
   metadata?: Record<string, any>
 }
 
-// 核心数据类型定义 - 与ML Service兼容
-export interface ArticleItem {
-  id: number
-  title: string
-  content: string
-  url: string
-  embedding: number[]
-  publish_date: string
-  status: string
-}
-
 // 请求元数据
 export interface RequestMetadata {
   requestId: string

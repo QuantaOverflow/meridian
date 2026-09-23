@@ -58,12 +58,6 @@ const ContradictionSchema = z.object({
 // 简报生成服务
 // ============================================================================
 
-/** 写作层要的原文。给了才走证据链，不给完全是此前行为。 */
-export interface BriefSourceArticle {
-  id: number;
-  body: string;
-}
-
 export class BriefGenerationService {
   private aiGatewayService: AIGatewayService;
   private traceContext: TraceContext;

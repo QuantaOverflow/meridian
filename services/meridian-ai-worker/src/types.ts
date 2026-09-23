@@ -131,7 +131,7 @@ export interface LogEntry {
 // Unified Request Types
 // =============================================================================
 
-export interface BaseAIRequest {
+interface BaseAIRequest {
   model?: string
   provider?: string
   fallback?: boolean
@@ -185,7 +185,7 @@ export interface ImageRequest extends BaseAIRequest {
   n?: number
 }
 
-export interface AudioRequest extends BaseAIRequest {
+interface AudioRequest extends BaseAIRequest {
   capability: 'audio'
   input: string
   voice?: string
@@ -193,7 +193,7 @@ export interface AudioRequest extends BaseAIRequest {
   speed?: number
 }
 
-export interface VisionRequest extends BaseAIRequest {
+interface VisionRequest extends BaseAIRequest {
   capability: 'vision'
   messages: VisionMessage[]
 }
@@ -218,7 +218,7 @@ export interface TextToSpeechRequest extends BaseAIRequest {
   pitch?: number
 }
 
-export interface SpeechToTextRequest extends BaseAIRequest {
+interface SpeechToTextRequest extends BaseAIRequest {
   capability: 'speech-to-text'
   audio: string // base64 encoded audio
   language?: string
@@ -236,7 +236,7 @@ export interface LiveAudioRequest extends BaseAIRequest {
   }
 }
 
-export interface LiveVideoRequest extends BaseAIRequest {
+interface LiveVideoRequest extends BaseAIRequest {
   capability: 'live-video'
   video_stream: string
   audio_stream?: string
@@ -259,7 +259,7 @@ export interface ChatMessage {
   content: string
 }
 
-export interface VisionMessage {
+interface VisionMessage {
   role: 'system' | 'user' | 'assistant'
   content: string | Array<{
     type: 'text' | 'image_url'
@@ -272,7 +272,7 @@ export interface VisionMessage {
 // Unified Response Types
 // =============================================================================
 
-export interface BaseAIResponse {
+interface BaseAIResponse {
   id: string
   provider: string
   model: string
@@ -316,12 +316,12 @@ export interface ImageResponse extends BaseAIResponse {
   }>
 }
 
-export interface AudioResponse extends BaseAIResponse {
+interface AudioResponse extends BaseAIResponse {
   capability: 'audio'
   data: string // base64 encoded audio
 }
 
-export interface VisionResponse extends BaseAIResponse {
+interface VisionResponse extends BaseAIResponse {
   capability: 'vision'
   choices: Array<{
     message: ChatMessage
@@ -347,7 +347,7 @@ export interface TextToSpeechResponse extends BaseAIResponse {
   duration?: number
 }
 
-export interface SpeechToTextResponse extends BaseAIResponse {
+interface SpeechToTextResponse extends BaseAIResponse {
   capability: 'speech-to-text'
   text: string
   confidence?: number
@@ -362,7 +362,7 @@ export interface LiveAudioResponse extends BaseAIResponse {
   status: 'listening' | 'processing' | 'responding' | 'completed'
 }
 
-export interface LiveVideoResponse extends BaseAIResponse {
+interface LiveVideoResponse extends BaseAIResponse {
   capability: 'live-video'
   session_id: string
   response_video?: string
@@ -424,7 +424,7 @@ export interface AIGatewayRequest {
 // AI Gateway Enhanced Features
 // =============================================================================
 
-export interface AIGatewayCostConfig {
+interface AIGatewayCostConfig {
   per_token_in?: number
   per_token_out?: number
   per_request?: number
@@ -432,20 +432,20 @@ export interface AIGatewayCostConfig {
   per_second?: number
 }
 
-export interface AIGatewayCacheConfig {
+interface AIGatewayCacheConfig {
   ttl?: number // Time to live in seconds
   key?: string // Custom cache key
   skipCache?: boolean
   cacheNamespace?: string
 }
 
-export interface AIGatewayAuthConfig {
+interface AIGatewayAuthConfig {
   token?: string
   skipAuthentication?: boolean
   customHeaders?: Record<string, string>
 }
 
-export interface AIGatewayMetricsConfig {
+interface AIGatewayMetricsConfig {
   collectMetrics?: boolean
   customTags?: Record<string, string>
   enableLogging?: boolean
@@ -485,25 +485,6 @@ export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends
   capability: AICapability
   buildProviderRequest(request: TRequest, model: ModelConfig): any
   parseProviderResponse(response: any, request: TRequest, model: ModelConfig): TResponse
-}
-
-export interface Env {
-  CLOUDFLARE_ACCOUNT_ID: string
-  CLOUDFLARE_GATEWAY_ID: string
-  CLOUDFLARE_API_TOKEN: string
-  OPENAI_API_KEY: string
-  ANTHROPIC_API_KEY?: string
-  GOOGLE_AI_API_KEY?: string
-  DASHSCOPE_API_KEY?: string
-  // Authentication and security
-  API_SECRET_KEY?: string
-  ALLOWED_ORIGINS?: string
-  // Retry configuration
-  DEFAULT_MAX_RETRIES?: string
-  DEFAULT_RETRY_DELAY_MS?: string
-  // Logging configuration
-  LOG_LEVEL?: string
-  ENABLE_DETAILED_LOGGING?: string
 }
 
 // Cloudflare Workers environment with string index signature

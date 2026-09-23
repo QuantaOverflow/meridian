@@ -28,7 +28,7 @@
  *    即可，两次尝试各留一份，用 started_at 排序。
  * ③ **落进 span 的 text 必须是真正进了 prompt 的那段**。故 claims/gaps 的 backing 落的是
  *    `expand()` 扩展后的窗口原文，不是命中的中心句。
- * ④ **时间戳在操作真正开始时取**（见 `timeSpan`），不是事后补记。
+ * ④ **时间戳在操作真正开始时取**，不是事后补记。
  * ⑤ 派生判定要记 evaluator 名与阈值——本文件不做判定，只记事实，判定留给查询层。
  * ⑥ **必须记版本**。原型用 git HEAD；生产这边没有 git，用 CF 的 version_metadata binding
  *    （`wrangler.toml` 的 `[version_metadata]`）。但它给的是**部署实例 id 不是代码版本**：
@@ -41,12 +41,12 @@
 import type { CloudflareEnv } from '../types';
 import type { TraceContext } from './llm-call-logger';
 
-export const SPAN_SCHEMA_VERSION = 1;
+const SPAN_SCHEMA_VERSION = 1;
 
 /** 粗粒度阶段，查询时按它分组。加新段先在这里加名字，别塞进 name 里 */
 export type SpanStage = 'block' | 'evidence' | 'step';
 
-export interface Span {
+interface Span {
   span_id: string;
   /** 一次 workflow 执行的 id。**不要放块序号进去**，那是维度不是身份 */
   trace_id: string;
@@ -125,46 +125,4 @@ export async function recordSpan(
     console.warn(`[SpanLog] 落盘失败 ${key}: ${e instanceof Error ? e.message : String(e)}`);
   }
   return spanId;
-}
-
-/**
- * 包一段异步操作：**开始时**取时间戳（见 ④），失败也落 span（status=error）后再抛。
- * `attrs` 在 fn 结束后调用，用来把结果并进 attributes——失败时它拿到的是 undefined。
- */
-export async function timeSpan<T>(
-  env: CloudflareEnv,
-  trace: TraceContext,
-  o: {
-    name: string;
-    stage: SpanStage;
-    attributes?: Record<string, unknown>;
-    idx?: number;
-    spanId?: string;
-    parent?: string | null;
-  },
-  fn: () => Promise<T>,
-  attrs?: (r: T | undefined, err: unknown) => Record<string, unknown>
-): Promise<T> {
-  const t0 = Date.now();
-  const startedAt = new Date(t0).toISOString();
-  let r: T | undefined;
-  let err: unknown;
-  try {
-    r = await fn();
-  } catch (e) {
-    err = e;
-  }
-  await recordSpan(env, trace, {
-    ...o,
-    startedAt,
-    durationMs: Date.now() - t0,
-    status: err ? 'error' : 'ok',
-    attributes: {
-      ...(o.attributes ?? {}),
-      ...(attrs?.(r, err) ?? {}),
-      ...(err ? { error: String((err as any)?.message ?? err) } : {}),
-    },
-  });
-  if (err) throw err;
-  return r as T;
 }

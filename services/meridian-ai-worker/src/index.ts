@@ -39,7 +39,7 @@ app.use('*', async (c, next) => {
   await next()
 })
 
-// 观测上下文：请求内用 traced() 包的步骤、以及其中的 LLM 调用自动成树（services/observe.ts）
+// 观测上下文：请求内经 loggedChat 的 LLM 调用自动挂到本请求的 span 下（services/observe.ts）
 app.use('*', observeMiddleware)
 
 // ============================================================================

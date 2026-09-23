@@ -268,7 +268,7 @@ export class RetryService {
   }
 }
 
-export class RetryExhaustedError extends Error {
+class RetryExhaustedError extends Error {
   constructor(
     message: string,
     public readonly attempts: RetryAttempt[],

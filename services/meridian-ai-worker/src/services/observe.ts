@@ -1,13 +1,14 @@
 /**
- * 观测 wrapper：请求内的每个步骤用 `traced()` 包一行，父子关系、耗时、成败、异常、
- * 以及步骤里发生的 LLM 调用都自动记下，调用方不再手写 recordSpan、不再手传 parent。
+ * 请求级观测上下文：请求本身成一个 span，请求内经 loggedChat 的 LLM 调用自动挂到它下面，
+ * 调用方不手传 parent。（步骤级 wrapper `traced()` 从未有调用方，2026-09 已删。）
  * 设计依据：docs/engineering-notes/llm-observability-integration-patterns.md（业界的 wrapper +
  * 隐式上下文 + 埋点与去向分离）。
  *
  * 去向按请求选，由 `observeMiddleware` 在请求入口决定：
  *   x-observe: inline         → 记录收在本请求自己的内存里，随 JSON 响应的 `observation` 字段带回。
  *                                开发 / 验收用，不写 R2（本地 wrangler dev 直连生产桶，写了就是污染）
- *   只有 x-trace-id            → 步骤写 R2 `observability/spans/`（与 span-log 同一套 schema）。
+ *   只有 x-trace-id            → 只把 kind=step 的 span 写 R2 `observability/spans/`（与 span-log 同一套 schema）；
+ *                                目前没有代码产生 step span，所以实际什么都不写。
  *                                LLM I/O 已由 llm-call-logger 落 `llm-calls/`，这里不重复；请求本身也不落，
  *                                免得给所有带 trace 的旧端点平添 R2 写入
  *   都没有                     → 不记，被包的函数照常执行
@@ -23,10 +24,10 @@ import type { MiddlewareHandler } from 'hono';
 import type { CloudflareEnv } from '../types';
 import { newSpanId, recordSpan } from './span-log';
 
-export type ObserveMode = 'inline' | 'r2';
+type ObserveMode = 'inline' | 'r2';
 
 /** 字段形状对齐 OTel（trace / span / parent / attributes），以后要接外部平台只需多写一个去向。 */
-export interface ObservedSpan {
+interface ObservedSpan {
   span_id: string;
   trace_id: string;
   parent_span_id: string | null;
@@ -76,19 +77,6 @@ async function run<T>(
     span.duration_ms = Date.now() - t0;
     await emit(scope, span);
   }
-}
-
-/** 包一个步骤。请求没开观测、或在 node 里直接调用（没有上下文）时原样执行。 */
-export function traced<T>(name: string, fn: () => Promise<T>, attrs?: Record<string, unknown>): Promise<T> {
-  const f = als.getStore();
-  if (!f) return fn();
-  return run(f.scope, f.span, name, 'step', fn, attrs);
-}
-
-/** 给当前步骤补业务读数（条数、命中数……）。没有上下文时什么都不做。 */
-export function annotate(attrs: Record<string, unknown>): void {
-  const f = als.getStore();
-  if (f) Object.assign(f.span.attributes, attrs);
 }
 
 /**

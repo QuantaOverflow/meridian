@@ -27,7 +27,7 @@
 
 import { getStoryRankPrompt, RANK_DATA_BLOCK_MARK, RANK_TOP_N, type RankCandidate } from '../prompts/story-rank'
 
-export interface RankedPick {
+interface RankedPick {
   id: number
   eventKey: string
   category: string
@@ -38,7 +38,7 @@ export interface RankedPick {
   timesSelected: number
 }
 
-export interface RankRoundDiag {
+interface RankRoundDiag {
   round: number
   ok: boolean
   error?: string

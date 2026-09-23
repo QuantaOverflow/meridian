@@ -1,6 +1,6 @@
 import { ProviderConfig } from '../types'
 
-export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
+const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   openai: {
     name: 'openai',
     base_url: 'https://api.openai.com/v1',

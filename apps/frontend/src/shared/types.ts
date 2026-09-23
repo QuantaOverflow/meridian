@@ -1,10 +1,7 @@
 import type { BriefSection } from '~/server/lib/briefContent';
 import type { BriefSource } from '~/server/lib/briefSources';
 
-export type { BriefSection, BriefStory } from '~/server/lib/briefContent';
-export type { BriefSource, BriefSourceArticle } from '~/server/lib/briefSources';
-
-export interface ReportDate {
+interface ReportDate {
   month: string;
   day: number;
   year: number;

@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Context } from 'hono';
 import { HonoEnv } from '../../app';
 import { articleAnalysisSchema } from '../../prompts/articleAnalysis.prompt';
-import { userAgents } from './constants';
 
 /**
  * 检查请求是否有有效的认证令牌
@@ -98,26 +97,6 @@ export function generateSearchText(data: z.infer<typeof articleAnalysisSchema> &
   }
 
   return combined;
-}
-
-/**
- * 简单的异步错误包装器，在错误时返回null而不是抛出异常
- * @param asyncFn 要执行的Promise
- * @returns 结果或在错误发生时返回null
- */
-export async function safeAsync<T>(asyncFn: Promise<T>): Promise<T | null> {
-  try {
-    return await asyncFn;
-  } catch (error) {
-    return null;
-  }
-}
-
-/**
- * 获取随机用户代理字符串
- */
-export function getRandomUserAgent(): string {
-  return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
 /**

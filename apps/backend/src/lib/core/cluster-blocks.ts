@@ -10,10 +10,8 @@
  *  · `assembleBlocks` —— 跨簇同名合并与 30 篇截断的**顺序**：先合后截。反过来会对同一个块
  *    采样两次，且合并后的篇数不对。
  */
-import { blockImportance, dominantEntity, PER_EVENT_BLOCK_CAP } from './storyline';
+import { blockImportance, dominantEntity } from './storyline';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from './story-dedup';
-
-export { PER_EVENT_BLOCK_CAP };
 
 /** 判定结果：ok 时带模型输出，否则带错误原因。形状与 `AIWorkerService.judgeCluster` 的返回一致。 */
 export type JudgeResult =

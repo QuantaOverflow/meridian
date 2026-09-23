@@ -15,7 +15,7 @@ import type { AIWorkerEnv } from './ai-services';
  * HDBSCAN 的噪声标签。ml 侧把这一组也当普通簇返回，故它会出现在 clusters 里；
  * 判"是不是真簇"必须显式排除它，别再靠 clusters.length。
  */
-export const NOISE_CLUSTER_ID = -1;
+const NOISE_CLUSTER_ID = -1;
 
 /**
  * ml 侧响应顶层的镜像身份字段名（ml-service `src/main.py` 的 `BUILD_IDENTITY_FIELD` 同名）。
@@ -26,7 +26,7 @@ export const NOISE_CLUSTER_ID = -1;
  * 2026-09-15 至 09-19 连续五天生产跑的是旧聚类算法（NO_EVENT 从 2% 涨到 52-54%，
  * 平均篇数 5.5→9.8），全程 brief_runs.status = COMPLETED。
  */
-export const ML_BUILD_IDENTITY_FIELD = 'build_identity';
+const ML_BUILD_IDENTITY_FIELD = 'build_identity';
 
 /** ml 侧"没注入"的占位值（与 main.py 的 BUILD_NOT_INJECTED 同值）。 */
 const ML_BUILD_NOT_INJECTED = 'not-injected';
@@ -56,7 +56,7 @@ function readExpectedBuildSha(env: AIWorkerEnv): string | undefined {
  * - `ok`          有字段且已注入：配了期望 SHA 时表示 SHA 相符；没配时只表示"不是旧镜像"
  *                 （build_sha 可能仍是占位符，构建时刻来自镜像层构建戳）。
  */
-export type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected' | 'mismatch';
+type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected' | 'mismatch';
 
 export interface BuildIdentityAssertion {
   status: BuildIdentityStatus;
@@ -76,7 +76,7 @@ export interface BuildIdentityAssertion {
  * 关键：**字段缺失必须是一个可判别的状态**，不能 `?? 'unknown'` 吞掉——那等于把这道闸拆了。
  * 这个函数只产出信号，不决定 DEGRADED（status 赋值归 workflow）。
  */
-export function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityAssertion {
+function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityAssertion {
   if (raw === undefined || raw === null) {
     return {
       status: 'missing',

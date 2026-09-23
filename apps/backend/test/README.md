@@ -85,11 +85,6 @@ const result = await parseRSSFeed(fixtures.independant_co_uk);
 
 ## 运行测试
 
-### 推荐方式 (无资源冲突)
-```bash
-npm run test:safe
-```
-
 ### 传统方式 (可能有资源冲突)
 ```bash
 npm test

@@ -356,11 +356,9 @@ Configure automated deployment through GitHub Actions or similar, ensuring:
 - **Hono:** Web framework for API server
 - **Drizzle ORM:** TypeScript ORM for database interactions
 - **postgres.js:** PostgreSQL client library
-- **Neverthrow:** Functional error handling
 - **Zod:** Schema validation and type safety
 
 ### AI & ML
-- **@ai-sdk/google:** Google Gemini integration
 - **@mozilla/readability:** Article content extraction
 - **linkedom:** DOM parsing for content processing
 - **fast-xml-parser:** RSS feed parsing

@@ -12,80 +12,22 @@
 // 跨 service 调用的判别式结果：成功给 value(+可选 metadata)，失败给 status+error。
 // 各调用方据此施加自己的策略（validateStory throw / intelligence 跳过 / faithfulness fail-open），
 // 故此处只报告结果、不代替调用方决定 throw 与否。
-export type ServiceResult<T> =
+type ServiceResult<T> =
   | { ok: true; value: T; metadata?: any }
   | { ok: false; status: number; error: string };
 
-export interface EmbeddingData {
+interface EmbeddingData {
   embeddings: Array<{ embedding: number[] }>;
   model?: string;
   dimensions?: number;
 }
-export interface ValidatedStoriesData {
-  stories: any[];
-  rejectedClusters: any[];
-}
-export interface FinalBriefData {
-  title: string;
-  content: string;
-  metadata?: any;
-}
-export interface BriefTldrData {
+interface BriefTldrData {
   tldr: string;
 }
 
 interface BriefSummaryData {
   tldrProse: string;
 }
-/** b′ 骨架：因果主线章节 + 独立事态。`i` 是 1 基的 story 序号（与 reportKeys 下标差 1）。 */
-export interface BriefSkeletonData {
-  main: Array<{ heading: string; causalLink: string; reports: Array<{ i: number; title: string }> }>;
-  isolated: Array<{ i: number; title: string }>;
-  /** 规划完全没提到、由 ai-worker 侧代码补进独立事态的 story 序号。非空即说明规划步不完整。 */
-  repaired: number[];
-}
-
-/** 一个写好的简报块。`verified:false` = 这块没经过 RARR 核验，不是"核过且干净"。 */
-export interface BriefBlockData {
-  index: number;
-  title: string;
-  text: string;
-  verified: boolean;
-  edits: number;
-  applied: number;
-  skipped: number;
-  blocked: Record<'noop' | 'bad_delete' | 'graft' | 'bloat', number>;
-}
-
-/** 报告层 v3：一个簇的原文 → 带出处的事实 / 当事方 / 分歧。report 形状见 ai-worker utils/report-v3.ts。 */
-export interface ReportV3Data {
-  report: Record<string, any>;
-  trace: {
-    facts: number;
-    skeleton: number;
-    parties: number;
-    conflicts: number;
-    llmCalls: number;
-    /** 这一簇全部 LLM 调用的 neurons 合计，成本对账读它 */
-    neurons: number;
-    [k: string]: any;
-  };
-}
-
-/** 写作层 v3 的一块。marks 是代码检查器的标记：**只进内部观测与管理页，不给读者看**。 */
-export interface BlockV3Data {
-  text: string;
-  marks: Array<{ sentence: string; reasons: Array<Record<string, any>> }>;
-  trace: {
-    points: number;
-    relations: number;
-    llmCalls: number;
-    neurons: number;
-    marks: { sentences: number; checked: number; abstained: number; marked: number };
-    [k: string]: any;
-  };
-}
-
 /**
  * 简报块 v6 的一块。与 ai-worker `src/services/brief-block-v6.ts` 的 `BriefBlockV6Result`
  * 对齐（跨 package 不能直接 import，这里是镜像；那份 TS 类型是唯一真源）。
@@ -94,7 +36,7 @@ export interface BriefBlockV6Sentence {
   text: string;
   sources: Array<{ articleId: number; sentence: number }>;
 }
-export interface BriefBlockV6Data {
+interface BriefBlockV6Data {
   verdict: 'written' | 'not_a_single_event';
   reason?: string;
   block: null | { title: string; sentences: BriefBlockV6Sentence[] };
@@ -120,15 +62,10 @@ export interface BriefBlockV6Data {
   };
 }
 
-export interface BriefTitleData {
+interface BriefTitleData {
   title: string;
   neurons: number;
 }
-
-// 情报报告 / 忠实度 verdict 载荷形态大且松，保持宽松类型（D 的收益在接缝仪式收敛，
-// 非逐字段深类型化——那是另一件事）。
-export type IntelligenceReportData = Record<string, any>;
-export type FaithfulnessVerdict = Record<string, any>;
 
 export interface AIWorkerEnv {
   AI_WORKER: {
@@ -139,7 +76,7 @@ export interface AIWorkerEnv {
 }
 
 // AI Worker服务协调器
-export class AIWorkerService {
+class AIWorkerService {
   private readonly baseUrl = 'https://meridian-ai-worker';
 
   constructor(private env: AIWorkerEnv, private traceId?: string) {}

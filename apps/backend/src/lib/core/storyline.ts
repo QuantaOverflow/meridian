@@ -126,7 +126,7 @@ export const PER_EVENT_BLOCK_CAP = 4;
  * 公式取对数是为了边际递减（第 2 个独立源比第 6 个信息量大）；源数权重是篇数的 2 倍，
  * 因为独立源数是文献里更强的客观显著性信号（GDELT breaking-news 检测同源）。
  */
-export function blockScore(distinctSources: number, articleCount: number): number {
+function blockScore(distinctSources: number, articleCount: number): number {
   return Math.log2(1 + Math.max(0, distinctSources)) + 0.5 * Math.log2(1 + Math.max(0, articleCount));
 }
 

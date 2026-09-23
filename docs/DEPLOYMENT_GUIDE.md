@@ -250,38 +250,9 @@ curl https://meridian-ai-worker.your-subdomain.workers.dev/ai-gateway/config
 - [ ] 部署AI Worker
 - [ ] 配置Service Binding
 - [ ] 更新Backend代码使用新客户端
-- [ ] 移除旧的AI SDK依赖
+- [x] 移除旧的AI SDK依赖
 - [ ] 测试功能一致性
 - [ ] 监控性能和成本
-
-### 代码变更示例
-
-**之前 (直接调用)**:
-```typescript
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-
-const google = createGoogleGenerativeAI({
-  apiKey: env.GEMINI_API_KEY,
-})
-
-const response = await generateObject({
-  model: google('gemini-1.5-flash-8b-001'),
-  prompt: getArticleAnalysisPrompt(title, text),
-  schema: articleAnalysisSchema,
-})
-```
-
-**之后 (Service Binding)**:
-```typescript
-import { createAIWorkerClient } from '../lib/aiWorkerClient'
-
-const aiClient = createAIWorkerClient(env)
-
-const result = await aiClient.analyzeArticle(title, text, {
-  provider: 'google-ai-studio',
-  model: 'gemini-1.5-flash-8b-001'
-})
-```
 
 ## 📈 预期收益
 

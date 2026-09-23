@@ -6,7 +6,7 @@ import { Env } from '../../index';
 /**
  * Schema for validating responses from the Cloudflare Browser Rendering API
  */
-export const articleSchema = z.object({
+const articleSchema = z.object({
   status: z.coerce.boolean(),
   errors: z.array(z.object({ code: z.number(), message: z.string() })).optional(),
   result: z.string(),

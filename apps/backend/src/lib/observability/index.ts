@@ -11,30 +11,6 @@ export interface WorkflowMetrics {
   error?: string;
 }
 
-export interface DataFlowMetrics {
-  stage: string;
-  articleCount: number;
-  clusterCount?: number;
-  storyCount?: number;
-  filterCriteria?: any;
-  removedCount?: number;
-  addedCount?: number;
-  transformationType?: string;
-  qualityMetrics?: any;
-}
-
-export interface ClusteringMetrics {
-  inputArticles: number;
-  clusterConfig: any;
-  outputClusters: number;
-  noisePoints: number;
-  avgClusterSize: number;
-  avgCoherenceScore: number;
-  largestClusterSize: number;
-  smallestClusterSize: number;
-  embeddingQuality: any;
-}
-
 export interface StorySelectionMetrics {
   candidateStories: number;
   selectedStories: number;
@@ -65,21 +41,6 @@ export interface StorySelectionMetrics {
     highConfidence: number;
     borderlineCases: number;
     avgSelectionMargin: number;
-  };
-}
-
-export interface BriefGenerationMetrics {
-  totalAnalysisTime: number;
-  aiModelUsed: string;
-  tokensUsed?: number;
-  costEstimate?: number;
-  contentLength: number;
-  storiesProcessed: number;
-  r2ContentAccess: {
-    attempted: number;
-    successful: number;
-    failed: number;
-    avgContentLength: number;
   };
 }
 

@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "vitest run",
-    "test:safe": "./scripts/run-tests.sh",
     "generate-fixtures": "node scripts/generate-fixtures.js",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit"
@@ -16,21 +15,18 @@
     "@cloudflare/vitest-pool-workers": "^0.8.19",
     "@cloudflare/workers-types": "^4.20250509.0",
     "@types/node": "^22.14.1",
+    "@vitest/coverage-v8": "3.1.2",
     "typescript": "^5.8.2",
     "vitest": "^3.1.2",
     "wrangler": "^4.14.0"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.2.13",
-    "@cloudflare/puppeteer": "^1.0.2",
     "@hono/zod-validator": "^0.4.3",
     "@meridian/database": "workspace:*",
     "@mozilla/readability": "^0.6.0",
-    "ai": "^4.3.9",
     "fast-xml-parser": "^5.2.1",
     "hono": "^4.7.7",
     "linkedom": "^0.18.9",
-    "neverthrow": "^8.2.0",
     "workers-og": "^0.0.25",
     "zod": "^3.24.3"
   }

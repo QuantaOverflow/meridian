@@ -13,9 +13,9 @@
 export type Tier = 'lead' | 'more' | 'brief';
 
 /** 头条 4 / 要闻 10 / 其余简讯。故事不足时靠后的层为空，空节不渲染。 */
-export const TIER_SIZES: { lead: number; more: number } = { lead: 4, more: 10 };
-export const TIERS: Tier[] = ['lead', 'more', 'brief'];
-export const SECTION_HEADINGS: Record<Tier, string> = {
+const TIER_SIZES: { lead: number; more: number } = { lead: 4, more: 10 };
+const TIERS: Tier[] = ['lead', 'more', 'brief'];
+const SECTION_HEADINGS: Record<Tier, string> = {
   lead: 'top stories',
   more: 'more news',
   brief: 'in brief',

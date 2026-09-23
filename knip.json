@@ -8,29 +8,27 @@
     },
 
     "apps/backend": {
-      "entry": ["src/index.ts", "src/workflows/*.ts", "src/durable_objects/*.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": ["src/workflows/*.ts", "src/durable_objects/*.ts", "scripts/**/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
     },
 
     "apps/frontend": {
       "entry": [
-        "src/app.vue",
-        "src/error.vue",
         "src/pages/**/*.vue",
         "src/layouts/*.vue",
-        "src/server/**/*.ts",
-        "nuxt.config.ts"
+        "src/server/**/*.ts"
       ],
-      "project": ["src/**/*.{ts,vue}", "nuxt.config.ts"]
+      "project": ["src/**/*.{ts,vue}"],
+      "ignoreDependencies": ["@unhead/vue", "vue-router", "vue-tsc", "wrangler"]
     },
 
     "services/meridian-ai-worker": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignoreBinaries": ["jq"]
     },
 
     "packages/database": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["drizzle/**"]
     },
@@ -38,7 +36,8 @@
     "eval/*": {
       "entry": ["**/*.{ts,mjs}"],
       "project": ["**/*.{ts,mjs}"],
-      "ignore": ["out/**", "scratch/**", "fixtures/**", "datasets/**"]
+      "ignore": ["out/**", "scratch/**", "fixtures/**", "datasets/**"],
+      "ignoreBinaries": ["wrangler"]
     }
   },
 
@@ -48,5 +47,9 @@
     "services/meridian-ml-service/cf-worker"
   ],
 
-  "ignore": ["**/prototypes/**", "**/out/**", "**/scratch/**"]
+  "ignore": ["**/prototypes/**", "**/out/**", "**/scratch/**"],
+
+  "ignoreIssues": {
+    "eval/cluster-to-brief/lib.mjs": ["duplicates"]
+  }
 }

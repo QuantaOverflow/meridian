@@ -151,16 +151,6 @@ curl -X POST https://meridian-ai-worker.your-subdomain.workers.dev/meridian/arti
       "provider": "workers-ai"
     }
   }'
-
-# 嵌入生成
-curl -X POST https://meridian-ai-worker.your-subdomain.workers.dev/meridian/embeddings/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "Text to embed",
-    "options": {
-      "provider": "workers-ai"
-    }
-  }'
 ```
 
 ## 🔐 环境变量配置

@@ -14,8 +14,6 @@
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
     "health": "curl http://localhost:8787/health | jq .",
-    "config": "curl http://localhost:8787/ai-gateway/config | jq .",
-    "providers": "curl http://localhost:8787/providers | jq .",
     "prototype:skeleton": "node --experimental-strip-types prototypes/skeleton-planner/tui.ts",
     "prototype:skeleton:batch": "node --experimental-strip-types prototypes/skeleton-planner/batch.ts",
     "prototype:anchor": "node --experimental-strip-types prototypes/skeleton-planner/anchor-ab.ts",

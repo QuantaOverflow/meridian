@@ -152,7 +152,7 @@ export const $brief_runs = pgTable(
 // 跨期线索（读者端「事件追踪」）。一条线索 = 若干天里被判为同一条持续事件的 brief_stories。
 //
 // 归并靠 e5-small embedding 的余弦相似度，不调 LLM：文章 embedding 库里本来就有，
-// 判据确定、可复现、零成本。阈值与回看窗口标定见 apps/backend/scripts/assign-story-clusters.js。
+// 判据确定、可复现、零成本。阈值与回看窗口标定见 apps/backend/scripts/assign-story-clusters.ts。
 //
 // 表本身只存无法从成员推导的东西（首末出现时间、展示标题）；持续天数、期数、进行中与否
 // 一律读时按成员算——数据量只有几千行，冗余字段带来的不一致风险远大于那点查询开销。

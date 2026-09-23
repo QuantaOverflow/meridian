@@ -44,7 +44,7 @@ pnpm wrangler dev \
 
 ```bash
 # wrangler dev 跑起来后，通过 HTTP 触发 workflow（见 backend admin 路由）
-curl -X POST http://localhost:8787/admin/trigger-brief ...
+curl -X POST http://localhost:8787/admin/briefs/generate -H 'Authorization: Bearer <API_TOKEN>' -H 'Content-Type: application/json' -d '{}'
 # 或用 wrangler workflows 命令查看实例
 wrangler workflows instances list <WORKFLOW_NAME>
 ```

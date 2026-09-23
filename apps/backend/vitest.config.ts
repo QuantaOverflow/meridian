@@ -48,16 +48,6 @@ export default defineWorkersConfig({
                 });
               }
               
-              if (path === '/meridian/embeddings/generate' && request.method === 'POST') {
-                return new Response(JSON.stringify({
-                  success: true,
-                  data: [{ embedding: new Array(384).fill(0.123) }],
-                }), {
-                  status: 200,
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-              
               // 健康检查端点
               if (path === '/health') {
                 return new Response(JSON.stringify({

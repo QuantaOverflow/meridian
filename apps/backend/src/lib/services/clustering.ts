@@ -495,8 +495,6 @@ export class ClusteringService {
    */
   private async aiWorkerClustering(items: any[], options?: {
     config?: any;
-    optimization?: any;
-    content_analysis?: any;
     return_embeddings?: boolean;
     return_reduced_embeddings?: boolean;
   }): Promise<Response> {
@@ -514,9 +512,7 @@ export class ClusteringService {
       headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
       body: JSON.stringify({
         items,
-        config: options?.config,
-        optimization: options?.optimization,
-        content_analysis: options?.content_analysis
+        config: options?.config
       })
     });
 

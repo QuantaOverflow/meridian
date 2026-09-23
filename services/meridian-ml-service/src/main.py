@@ -20,7 +20,7 @@ from .schemas import (
     BaseClusteringResponse,
     
     # 配置模型
-    BaseClusteringConfig, OptimizationConfig, ContentAnalysisConfig
+    BaseClusteringConfig, ContentAnalysisConfig
 )
 from .pipeline import process_clustering_request
 from .embeddings import compute_embeddings
@@ -211,7 +211,6 @@ async def generate_embeddings(
 async def ai_worker_clustering(
     items: List[Dict[str, Any]],
     config: BaseClusteringConfig = None,
-    optimization: OptimizationConfig = None,
     content_analysis: ContentAnalysisConfig = None,
     return_embeddings: bool = Query(False, description="是否返回原始嵌入向量"),
     return_reduced_embeddings: bool = Query(True, description="是否返回降维后向量"),
@@ -241,9 +240,7 @@ async def ai_worker_clustering(
         result = await process_clustering_request(
             items=items,
             config=config,
-            optimization=optimization,
             content_analysis=content_analysis,
-            model_components=None,
             data_type=detected_format if detected_format.startswith('ai_worker') else 'vectors'
         )
         

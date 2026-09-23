@@ -5,19 +5,18 @@ Meridian ML Pipeline - 统一的ML处理管道
 
 import time
 import numpy as np
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import List, Dict, Any, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from .schemas import (
-    AIWorkerEmbeddingItem, AIWorkerArticleDataItem, DataFormatConverter,
-    BaseClusteringConfig, OptimizationConfig, ContentAnalysisConfig,
+    AIWorkerEmbeddingItem, AIWorkerArticleDataItem,
+    BaseClusteringConfig, ContentAnalysisConfig,
     ClusteringStats, ClusterInfo,
-    convert_to_internal_config, build_optimization_grid
+    convert_to_internal_config
 )
-from .embeddings import compute_embeddings, validate_embeddings
+from .embeddings import validate_embeddings
 from .clustering import (
-    cluster_embeddings_with_optimization,
     cluster_embeddings,
     analyze_cluster_content,
     ClusteringConfig as InternalClusteringConfig
@@ -97,9 +96,6 @@ class DataExtractionResult:
 class DataExtractionStage(ProcessingStage):
     """数据提取和验证阶段"""
     
-    def __init__(self, model_components=None):
-        self.model_components = model_components
-    
     async def process(self, data: Any, context: Dict[str, Any]) -> DataExtractionResult:
         """从各种数据格式中提取嵌入向量和文本"""
         items = data['items']
@@ -108,27 +104,6 @@ class DataExtractionStage(ProcessingStage):
         embeddings = []
         texts = []
         metadata = []
-        
-        # 检测数据类型
-        if data_type == 'auto':
-            if isinstance(items[0], dict):
-                # 使用格式检测器自动识别AI Worker格式
-                detected_format = DataFormatConverter.detect_format(items)
-                context['detected_format'] = detected_format
-                
-                if detected_format.startswith('ai_worker'):
-                    data_type = detected_format
-                elif 'embedding' in items[0]:
-                    data_type = 'vectors'
-                else:
-                    data_type = 'texts'
-            else:
-                # Pydantic模型，检查类型
-                first_item = items[0] if items else {}
-                if hasattr(first_item, 'embedding'):
-                    data_type = 'vectors'
-                else:
-                    data_type = 'texts'
         
         context['detected_data_type'] = data_type
         print(f"[DataExtraction] 检测到数据类型: {data_type}")
@@ -210,63 +185,6 @@ class DataExtractionStage(ProcessingStage):
             # 验证嵌入向量
             embeddings_array = validate_embeddings(embeddings)
             
-        elif data_type == 'texts':
-            # 文本生成嵌入模式（原有逻辑）
-            if not self.model_components:
-                raise ValueError("文本模式需要提供model_components")
-            
-            for i, item in enumerate(items):
-                if isinstance(item, dict):
-                    text = item.get('text', item.get('title', ''))
-                    texts.append(text)
-                    metadata.append({
-                        'id': item.get('id', i),
-                        'source': 'generated',
-                        **{k: v for k, v in item.items() if k != 'text'}
-                    })
-                else:
-                    # Pydantic模型
-                    text = getattr(item, 'text', getattr(item, 'title', ''))
-                    texts.append(text)
-                    metadata.append({
-                        'id': getattr(item, 'id', i),
-                        'source': 'generated',
-                        **{k: v for k, v in item.dict().items() if k != 'text'}
-                    })
-            
-            # 生成嵌入向量
-            embeddings_array = compute_embeddings(texts, self.model_components)
-            
-        elif data_type == 'text_item':
-            # text_item 格式处理 - 与 texts 相同的逻辑
-            print("[DataExtraction] 处理纯文本格式")
-            if not self.model_components:
-                raise ValueError("文本模式需要提供model_components")
-            
-            for i, item in enumerate(items):
-                if isinstance(item, dict):
-                    text = item.get('text', item.get('title', ''))
-                    texts.append(text)
-                    metadata.append({
-                        'id': item.get('id', i),
-                        'source': 'generated',
-                        'original_format': 'text_item',
-                        **{k: v for k, v in item.items() if k != 'text'}
-                    })
-                else:
-                    # Pydantic模型
-                    text = getattr(item, 'text', getattr(item, 'title', ''))
-                    texts.append(text)
-                    metadata.append({
-                        'id': getattr(item, 'id', i),
-                        'source': 'generated',
-                        'original_format': 'text_item',
-                        **{k: v for k, v in item.dict().items() if k != 'text'}
-                    })
-            
-            # 生成嵌入向量
-            embeddings_array = compute_embeddings(texts, self.model_components)
-            
         else:
             raise ValueError(f"不支持的数据类型: {data_type}")
         
@@ -293,10 +211,8 @@ class ClusteringStage(ProcessingStage):
     """聚类分析阶段"""
     
     def __init__(self, 
-                 config: Optional[BaseClusteringConfig] = None,
-                 optimization: Optional[OptimizationConfig] = None):
+                 config: Optional[BaseClusteringConfig] = None):
         self.config = config
-        self.optimization = optimization
     
     async def process(self, data: DataExtractionResult, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行聚类分析"""
@@ -306,31 +222,8 @@ class ClusteringStage(ProcessingStage):
         # 转换配置
         internal_config = convert_to_internal_config(self.config)
         
-        # 决定是否使用优化
-        use_optimization = self.optimization and self.optimization.enabled
-        
-        if use_optimization:
-            print("使用参数优化聚类...")
-            grid_config = build_optimization_grid(self.optimization)
-            
-            # 将优化配置转换为内部格式
-            from .clustering import GridSearchConfig
-            internal_grid = GridSearchConfig(
-                umap_n_neighbors=grid_config.get('umap_n_neighbors', [10, 15, 20]),
-                hdbscan_min_cluster_size=grid_config.get('hdbscan_min_cluster_size', [3, 5, 8]),
-                hdbscan_min_samples=grid_config.get('hdbscan_min_samples', [2, 3]),
-                hdbscan_epsilon=grid_config.get('hdbscan_epsilon', [0.1, 0.2]),
-            )
-            
-            clustering_result = cluster_embeddings_with_optimization(
-                embeddings,
-                use_optimization=True,
-                grid_config=internal_grid
-            )
-        else:
-            print("使用标准聚类...")
-            internal_config_obj = InternalClusteringConfig(**internal_config) if internal_config else None
-            clustering_result = cluster_embeddings(embeddings, internal_config_obj)
+        internal_config_obj = InternalClusteringConfig(**internal_config) if internal_config else None
+        clustering_result = cluster_embeddings(embeddings, internal_config_obj)
         
         # 分析簇内容
         cluster_labels = np.array(clustering_result['cluster_labels'])
@@ -370,10 +263,6 @@ class ContentAnalysisStage(ProcessingStage):
     
     async def process(self, data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """分析内容并构建最终结果"""
-        if not self.config.enabled:
-            # 跳过内容分析，直接构建基础结果
-            return self._build_basic_result(data, context)
-        
         print("执行内容分析...")
         
         # 构建聚类信息
@@ -440,15 +329,6 @@ class ContentAnalysisStage(ProcessingStage):
         
         return sorted(clusters, key=lambda x: x.size, reverse=True)
     
-    def _build_basic_result(self, data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """构建基础结果（跳过详细内容分析）"""
-        # 简化版本，适用于高性能场景
-        return {
-            'clustering_stats': ClusteringStats(**data['clustering_stats']),
-            'config_used': data['config_used'],
-            'processing_time': context.get('total_processing_time')
-        }
-    
     def get_stage_name(self) -> str:
         return "content_analysis"
 
@@ -460,28 +340,14 @@ class MLPipelineFactory:
     """ML管道工厂 - 提供常用的管道组合"""
     
     @staticmethod
-    def create_text_clustering_pipeline(
-        model_components,
-        config: Optional[BaseClusteringConfig] = None,
-        optimization: Optional[OptimizationConfig] = None,
-        content_analysis: Optional[ContentAnalysisConfig] = None
-    ) -> MLPipeline:
-        """创建文本聚类管道"""
-        return (MLPipeline()
-                .add_stage(DataExtractionStage(model_components))
-                .add_stage(ClusteringStage(config, optimization))
-                .add_stage(ContentAnalysisStage(content_analysis)))
-    
-    @staticmethod
     def create_vector_clustering_pipeline(
         config: Optional[BaseClusteringConfig] = None,
-        optimization: Optional[OptimizationConfig] = None,
         content_analysis: Optional[ContentAnalysisConfig] = None
     ) -> MLPipeline:
         """创建向量聚类管道"""
         return (MLPipeline()
                 .add_stage(DataExtractionStage())  # 不需要model_components
-                .add_stage(ClusteringStage(config, optimization))
+                .add_stage(ClusteringStage(config))
                 .add_stage(ContentAnalysisStage(content_analysis)))
 
 # ============================================================================
@@ -491,22 +357,14 @@ class MLPipelineFactory:
 async def process_clustering_request(
     items: List[Any],
     config: Optional[BaseClusteringConfig] = None,
-    optimization: Optional[OptimizationConfig] = None,
     content_analysis: Optional[ContentAnalysisConfig] = None,
-    model_components=None,
     data_type: str = 'auto'
 ) -> Dict[str, Any]:
     """统一的聚类处理函数 - 替代所有端点中的重复逻辑"""
     
-    # 选择合适的管道
-    if data_type in ['texts', 'text_item', 'auto'] and model_components:
-        pipeline = MLPipelineFactory.create_text_clustering_pipeline(
-            model_components, config, optimization, content_analysis
-        )
-    else:
-        pipeline = MLPipelineFactory.create_vector_clustering_pipeline(
-            config, optimization, content_analysis
-        )
+    pipeline = MLPipelineFactory.create_vector_clustering_pipeline(
+        config, content_analysis
+    )
     
     # 准备输入数据
     input_data = {

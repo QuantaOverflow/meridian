@@ -1,6 +1,6 @@
 # Meridian ML Service
 
-An AI-driven intelligent clustering and embedding generation service designed for the Meridian project, providing core machine learning capabilities with efficient text embedding, robust clustering with parameter optimization, and seamless integration with existing backend systems.
+An AI-driven intelligent clustering and embedding generation service designed for the Meridian project, providing core machine learning capabilities with efficient text embedding, robust clustering, and seamless integration with existing backend systems.
 
 ## 🌟 Key Features
 
@@ -81,7 +81,7 @@ The system is structured into several logical components:
 - **Core ML Service**: FastAPI application exposing ML functionalities via RESTful APIs
 - **ML Pipeline**: Modular processing pipeline with data extraction, clustering, and content analysis stages
 - **Embedding Engine**: Handles loading and computation of text embeddings using transformer models
-- **Clustering Engine**: Implements agglomerative clustering on cosine distance (`agglomerative_cosine`, production default) plus the original UMAP + HDBSCAN pipeline (`umap_hdbscan`, rollback path only), with automatic parameter optimization for the latter
+- **Clustering Engine**: Implements agglomerative clustering on cosine distance (`agglomerative_cosine`, production default) plus the original UMAP + HDBSCAN pipeline (`umap_hdbscan`, rollback path only)
 
 > **Note (history)**: commit `12a0f06` (2026-09-05) switched the caller default to `agglomerative_cosine`, but the ml-service container image failed to push, so production kept running the old `umap_hdbscan` code from 2026-09-15 through 2026-09-19 despite the code default having changed — evidenced by the cluster-judge NO_EVENT rate jumping from a normal ~2% to 52-54% during that window. This is why the docs kept describing UMAP+HDBSCAN long after it stopped being the intended default: for five days it actually was production behavior, just not what the code default said.
 - **AI Worker Integration**: Seamless compatibility with existing AI Worker data formats
@@ -282,31 +282,10 @@ The service automatically detects and processes multiple input formats:
 }
 ```
 
-### Optimization Configuration
-```json
-{
-  "optimization": {
-    "enabled": true,
-    "metric": "dbcv",
-    "n_trials": 20,
-    "umap_params": {
-      "n_neighbors": [5, 10, 15],
-      "n_components": [5, 10, 15],
-      "min_dist": [0.0, 0.1, 0.25]
-    },
-    "hdbscan_params": {
-      "min_cluster_size": [3, 5, 10],
-      "min_samples": [1, 3, 5]
-    }
-  }
-}
-```
-
 ### Content Analysis Configuration
 ```json
 {
   "content_analysis": {
-    "enabled": true,
     "max_representative_content": 5,
     "include_outliers": true
   }
@@ -468,7 +447,7 @@ scripts/
 - **`schemas.py`**: Request/response models and data format detection utilities
 - **`dependencies.py`**: Shared resources and authentication management
 - **`embeddings.py`**: Transformer model loading and text-to-vector conversion
-- **`clustering.py`**: agglomerative cosine-distance clustering (production default, `agglomerative_cosine`) plus the UMAP + HDBSCAN implementation (rollback path, `umap_hdbscan`) with parameter optimization
+- **`clustering.py`**: agglomerative cosine-distance clustering (production default, `agglomerative_cosine`) plus the UMAP + HDBSCAN implementation (rollback path, `umap_hdbscan`)
 - **`pipeline.py`**: Modular processing workflow with configurable stages
 
 ## 🔗 Integration Points
@@ -479,7 +458,7 @@ The service is designed as a drop-in replacement for existing AI Worker services
 
 - **Compatible Data Formats**: Supports all AI Worker data structures
 - **Consistent API**: Maintains familiar endpoint patterns
-- **Enhanced Features**: Adds parameter optimization and content analysis
+- **Enhanced Features**: Adds content analysis
 - **Migration Support**: Provides automated format detection and conversion
 
 ### External Dependencies

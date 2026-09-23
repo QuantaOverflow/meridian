@@ -41,19 +41,8 @@ class BaseClusteringConfig(BaseModel):
     postprocess_prune_threshold: Optional[float] = Field(default=None, description="成员到簇质心余弦<此值则剪为噪音(治污染)")
     postprocess_dissolve_threshold: Optional[float] = Field(default=None, description="簇平均内聚(成员到质心余弦)<此值则整簇解散为噪音(治噪音巨团)")
 
-class OptimizationConfig(BaseModel):
-    """参数优化配置"""
-    enabled: bool = Field(default=False, description="是否启用参数优化")
-    
-    # 网格搜索范围
-    umap_n_neighbors_range: List[int] = Field(default=[10, 15, 20, 30], description="UMAP邻居数量搜索范围")
-    hdbscan_min_cluster_size_range: List[int] = Field(default=[3, 5, 8, 10], description="HDBSCAN最小簇大小搜索范围")
-    hdbscan_min_samples_range: List[int] = Field(default=[2, 3, 5], description="HDBSCAN最小样本数搜索范围")
-    hdbscan_epsilon_range: List[float] = Field(default=[0.1, 0.2, 0.3], description="HDBSCAN epsilon搜索范围")
-
 class ContentAnalysisConfig(BaseModel):
     """内容分析配置"""
-    enabled: bool = Field(default=True, description="是否启用内容分析")
     top_n_per_cluster: int = Field(default=5, ge=1, le=20, description="每个簇返回的代表性内容数量")
 
 # ============================================================================
@@ -205,15 +194,3 @@ def convert_to_internal_config(api_config: Optional[BaseClusteringConfig]) -> Di
         "normalize_embeddings": api_config.normalize_embeddings,
         "remove_outliers": api_config.remove_outliers,
     }
-
-def build_optimization_grid(config: OptimizationConfig) -> Dict[str, List[Any]]:
-    """构建参数优化网格"""
-    if not config.enabled:
-        return {}
-    
-    return {
-        "umap_n_neighbors": config.umap_n_neighbors_range,
-        "hdbscan_min_cluster_size": config.hdbscan_min_cluster_size_range,
-        "hdbscan_min_samples": config.hdbscan_min_samples_range,
-        "hdbscan_epsilon": config.hdbscan_epsilon_range,
-    } 

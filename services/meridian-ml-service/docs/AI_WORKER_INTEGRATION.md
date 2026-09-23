@@ -42,9 +42,6 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
       "umap_n_neighbors": 15,
       "hdbscan_min_cluster_size": 3
     },
-    "optimization": {
-      "enabled": true
-    },
     "return_reduced_embeddings": true
   }'
 ```
@@ -94,8 +91,7 @@ const clusterRequest = new Request('https://meridian-ml-service/ai-worker/cluste
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     items: articlesForClustering,  // 字段名从 articles -> items
-    config: {...},                 // options -> config
-    optimization: { enabled: true }
+    config: {...}                  // options -> config
   })
 });
 ```
@@ -116,11 +112,7 @@ interface MLServiceClusteringRequest {
     hdbscan_min_cluster_size?: number;
     normalize_embeddings?: boolean;
   };
-  optimization?: {
-    enabled: boolean;
-  };
   content_analysis?: {
-    enabled: boolean;
     top_n_per_cluster?: number;
   };
 }
@@ -191,19 +183,12 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
     "normalize_embeddings": true,    // 提高聚类质量
     "umap_n_neighbors": 15,         // 根据数据量调整
     "hdbscan_min_cluster_size": 3   // 避免过小聚类
-  },
-  "optimization": {
-    "enabled": true                  // 自动优化参数
-  },
-  "content_analysis": {
-    "enabled": false                // 高性能场景可关闭
   }
 }
 ```
 
 ### **3. 批处理建议**
 - **小批量** (< 50 篇): 使用所有功能
-- **中批量** (50-200 篇): 关闭内容分析
 - **大批量** (> 200 篇): 使用简化格式 + 基础配置
 
 ---
@@ -224,8 +209,7 @@ curl -X POST "http://localhost:8081/ai-worker/clustering" \
    -   "articles": [...],
    +   "items": [...],
    -   "options": {...}
-   +   "config": {...},
-   +   "optimization": {...}
+   +   "config": {...}
    }
    ```
 
@@ -272,8 +256,6 @@ curl -X POST "/ai-worker/clustering" \
 ```bash
 # 解决方案：优化配置
 {
-  "optimization": {"enabled": false},  // 关闭参数优化
-  "content_analysis": {"enabled": false},  // 关闭内容分析
   "return_reduced_embeddings": false   // 减少数据传输
 }
 ```

@@ -10,37 +10,6 @@
 
 - `lib/cluster-blocks.spec.ts` - 聚类分块测试
 
-### Fixtures 系统
-
-由于 Cloudflare Workers 环境不支持 `fs.readFileSync`，我们开发了一个 fixtures 模块系统：
-
-#### 生成 Fixtures
-
-```bash
-npm run generate-fixtures
-```
-
-这个命令会：
-1. 读取 `test/fixtures/*.xml` 中的所有测试文件
-2. 生成 `test/fixtures.ts` 模块文件
-3. 将文件内容作为字符串常量导出
-
-#### 使用 Fixtures
-
-```typescript
-import { fixtures } from './fixtures';
-
-// 使用生成的 fixtures
-const result = await parseRSSFeed(fixtures.independant_co_uk);
-```
-
-#### 可用的 Fixtures
-
-- `fixtures.independant_co_uk` - The Independent RSS feed
-- `fixtures.cn_nytimes_com` - 纽约时报中文网 RSS feed  
-- `fixtures.ft_com` - Financial Times RSS feed
-- `fixtures.theverge_com` - The Verge Atom feed
-
 ### 测试覆盖范围
 
 1. **基本单元测试**
@@ -95,11 +64,6 @@ npm test
 npm test -- test/lib/cluster-blocks.spec.ts
 ```
 
-### 重新生成 Fixtures
-```bash
-npm run generate-fixtures
-```
-
 ## 测试策略
 
 由于 Cloudflare Workers 测试环境的限制，我们采用以下策略：
@@ -109,20 +73,13 @@ npm run generate-fixtures
 3. **简化配置**: 最小化绑定配置，减少启动错误
 4. **模拟优先**: 对复杂依赖使用模拟而非真实绑定
 
-## 添加新的测试数据
-
-1. 将新的 XML 文件放入 `test/fixtures/` 目录
-2. 运行 `npm run generate-fixtures` 重新生成 fixtures 模块
-3. 在测试中使用 `fixtures.your_new_fixture_name`
-
 ## 故障排除
 
 ### 常见问题
 
 1. **"Cannot use require() to import an ES Module"**: 使用 fixtures 模块系统替代文件读取
-2. **"No such module" 错误**: 确保运行了 `npm run generate-fixtures`
-3. **兼容性日期错误**: 确保使用支持的日期 (2025-04-17)
-4. **Durable Objects 错误**: 确保配置了正确的 migrations
+2. **兼容性日期错误**: 确保使用支持的日期 (2025-04-17)
+3. **Durable Objects 错误**: 确保配置了正确的 migrations
 
 ### 测试最佳实践
 

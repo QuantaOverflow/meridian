@@ -80,15 +80,6 @@ node apps/backend/scripts/monitor-database.js
 ./apps/backend/scripts/quick-test.sh stats         # 显示统计
 ```
 
-### 5. 测试数据生成 - `generate-fixtures.js`
-
-**功能**：生成测试fixture数据
-
-**使用方法**：
-```bash
-node apps/backend/scripts/generate-fixtures.js
-```
-
 ## 🚀 快速开始
 
 ### 环境准备
@@ -248,7 +239,6 @@ apps/backend/scripts/
 ├── monitor-database.js   # 数据库实时监控
 ├── db-stats.sh          # 数据库统计概览
 ├── quick-test.sh        # 快速测试启动器
-├── generate-fixtures.js # 测试数据生成器
 └── README.md           # 使用指南（本文件）
 ```
 

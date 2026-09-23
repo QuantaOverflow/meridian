@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "vitest run",
-    "generate-fixtures": "node scripts/generate-fixtures.js",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit"
   },

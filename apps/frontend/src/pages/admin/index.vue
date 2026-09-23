@@ -17,12 +17,9 @@ if (sourcesError.value) {
 }
 
 type Source = NonNullable<typeof data.value>['sources'][number];
-type Overview = NonNullable<typeof data.value>['overview'];
 
 const sources = computed(() => data.value?.sources ?? []);
 const overview = computed(() => data.value?.overview);
-
-const config = useRuntimeConfig();
 
 const sortKey = ref<keyof Source | ''>('');
 const sortOrder = ref<'asc' | 'desc'>('asc');

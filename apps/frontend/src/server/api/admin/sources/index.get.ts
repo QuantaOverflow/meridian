@@ -1,4 +1,4 @@
-import { sql, $articles, $sources, and, lte, gte } from '@meridian/database';
+import { sql, $articles, and, gte } from '@meridian/database';
 import { formatScrapeFrequency, getDB } from '~/server/lib/utils';
 
 export default defineEventHandler(async event => {

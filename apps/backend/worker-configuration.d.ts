@@ -3,15 +3,9 @@
 // Runtime types generated with workerd@1.20250508.0 2025-04-30 nodejs_compat
 declare namespace Cloudflare {
 	interface Env {
-		DATABASE_URL: string;
 		API_TOKEN: string;
 		CLOUDFLARE_ACCOUNT_ID: string;
 		CLOUDFLARE_API_TOKEN: string;
-		CLOUDFLARE_BROWSER_RENDERING_API_TOKEN: string;
-		GEMINI_API_KEY: string;
-		GEMINI_BASE_URL: string;
-		ML_SERVICE_URL: string;
-		ML_SERVICE_API_TOKEN: string;
 		SOURCE_SCRAPER: DurableObjectNamespace<import("./src/index").SourceScraperDO>;
 		ARTICLES_BUCKET: R2Bucket;
 		AI_WORKER: Fetcher /* meridian-ai-worker */;
@@ -26,7 +20,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "DATABASE_URL" | "API_TOKEN" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_API_TOKEN" | "CLOUDFLARE_BROWSER_RENDERING_API_TOKEN" | "GEMINI_API_KEY" | "GEMINI_BASE_URL" | "ML_SERVICE_URL" | "ML_SERVICE_API_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "API_TOKEN" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_API_TOKEN">> {}
 }
 
 // Begin runtime types

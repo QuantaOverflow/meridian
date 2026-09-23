@@ -58,26 +58,6 @@ function canonicalMap(words: Iterable<string>): Map<string, string> {
 }
 
 /**
- * 标题里的**连续大写短语**（`Hong Kong` / `Sri Lanka` / `Imran Khan`）。
- *
- * 只用于给块起名，**不用于统计**：`entityShare` 与分组仍按单词，那条路验过（生产 35/35 块
- * 全 ≥0.50，误杀 0），不动。而按词取出来的名字当标题会残缺——实测把 `Hong Kong` 显示成
- * `Hong`、`China` 与 `Chinese` 分成两块。
- */
-function extractCapPhrases(title: string): string[] {
-  const out: string[] = [];
-  for (const m of title.matchAll(/\b[A-Z][A-Za-z’']{2,}(?:[ -][A-Z][A-Za-z’']{2,})*\b/g)) {
-    // 掐掉句首的大写停用词（`Why Australia's` → `Australia`）与所有格尾巴（`Europe's` → `Europe`）：
-    // 两者都不是名字的一部分，留着会让块名读起来像半句话。
-    let words = m[0].split(/[ -]/);
-    while (words.length > 1 && CAP_STOPWORDS.has(words[0])) words = words.slice(1);
-    const ph = words.join(' ').replace(/[’']s$/i, '');
-    if (ph.length >= 3 && !CAP_STOPWORDS.has(ph)) out.push(ph);
-  }
-  return out;
-}
-
-/**
  * 一批标题里覆盖率最高的那个专有名词。**跨簇的「事件键」用它**。
  *
  * 判定是按簇独立跑的——一次只看一个簇，不知道别的簇存在。所以聚类把同一个事件分到两个簇时，

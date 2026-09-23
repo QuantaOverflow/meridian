@@ -179,21 +179,7 @@ curl -X PATCH \
   https://your-worker.workers.dev/admin/sources/123
 ```
 
-#### Delete Source
-```bash
-curl -X DELETE \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  https://your-worker.workers.dev/admin/sources/123
-```
-
 ### Briefing Management
-
-#### Get Latest Briefing
-```bash
-curl -X GET \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  https://your-worker.workers.dev/reports/last-report
-```
 
 #### Generate New Briefing
 ```bash
@@ -216,13 +202,6 @@ curl -X POST \
 curl -X POST \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   https://your-worker.workers.dev/do/source/123/fetch
-```
-
-#### System Overview
-```bash
-curl -X GET \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  https://your-worker.workers.dev/admin/overview
 ```
 
 ## Configuration
@@ -337,11 +316,9 @@ Configure automated deployment through GitHub Actions or similar, ensuring:
 ## Monitoring & Observability
 
 ### Available Endpoints
-- `/admin/overview` - System health and statistics
-- `/observability/workflows` - Workflow execution status
-- `/observability/briefs/stats` - Briefing generation metrics
-- `/observability/dashboard` - Comprehensive system dashboard
-- `/observability/quality/analysis` - Data quality assessment
+- `/observability/health/summary` - System health summary (last 24h)
+- `/observability/trends` - Daily run/story trends
+- `/observability/runs/:workflowId` - Full trace of one brief workflow run
 
 ### Key Metrics
 - Article processing success rates

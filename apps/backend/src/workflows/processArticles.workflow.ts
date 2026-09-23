@@ -28,13 +28,6 @@ interface AIWorkerAnalysisResponse {
   metadata?: any;
 }
 
-interface AIWorkerEmbeddingResponse {
-  success: boolean;
-  data?: number[];
-  error?: string;
-  metadata?: any;
-}
-
 const TRICKY_DOMAINS = [
   'reuters.com',
   'nytimes.com',

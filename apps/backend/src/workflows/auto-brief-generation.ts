@@ -10,13 +10,11 @@ import {
   type PendingBlock,
 } from '../lib/core/cluster-blocks';
 import {
-  blockImportance,
-  dominantEntity,
   PER_EVENT_BLOCK_CAP,
 } from '../lib/core/storyline';
 import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
-import { createClusteringService, type ArticleDataset, type ClusteringResult } from '../lib/services/clustering';
+import { createClusteringService, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
@@ -381,7 +379,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         r2FetchFailures: 0,
         qualityFilteredOut: 0
       };
-      let validArticlesCount = 0;
       
       // 补算缺失 embedding（成本优化 2026-07-08）：进稿侧不再逐篇实时算——那会让 ml-service
       // 容器的 10min sleepAfter 被全天进稿反复重置而 24/7 常驻（账单实证 ~$31/月）。embedding
@@ -576,8 +573,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             Array.isArray(row.embedding) && row.embedding.length === 384
           );
           
-          validArticlesCount = validArticles.length; // 保存到外部变量
-          
           if (queryResult.length !== validArticles.length) {
             console.warn(`[AutoBrief] 过滤掉 ${queryResult.length - validArticles.length} 篇无效嵌入向量的文章`);
           }
@@ -657,8 +652,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 并行处理文章内容获取的函数
           const processArticleContent = async (article: typeof validArticles[0], index: number) => {
             let content = '';
-            let contentAcquired = false;
-            let failureReason = '';
             
             try {
               // 严格要求必须有 contentFileKey
@@ -697,7 +690,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               }
               
               r2ContentMetrics.r2FetchSuccesses++;
-              contentAcquired = true;
               
             } catch (error) {
               r2ContentMetrics.r2FetchFailures++;

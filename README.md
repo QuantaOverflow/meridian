@@ -355,26 +355,14 @@ POST /admin/sources
   "scrape_frequency": 2
 }
 
-# Get all sources
-GET /admin/sources
-
 # Update source
-PATCH /admin/sources/{id}
-
-# Delete source
-DELETE /admin/sources/{id}
+PUT /admin/sources/{id}
 ```
 
 ### **Briefing Management**
 ```bash
-# Get latest briefing
-GET /reports/last-report
-
 # Generate new briefing
 POST /admin/briefs/generate
-
-# Get briefing by ID
-GET /reports/{id}
 ```
 
 ### **AI Worker APIs**
@@ -437,10 +425,6 @@ POST /ai-worker/clustering
 
 ### **Available Endpoints**
 - `/health`: Service health status
-- `/admin/overview`: System statistics and performance
-- `/observability/workflows`: Workflow execution monitoring
-- `/observability/dashboard`: Comprehensive system dashboard
-- `/observability/quality/analysis`: Data quality assessment
 
 ### **Key Metrics**
 - Article processing success rates and performance

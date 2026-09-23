@@ -1,7 +1,6 @@
 import { 
   AIRequest, 
   AIResponse, 
-  AIGatewayRequest, 
   CloudflareEnv, 
   BaseProvider,
   AICapability,
@@ -11,8 +10,6 @@ import {
   RequestMetadata,
   RetryConfig,
   AuthenticationConfig,
-  RetryAttempt,
-  AIGatewayEnhancedConfig,
   ModelConfig
 } from '../types'
 import { OpenAIProvider } from './providers/openai'
@@ -21,7 +18,6 @@ import { AnthropicProvider } from './providers/anthropic'
 import { GoogleAIProvider } from './providers/google-ai'
 import { DashScopeProvider } from './providers/dashscope'
 import { MockProvider } from './providers/mock'
-import { getProvidersForCapability, getAllProviders } from '../config/providers'
 import { isThinkingDisabled } from '../config/thinking'
 import { AuthenticationService } from './auth'
 import { Logger } from './logger'

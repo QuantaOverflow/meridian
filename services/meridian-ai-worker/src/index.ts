@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { z } from 'zod'
 import { AIGatewayService } from './services/ai-gateway'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
@@ -13,7 +12,7 @@ import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
 import { CloudflareEnv, ChatResponse } from './types'
-import { APIResponse, ArticleItem } from './types/api'
+import { APIResponse } from './types/api'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
 type HonoEnv = {
@@ -43,42 +42,6 @@ app.use('*', async (c, next) => {
 app.use('*', observeMiddleware)
 
 // ============================================================================
-// 通用工具函数
-// ============================================================================
-
-async function callAI(
-  aiGateway: AIGatewayService, 
-  prompt: string, 
-  systemPrompt?: string,
-  options: { provider?: string; model?: string; temperature?: number; maxTokens?: number } = {}
-): Promise<string> {
-  const messages = systemPrompt 
-    ? [
-        { role: 'system' as const, content: systemPrompt },
-        { role: 'user' as const, content: prompt }
-      ]
-    : [{ role: 'user' as const, content: prompt }]
-
-  const chatRequest = {
-    capability: 'chat' as const,
-    messages,
-    provider: options.provider || 'dashscope',
-    model: options.model || 'qwen-plus',
-    // ?? 而非 ||：调用方显式传 temperature: 0（需确定性的判定场景）时必须生效，|| 会吞成 0.1
-    temperature: options.temperature ?? 0.1,
-    max_tokens: options.maxTokens || 8000,
-    metadata: createRequestMetadata({ req: { header: () => 'ai-worker' } })
-  }
-
-  const result = await aiGateway.chat(chatRequest)
-  if (result.capability !== 'chat') {
-    throw new Error('Unexpected response type from chat service')
-  }
-
-  return (result as ChatResponse).choices?.[0]?.message?.content || ''
-}
-
-// ============================================================================
 // Health Check
 // ============================================================================
 
@@ -99,7 +62,7 @@ app.post('/meridian/article/analyze', async (c) => {
   const requestMetadata = createRequestMetadata(c)
   
   try {
-    const { title, content, url } = await c.req.json()
+    const { title, content } = await c.req.json()
     
     if (!title || !content) {
       return c.json({ success: false, error: '缺少必需字段：title 和 content' }, 400)

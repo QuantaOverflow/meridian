@@ -4,7 +4,7 @@ export class Logger {
   private logLevel: LogLevel
   private enableDetailedLogging: boolean
 
-  constructor(private env: CloudflareEnv) {
+  constructor(env: CloudflareEnv) {
     this.logLevel = (env.LOG_LEVEL as LogLevel) || 'info'
     this.enableDetailedLogging = env.ENABLE_DETAILED_LOGGING === 'true'
   }

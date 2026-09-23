@@ -25,7 +25,7 @@
  * 「排序生效了但结果一样」变得不可分辨。
  */
 
-import { getStoryRankPrompt, RANK_DATA_BLOCK_MARK, RANK_TOP_N, type RankCandidate } from '../prompts/story-rank'
+import { getStoryRankPrompt, RANK_TOP_N, type RankCandidate } from '../prompts/story-rank'
 
 interface RankedPick {
   id: number

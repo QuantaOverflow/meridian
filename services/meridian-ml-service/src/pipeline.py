@@ -112,12 +112,7 @@ class DataExtractionStage(ProcessingStage):
         if data_type == 'ai_worker_embedding' or data_type == 'ai_worker_embedding_extended':
             print("[DataExtraction] 处理AI Worker嵌入格式")
             for i, item in enumerate(items):
-                # 转换为标准格式进行处理
-                if isinstance(item, dict):
-                    ai_item = AIWorkerEmbeddingItem(**item)
-                else:
-                    ai_item = item
-                
+                ai_item = AIWorkerEmbeddingItem(**item)
                 embeddings.append(ai_item.embedding)
                 texts.append(ai_item.title or f"Article {ai_item.id}")
                 metadata.append({
@@ -136,12 +131,7 @@ class DataExtractionStage(ProcessingStage):
         elif data_type == 'ai_worker_article':
             print("[DataExtraction] 处理AI Worker完整文章格式")
             for i, item in enumerate(items):
-                # 转换为标准格式进行处理
-                if isinstance(item, dict):
-                    ai_article = AIWorkerArticleDataItem(**item)
-                else:
-                    ai_article = item
-                
+                ai_article = AIWorkerArticleDataItem(**item)
                 embeddings.append(ai_article.embedding)
                 # 组合标题和内容作为文本
                 text_content = f"{ai_article.title}\n\n{ai_article.content[:500]}..."
@@ -164,24 +154,14 @@ class DataExtractionStage(ProcessingStage):
         elif data_type == 'vectors':
             # 预生成向量模式（原有逻辑）
             for i, item in enumerate(items):
-                if isinstance(item, dict):
-                    embeddings.append(item['embedding'])
-                    texts.append(item.get('text', item.get('title', f'Item {i}')))
-                    metadata.append({
-                        'id': item.get('id', i),
-                        'source': 'pre_generated',
-                        **{k: v for k, v in item.items() if k not in ['embedding', 'text']}
-                    })
-                else:
-                    # Pydantic模型
-                    embeddings.append(item.embedding)
-                    texts.append(getattr(item, 'text', getattr(item, 'title', f'Item {i}')))
-                    metadata.append({
-                        'id': getattr(item, 'id', i),
-                        'source': 'pre_generated',
-                        **{k: v for k, v in item.dict().items() if k not in ['embedding', 'text']}
-                    })
-            
+                embeddings.append(item['embedding'])
+                texts.append(item.get('text', item.get('title', f'Item {i}')))
+                metadata.append({
+                    'id': item.get('id', i),
+                    'source': 'pre_generated',
+                    **{k: v for k, v in item.items() if k not in ['embedding', 'text']}
+                })
+
             # 验证嵌入向量
             embeddings_array = validate_embeddings(embeddings)
             

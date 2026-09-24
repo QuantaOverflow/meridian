@@ -139,8 +139,7 @@ async def health_check():
             "timestamp": time.time(),
             BUILD_IDENTITY_FIELD: get_build_identity(),
             "embedding_model": settings.embedding_model_name,
-            "clustering_available": CLUSTERING_AVAILABLE,
-            "optimization_available": CLUSTERING_AVAILABLE
+            "clustering_available": CLUSTERING_AVAILABLE
         }
         
         if not CLUSTERING_AVAILABLE:

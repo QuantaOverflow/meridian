@@ -1,265 +1,108 @@
-# Meridian AI Worker
+# meridian-ai-worker
 
-Meridian AI Worker is an AI gateway service built on Cloudflare Workers, designed to provide a unified AI service interface for the Meridian Intelligence Brief System. It supports interaction with multiple AI providers (OpenAI, Anthropic, Google AI, Cloudflare Workers AI) and integrates enterprise-grade features including authentication, cost tracking, intelligent caching, and enhanced monitoring.
+Meridian 管线里所有 LLM 调用的出口。Cloudflare Worker（Hono），backend 经 service binding
+`AI_WORKER` 调它；它自己不碰数据库，只读写 R2 做观测落盘。
 
-## System Architecture Overview
-
-Meridian AI Worker adopts a clear layered architecture with well-defined responsibilities, featuring excellent modularity and extensibility. The core design philosophy is to abstract the differences between underlying AI providers through a unified AI Gateway service, achieving high maintainability and flexibility.
+## 在管线里的位置
 
 ```
-┌───────────────────────────────────────────────┐
-│              HTTP Routes (index.ts)           │  (API endpoints, request parsing, response handling)
-├───────────────────────────────────────────────┤
-│                  Service Layer                │  (Core business logic, AI capability coordination, provider calls)
-│  ┌───────────────────────────────────────────┐│
-│  │ AIGatewayService (Core AI request dispatch & enhancement) ││
-│  │ BriefGenerationService (Brief generation workflow)       ││
-│  │ StoryValidationService (Story validation workflow)       ││
-│  │ AuthenticationService (Authentication & authorization)    ││
-│  │ RetryService (Retry mechanisms)                         ││
-│  │ Logger, MetadataService (Logging & metadata)            ││
-│  └───────────────────────────────────────────┘│
-├───────────────────────────────────────────────┤
-│                 Provider Layer                │  (AI provider adapters, unified request/response format)
-│  ┌───────────────────────────────────────────┐│
-│  │ OpenAIProvider │ AnthropicProvider │        ││
-│  │ GoogleAIProvider │ WorkersAIProvider │ MockProvider ││
-│  └───────────────────────────────────────────┘│
-├───────────────────────────────────────────────┤
-│               Capability Layer                │  (Specific AI capability request building & response parsing)
-│  ┌───────────────────────────────────────────┐│
-│  │ ChatCapability │ EmbeddingCapability │ ImageCapability ││
-│  │ VideoCapability │ TextToSpeechCapability │ LiveAudioCapability │ etc. ││
-│  └───────────────────────────────────────────┘│
-└───────────────────────────────────────────────┘
-                                   ↓
-                       Cloudflare AI Gateway (Unified entry, caching, cost tracking, monitoring)
-                                   ↓
-                       AI Models (GPT-4, Gemini, Llama, Claude, BGE-M3, etc.)
+抓取 (SourceScraperDO) → queue → ProcessArticles ──► /meridian/article/analyze
+                                                    └► ml-service /embeddings
+AutoBriefGeneration ─► ml-service /ai-worker/clustering
+                    ─► /meridian/cluster/judge        （一簇一次）
+                    ─► blockImportance（backend 代码）+ /meridian/stories/rank
+                    ─► /meridian/brief-block-v6       （一块一次）
+                    ─► /meridian/brief-title → /meridian/generate-brief-tldr → /meridian/generate-brief-summary
 ```
 
-### Design Principles
+embedding 和聚类不在本服务，在 `services/meridian-ml-service`。
+backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，那里的客户端方法就是契约。
 
-- **Layered Architecture**: Application logic is divided into clear layers for easy understanding and maintenance
-- **Adapter Pattern**: Through `AbstractProvider` and its concrete implementations, unifies interfaces across different AI providers
-- **Strategy Pattern**: `CapabilityHandler` defines specific processing logic for each AI capability
-- **Single Responsibility Principle**: Each service and module focuses on a single function
-- **Configuration-Driven**: Centralized management of AI model and provider configurations for easy extension
-- **Robustness**: Built-in retry mechanisms, error handling, and logging
+## 路由（`src/index.ts`，共 9 条）
 
-## Tech Stack
+请求/响应形状以 handler 为准；除 `/health` 外都返回 `{ success, data?, error?, metadata? }`。
 
-- **Platform**: Cloudflare Workers
-- **Programming Language**: TypeScript
-- **Web Framework**: Hono (lightweight, high-performance)
-- **Runtime Compatibility**: Node.js compatibility mode (`nodejs_compat`)
-- **Package Management**: npm (or pnpm)
-- **Testing Framework**: Vitest (unit testing, integration testing), Miniflare (Workers environment simulation)
-- **Deployment Tool**: Cloudflare Wrangler CLI
-- **Data Validation**: Zod (for API request and response contract validation)
-- **AI Gateway**: Cloudflare AI Gateway (unified proxy for all AI requests)
-- **AI Providers**: OpenAI, Anthropic, Google AI Studio, Cloudflare Workers AI
+| 路由 | 用途 | 调用方 |
+|---|---|---|
+| `GET /health` | 存活检查 | — |
+| `POST /meridian/article/analyze` | `{title, content}` → 单篇结构化分析（语言、地点、摘要点、关键词、实体…），字段契约见 `prompts/articleAnalysis.ts` 的 `articleAnalysisSchema` | ProcessArticles |
+| `POST /meridian/cluster/judge` | `{articles:[{id,title,…}]}`（≥2 篇）→ `verdict` EVENT / NO_EVENT / UNSURE + 标题；解析失败回 500，不伪装成 NO_EVENT | AutoBriefGeneration |
+| `POST /meridian/stories/rank` | `{candidates:[{id,title,articles}]}` → 三轮洗牌 + Borda 聚合取前 12（`services/story-rank.ts`）；三轮全败回 500 | AutoBriefGeneration |
+| `POST /meridian/brief-block-v6` | `{title, articles:[{id,title,content}], tier?}` → 一簇写成一块简报（`services/brief-block-v6.ts`）；`tier` = `lead` / `more` / `brief` | AutoBriefGeneration |
+| `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
+| `POST /meridian/generate-brief-tldr` | `{briefTitle, briefContent}` → `tldr`（机器格式，给次日管线读，不给读者看） | AutoBriefGeneration |
+| `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration、`apps/backend/scripts/backfill-tldr-prose.ts` |
+| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | eval 判官（`eval/_shared/judge-llm.ts`） |
 
-## Core Components & Modules
+所有路由都**没有鉴权**：`services/auth.ts` 的 `AuthenticationService` 只在
+`AIGatewayService.processRequestWithAuth` 里用到，而这个方法没有调用方。
 
-### Entry Point
-- **`src/index.ts`**: Application entry point defining all external HTTP API endpoints
-  - Routes requests to appropriate service layer handlers
-  - Performs basic request validation
-  - Constructs unified API response format
+## LLM 调用怎么走
 
-### Services (`src/services/`)
+- 除 article analyze 与 `/meridian/chat` 外，所有调用都经 `src/services/call-llm.ts` 的
+  `callLLM(phase)`：每个 phase 在 `PHASE_DEFAULTS` 里有一套 provider / model / temperature /
+  maxTokens / skipCache 默认值，caller 只覆盖真不同的。
+- 现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
+  （`AIGatewayService.executeWorkersAIViaBinding`）。思维链由 `config/thinking.ts` 关掉。
+- article analyze 在 `index.ts` 自带两档重试：`@cf/qwen/qwen3-30b-a3b-fp8` → `@cf/zai-org/glm-4.7-flash`。
+- **Workers AI binding 调用目前不经 AI Gateway**：`executeWorkersAIViaBinding` 刻意不传 `gateway`
+  参数（原因见该处注释）。只有非 workers-ai 的 provider（如 `/meridian/chat` 默认的 dashscope）走
+  `https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}`。
+- 经 `callLLM` 的调用都会做输出语言检测（`checkOutputLanguage`），CJK 占比超阈值只告警、落 sensor，不改输出。
 
-#### `ai-gateway.ts` (`AIGatewayService`)
-- **Purpose**: System core, acting as unified dispatcher and enhancer for all AI requests
-- **Functionality**: Selects appropriate `BaseProvider` based on request capability and provider, builds requests compatible with Cloudflare AI Gateway universal endpoint format, executes HTTP calls, and parses responses
-- **Key Responsibilities**: AI request routing, traffic control, external AI API abstraction
+## 环境变量与 secret
 
-#### Provider Layer (`services/providers/`)
-- **Purpose**: Adapts different AI providers, providing unified API call interfaces
-- **Functionality**: `AbstractProvider` defines common methods for all providers (getting supported capabilities and models, building request bodies, parsing responses)
-- **Implementations**: `OpenAIProvider`, `AnthropicProvider`, `GoogleAIProvider`, `WorkersAIProvider`
+本地复制 `.dev.vars.example` 为 `.dev.vars`；生产在本目录 `npx wrangler@4.120.0 secret put <NAME>`。
+代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `ai-gateway.ts`）：
 
-#### `auth.ts` (`AuthenticationService`)
-- **Purpose**: Handles API request authentication and authorization
-- **Functionality**: Validates API keys, checks request origins (CORS), handles preflight requests
-- **Key Responsibilities**: Security control, API access management
+| 名称 | 作用 |
+|---|---|
+| `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
+| `ARTICLES_BUCKET`（R2 binding） | 观测落盘 + 读文章正文，与 backend 同一个桶 `meridian-articles-prod` |
+| `CF_VERSION_METADATA`（binding） | span 里的 `deployment_version` |
+| `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_GATEWAY_ID` | 拼 AI Gateway URL（非 workers-ai provider 用）；没有 account id 时会注册 mock provider |
+| `AI_GATEWAY_TOKEN` 🔐 | Gateway 开了鉴权时发 `cf-aig-authorization` |
+| `DASHSCOPE_API_KEY` 🔐 | 注册 dashscope provider（`/meridian/chat` 默认用它）；2026-07-29 起该 key 返回 401，现行管线不依赖它 |
+| `OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`GOOGLE_AI_API_KEY`、`CLOUDFLARE_API_TOKEN` 🔐 | 有值才注册对应 provider；`CLOUDFLARE_API_TOKEN` 是 Workers AI 的 REST 通道，binding 在时用不上 |
+| `ENABLE_COST_TRACKING`、`DEFAULT_CACHE_TTL`、`ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | Gateway 请求头 / 日志开关 |
+| `DEFAULT_MAX_RETRIES`、`DEFAULT_RETRY_DELAY_MS` | `AIGatewayService` 的重试参数 |
+| `ENVIRONMENT` | `wrangler.toml` 的 `[env.*].vars` 设置；`development` 时注册 mock provider |
+| `GATEWAY_API_KEYS`、`API_SECRET_KEY`、`ALLOWED_ORIGINS` | 只被 `AuthenticationService` 读，而它不在任何路由上（见上） |
 
-#### `logger.ts` (`Logger`)
-- **Purpose**: Provides unified, structured logging functionality
-- **Functionality**: Supports different log levels (debug, info, warn, error), records request/response, errors, and performance metrics
-- **Key Responsibilities**: System observability, problem diagnosis
+## 观测数据落在哪
 
-#### `metadata.ts` (`MetadataService`)
-- **Purpose**: Creates and manages request metadata for tracking, monitoring, and analysis
-- **Functionality**: Extracts user information, IP addresses, User-Agent from HTTP requests, adds processing information
-- **Key Responsibilities**: Data tracking, performance analysis, error attribution
+只在请求带 `x-trace-id` 头时写 R2（桶 `meridian-articles-prod`）：
 
-#### `retry.ts` (`RetryService`)
-- **Purpose**: Provides automatic retry mechanisms for unstable external calls
-- **Functionality**: Implements exponential backoff strategy with jitter to avoid thundering herd effects
-- **Key Responsibilities**: Improves system reliability, reduces transient failure impact
+- `llm-calls/{trace_id}/{phase}-{idx}.json`：一次 LLM 调用的完整输入/输出（`services/llm-call-logger.ts`）；`idx` 取 `x-call-index` 头或 `callLLM` 的 `callIndex`
+- `observability/sensors/{trace_id}/{kind}-{idx}.json`：传感器读数，例如输出语言告警（`services/sensor-log.ts`）
+- `observability/spans/{trace_id}/…`：管线内部各段的结构化记录（`services/span-log.ts`）
 
-#### Business Logic Services
-> ⚠️ **Retired pipeline notice**: `brief-generation.ts`, `intelligence.ts`, and `story-validation.ts` (and the endpoints they back — `/meridian/story/validate`, `/meridian/intelligence/analyze-stories`, `/meridian/generate-final-brief`) are still present in code but are **no longer called by the production workflow**. The backend replaced this "cluster → intelligence report → writer" chain with "cluster → brief-block-v6" (commit `961aeca`, 2026-09-21). Current endpoints the workflow actually calls: `/meridian/cluster/judge`, `/meridian/stories/rank`, `/meridian/brief-block-v6`, `/meridian/brief-title`. See ADR 0003 / ADR 0004 in the main repo's `docs/adr/`.
-- **`brief-generation.ts`**: Generates final intelligence briefs and summaries from intelligence analysis reports
-- **`intelligence.ts`**: Performs deep intelligence analysis on validated stories
-- **`story-validation.ts`**: Validates whether article clusters constitute meaningful "stories"
+请求带 `x-observe: inline` 时不写 R2，记录随响应的 `observation` 字段返回（`services/observe.ts`），用于本地验收。
+读这些数据的入口是 backend 的 `/observability/*` 路由，见 [`docs/OBSERVABILITY_GUIDE.md`](../../docs/OBSERVABILITY_GUIDE.md)。
 
-### Capabilities (`src/capabilities/`)
-- **Purpose**: Defines request building and response parsing logic for each AI capability
-- **Functionality**: `CapabilityHandler` interface defines `buildProviderRequest` and `parseProviderResponse` methods
-- **Implementations**: `ChatCapabilityHandler`, `EmbeddingCapabilityHandler`, etc.
+## 开发、测试、部署
 
-### Configuration (`src/config/providers.ts`)
-- **Purpose**: Centralized management of all AI provider and model configurations
-- **Functionality**: Contains provider names, base URLs, auth headers, default models, and detailed model information
-- **Key Responsibilities**: Global configuration, model capability definition
-
-### Prompts (`src/prompts/`)
-- **Purpose**: Stores all AI prompt templates
-- **Functionality**: Provides reusable functions for generating prompts for article analysis, story validation, intelligence analysis, and brief generation
-- **Key Responsibilities**: AI interaction content management
-
-### Types (`src/types/`)
-- **Purpose**: Defines TypeScript types used throughout the application
-- **Functionality**: Includes common API responses, unified AI request/response interfaces, provider configurations, and business domain data contracts
-- **Key Responsibilities**: Ensures code type safety, defines data contracts
-
-### Utilities (`src/utils/`)
-- **Purpose**: Contains common utility functions
-- **Functionality**: Includes AI response JSON parsing, text token limiting, article Markdown formatting, and quota handling logic
-- **Key Responsibilities**: Common logic encapsulation, code reuse
-
-## Data Flow & Business Logic
-
-The core business logic revolves around the "Intelligence Brief Generation Workflow":
-
-> ⚠️ Steps 5-7 below describe the **retired** report-layer pipeline (still reachable via HTTP but not called by production). See the retired pipeline notice above.
-
-1. **Initial Data Preparation**: External systems provide `ArticleDataset` containing raw article content and embeddings
-2. **Article Analysis** (`POST /meridian/article/analyze`): Structured analysis of articles using AI
-3. **Embedding Generation** (`POST /meridian/embeddings/generate`): Generate vector embeddings for text
-4. **Clustering** (external): ML service groups related articles into clusters
-5. **Story Validation** (`POST /meridian/story/validate`): Validate if clusters constitute coherent "stories"
-6. **Intelligence Analysis** (`POST /meridian/intelligence/analyze-stories`): Deep AI analysis of validated stories
-7. **Brief Generation** (`POST /meridian/generate-final-brief`): Synthesize intelligence reports into comprehensive daily briefings
-8. **TLDR Generation** (`POST /meridian/generate-brief-tldr`): Generate concise summaries of briefs
-9. **General Chat** (`POST /meridian/chat`): General-purpose AI conversation
-
-**Current production flow** (replaces steps 5-7 above, since commit `961aeca`, 2026-09-21):
-
-5. **Cluster Judging** (`POST /meridian/cluster/judge`): One call per cluster decides EVENT/NO_EVENT and names the story
-6. **Story Importance Ranking** (`POST /meridian/stories/rank`): Three-round LLM shuffle + Borda aggregation, replacing plain popularity sorting (commits `86633c5`, `0ae2592`)
-7. **Brief Block Generation** (`POST /meridian/brief-block-v6`): One judged cluster becomes one brief block directly, no intermediate intelligence-report stage
-8. **Brief Title** (`POST /meridian/brief-title`): Generates the brief's title from assembled content
-
-## API Endpoints
-
-### Core Endpoints
-
-Called by the `AutoBriefGeneration` workflow (current brief pipeline):
-- `POST /meridian/cluster/judge` - Judge a cluster (EVENT/NO_EVENT) and name the story
-- `POST /meridian/stories/rank` - Story importance ranking (three-round shuffle + Borda)
-- `POST /meridian/brief-block-v6` - Generate one brief block from a judged cluster
-- `POST /meridian/brief-title` - Generate the brief's title
-- `POST /meridian/generate-brief-tldr` - Generate brief TLDR
-- `POST /meridian/generate-brief-summary` - Generate brief summary (prose, for next-day continuity context)
-
-Called by other production workflows (article ingestion, not the brief pipeline):
-- `POST /meridian/article/analyze` - Analyze individual articles (`ProcessArticles` workflow)
-- `POST /meridian/embeddings/generate` - Generate text embeddings
-
-Still present in code but **not called by any production workflow** (retired report-layer pipeline; see notice above):
-- `POST /meridian/story/validate` - Validate article clusters as stories
-- `POST /meridian/intelligence/analyze-stories` - Analyze multiple stories
-- `POST /meridian/generate-final-brief` - Generate comprehensive brief
-
-Utility:
-- `POST /meridian/chat` - General AI chat
-
-### Utility Endpoints
-- `GET /health` - Health check
-- `GET /` - Service information
-
-## Integration Points
-
-- **HTTP API**: RESTful API endpoints for external integration
-- **Environment Variables**: Configuration via Cloudflare Workers environment variables
-- **Cloudflare AI Gateway**: All AI requests proxy through AI Gateway for caching, cost tracking, and monitoring
-- **AI Provider APIs**: Internal integration with OpenAI, Anthropic, Google AI, and Cloudflare Workers AI
-- **CORS**: Cross-origin request handling via Hono middleware
-- **Logging/Monitoring**: Structured logging to Cloudflare Workers platform
-- **External ML Services**: Integration with external services for embedding generation and clustering
-
-## Dependencies
-
-- **`hono`**: Lightweight web framework for Workers routing and HTTP handling
-- **`zod`**: TypeScript-first schema declaration and validation library
-- **`@cloudflare/workers-types`**: TypeScript definitions for Cloudflare Workers APIs
-- **`vitest`**: Next-generation testing framework for unit and integration tests
-- **`miniflare`**: Local Cloudflare Workers simulator for testing
-- **`wrangler`**: Official Cloudflare CLI tool for development and deployment
-
-## Design Patterns
-
-- **Abstract Factory/Strategy Pattern**: Dynamic selection of AI providers and processing strategies
-- **Template Method Pattern**: Common AI request processing flow with provider-specific implementations
-- **Chain of Responsibility**: Request processing through authentication, metadata enhancement, AI Gateway enhancement, retry mechanisms
-- **Singleton Pattern**: Shared service instances (Logger, AuthenticationService, etc.)
-- **Dependency Injection**: Constructor-based dependency injection for loose coupling
-- **Configuration as Code**: TypeScript-based configuration management
-- **High Cohesion, Low Coupling**: Well-defined module boundaries with clear interfaces
-- **Observability First**: Built-in logging and metadata collection for monitoring and diagnostics
-
-## Development & Deployment
-
-### Prerequisites
-- Node.js 18+ with npm or pnpm
-- Cloudflare account with Workers enabled
-- Wrangler CLI installed globally
-
-### Local Development
 ```bash
-# Install dependencies
-npm install
+# 本地起服务。wrangler.toml 的 R2 是 remote = true（需 wrangler ≥ 4.37，本包锁的 3.x 不够），
+# 所以用 pinned 版本；本地 dev 的 R2 写入会落生产桶
+cd services/meridian-ai-worker && npx wrangler@4.120.0 dev --port 8787
 
-# Start development server
-npm run dev
+pnpm -F meridian-ai-worker typecheck          # tsc --noEmit
+pnpm -F meridian-ai-worker exec vitest run    # test/（golden 快照）+ tests/（auth / metadata / retry 单元测试）
 
-# Run tests
-npm test
-
-# Type checking
-npm run type-check
+# 部署：只在本目录，永不从仓库根部署
+cd services/meridian-ai-worker && npx wrangler@4.120.0 deploy
 ```
 
-### Deployment
-```bash
-# Deploy to Cloudflare Workers
-npm run deploy
+- `test/*.golden.test.ts` 是 golden 快照：输入取自生产 run 的真实 LLM 输出，行为有意改变时用
+  `UPDATE_GOLDEN=1 pnpm exec vitest run <file>` 重写快照（见各文件头注释）。
+- 全链路回归（backend workflow + 本服务，LLM 回答用录像回放）见
+  [`apps/backend/test/replay/README.md`](../../apps/backend/test/replay/README.md)。
+- 改 prompt（`src/prompts/`）前后要跑 `eval/` 评估。
 
-# Deploy to specific environment
-wrangler deploy --env production
-```
+## 相关文档
 
-### Environment Variables
-Configure the following variables in your Cloudflare Workers environment:
-- `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
-- `CLOUDFLARE_AI_GATEWAY_ID` - AI Gateway ID for request proxying
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `GOOGLE_AI_API_KEY` - Google AI Studio API key
-- `MERIDIAN_API_KEY` - Authentication key for API access
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with appropriate tests
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- 现行简报链路与已证伪路线：[`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)
+- 写作层：[`docs/adr/0004-brief-writer-v3.md`](../../docs/adr/0004-brief-writer-v3.md)
+- 工作流编排：[`docs/meridian-workflow-architecture.md`](../../docs/meridian-workflow-architecture.md)
+- 部署：[`docs/DEPLOYMENT_GUIDE.md`](../../docs/DEPLOYMENT_GUIDE.md)

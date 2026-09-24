@@ -1,0 +1,104 @@
+{
+  "note": "stories/rank：第 1 轮排序结果，```json 围栏包裹，selected 12 条 + nearMisses 5 条",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/story_rank-000.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "```json\n{\n  \"selected\": [\n    {\n      \"id\": 0,\n      \"eventKey\": \"us-iran-talks-un\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence involving a major cross-border conflict and nuclear proliferation; high systemic reach via energy markets and global alliances.\"\n    },\n    {\n      \"id\": 1,\n      \"eventKey\": \"us-denmark-greenland-arctic-deal\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"Major strategic/policy shift in the Arctic balance of power and cross-border security cooperation, with high systemic reach.\"\n    },\n    {\n      \"id\": 2,\n      \"eventKey\": \"trump-xi-summit-us-ai-policy\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence defining the future of US-China relations and global AI policy, with significant systemic reach.\"\n    },\n    {\n      \"id\": 3,\n      \"eventKey\": \"trump-unga-speech-iran\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence as a major institutional/procedural shift in US foreign policy toward Iran, with high systemic reach.\"\n    },\n    {\n      \"id\": 4,\n      \"eventKey\": \"zelensky-trump-energy-truce-talks\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence with major systemic reach, directly addressing a major cross-border conflict and energy security.\"\n    },\n    {\n      \"id\": 5,\n      \"eventKey\": \"durban-mass-shooting\",\n      \"category\": \"society-other\",\n      \"why\": \"High human/scale impact with a substantive new development, involving a mass casualty event.\"\n    },\n    {\n      \"id\": 8,\n      \"eventKey\": \"sri-lanka-easter-bombings-verdict\",\n      \"category\": \"society-other\",\n      \"why\": \"High human/scale impact with a substantive new development, marking a major judicial conclusion to a terrorist attack.\"\n    },\n    {\n      \"id\": 11,\n      \"eventKey\": \"us-f-16-crash-spangdahlem\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence as a kinetic/security action involving a major military asset, with high systemic reach.\"\n    },\n    {\n      \"id\": 12,\n      \"eventKey\": \"qatar-diplomatic-stance-gulf-iran\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence as a major institutional/procedural shift in regional alliances, with high systemic reach.\"\n    },\n    {\n      \"id\": 15,\n      \"eventKey\": \"ethiopia-tigray-conflict-reignites\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence with high human/scale impact, involving a major cross-border conflict and humanitarian crisis.\"\n    },\n    {\n      \"id\": 21,\n      \"eventKey\": \"trump-pezeshkian-iran-unga\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence as a major institutional/procedural shift in US foreign policy toward Iran, with high systemic reach.\"\n    },\n    {\n      \"id\": 30,\n      \"eventKey\": \"houthis-red-sea-coastal-heights\",\n      \"category\": \"geopolitics-security\",\n      \"why\": \"High strategic/policy consequence as a kinetic/security action with high systemic reach, threatening a major global trade chokepoint.\"\n    }\n  ],\n  \"nearMisses\": [\n    {\n      \"id\": 23,\n      \"why\": \"Lacks a substantive new development today, being a routine market reaction to a previously announced meeting.\"\n    },\n    {\n      \"id\": 34,\n      \"why\": \"Lacks strategic/policy consequence, being a routine labor settlement in a single city.\"\n    },\n    {\n      \"id\": 13,\n      \"why\": \"Lacks strategic/policy consequence, being a single incident of law enforcement interaction.\"\n    },\n    {\n      \"id\": 31,\n      \"why\": \"Lacks strategic/policy consequence, being a routine election in a single country.\"\n    },\n    {\n      \"id\": 10,\n      \"why\": \"Lacks strategic/policy consequence, being a routine administrative procedure in a single country.\"\n    }\n  ]\n}\n```",
+  "expected": {
+    "selected": [
+      {
+        "id": 0,
+        "eventKey": "us-iran-talks-un",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence involving a major cross-border conflict and nuclear proliferation; high systemic reach via energy markets and global alliances."
+      },
+      {
+        "id": 1,
+        "eventKey": "us-denmark-greenland-arctic-deal",
+        "category": "geopolitics-security",
+        "why": "Major strategic/policy shift in the Arctic balance of power and cross-border security cooperation, with high systemic reach."
+      },
+      {
+        "id": 2,
+        "eventKey": "trump-xi-summit-us-ai-policy",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence defining the future of US-China relations and global AI policy, with significant systemic reach."
+      },
+      {
+        "id": 3,
+        "eventKey": "trump-unga-speech-iran",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence as a major institutional/procedural shift in US foreign policy toward Iran, with high systemic reach."
+      },
+      {
+        "id": 4,
+        "eventKey": "zelensky-trump-energy-truce-talks",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence with major systemic reach, directly addressing a major cross-border conflict and energy security."
+      },
+      {
+        "id": 5,
+        "eventKey": "durban-mass-shooting",
+        "category": "society-other",
+        "why": "High human/scale impact with a substantive new development, involving a mass casualty event."
+      },
+      {
+        "id": 8,
+        "eventKey": "sri-lanka-easter-bombings-verdict",
+        "category": "society-other",
+        "why": "High human/scale impact with a substantive new development, marking a major judicial conclusion to a terrorist attack."
+      },
+      {
+        "id": 11,
+        "eventKey": "us-f-16-crash-spangdahlem",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence as a kinetic/security action involving a major military asset, with high systemic reach."
+      },
+      {
+        "id": 12,
+        "eventKey": "qatar-diplomatic-stance-gulf-iran",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence as a major institutional/procedural shift in regional alliances, with high systemic reach."
+      },
+      {
+        "id": 15,
+        "eventKey": "ethiopia-tigray-conflict-reignites",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence with high human/scale impact, involving a major cross-border conflict and humanitarian crisis."
+      },
+      {
+        "id": 21,
+        "eventKey": "trump-pezeshkian-iran-unga",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence as a major institutional/procedural shift in US foreign policy toward Iran, with high systemic reach."
+      },
+      {
+        "id": 30,
+        "eventKey": "houthis-red-sea-coastal-heights",
+        "category": "geopolitics-security",
+        "why": "High strategic/policy consequence as a kinetic/security action with high systemic reach, threatening a major global trade chokepoint."
+      }
+    ],
+    "nearMisses": [
+      {
+        "id": 23,
+        "why": "Lacks a substantive new development today, being a routine market reaction to a previously announced meeting."
+      },
+      {
+        "id": 34,
+        "why": "Lacks strategic/policy consequence, being a routine labor settlement in a single city."
+      },
+      {
+        "id": 13,
+        "why": "Lacks strategic/policy consequence, being a single incident of law enforcement interaction."
+      },
+      {
+        "id": 31,
+        "why": "Lacks strategic/policy consequence, being a routine election in a single country."
+      },
+      {
+        "id": 10,
+        "why": "Lacks strategic/policy consequence, being a routine administrative procedure in a single country."
+      }
+    ]
+  }
+}

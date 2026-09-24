@@ -1,0 +1,12 @@
+{
+  "note": "cluster_judge：判定属于同一事件（verdict=EVENT），```json 围栏包裹——常见形态",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/cluster_judge-001.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "```json\n{\n  \"verdict\": \"EVENT\",\n  \"title\": \"ICE shooting of DoorDash driver\",\n  \"event\": \"ICE agent shoots and detains a DoorDash driver, sparking legal and procedural controversy.\",\n  \"reason\": \"所有报道围绕同一具体事件：ICE（移民与海关执法局）射伤一名DoorDash外卖员，涉及被捕细节、法官干预、执法记录仪缺失及涉事特工背景等直接后续与各方回应。\"\n}\n```",
+  "expected": {
+    "verdict": "EVENT",
+    "title": "ICE shooting of DoorDash driver",
+    "event": "ICE agent shoots and detains a DoorDash driver, sparking legal and procedural controversy.",
+    "reason": "所有报道围绕同一具体事件：ICE（移民与海关执法局）射伤一名DoorDash外卖员，涉及被捕细节、法官干预、执法记录仪缺失及涉事特工背景等直接后续与各方回应。"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "note": "cluster_judge：判官判定三篇不属于同一事件（verdict=NO_EVENT），```json 围栏包裹——边界样本",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/cluster_judge-000.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "```json\n{\n  \"verdict\": \"NO_EVENT\",\n  \"title\": \"\",\n  \"event\": \"\",\n  \"reason\": \"第一篇和第二篇是关于同一具体案件（前高官在伦敦受审）的报道，属于同一件事；但第三篇是关于1994年种族灭绝起因的历史分析，与上述案件性质完全不同，属于不同题材。\"\n}\n```",
+  "expected": {
+    "verdict": "NO_EVENT",
+    "title": "",
+    "event": "",
+    "reason": "第一篇和第二篇是关于同一具体案件（前高官在伦敦受审）的报道，属于同一件事；但第三篇是关于1994年种族灭绝起因的历史分析，与上述案件性质完全不同，属于不同题材。"
+  }
+}

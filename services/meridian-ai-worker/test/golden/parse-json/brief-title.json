@@ -1,0 +1,9 @@
+{
+  "note": "brief-title：整篇标题生成，```json 围栏包裹、字段极简（只有 title）",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/brief_generation-690.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "```json\n{\n    \"title\": \"trump iran talks us denmark greenland summit us china ai\"\n}\n```",
+  "expected": {
+    "title": "trump iran talks us denmark greenland summit us china ai"
+  }
+}

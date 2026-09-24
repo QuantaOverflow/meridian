@@ -927,7 +927,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // configSent / configUsed **必须并排记**：2026-09 生产 ml-service 镜像停在 6-25，
       // 聚类算法换了却没生效，三个半月无人发现——病正是这两者不一致，而落盘里一个都没有。
       // 只记其中一个看不出错位。mlStats 只是诊断旁证：statistics 仍从 clusters 自推
-      // （clustering_stats.n_outliers 与真实 -1 组系统性差约 8 倍，见 clustering.ts）。
+      // （原因见 clustering.ts 的 statistics 注释）。
       try {
         await this.env.ARTICLES_BUCKET.put(
           `observability/clustering/${workflowId}.json`,
@@ -938,7 +938,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             configSent: effectiveClusteringOptions,
             configUsed: clusteringResult.configUsed ?? null,
             mlStats: clusteringResult.clusteringStats ?? null,
-            modelInfo: clusteringResult.modelInfo ?? null,
             clusters: clusteringResult.clusters.map(c => ({
               clusterId: c.clusterId,
               articleIds: c.articleIds,

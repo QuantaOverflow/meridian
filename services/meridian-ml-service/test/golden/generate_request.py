@@ -10,9 +10,9 @@
 
 生成的 request.json 就是 backend（apps/backend/src/lib/services/clustering.ts）
 对 POST /ai-worker/clustering 发送的请求体：
-    { items: [{id, title, url, embedding, publishDate, summary}, ...], config: {...} }
-config 的 11 个字段值取自 apps/backend/src/lib/core/constants.ts 的
-BRIEF_CLUSTERING_OPTIONS，经 clustering.ts:322-358 的 `options?.x ?? default` 展开
+    { items: [{id, embedding}, ...], config: {...} }
+config 的 3 个字段值取自 apps/backend/src/lib/core/constants.ts 的
+BRIEF_CLUSTERING_OPTIONS，经 clustering.ts 的 `options?.x ?? default` 展开
 后实际发送的值（不是 ml 侧 pydantic 的默认值）。
 
 标题为短合成句，不是真实文章文本（本仓库公开）：6 个主题各 8 句同题改写 +
@@ -164,20 +164,10 @@ def main() -> None:
     embeddings = compute_embeddings(texts=titles, model_components=model_components)
     assert embeddings.shape == (len(titles), 384), f"意外的嵌入形状: {embeddings.shape}"
 
-    base_date = "2026-09-01T08:00:00.000Z"
-    items = []
-    for idx, title in enumerate(titles):
-        article_id = idx + 1
-        items.append(
-            {
-                "id": article_id,
-                "title": title,
-                "url": f"https://example.test/article/{article_id}",
-                "embedding": embeddings[idx].tolist(),
-                "publishDate": base_date,
-                "summary": f"Synthetic test summary for: {title}",
-            }
-        )
+    items = [
+        {"id": idx + 1, "embedding": embeddings[idx].tolist()}
+        for idx in range(len(titles))
+    ]
 
     request_body = {"items": items, "config": CONFIG}
 

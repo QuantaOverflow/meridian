@@ -192,8 +192,6 @@ export interface ClusteringResult {
   configUsed?: Record<string, any>;
   /** ml 侧 clustering_stats 原样保留。**只作诊断旁证**，不得替换 statistics（原因见下方注释）。 */
   clusteringStats?: Record<string, any>;
-  /** ml 侧 model_info 原样保留：排查"跑的到底是哪个镜像/哪个模型"。 */
-  modelInfo?: Record<string, any>;
   /**
    * ml 侧 build_identity 原样保留（可能为 undefined —— 缺失本身就是信号，见 buildIdentityCheck）。
    * 与 configUsed 分开：这是镜像身份，不是配置。
@@ -272,23 +270,14 @@ export class ClusteringService {
         }
       }
 
-      // 转换为ML服务期望的AI Worker格式
-      // 优化：移除content字段以减少网络负载，ML服务的聚类算法只依赖embedding向量
+      // ml 侧只读 id 与 embedding（多余字段会被忽略），只发这两个
       const items = dataset.articles.map(article => {
         const embedding = dataset.embeddings.find(e => e.articleId === article.id);
         if (!embedding) {
           throw new Error(`Missing embedding for article ${article.id}`);
         }
         
-        return {
-          id: article.id,
-          title: article.title,
-          // content: article.content, // 移除：聚类不需要完整内容，下游工作流通过R2按需获取
-          url: article.url,
-          embedding: embedding.embedding,
-          publishDate: article.publishDate,
-          summary: article.summary // 保留摘要信息，可能对ML服务有用
-        };
+        return { id: article.id, embedding: embedding.embedding };
       });
 
               // 调用ML服务的AI Worker聚类端点
@@ -343,7 +332,6 @@ export class ClusteringService {
             n_samples?: number;
             [key: string]: unknown;
           };
-          model_info?: Record<string, unknown>;
           /**
            * 镜像身份。**声明成可选是因为旧镜像真的不会回传它**——这正是要抓的信号，
            * 所以下面不允许用 `?? 'unknown'` 之类把缺失抹平（2026-09 教训：解析时挑漏字段，
@@ -376,10 +364,9 @@ export class ClusteringService {
         const clusteringResult: ClusteringResult = {
           clusters,
           // totalClusters / noisePoints 从 clusters 自身推导，不再取 ml 侧的旁路统计字段。
-          // 2026-08 四次生产 run 实测 clustering_stats.n_outliers 与真实 -1 组系统性差约 8 倍
-          // （报 8/9/7/11，实际 71/70/59/54 = 输入的 36-47%）。ml 侧为何不一致尚未定位，
-          // 但下游真正消费的是 clusters 数组，指标必须与它同源——否则观测面板显示"聚类几乎
-          // 没丢东西"，而实际近一半文章在这一关就出局，没人看得见。
+          // 2026-08（HDBSCAN 时代）四次生产 run 实测 clustering_stats.n_outliers 与真实 -1 组
+          // 差约 8 倍；现行凝聚聚类下两者同源（golden 实测 15 = 15），但下游真正消费的是
+          // clusters 数组，指标仍与它同源，不依赖 ml 侧旁路统计。
           statistics: {
             totalClusters: clusters.filter(c => c.clusterId !== NOISE_CLUSTER_ID).length,
             noisePoints: noiseCluster?.articleIds.length ?? 0,
@@ -387,11 +374,10 @@ export class ClusteringService {
           },
           // 运行身份：ml 侧回传什么就原样带什么，不挑字段。挑字段等于提前替调用方决定
           // "哪些配置值得看"——而这次没生效的恰恰是没被挑中的 clustering_algorithm。
-          // clusteringStats 只是诊断旁证：它的 n_outliers 与真实 -1 组差约 8 倍（见上），
+          // clusteringStats 只是诊断旁证（见上），
           // 不能拿来替换 statistics。
           configUsed: mlResult.config_used,
           clusteringStats: mlResult.clustering_stats,
-          modelInfo: mlResult.model_info,
           // 镜像身份：与 configUsed 分开。configUsed 是请求回显（旧镜像也能回显得一模一样），
           // 这个字段的值来自 ml 镜像构建时注入的环境变量，源码里没有字面量。
           buildIdentity: mlResult.build_identity,

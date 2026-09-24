@@ -3,7 +3,7 @@
 （2026-09-05 取代 UMAP+HDBSCAN；旧实现 2026-09-24 删除，见 git 历史与 docs/adr/0003-cluster-as-brief-block.md）
 """
 import numpy as np
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 import logging
 import warnings
 from dataclasses import dataclass
@@ -106,7 +106,7 @@ def preprocess_embeddings(embeddings: np.ndarray) -> np.ndarray:
 def perform_agglomerative_clustering(
     embeddings: np.ndarray,
     config: ClusteringConfig
-) -> Tuple[np.ndarray, Any]:
+) -> np.ndarray:
     """余弦距离矩阵 + average linkage 阈值聚类。不降维、无随机性。
 
     **小于 `agglomerative_min_cluster_size` 篇的簇整个记为 -1（噪声）**。下游 `clusterId < 0` 直接跳过，所以这就是「不进简报」。
@@ -120,7 +120,7 @@ def perform_agglomerative_clustering(
     n_samples = embeddings.shape[0]
     if n_samples <= 2:
         logger.warning(f"数据集过小 (n_samples={n_samples})，全部记为噪声")
-        return np.full(n_samples, -1, dtype=int), None
+        return np.full(n_samples, -1, dtype=int)
 
     # 余弦距离矩阵。embeddings 已在 preprocess 里 L2 归一化，点积即余弦。
     sim = embeddings @ embeddings.T
@@ -149,7 +149,7 @@ def perform_agglomerative_clustering(
         f"凝聚聚类完成: {n_clusters}个簇, {int(too_small.sum())}篇落在 "
         f"<{config.agglomerative_min_cluster_size} 篇的簇里（记为噪声，不进简报）"
     )
-    return labels, model
+    return labels
 
 
 def cluster_embeddings(
@@ -160,25 +160,17 @@ def cluster_embeddings(
     logger.info(f"开始聚类流程: {embeddings.shape}")
 
     processed_embeddings = preprocess_embeddings(embeddings)
-    cluster_labels, _ = perform_agglomerative_clustering(processed_embeddings, config)
+    cluster_labels = perform_agglomerative_clustering(processed_embeddings, config)
 
     unique_labels = np.unique(cluster_labels)
     n_clusters = len(unique_labels) - (1 if -1 in unique_labels else 0)
     n_outliers = np.sum(cluster_labels == -1)
-
-    # 计算每个簇的大小
-    cluster_sizes = {}
-    for label in unique_labels:
-        if label != -1:  # 排除异常点
-            cluster_sizes[int(label)] = int(np.sum(cluster_labels == label))
 
     total_samples = int(len(embeddings))
     clustering_stats = {
         "n_samples": total_samples,
         "n_clusters": n_clusters,
         "n_outliers": n_outliers,
-        "outlier_ratio": float(n_outliers / total_samples),
-        "cluster_sizes": convert_numpy_types(cluster_sizes),
     }
 
     result = {

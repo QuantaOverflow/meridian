@@ -67,8 +67,6 @@ def compute_embeddings(
     texts: list[str],
     model_components: ModelComponents,
     batch_size: int = 32,
-    normalize: bool = True,
-    e5_prefix: str | None = None,
 ) -> np.ndarray:
     """计算文本嵌入向量"""
     import torch
@@ -77,11 +75,7 @@ def compute_embeddings(
     tokenizer, model, device = model_components
     all_embeddings: list[np.ndarray] = []
 
-    if e5_prefix:
-        texts_to_embed = [f"{e5_prefix}{text}" for text in texts]
-        print(f"添加前缀 '{e5_prefix}' 到文本")
-    else:
-        texts_to_embed = texts
+    texts_to_embed = texts
 
     print(f"正在计算 {len(texts_to_embed)} 个文本的嵌入向量...")
     
@@ -114,8 +108,7 @@ def compute_embeddings(
                 print(f"错误: 批次 {i} 模型推理失败: {e}")
                 raise
 
-        if normalize:
-            embeddings = F.normalize(embeddings, p=2, dim=1)
+        embeddings = F.normalize(embeddings, p=2, dim=1)
 
         all_embeddings.append(embeddings.cpu().numpy())
 

@@ -18,8 +18,8 @@ Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloud
 | 路由 | 请求 | 响应 |
 |---|---|---|
 | `GET /health` | — | `status`、`build_identity`、`embedding_model`、`clustering_available` |
-| `POST /embeddings` | `{texts: string[], normalize?: bool}` | `{embeddings, model_name, dimensions, processing_time}` |
-| `POST /ai-worker/clustering` | `{items: [{id, embedding, title?, url?, …}], config?}`；`config` 字段见 `src/schemas.py` 的 `BaseClusteringConfig` | `clusters`（`cluster_id` = -1 为噪声）、`clustering_stats`、`config_used`、`build_identity` 等 |
+| `POST /embeddings` | `{texts: string[]}` | `{embeddings, model_name, dimensions}`（已 L2 归一化） |
+| `POST /ai-worker/clustering` | `{items: [{id, embedding}], config?}`（多余字段忽略）；`config` 字段见 `src/schemas.py` 的 `BaseClusteringConfig` | `clusters[{cluster_id, size, items[{id}]}]`（`cluster_id` = -1 为噪声）、`clustering_stats`、`config_used`、`build_identity` |
 
 `build_identity`（`build_sha` / `build_time` / `injected`）用来确认生产跑的是不是本次部署的镜像：
 backend 在每次聚类时断言它（`clustering.ts` 的 `assertBuildIdentity`），缺字段即判定为旧镜像。
@@ -32,7 +32,6 @@ backend 在每次聚类时断言它（`clustering.ts` 的 `assertBuildIdentity`�
 | `API_TOKEN` 🔐 | 空 | 须与 backend 的 `MERIDIAN_ML_SERVICE_API_KEY` 一致；生产由 `cf-worker` 注入容器 |
 | `EMBEDDING_MODEL_NAME` | `sentence-transformers/multilingual-e5-small` | 模型名或本地目录；镜像里设为 `/home/appuser/model` |
 | `EXPECTED_EMBEDDING_DIMENSIONS` | `384` | |
-| `BATCH_SIZE` | `32` | |
 | `MERIDIAN_ML_BUILD_SHA`、`MERIDIAN_ML_BUILD_TIME`、`MERIDIAN_ML_BUILD_STAMP_FILE` | 空 | `build_identity` 的来源，由 `Dockerfile` 设置 |
 
 ## 本地开发

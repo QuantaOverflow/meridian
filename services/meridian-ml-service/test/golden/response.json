@@ -6,218 +6,58 @@
     "injected": false
   },
   "clustering_stats": {
-    "cluster_sizes": {
-      "0": 4,
-      "11": 8,
-      "2": 5,
-      "3": 8,
-      "4": 4,
-      "5": 8,
-      "8": 4
-    },
     "n_clusters": 7,
     "n_outliers": 15,
-    "n_samples": 56,
-    "outlier_ratio": 0.26785714285714285
+    "n_samples": 56
   },
   "clusters": [
     {
       "cluster_id": -1,
       "items": [
         {
-          "index": 1,
-          "metadata": {
-            "id": 2,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Central bank raises benchmark interest rate by quarter point",
-            "url": "https://example.test/article/2"
-          },
-          "text": "Central bank raises benchmark interest rate by quarter point"
+          "id": 2
         },
         {
-          "index": 7,
-          "metadata": {
-            "id": 8,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Policymakers hike interest rates to curb inflation",
-            "url": "https://example.test/article/8"
-          },
-          "text": "Policymakers hike interest rates to curb inflation"
+          "id": 8
         },
         {
-          "index": 14,
-          "metadata": {
-            "id": 15,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Runners flood downtown streets for annual marathon event",
-            "url": "https://example.test/article/15"
-          },
-          "text": "Runners flood downtown streets for annual marathon event"
+          "id": 15
         },
         {
-          "index": 19,
-          "metadata": {
-            "id": 20,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Monetary authority lifts key rate for third time this year",
-            "url": "https://example.test/article/20"
-          },
-          "text": "Monetary authority lifts key rate for third time this year"
+          "id": 20
         },
         {
-          "index": 20,
-          "metadata": {
-            "id": 21,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Annual marathon race sees thousands cross finish line",
-            "url": "https://example.test/article/21"
-          },
-          "text": "Annual marathon race sees thousands cross finish line"
+          "id": 21
         },
         {
-          "index": 32,
-          "metadata": {
-            "id": 33,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "City streets closed as marathon draws thousands",
-            "url": "https://example.test/article/33"
-          },
-          "text": "City streets closed as marathon draws thousands"
+          "id": 33
         },
         {
-          "index": 37,
-          "metadata": {
-            "id": 38,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Rate-setting committee votes to raise benchmark rate",
-            "url": "https://example.test/article/38"
-          },
-          "text": "Rate-setting committee votes to raise benchmark rate"
+          "id": 38
         },
         {
-          "index": 48,
-          "metadata": {
-            "id": 49,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Archaeologists uncover ancient pottery at dig site",
-            "url": "https://example.test/article/49"
-          },
-          "text": "Archaeologists uncover ancient pottery at dig site"
+          "id": 49
         },
         {
-          "index": 49,
-          "metadata": {
-            "id": 50,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "New species of frog discovered in rainforest",
-            "url": "https://example.test/article/50"
-          },
-          "text": "New species of frog discovered in rainforest"
+          "id": 50
         },
         {
-          "index": 50,
-          "metadata": {
-            "id": 51,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "City council approves plan for new public library",
-            "url": "https://example.test/article/51"
-          },
-          "text": "City council approves plan for new public library"
+          "id": 51
         },
         {
-          "index": 51,
-          "metadata": {
-            "id": 52,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Astronomers detect faint signal from distant galaxy",
-            "url": "https://example.test/article/52"
-          },
-          "text": "Astronomers detect faint signal from distant galaxy"
+          "id": 52
         },
         {
-          "index": 52,
-          "metadata": {
-            "id": 53,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Farmers report record harvest after favorable weather",
-            "url": "https://example.test/article/53"
-          },
-          "text": "Farmers report record harvest after favorable weather"
+          "id": 53
         },
         {
-          "index": 53,
-          "metadata": {
-            "id": 54,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Museum opens new exhibit on ancient maritime trade",
-            "url": "https://example.test/article/54"
-          },
-          "text": "Museum opens new exhibit on ancient maritime trade"
+          "id": 54
         },
         {
-          "index": 54,
-          "metadata": {
-            "id": 55,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Volunteers plant thousands of trees in reforestation drive",
-            "url": "https://example.test/article/55"
-          },
-          "text": "Volunteers plant thousands of trees in reforestation drive"
+          "id": 55
         },
         {
-          "index": 55,
-          "metadata": {
-            "id": 56,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Chess tournament crowns new regional champion",
-            "url": "https://example.test/article/56"
-          },
-          "text": "Chess tournament crowns new regional champion"
+          "id": 56
         }
       ],
       "size": 15
@@ -226,108 +66,28 @@
       "cluster_id": 3,
       "items": [
         {
-          "index": 4,
-          "metadata": {
-            "id": 5,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Wildfire forces evacuation of thousands in mountain region",
-            "url": "https://example.test/article/5"
-          },
-          "text": "Wildfire forces evacuation of thousands in mountain region"
+          "id": 5
         },
         {
-          "index": 10,
-          "metadata": {
-            "id": 11,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Mountain wildfire spreads, thousands evacuated",
-            "url": "https://example.test/article/11"
-          },
-          "text": "Mountain wildfire spreads, thousands evacuated"
+          "id": 11
         },
         {
-          "index": 16,
-          "metadata": {
-            "id": 17,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Thousands flee homes as wildfire spreads in hills",
-            "url": "https://example.test/article/17"
-          },
-          "text": "Thousands flee homes as wildfire spreads in hills"
+          "id": 17
         },
         {
-          "index": 22,
-          "metadata": {
-            "id": 23,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Wildfire prompts mass evacuation in mountain communities",
-            "url": "https://example.test/article/23"
-          },
-          "text": "Wildfire prompts mass evacuation in mountain communities"
+          "id": 23
         },
         {
-          "index": 28,
-          "metadata": {
-            "id": 29,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Fast-moving wildfire forces thousands from homes",
-            "url": "https://example.test/article/29"
-          },
-          "text": "Fast-moving wildfire forces thousands from homes"
+          "id": 29
         },
         {
-          "index": 34,
-          "metadata": {
-            "id": 35,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Mountain region wildfire triggers evacuation orders",
-            "url": "https://example.test/article/35"
-          },
-          "text": "Mountain region wildfire triggers evacuation orders"
+          "id": 35
         },
         {
-          "index": 40,
-          "metadata": {
-            "id": 41,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Wildfire spreads rapidly, evacuations ordered for thousands",
-            "url": "https://example.test/article/41"
-          },
-          "text": "Wildfire spreads rapidly, evacuations ordered for thousands"
+          "id": 41
         },
         {
-          "index": 46,
-          "metadata": {
-            "id": 47,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Thousands evacuated as wildfire burns through mountains",
-            "url": "https://example.test/article/47"
-          },
-          "text": "Thousands evacuated as wildfire burns through mountains"
+          "id": 47
         }
       ],
       "size": 8
@@ -336,108 +96,28 @@
       "cluster_id": 5,
       "items": [
         {
-          "index": 3,
-          "metadata": {
-            "id": 4,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Tech company unveils latest smartphone model",
-            "url": "https://example.test/article/4"
-          },
-          "text": "Tech company unveils latest smartphone model"
+          "id": 4
         },
         {
-          "index": 9,
-          "metadata": {
-            "id": 10,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "New smartphone launch announced by tech firm",
-            "url": "https://example.test/article/10"
-          },
-          "text": "New smartphone launch announced by tech firm"
+          "id": 10
         },
         {
-          "index": 15,
-          "metadata": {
-            "id": 16,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Tech giant reveals newest flagship phone",
-            "url": "https://example.test/article/16"
-          },
-          "text": "Tech giant reveals newest flagship phone"
+          "id": 16
         },
         {
-          "index": 21,
-          "metadata": {
-            "id": 22,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Company launches next-generation smartphone device",
-            "url": "https://example.test/article/22"
-          },
-          "text": "Company launches next-generation smartphone device"
+          "id": 22
         },
         {
-          "index": 27,
-          "metadata": {
-            "id": 28,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Tech firm announces new phone with upgraded camera",
-            "url": "https://example.test/article/28"
-          },
-          "text": "Tech firm announces new phone with upgraded camera"
+          "id": 28
         },
         {
-          "index": 33,
-          "metadata": {
-            "id": 34,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Latest smartphone model unveiled at company event",
-            "url": "https://example.test/article/34"
-          },
-          "text": "Latest smartphone model unveiled at company event"
+          "id": 34
         },
         {
-          "index": 39,
-          "metadata": {
-            "id": 40,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "New flagship phone announced by tech company",
-            "url": "https://example.test/article/40"
-          },
-          "text": "New flagship phone announced by tech company"
+          "id": 40
         },
         {
-          "index": 45,
-          "metadata": {
-            "id": 46,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Tech company debuts newest smartphone lineup",
-            "url": "https://example.test/article/46"
-          },
-          "text": "Tech company debuts newest smartphone lineup"
+          "id": 46
         }
       ],
       "size": 8
@@ -446,108 +126,28 @@
       "cluster_id": 11,
       "items": [
         {
-          "index": 5,
-          "metadata": {
-            "id": 6,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Basketball league finals conclude with championship win",
-            "url": "https://example.test/article/6"
-          },
-          "text": "Basketball league finals conclude with championship win"
+          "id": 6
         },
         {
-          "index": 11,
-          "metadata": {
-            "id": 12,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Professional basketball finals wrap up season",
-            "url": "https://example.test/article/12"
-          },
-          "text": "Professional basketball finals wrap up season"
+          "id": 12
         },
         {
-          "index": 17,
-          "metadata": {
-            "id": 18,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Championship basketball finals come to a close",
-            "url": "https://example.test/article/18"
-          },
-          "text": "Championship basketball finals come to a close"
+          "id": 18
         },
         {
-          "index": 23,
-          "metadata": {
-            "id": 24,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Basketball finals end with thrilling championship game",
-            "url": "https://example.test/article/24"
-          },
-          "text": "Basketball finals end with thrilling championship game"
+          "id": 24
         },
         {
-          "index": 29,
-          "metadata": {
-            "id": 30,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "League finals conclude as basketball season wraps up",
-            "url": "https://example.test/article/30"
-          },
-          "text": "League finals conclude as basketball season wraps up"
+          "id": 30
         },
         {
-          "index": 35,
-          "metadata": {
-            "id": 36,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Basketball championship series concludes finals",
-            "url": "https://example.test/article/36"
-          },
-          "text": "Basketball championship series concludes finals"
+          "id": 36
         },
         {
-          "index": 41,
-          "metadata": {
-            "id": 42,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Professional league basketball finals reach conclusion",
-            "url": "https://example.test/article/42"
-          },
-          "text": "Professional league basketball finals reach conclusion"
+          "id": 42
         },
         {
-          "index": 47,
-          "metadata": {
-            "id": 48,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Basketball finals close out championship season",
-            "url": "https://example.test/article/48"
-          },
-          "text": "Basketball finals close out championship season"
+          "id": 48
         }
       ],
       "size": 8
@@ -556,69 +156,19 @@
       "cluster_id": 2,
       "items": [
         {
-          "index": 2,
-          "metadata": {
-            "id": 3,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Thousands of runners take part in annual city marathon",
-            "url": "https://example.test/article/3"
-          },
-          "text": "Thousands of runners take part in annual city marathon"
+          "id": 3
         },
         {
-          "index": 8,
-          "metadata": {
-            "id": 9,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "City marathon draws record number of participants",
-            "url": "https://example.test/article/9"
-          },
-          "text": "City marathon draws record number of participants"
+          "id": 9
         },
         {
-          "index": 26,
-          "metadata": {
-            "id": 27,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Local marathon attracts record crowd of runners",
-            "url": "https://example.test/article/27"
-          },
-          "text": "Local marathon attracts record crowd of runners"
+          "id": 27
         },
         {
-          "index": 38,
-          "metadata": {
-            "id": 39,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Marathon event brings record turnout to city center",
-            "url": "https://example.test/article/39"
-          },
-          "text": "Marathon event brings record turnout to city center"
+          "id": 39
         },
         {
-          "index": 44,
-          "metadata": {
-            "id": 45,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Thousands join annual marathon race downtown",
-            "url": "https://example.test/article/45"
-          },
-          "text": "Thousands join annual marathon race downtown"
+          "id": 45
         }
       ],
       "size": 5
@@ -627,56 +177,16 @@
       "cluster_id": 0,
       "items": [
         {
-          "index": 12,
-          "metadata": {
-            "id": 13,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Lab team reports novel material for longer-lasting batteries",
-            "url": "https://example.test/article/13"
-          },
-          "text": "Lab team reports novel material for longer-lasting batteries"
+          "id": 13
         },
         {
-          "index": 18,
-          "metadata": {
-            "id": 19,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "New battery chemistry promises faster charging, study finds",
-            "url": "https://example.test/article/19"
-          },
-          "text": "New battery chemistry promises faster charging, study finds"
+          "id": 19
         },
         {
-          "index": 30,
-          "metadata": {
-            "id": 31,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Chemists develop experimental battery material with higher density",
-            "url": "https://example.test/article/31"
-          },
-          "text": "Chemists develop experimental battery material with higher density"
+          "id": 31
         },
         {
-          "index": 36,
-          "metadata": {
-            "id": 37,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Study details new compound for next-generation batteries",
-            "url": "https://example.test/article/37"
-          },
-          "text": "Study details new compound for next-generation batteries"
+          "id": 37
         }
       ],
       "size": 4
@@ -685,56 +195,16 @@
       "cluster_id": 4,
       "items": [
         {
-          "index": 0,
-          "metadata": {
-            "id": 1,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Scientists unveil new solid-state battery material in lab trial",
-            "url": "https://example.test/article/1"
-          },
-          "text": "Scientists unveil new solid-state battery material in lab trial"
+          "id": 1
         },
         {
-          "index": 6,
-          "metadata": {
-            "id": 7,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Researchers announce breakthrough solid-state battery compound",
-            "url": "https://example.test/article/7"
-          },
-          "text": "Researchers announce breakthrough solid-state battery compound"
+          "id": 7
         },
         {
-          "index": 24,
-          "metadata": {
-            "id": 25,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Solid-state battery material discovery could reshape EV industry",
-            "url": "https://example.test/article/25"
-          },
-          "text": "Solid-state battery material discovery could reshape EV industry"
+          "id": 25
         },
         {
-          "index": 42,
-          "metadata": {
-            "id": 43,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Research lab confirms progress on solid-state battery material",
-            "url": "https://example.test/article/43"
-          },
-          "text": "Research lab confirms progress on solid-state battery material"
+          "id": 43
         }
       ],
       "size": 4
@@ -743,56 +213,16 @@
       "cluster_id": 8,
       "items": [
         {
-          "index": 13,
-          "metadata": {
-            "id": 14,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Central bank announces rate increase amid inflation concerns",
-            "url": "https://example.test/article/14"
-          },
-          "text": "Central bank announces rate increase amid inflation concerns"
+          "id": 14
         },
         {
-          "index": 25,
-          "metadata": {
-            "id": 26,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Interest rate hike announced by central bank policy committee",
-            "url": "https://example.test/article/26"
-          },
-          "text": "Interest rate hike announced by central bank policy committee"
+          "id": 26
         },
         {
-          "index": 31,
-          "metadata": {
-            "id": 32,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Central bank tightens policy with new rate increase",
-            "url": "https://example.test/article/32"
-          },
-          "text": "Central bank tightens policy with new rate increase"
+          "id": 32
         },
         {
-          "index": 43,
-          "metadata": {
-            "id": 44,
-            "original_format": "ai_worker_embedding",
-            "publish_date": null,
-            "source": "ai_worker",
-            "status": null,
-            "title": "Central bank signals further rate hikes ahead",
-            "url": "https://example.test/article/44"
-          },
-          "text": "Central bank signals further rate hikes ahead"
+          "id": 44
         }
       ],
       "size": 4
@@ -802,14 +232,5 @@
     "agglomerative_linkage": "average",
     "agglomerative_min_cluster_size": 3,
     "agglomerative_threshold": 0.1
-  },
-  "model_info": {
-    "ai_worker_compatible": true,
-    "backend_integration": "完全兼容",
-    "data_type": "ai_worker_embedding_extended",
-    "detected_format": "ai_worker_embedding_extended",
-    "embedding_dimensions": 384,
-    "has_metadata": true,
-    "total_items": 56
   }
 }

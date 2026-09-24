@@ -120,7 +120,7 @@ class AIWorkerService {
     const mlResp = await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
       method: 'POST',
       headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
-      body: JSON.stringify({ texts, normalize: true }),
+      body: JSON.stringify({ texts }),
     });
 
     if (!mlResp.ok) {

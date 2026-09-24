@@ -3,7 +3,7 @@ Meridian ML Service - 精简核心数据模型
 专注于核心功能，移除不必要的复杂性
 """
 
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 # ============================================================================
@@ -25,12 +25,6 @@ class AIWorkerEmbeddingItem(BaseModel):
     id: int = Field(..., description="文章ID")
     embedding: List[float] = Field(..., description="384维嵌入向量")
     
-    # 可选的扩展字段
-    title: Optional[str] = Field(default=None, description="文章标题")
-    url: Optional[str] = Field(default=None, description="文章URL")
-    publish_date: Optional[str] = Field(default=None, description="发布日期")
-    content: Optional[str] = Field(default=None, description="文章内容")
-    status: Optional[str] = Field(default=None, description="处理状态")
 
 # ============================================================================
 # 请求/响应模型
@@ -39,14 +33,12 @@ class AIWorkerEmbeddingItem(BaseModel):
 class EmbeddingRequest(BaseModel):
     """嵌入生成请求"""
     texts: List[str] = Field(..., description="文本列表")
-    normalize: bool = Field(default=True, description="是否归一化")
 
 class EmbeddingResponse(BaseModel):
     """嵌入生成响应"""
     embeddings: List[List[float]] = Field(..., description="生成的嵌入向量")
     model_name: str = Field(..., description="使用的模型名称")
     dimensions: int = Field(..., description="嵌入维度")
-    processing_time: Optional[float] = Field(default=None, description="处理时间")
 
 # ============================================================================
 # 响应模型
@@ -57,8 +49,6 @@ class ClusteringStats(BaseModel):
     n_samples: int = Field(..., description="样本总数")
     n_clusters: int = Field(..., description="聚类簇数量")
     n_outliers: int = Field(..., description="异常点数量")
-    outlier_ratio: float = Field(..., description="异常点比例")
-    cluster_sizes: Dict[int, int] = Field(..., description="每个簇的大小")
 
 class ClusterInfo(BaseModel):
     """聚类信息"""
@@ -71,5 +61,3 @@ class BaseClusteringResponse(BaseModel):
     clusters: List[ClusterInfo] = Field(..., description="聚类结果")
     clustering_stats: ClusteringStats = Field(..., description="聚类统计信息")
     config_used: Dict[str, Any] = Field(..., description="实际使用的配置参数")
-    processing_time: Optional[float] = Field(default=None, description="处理时间（秒）")
-    model_info: Optional[Dict[str, Any]] = Field(default=None, description="模型信息")

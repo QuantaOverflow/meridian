@@ -15,9 +15,6 @@ class Settings:
         
         # API配置
         self.api_token = os.getenv("API_TOKEN", "")
-        
-        # 性能配置
-        self.batch_size = int(os.getenv("BATCH_SIZE", "32"))
 
 
 # 全局设置实例

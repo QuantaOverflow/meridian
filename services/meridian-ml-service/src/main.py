@@ -168,28 +168,17 @@ async def generate_embeddings(
     
     try:
         start_time = time.time()
-        
-        # 生成嵌入向量
+        # compute_embeddings 已做 L2 归一化
         embeddings_np = compute_embeddings(
             texts=request.texts,
             model_components=model_components,
         )
-        
-        # 可选归一化
-        if request.normalize:
-            import numpy as np
-            norms = np.linalg.norm(embeddings_np, axis=1, keepdims=True)
-            embeddings_np = embeddings_np / (norms + 1e-8)
-        
-        processing_time = time.time() - start_time
-        
-        print(f"[Embeddings] 处理完成，耗时: {processing_time:.2f}秒")
+        print(f"[Embeddings] 处理完成，耗时: {time.time() - start_time:.2f}秒")
         
         return EmbeddingResponse(
             embeddings=embeddings_np.tolist(),
             model_name=settings.embedding_model_name,
             dimensions=embeddings_np.shape[1],
-            processing_time=processing_time
         )
         
     except Exception as e:
@@ -202,18 +191,6 @@ async def generate_embeddings(
 # ============================================================================
 # 核心端点 2: AI Worker集成聚类
 # ============================================================================
-
-def _detect_item_format(items: List[Dict[str, Any]]) -> str:
-    """backend 发来的是 {id, embedding} 加少量可选字段（ai_worker_embedding_extended）。"""
-    if not items:
-        return "unknown"
-    keys = set(items[0].keys())
-    if keys == {"id", "embedding"}:
-        return "ai_worker_embedding"
-    if {"id", "embedding"} <= keys and len(keys) <= 7:
-        return "ai_worker_embedding_extended"
-    return "unknown"
-
 
 # response_model 去掉的原因：BaseClusteringResponse 里没有 build_identity 字段，
 # FastAPI 会按 response_model 过滤掉它。响应仍然先构造 BaseClusteringResponse（形状校验
@@ -230,29 +207,7 @@ async def ai_worker_clustering(
     print(f"[AIWorkerClustering] 收到请求：{len(items)} 个AI Worker数据项")
     
     try:
-        detected_format = _detect_item_format(items)
-        print(f"[AIWorkerClustering] 检测到格式: {detected_format}")
-        
-        if detected_format == "unknown":
-            raise ValueError("输入数据必须是 {id, embedding, ...} 形状")
-        
-        # 使用统一管道处理
-        result = await process_clustering_request(
-            items=items,
-            config=config,
-            data_type=detected_format
-        )
-        
-        # 构建AI Worker兼容响应
-        response = BaseClusteringResponse(**result)
-        
-        # 添加AI Worker特定的元数据
-        response.model_info = {
-            **(response.model_info or {}),
-            "ai_worker_compatible": True,
-            "detected_format": detected_format,
-            "backend_integration": "完全兼容"
-        }
+        response = BaseClusteringResponse(**process_clustering_request(items=items, config=config))
         
         print(f"[AIWorkerClustering] 处理完成，发现 {len(response.clusters)} 个聚类")
 

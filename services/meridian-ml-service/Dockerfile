@@ -48,7 +48,6 @@ COPY --chown=appuser:appuser ./model-cache /home/appuser/model
 
 # Copy your application code
 COPY --chown=appuser:appuser ./src ./src
-COPY --chown=appuser:appuser ./scripts ./scripts
 COPY --chown=appuser:appuser pyproject.toml ./
 
 # Environment variables

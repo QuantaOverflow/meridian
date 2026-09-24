@@ -2,8 +2,6 @@
   "items": [
     {
       "id": 1,
-      "title": "Scientists unveil new solid-state battery material in lab trial",
-      "url": "https://example.test/article/1",
       "embedding": [
         0.050391510128974915,
         -0.02410196326673031,
@@ -389,14 +387,10 @@
         0.0747447982430458,
         0.023075884208083153,
         0.028789477422833443
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Scientists unveil new solid-state battery material in lab trial"
+      ]
     },
     {
       "id": 2,
-      "title": "Central bank raises benchmark interest rate by quarter point",
-      "url": "https://example.test/article/2",
       "embedding": [
         0.035330336540937424,
         -0.004788365680724382,
@@ -782,14 +776,10 @@
         0.05751713365316391,
         -0.02039327658712864,
         0.10464996099472046
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Central bank raises benchmark interest rate by quarter point"
+      ]
     },
     {
       "id": 3,
-      "title": "Thousands of runners take part in annual city marathon",
-      "url": "https://example.test/article/3",
       "embedding": [
         0.03653184697031975,
         -0.019687211140990257,
@@ -1175,14 +1165,10 @@
         0.03892401605844498,
         0.033235326409339905,
         0.06052066385746002
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Thousands of runners take part in annual city marathon"
+      ]
     },
     {
       "id": 4,
-      "title": "Tech company unveils latest smartphone model",
-      "url": "https://example.test/article/4",
       "embedding": [
         0.03464008867740631,
         -0.010474019683897495,
@@ -1568,14 +1554,10 @@
         0.05883656442165375,
         0.024020103737711906,
         0.04218130186200142
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Tech company unveils latest smartphone model"
+      ]
     },
     {
       "id": 5,
-      "title": "Wildfire forces evacuation of thousands in mountain region",
-      "url": "https://example.test/article/5",
       "embedding": [
         0.0651540607213974,
         0.025666601955890656,
@@ -1961,14 +1943,10 @@
         0.05893632024526596,
         -0.040038928389549255,
         0.04524288326501846
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Wildfire forces evacuation of thousands in mountain region"
+      ]
     },
     {
       "id": 6,
-      "title": "Basketball league finals conclude with championship win",
-      "url": "https://example.test/article/6",
       "embedding": [
         0.07255353778600693,
         0.023890772834420204,
@@ -2354,14 +2332,10 @@
         0.018471786752343178,
         0.053459059447050095,
         0.014974399469792843
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Basketball league finals conclude with championship win"
+      ]
     },
     {
       "id": 7,
-      "title": "Researchers announce breakthrough solid-state battery compound",
-      "url": "https://example.test/article/7",
       "embedding": [
         0.07454286515712738,
         -0.017599711194634438,
@@ -2747,14 +2721,10 @@
         0.06410015374422073,
         0.04727067053318024,
         0.025669697672128677
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Researchers announce breakthrough solid-state battery compound"
+      ]
     },
     {
       "id": 8,
-      "title": "Policymakers hike interest rates to curb inflation",
-      "url": "https://example.test/article/8",
       "embedding": [
         0.04903439059853554,
         -0.006635207217186689,
@@ -3140,14 +3110,10 @@
         0.054722193628549576,
         -0.0005036318325437605,
         0.07991185039281845
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Policymakers hike interest rates to curb inflation"
+      ]
     },
     {
       "id": 9,
-      "title": "City marathon draws record number of participants",
-      "url": "https://example.test/article/9",
       "embedding": [
         0.014915646985173225,
         -0.027511175721883774,
@@ -3533,14 +3499,10 @@
         0.033607274293899536,
         0.02784358710050583,
         0.06052693352103233
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: City marathon draws record number of participants"
+      ]
     },
     {
       "id": 10,
-      "title": "New smartphone launch announced by tech firm",
-      "url": "https://example.test/article/10",
       "embedding": [
         0.008836413733661175,
         -0.017067784443497658,
@@ -3926,14 +3888,10 @@
         0.04613758251070976,
         -0.008386346511542797,
         0.030204014852643013
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: New smartphone launch announced by tech firm"
+      ]
     },
     {
       "id": 11,
-      "title": "Mountain wildfire spreads, thousands evacuated",
-      "url": "https://example.test/article/11",
       "embedding": [
         0.06578345596790314,
         0.015651699155569077,
@@ -4319,14 +4277,10 @@
         0.04768642410635948,
         -0.009308448061347008,
         0.056857481598854065
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Mountain wildfire spreads, thousands evacuated"
+      ]
     },
     {
       "id": 12,
-      "title": "Professional basketball finals wrap up season",
-      "url": "https://example.test/article/12",
       "embedding": [
         0.05431516468524933,
         -0.0033737709745764732,
@@ -4712,14 +4666,10 @@
         0.034031305462121964,
         0.0657159835100174,
         0.03763473033905029
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Professional basketball finals wrap up season"
+      ]
     },
     {
       "id": 13,
-      "title": "Lab team reports novel material for longer-lasting batteries",
-      "url": "https://example.test/article/13",
       "embedding": [
         0.03386232629418373,
         -0.01695636846125126,
@@ -5105,14 +5055,10 @@
         0.05615241080522537,
         0.05038592219352722,
         0.03057737834751606
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Lab team reports novel material for longer-lasting batteries"
+      ]
     },
     {
       "id": 14,
-      "title": "Central bank announces rate increase amid inflation concerns",
-      "url": "https://example.test/article/14",
       "embedding": [
         0.04291833937168121,
         -0.0477164089679718,
@@ -5498,14 +5444,10 @@
         0.046738382428884506,
         -0.05039412900805473,
         0.08503030240535736
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Central bank announces rate increase amid inflation concerns"
+      ]
     },
     {
       "id": 15,
-      "title": "Runners flood downtown streets for annual marathon event",
-      "url": "https://example.test/article/15",
       "embedding": [
         0.039308227598667145,
         -0.025704095140099525,
@@ -5891,14 +5833,10 @@
         0.050102632492780685,
         0.04224120453000069,
         0.07227762043476105
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Runners flood downtown streets for annual marathon event"
+      ]
     },
     {
       "id": 16,
-      "title": "Tech giant reveals newest flagship phone",
-      "url": "https://example.test/article/16",
       "embedding": [
         0.03438268229365349,
         -0.014711576513946056,
@@ -6284,14 +6222,10 @@
         0.0527491569519043,
         0.00856101606041193,
         0.060147739946842194
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Tech giant reveals newest flagship phone"
+      ]
     },
     {
       "id": 17,
-      "title": "Thousands flee homes as wildfire spreads in hills",
-      "url": "https://example.test/article/17",
       "embedding": [
         0.05700194835662842,
         -0.02859891764819622,
@@ -6677,14 +6611,10 @@
         0.06512444466352463,
         -0.023251963779330254,
         0.02683488093316555
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Thousands flee homes as wildfire spreads in hills"
+      ]
     },
     {
       "id": 18,
-      "title": "Championship basketball finals come to a close",
-      "url": "https://example.test/article/18",
       "embedding": [
         0.047552939504384995,
         0.012161144986748695,
@@ -7070,14 +7000,10 @@
         0.02757379598915577,
         0.05606520175933838,
         0.03394126519560814
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Championship basketball finals come to a close"
+      ]
     },
     {
       "id": 19,
-      "title": "New battery chemistry promises faster charging, study finds",
-      "url": "https://example.test/article/19",
       "embedding": [
         0.023672256618738174,
         -0.008408644236624241,
@@ -7463,14 +7389,10 @@
         0.057216789573431015,
         0.05428799241781235,
         0.06425341963768005
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: New battery chemistry promises faster charging, study finds"
+      ]
     },
     {
       "id": 20,
-      "title": "Monetary authority lifts key rate for third time this year",
-      "url": "https://example.test/article/20",
       "embedding": [
         0.05040746182203293,
         -0.02583589404821396,
@@ -7856,14 +7778,10 @@
         0.03336358442902565,
         -0.011832738295197487,
         0.09509947150945663
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Monetary authority lifts key rate for third time this year"
+      ]
     },
     {
       "id": 21,
-      "title": "Annual marathon race sees thousands cross finish line",
-      "url": "https://example.test/article/21",
       "embedding": [
         0.03620630502700806,
         -0.006942300125956535,
@@ -8249,14 +8167,10 @@
         0.05766773596405983,
         0.041298381984233856,
         0.051573414355516434
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Annual marathon race sees thousands cross finish line"
+      ]
     },
     {
       "id": 22,
-      "title": "Company launches next-generation smartphone device",
-      "url": "https://example.test/article/22",
       "embedding": [
         0.009869161993265152,
         0.017565004527568817,
@@ -8642,14 +8556,10 @@
         0.08332477509975433,
         0.0198751762509346,
         0.05244966968894005
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Company launches next-generation smartphone device"
+      ]
     },
     {
       "id": 23,
-      "title": "Wildfire prompts mass evacuation in mountain communities",
-      "url": "https://example.test/article/23",
       "embedding": [
         0.06035934016108513,
         0.006735320668667555,
@@ -9035,14 +8945,10 @@
         0.035237234085798264,
         -0.01978544518351555,
         0.06387287378311157
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Wildfire prompts mass evacuation in mountain communities"
+      ]
     },
     {
       "id": 24,
-      "title": "Basketball finals end with thrilling championship game",
-      "url": "https://example.test/article/24",
       "embedding": [
         0.05665668845176697,
         -0.0026377139147371054,
@@ -9428,14 +9334,10 @@
         0.036339085549116135,
         0.06443455815315247,
         -0.0004875326412729919
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Basketball finals end with thrilling championship game"
+      ]
     },
     {
       "id": 25,
-      "title": "Solid-state battery material discovery could reshape EV industry",
-      "url": "https://example.test/article/25",
       "embedding": [
         0.06398353725671768,
         -0.04948887974023819,
@@ -9821,14 +9723,10 @@
         0.06741506606340408,
         0.0012746802531182766,
         0.02689041942358017
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Solid-state battery material discovery could reshape EV industry"
+      ]
     },
     {
       "id": 26,
-      "title": "Interest rate hike announced by central bank policy committee",
-      "url": "https://example.test/article/26",
       "embedding": [
         0.06580556929111481,
         -0.03372561186552048,
@@ -10214,14 +10112,10 @@
         0.03589511290192604,
         -0.014743619598448277,
         0.07510032504796982
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Interest rate hike announced by central bank policy committee"
+      ]
     },
     {
       "id": 27,
-      "title": "Local marathon attracts record crowd of runners",
-      "url": "https://example.test/article/27",
       "embedding": [
         -0.01748950593173504,
         -0.00724440673366189,
@@ -10607,14 +10501,10 @@
         0.04584700986742973,
         0.054006177932024,
         0.05334572494029999
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Local marathon attracts record crowd of runners"
+      ]
     },
     {
       "id": 28,
-      "title": "Tech firm announces new phone with upgraded camera",
-      "url": "https://example.test/article/28",
       "embedding": [
         0.03153202310204506,
         -0.041693124920129776,
@@ -11000,14 +10890,10 @@
         0.051086243242025375,
         -0.005637056659907103,
         0.030367985367774963
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Tech firm announces new phone with upgraded camera"
+      ]
     },
     {
       "id": 29,
-      "title": "Fast-moving wildfire forces thousands from homes",
-      "url": "https://example.test/article/29",
       "embedding": [
         0.039452191442251205,
         0.008877832442522049,
@@ -11393,14 +11279,10 @@
         0.06373274326324463,
         -0.0058961124159395695,
         0.04699461907148361
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Fast-moving wildfire forces thousands from homes"
+      ]
     },
     {
       "id": 30,
-      "title": "League finals conclude as basketball season wraps up",
-      "url": "https://example.test/article/30",
       "embedding": [
         0.06391970813274384,
         -0.002722852397710085,
@@ -11786,14 +11668,10 @@
         0.011930681765079498,
         0.03975928574800491,
         0.020943377166986465
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: League finals conclude as basketball season wraps up"
+      ]
     },
     {
       "id": 31,
-      "title": "Chemists develop experimental battery material with higher density",
-      "url": "https://example.test/article/31",
       "embedding": [
         0.03146931529045105,
         -0.014585873112082481,
@@ -12179,14 +12057,10 @@
         0.06087421253323555,
         0.05513153225183487,
         0.050789184868335724
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Chemists develop experimental battery material with higher density"
+      ]
     },
     {
       "id": 32,
-      "title": "Central bank tightens policy with new rate increase",
-      "url": "https://example.test/article/32",
       "embedding": [
         0.03842165321111679,
         -0.03171949088573456,
@@ -12572,14 +12446,10 @@
         0.05158022791147232,
         -0.07165978848934174,
         0.07360368967056274
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Central bank tightens policy with new rate increase"
+      ]
     },
     {
       "id": 33,
-      "title": "City streets closed as marathon draws thousands",
-      "url": "https://example.test/article/33",
       "embedding": [
         0.049096014350652695,
         -0.015836551785469055,
@@ -12965,14 +12835,10 @@
         0.050687287002801895,
         0.0004060571955051273,
         0.033388201147317886
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: City streets closed as marathon draws thousands"
+      ]
     },
     {
       "id": 34,
-      "title": "Latest smartphone model unveiled at company event",
-      "url": "https://example.test/article/34",
       "embedding": [
         0.043867431581020355,
         -0.0071099367924034595,
@@ -13358,14 +13224,10 @@
         0.07526484876871109,
         0.02653060480952263,
         0.0392763689160347
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Latest smartphone model unveiled at company event"
+      ]
     },
     {
       "id": 35,
-      "title": "Mountain region wildfire triggers evacuation orders",
-      "url": "https://example.test/article/35",
       "embedding": [
         0.09344067424535751,
         -0.011314773000776768,
@@ -13751,14 +13613,10 @@
         0.046802397817373276,
         -0.04821980372071266,
         0.07420503348112106
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Mountain region wildfire triggers evacuation orders"
+      ]
     },
     {
       "id": 36,
-      "title": "Basketball championship series concludes finals",
-      "url": "https://example.test/article/36",
       "embedding": [
         0.07009269297122955,
         0.007896183989942074,
@@ -14144,14 +14002,10 @@
         0.03941945359110832,
         0.07307182997465134,
         0.011711116880178452
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Basketball championship series concludes finals"
+      ]
     },
     {
       "id": 37,
-      "title": "Study details new compound for next-generation batteries",
-      "url": "https://example.test/article/37",
       "embedding": [
         0.05996440723538399,
         0.009267177432775497,
@@ -14537,14 +14391,10 @@
         0.058078233152627945,
         0.06326091289520264,
         0.04835336655378342
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Study details new compound for next-generation batteries"
+      ]
     },
     {
       "id": 38,
-      "title": "Rate-setting committee votes to raise benchmark rate",
-      "url": "https://example.test/article/38",
       "embedding": [
         0.07018449157476425,
         -0.03724927455186844,
@@ -14930,14 +14780,10 @@
         0.04200303927063942,
         -0.00035739579470828176,
         0.08205180615186691
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Rate-setting committee votes to raise benchmark rate"
+      ]
     },
     {
       "id": 39,
-      "title": "Marathon event brings record turnout to city center",
-      "url": "https://example.test/article/39",
       "embedding": [
         0.01042331662029028,
         -0.04188138246536255,
@@ -15323,14 +15169,10 @@
         0.061725206673145294,
         0.00183952902443707,
         0.09304941445589066
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Marathon event brings record turnout to city center"
+      ]
     },
     {
       "id": 40,
-      "title": "New flagship phone announced by tech company",
-      "url": "https://example.test/article/40",
       "embedding": [
         0.03112911619246006,
         -0.028750794008374214,
@@ -15716,14 +15558,10 @@
         0.04692631959915161,
         0.0004769636143464595,
         0.038526903837919235
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: New flagship phone announced by tech company"
+      ]
     },
     {
       "id": 41,
-      "title": "Wildfire spreads rapidly, evacuations ordered for thousands",
-      "url": "https://example.test/article/41",
       "embedding": [
         0.032463282346725464,
         -0.010603788308799267,
@@ -16109,14 +15947,10 @@
         0.05674446374177933,
         -0.019171053543686867,
         0.05411083996295929
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Wildfire spreads rapidly, evacuations ordered for thousands"
+      ]
     },
     {
       "id": 42,
-      "title": "Professional league basketball finals reach conclusion",
-      "url": "https://example.test/article/42",
       "embedding": [
         0.07434707134962082,
         0.0069218832068145275,
@@ -16502,14 +16336,10 @@
         0.010065017268061638,
         0.058242082595825195,
         0.006933698430657387
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Professional league basketball finals reach conclusion"
+      ]
     },
     {
       "id": 43,
-      "title": "Research lab confirms progress on solid-state battery material",
-      "url": "https://example.test/article/43",
       "embedding": [
         0.05188743397593498,
         -0.049206819385290146,
@@ -16895,14 +16725,10 @@
         0.04293835163116455,
         0.042956240475177765,
         0.006882105953991413
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Research lab confirms progress on solid-state battery material"
+      ]
     },
     {
       "id": 44,
-      "title": "Central bank signals further rate hikes ahead",
-      "url": "https://example.test/article/44",
       "embedding": [
         0.0456339493393898,
         -0.04946683347225189,
@@ -17288,14 +17114,10 @@
         0.04584195837378502,
         -0.019020551815629005,
         0.11278922110795975
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Central bank signals further rate hikes ahead"
+      ]
     },
     {
       "id": 45,
-      "title": "Thousands join annual marathon race downtown",
-      "url": "https://example.test/article/45",
       "embedding": [
         0.05364895612001419,
         -0.03521641343832016,
@@ -17681,14 +17503,10 @@
         0.032657839357852936,
         0.03894607722759247,
         0.05569399148225784
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Thousands join annual marathon race downtown"
+      ]
     },
     {
       "id": 46,
-      "title": "Tech company debuts newest smartphone lineup",
-      "url": "https://example.test/article/46",
       "embedding": [
         0.023458970710635185,
         -0.006673517171293497,
@@ -18074,14 +17892,10 @@
         0.05570529028773308,
         0.016559846699237823,
         0.05090773105621338
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Tech company debuts newest smartphone lineup"
+      ]
     },
     {
       "id": 47,
-      "title": "Thousands evacuated as wildfire burns through mountains",
-      "url": "https://example.test/article/47",
       "embedding": [
         0.0818602591753006,
         -0.011487897485494614,
@@ -18467,14 +18281,10 @@
         0.05580734461545944,
         -0.02810506708920002,
         0.028585350140929222
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Thousands evacuated as wildfire burns through mountains"
+      ]
     },
     {
       "id": 48,
-      "title": "Basketball finals close out championship season",
-      "url": "https://example.test/article/48",
       "embedding": [
         0.06823507696390152,
         0.01610797643661499,
@@ -18860,14 +18670,10 @@
         0.0169675312936306,
         0.07006944715976715,
         0.015189748257398605
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Basketball finals close out championship season"
+      ]
     },
     {
       "id": 49,
-      "title": "Archaeologists uncover ancient pottery at dig site",
-      "url": "https://example.test/article/49",
       "embedding": [
         0.06453140079975128,
         -0.005060705356299877,
@@ -19253,14 +19059,10 @@
         0.04003467410802841,
         0.04927133023738861,
         0.01823015883564949
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Archaeologists uncover ancient pottery at dig site"
+      ]
     },
     {
       "id": 50,
-      "title": "New species of frog discovered in rainforest",
-      "url": "https://example.test/article/50",
       "embedding": [
         0.08987388759851456,
         0.012125869281589985,
@@ -19646,14 +19448,10 @@
         0.033966824412345886,
         0.04166236147284508,
         0.06497600674629211
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: New species of frog discovered in rainforest"
+      ]
     },
     {
       "id": 51,
-      "title": "City council approves plan for new public library",
-      "url": "https://example.test/article/51",
       "embedding": [
         0.058766137808561325,
         0.019630970433354378,
@@ -20039,14 +19837,10 @@
         0.015014203265309334,
         -0.00631416542455554,
         0.03619925305247307
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: City council approves plan for new public library"
+      ]
     },
     {
       "id": 52,
-      "title": "Astronomers detect faint signal from distant galaxy",
-      "url": "https://example.test/article/52",
       "embedding": [
         0.07158885896205902,
         -0.0026450862642377615,
@@ -20432,14 +20226,10 @@
         0.056170374155044556,
         0.010926521383225918,
         0.0708264485001564
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Astronomers detect faint signal from distant galaxy"
+      ]
     },
     {
       "id": 53,
-      "title": "Farmers report record harvest after favorable weather",
-      "url": "https://example.test/article/53",
       "embedding": [
         0.03455232083797455,
         -0.03023504838347435,
@@ -20825,14 +20615,10 @@
         0.049821868538856506,
         0.03554420545697212,
         0.05240664258599281
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Farmers report record harvest after favorable weather"
+      ]
     },
     {
       "id": 54,
-      "title": "Museum opens new exhibit on ancient maritime trade",
-      "url": "https://example.test/article/54",
       "embedding": [
         0.07202046364545822,
         -0.04127250611782074,
@@ -21218,14 +21004,10 @@
         0.05767160654067993,
         0.015239507891237736,
         0.038465678691864014
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Museum opens new exhibit on ancient maritime trade"
+      ]
     },
     {
       "id": 55,
-      "title": "Volunteers plant thousands of trees in reforestation drive",
-      "url": "https://example.test/article/55",
       "embedding": [
         0.046266358345746994,
         -0.005333612207323313,
@@ -21611,14 +21393,10 @@
         0.08566948771476746,
         0.01753189042210579,
         0.03376255929470062
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Volunteers plant thousands of trees in reforestation drive"
+      ]
     },
     {
       "id": 56,
-      "title": "Chess tournament crowns new regional champion",
-      "url": "https://example.test/article/56",
       "embedding": [
         0.05703442543745041,
         0.007679269183427095,
@@ -22004,9 +21782,7 @@
         0.07365730404853821,
         0.03475432097911835,
         0.039934493601322174
-      ],
-      "publishDate": "2026-09-01T08:00:00.000Z",
-      "summary": "Synthetic test summary for: Chess tournament crowns new regional champion"
+      ]
     }
   ],
   "config": {

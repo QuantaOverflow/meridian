@@ -6,13 +6,13 @@
 - Monorepo: **pnpm + turbo**, Node ≥22, pnpm 10.9.0
 - `apps/backend` — CF Worker (Durable Objects + Workflows + Queue + Hyperdrive)
 - `apps/frontend` — Nuxt 3
-- `services/meridian-ai-worker` — CF Worker，LLM 路由经 AI Gateway (Qwen/DashScope)
-- `services/meridian-ml-service` — Python/FastAPI on CF Container (HDBSCAN + e5-small)
+- `services/meridian-ai-worker` — CF Worker，LLM 经 AI Gateway；简报链路走 Workers AI `glm-4.7-flash`（DashScope 只剩 `other` phase）
+- `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
 
 ## Commands（根目录）
 - `pnpm typecheck` / `pnpm format`
-- `pnpm -F meridian-backend dev` / `meridian-frontend dev` / `meridian-ai-worker dev`
+- `pnpm -F @meridian/backend dev` / `@meridian/frontend dev` / `meridian-ai-worker dev`
 - `pnpm -F @meridian/database generate` / `migrate` / `studio`
 - 部署：进对应 service 目录跑 `wrangler deploy`，**永不从 root 部署**
 
@@ -27,11 +27,13 @@
 - 分支：`meridian-dev` 是主干（没有 `main`）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
 - 改 LLM prompt：编辑 `services/meridian-ai-worker/src/prompts/` → 跑 `eval/` 评估 → 再合
-- 完成前跑 `pnpm typecheck`；项目暂无单元测试，"完成"以 typecheck + 手动验证为准
+- 完成前跑 `pnpm typecheck` + 相关测试。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
+  `pnpm -F @meridian/backend test`、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`；
+  整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
 - 报错先 `wrangler tail`，再加 console.log
 
 ## 已知坑
-- **CF Workflow 单 step 输出 ~1MB 上限**——曾因情报 step 内联返回全部 story 报告而触发 `WorkflowInternalError`（当时靠 `maxStoriesToGenerate=3` 规避）。**已解决（2026-06）**：情报报告卸载 R2、step 只回传 keys（`auto-brief-generation.ts`），现 `maxStoriesToGenerate=15` 安全。新增 step 若要传大对象，沿用"卸 R2 + 传 key"模式
+- **CF Workflow 单 step 输出 ~1MB 上限**——曾因情报 step 内联返回全部 story 报告而触发 `WorkflowInternalError`（当时靠 `maxStoriesToGenerate=3` 规避）。**已解决（2026-06）**：大对象卸 R2、step 只回传 key（`auto-brief-generation.ts` 的 embeddings 即如此；v6 块 step 只回写出的 3–5 句），现 cron 取 `MAX_STORIES_TO_GENERATE=25`。新增 step 若要传大对象，沿用"卸 R2 + 传 key"模式
 - `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点
 - 调试三件套：`wrangler tail` / `wrangler workflows instances describe` / R2 `observability/*.json`
@@ -109,6 +111,6 @@
 | `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
 ## 禁区（未明确要求不要碰）
-- `packages/database/drizzle/` — 历史 migration 不可变
+- `packages/database/migrations/` — 历史 migration 不可变
 - `services/meridian-ml-service/model-cache/` — 470MB 模型，gitignored
 - `apps/backend/src/tests/` — gitignored

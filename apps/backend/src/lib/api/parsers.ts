@@ -37,7 +37,6 @@ export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedS
   const properItems = items.map((item: any) => {
     let title = '';
     let link = '';
-    let id = '';
     let pubDateString: string | null = null;
 
     if (typeof item.title === 'string') {
@@ -56,14 +55,6 @@ export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedS
       link = item.guid;
     } else {
       link = 'UNKNOWN';
-    }
-
-    if (typeof item.guid === 'string') {
-      id = item.guid;
-    } else if (typeof item.guid === 'object' && item.guid['#text']) {
-      id = item.guid['#text'];
-    } else {
-      id = 'UNKNOWN';
     }
 
     if (typeof item.pubDate === 'string') {
@@ -85,7 +76,6 @@ export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedS
     return {
       title: cleanString(title),
       link: cleanUrl(cleanString(link)),
-      id: cleanString(id),
       pubDate,
     };
   });

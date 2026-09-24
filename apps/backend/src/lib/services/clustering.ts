@@ -1,12 +1,6 @@
 /**
- * 聚类服务模块
- * 封装与Meridian ML Service的聚类分析交互
- * 提供符合intelligence-pipeline.test.ts数据契约的接口
- * 
- * 性能优化说明：
- * - 聚类请求中不再传递完整的文章内容(content)字段，以减少网络负载
- * - ML服务的聚类算法仅依赖embedding向量，不需要原始文章内容
- * - 下游工作流(如简报生成)通过R2存储按需获取完整文章内容
+ * 聚类服务模块：封装与 Meridian ML Service 的聚类分析交互。
+ * 只给 ml 侧发 {id, embedding}；正文由下游工作流按需从 R2 取。
  */
 
 import type { AIWorkerEnv } from './ai-services';
@@ -34,8 +28,8 @@ const ML_BUILD_NOT_INJECTED = 'not-injected';
 /**
  * 期望的 ml 镜像 SHA 从哪读。
  *
- * 注意：`MERIDIAN_ML_EXPECTED_BUILD_SHA` 还没在 `apps/backend/wrangler.toml` 的 [vars]
- * 与 `AIWorkerEnv` 里声明（这两个文件本轮不由本改动负责），所以这里走一次显式 cast 读。
+ * 注意：`MERIDIAN_ML_EXPECTED_BUILD_SHA` 没在 `apps/backend/wrangler.jsonc` 的 vars
+ * 与 `AIWorkerEnv` 里声明，所以这里走一次显式 cast 读。
  * 未配置时断言仍然有效，只是降一档：只能判"字段缺失 / 没注入"，判不了"不是本次部署的镜像"。
  */
 function readExpectedBuildSha(env: AIWorkerEnv): string | undefined {
@@ -74,7 +68,7 @@ interface BuildIdentityAssertion {
  * 从 ml 响应顶层解析并断言镜像身份。
  *
  * 关键：**字段缺失必须是一个可判别的状态**，不能 `?? 'unknown'` 吞掉——那等于把这道闸拆了。
- * 这个函数只产出信号，不决定 DEGRADED（status 赋值归 workflow）。
+ * 这个函数只产出信号；missing / mismatch 由 workflow 并进 degradedReasons 记 DEGRADED。
  */
 function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityAssertion {
   if (raw === undefined || raw === null) {
@@ -155,16 +149,8 @@ function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityA
   };
 }
 
-// 数据类型定义 - 与intelligence-pipeline.test.ts保持一致
 export interface ArticleDataset {
-  articles: Array<{
-    id: number;
-    title: string;
-    content: string;
-    publishDate: string;
-    url: string;
-    summary: string;
-  }>;
+  articles: Array<{ id: number }>;
   embeddings: Array<{
     articleId: number;
     embedding: number[];
@@ -210,10 +196,7 @@ export interface ClusteringServiceResponse {
   error?: string;
 }
 
-/**
- * 聚类服务类
- * 提供与intelligence-pipeline.test.ts兼容的聚类分析接口
- */
+/** 聚类服务类 */
 export class ClusteringService {
   constructor(private env: AIWorkerEnv, private traceId?: string) {}
 
@@ -271,14 +254,11 @@ export class ClusteringService {
       }
 
       // ml 侧只读 id 与 embedding（多余字段会被忽略），只发这两个
-      const items = dataset.articles.map(article => {
-        const embedding = dataset.embeddings.find(e => e.articleId === article.id);
-        if (!embedding) {
-          throw new Error(`Missing embedding for article ${article.id}`);
-        }
-        
-        return { id: article.id, embedding: embedding.embedding };
-      });
+      // 上面已校验每篇都有 embedding
+      const items = dataset.articles.map(article => ({
+        id: article.id,
+        embedding: dataset.embeddings.find(e => e.articleId === article.id)!.embedding,
+      }));
 
               // 调用ML服务的AI Worker聚类端点
       const mlResponse = await this.aiWorkerClustering(items, {
@@ -351,7 +331,7 @@ export class ClusteringService {
         // 转换ML服务响应为ClusteringResult格式
         const clusters = mlResult.clusters.map((cluster) => ({
           clusterId: cluster.cluster_id,
-          articleIds: cluster.items.map((item: any) => item.metadata?.id || item.id),
+          articleIds: cluster.items.map((item: any) => item.id),
           size: cluster.size
         }));
 

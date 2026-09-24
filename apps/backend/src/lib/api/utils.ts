@@ -7,25 +7,17 @@ export type ApiResponse<T = any> = {
   error?: string;
   message?: string;
   timestamp?: string;
-  pagination?: {
-    page: number;
-    limit: number;
-    total?: number;
-    hasMore?: boolean;
-  };
 };
 
 // 创建成功响应
 export function createSuccessResponse<T>(
   data: T, 
-  message?: string, 
-  pagination?: ApiResponse['pagination']
+  message?: string
 ): ApiResponse<T> {
   return {
     success: true,
     data,
     message,
-    pagination,
     timestamp: new Date().toISOString()
   };
 }
@@ -43,15 +35,11 @@ export function createErrorResponse(error: string): ApiResponse {
 export function handleDatabaseError(
   error: unknown, 
   operation: string, 
-  logger: Logger,
-  context?: Record<string, any>
+  logger: Logger
 ): { error: string; statusCode: number } {
   const err = error instanceof Error ? error : new Error(String(error));
   
-  logger.error(`${operation} failed`, { 
-    error_message: err.message,
-    ...context 
-  }, err);
+  logger.error(`${operation} failed`, { error_message: err.message }, err);
 
   // 根据错误类型返回适当的状态码
   if (err.message.includes('unique constraint') || err.message.includes('duplicate')) {
@@ -73,29 +61,18 @@ export function handleDatabaseError(
 export async function checkResourceExists<T>(
   queryFn: () => Promise<T | undefined>,
   resourceName: string,
-  logger: Logger,
-  context?: Record<string, any>
-): Promise<{ exists: boolean; resource?: T; error?: { message: string; statusCode: number } }> {
+  logger: Logger
+): Promise<{ exists: boolean }> {
   try {
     const resource = await queryFn();
-    
     if (resource === undefined) {
-      logger.warn(`${resourceName} not found`, context);
-      return { 
-        exists: false, 
-        error: { message: `${resourceName} not found`, statusCode: 404 } 
-      };
+      logger.warn(`${resourceName} not found`);
+      return { exists: false };
     }
-    
-    return { exists: true, resource };
+    return { exists: true };
   } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      `Check ${resourceName} existence`, 
-      logger, 
-      context
-    );
-    return { exists: false, error: { message: errorMsg, statusCode } };
+    handleDatabaseError(error, `Check ${resourceName} existence`, logger);
+    return { exists: false };
   }
 }
 

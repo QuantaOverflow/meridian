@@ -124,7 +124,7 @@ export async function backfillStoryLeadArticles(db: Db, workflowId?: string): Pr
  */
 async function assignOneBriefedStory(
   db: Db,
-  story: { id: number; title: string; createdAt: string },
+  story: { id: number; title: string },
   threshold: number,
   lookbackDays: number
 ): Promise<'joined' | 'created' | 'skipped'> {
@@ -209,14 +209,14 @@ export async function assignStoryClustersForWorkflow(
   await backfillStoryLeadArticles(db, workflowId);
 
   const briefedStories = (await db.execute(sql`
-    SELECT id, title, created_at AS "createdAt"
+    SELECT id, title
     FROM brief_stories
     WHERE workflow_id = ${workflowId}
       AND story_cluster_id IS NULL
       AND selected_for_intel = true
       AND centroid IS NOT NULL
     ORDER BY importance DESC NULLS LAST, id
-  `)) as unknown as { id: number; title: string; createdAt: string }[];
+  `)) as unknown as { id: number; title: string }[];
 
   const stats: ClusterAssignmentStats = { briefed: 0, joined: 0, created: 0, attachedCandidates: 0 };
 

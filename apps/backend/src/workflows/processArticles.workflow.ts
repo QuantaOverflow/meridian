@@ -25,7 +25,6 @@ interface AIWorkerAnalysisResponse {
     content_focus: string[];
   };
   error?: string;
-  metadata?: any;
 }
 
 const TRICKY_DOMAINS = [
@@ -292,7 +291,6 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               .update($articles)
               .set({
                 status: 'CONTENT_FETCHED',
-                used_browser: result.used_browser,
               })
               .where(eq($articles.id, result.id));
           });

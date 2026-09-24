@@ -4,7 +4,7 @@ Drizzle ORM 的表定义与连接工厂，backend、frontend 与 backend 的运�
 （`ap-southeast-1`），backend 经 Hyperdrive 连接，frontend 直连。
 
 - `src/schema.ts`：全部表与枚举。表对象以 `$` 开头（`$sources`、`$articles`、`$reports`、`$newsletter`、
-  `$brief_runs`、`$story_clusters`、`$brief_stories`、`$cluster_rejections`）；`articles.embedding` 是 384 维 `vector`（pgvector，HNSW 索引）
+  `$brief_runs`、`$story_clusters`、`$brief_stories`）；`articles.embedding` 是 384 维 `vector`（pgvector，HNSW 索引）
 - `src/database.ts`：`getDb(url)`
 - `src/index.ts`：导出上面两者和常用的 drizzle 操作符
 - `migrations/`：`drizzle-kit generate` 的产物，已应用的 migration 不改

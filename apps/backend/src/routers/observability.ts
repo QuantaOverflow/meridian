@@ -8,7 +8,7 @@ const app = new Hono<{ Bindings: Env }>();
 // ========== 新观测性聚合查询（Phase 3） ==========
 
 /**
- * 一次拉到 brief workflow 的完整链路：brief_runs + stories + 可观测性快照 + 关联报告
+ * 一次拉到 brief workflow 的完整链路：brief_runs + stories + 可观测性快照（brief_runs.report_id 指向报告）
  */
 app.get('/runs/:workflowId', async (c) => {
   try {

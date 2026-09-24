@@ -24,7 +24,7 @@
 | `POST /do/admin/initialize-dos?batchSize=100` | token | 为所有源批量初始化 DO，回 `{initialized, total}` |
 | `DELETE /do/admin/source/:sourceId` | token | 销毁该源的 DO，**并删除该源的文章和 sources 行** |
 | `GET\|POST /do/source/:sourceKey/*` | 需要 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
-| `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + 关联 report |
+| `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + R2 观测快照 |
 | `GET /observability/runs/:workflowId/clustering` | token | R2 `observability/clustering/<wf>.json` 聚类快照 |
 | `GET /observability/runs/:workflowId/llm-calls` | token | 列出 R2 `llm-calls/<wf>/` 下的 LLM 调用记录 |
 | `GET /observability/llm-calls/<key>` | token | 读取单条 LLM 调用记录，`<key>` 必须以 `llm-calls/` 开头 |

@@ -326,9 +326,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         .insert($brief_runs)
         .values({
           workflow_id: workflowId,
-          trace_id: workflowId,
           status: 'RUNNING',
-          triggered_by: triggeredBy,
           params: event.payload as any,
         })
         .onConflictDoNothing({ target: $brief_runs.workflow_id });
@@ -876,21 +874,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 创建聚类服务实例
         const clusteringService = createClusteringService(this.env, workflowId);
         
-        // 优化：聚类分析仅依赖embedding向量，不需要文章内容
-        // clustering-service.ts会自动过滤content字段，只传递必要字段给ML服务
-        console.log(`[AutoBrief] 构建聚类数据集（仅传递聚类所需的核心字段）...`);
-        
-        // 构建符合ArticleDataset接口的数据集
-        // 注意：clustering-service.ts内部会过滤掉content字段，只传递id、title、url、embedding、publishDate、summary给ML服务
+        // 聚类只依赖 embedding，给 ml 侧只发 {id, embedding}
         const clusteringDataset = {
-          articles: dataset.articles.map(article => ({
-            id: article.id,
-            title: article.title,
-            content: article.summary, // 满足接口要求，但clustering-service会过滤此字段
-            publishDate: article.publishDate,
-            url: article.url,
-            summary: article.summary
-          })),
+          articles: dataset.articles.map(article => ({ id: article.id })),
           embeddings: dataset.embeddings
         };
         
@@ -938,6 +924,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             configSent: effectiveClusteringOptions,
             configUsed: clusteringResult.configUsed ?? null,
             mlStats: clusteringResult.clusteringStats ?? null,
+            buildIdentityCheck: clusteringResult.buildIdentityCheck,
             clusters: clusteringResult.clusters.map(c => ({
               clusterId: c.clusterId,
               articleIds: c.articleIds,
@@ -1326,7 +1313,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。相关代码留在
       // lib/core/story-dedup.ts 里未删（跨期线索合并仍可能用到），但不在简报主链路上。
       //
-      // 这里只补 __briefStoryRowIds：下游 mark_selected_for_intel 与 intel_report_r2_key
+      // 这里只补 __briefStoryRowIds：下游 mark_selected_for_intel
       // 落库靠它精确定位主键，不能靠 stories.indexOf。
       validatedStories.stories = validatedStories.stories.map((st: any, i: number) => ({
         ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number'),
@@ -1611,8 +1598,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             return { failure: { idx, title: story.title, reason: `分层表里没有 idx=${idx}` } };
           }
           const res = await aiw.briefBlockV6(
-            String(story.title ?? ''),
-            withBody.map((a) => ({ id: a.id, title: a.title, url: a.url, publishDate: a.publishDate, content: a.content })),
+            withBody.map((a) => ({ id: a.id, title: a.title, publishDate: a.publishDate, content: a.content })),
             plan.tier,
             idx
           );
@@ -1907,14 +1893,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         try {
           const db = getDb(this.env.HYPERDRIVE);
           
-          // 计算source统计
-          // 1. 获取所有RSS源数量
-          const totalSourcesResult = await db
-            .select({ count: sql<number>`count(*)` })
-            .from($sources);
-          const totalSources = totalSourcesResult[0]?.count || 0;
-          
-          // 2. 计算使用的source数量（基于参与简报的文章）
+          // 计算使用的source数量（基于参与简报的文章）
           const usedArticleIds = dataset.articles
             .filter((article: any) => 
               validatedStories && 
@@ -1942,7 +1921,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               title: briefResult.title,
               content: briefResult.content,
               totalArticles: briefResult.stats.total_articles,
-              totalSources: totalSources,
               usedArticles: briefResult.stats.used_articles,
               usedSources: usedSources,
               tldr: briefResult.tldr,
@@ -2002,6 +1980,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         ...(blockFailures.length > 0 ? [`块生成失败 ${blockFailures.length} 个（选中 ${storiesForIntelligence.length}）`] : []),
         ...(noEventRateDegraded
           ? [`NO_EVENT 率 ${(noEventRate * 100).toFixed(1)}%（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls}）超阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%`]
+          : []),
+        // ml 镜像身份：missing = 跑的是旧镜像（2026-09-15~19 连续五天跑旧算法、status 全程 COMPLETED
+        // 的那种），mismatch = 不是本次部署的镜像。not_injected 是本地直起服务（replay 即此），不算降级。
+        ...(clusteringResult.buildIdentityCheck.status === 'missing' || clusteringResult.buildIdentityCheck.status === 'mismatch'
+          ? [`ml 镜像身份 ${clusteringResult.buildIdentityCheck.status}：${clusteringResult.buildIdentityCheck.detail}`]
           : []),
       ];
       if (degradedReasons.length > 0) {

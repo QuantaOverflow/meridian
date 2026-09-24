@@ -31,7 +31,7 @@ export interface RankOptions {
    * 事件键。同键即同一事件，受 perEventCap 约束。不传 = 每条各自成事件（等价于不限）。
    * 生产传的是块内文章标题的主导专有名词（见 lib/core/storyline.ts 的 dominantEntity）。
    */
-  eventKeyOf?: (story: unknown, index: number) => string;
+  eventKeyOf?: (story: unknown) => string;
   /**
    * LLM 排序给出的优先序（stories 的下标，最重要的在前）。不传 = 全按选择分（旧行为）。
    *
@@ -86,7 +86,7 @@ export function rankStoriesForIntelligence<S extends { importance?: number }>(
   for (const r of ranked) {
     if (selected.length >= opts.maxStories) break;
     if (cap != null && keyOf) {
-      const k = keyOf(r.story, stories.indexOf(r.story));
+      const k = keyOf(r.story);
       const n = seen.get(k) ?? 0;
       if (k && n >= cap) { capped.push(r); continue; }
       seen.set(k, n + 1);

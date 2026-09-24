@@ -3,7 +3,7 @@
  *
  * 由 wrangler.jsonc 的 cron 触发器调起(UTC 13:00 = 北京 21:00)。
  * 与 POST /admin/briefs/generate 是两个平级入口,共用同一个 workflow 与同一组聚类参数;
- * 差别只有:workflow id 前缀(cron-brief- vs admin-brief-)、triggered_by、以及这里的并发保护。
+ * 差别只有:workflow id 前缀(cron-brief- vs admin-brief-)、triggeredBy 参数、以及这里的并发保护。
  */
 
 import { getDb } from '../database';

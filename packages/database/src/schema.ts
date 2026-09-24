@@ -52,7 +52,6 @@ export const $articles = pgTable(
     primary_location: text('primary_location'),
     completeness: articleCompletenessEnum(),
     content_quality: articleContentQualityEnum(),
-    used_browser: boolean('used_browser'),
     event_summary_points: jsonb('event_summary_points'),
     thematic_keywords: jsonb('thematic_keywords'),
     topic_tags: jsonb('topic_tags'),
@@ -78,7 +77,6 @@ export const $reports = pgTable('reports', {
   content: text('content').notNull(),
 
   totalArticles: integer('total_articles').notNull(),
-  totalSources: integer('total_sources').notNull(),
 
   // 进入简报的去重文章数。
   // ⚠️ 语义在 2026-08-17 修正过：第 51-59 期存的是**故事数**（旧代码错写成
@@ -127,9 +125,7 @@ export const $brief_runs = pgTable(
   {
     id: serial('id').primaryKey(),
     workflow_id: text('workflow_id').notNull().unique(),
-    trace_id: text('trace_id').notNull(),
     status: briefRunStatusEnum().notNull().default('RUNNING'),
-    triggered_by: text('triggered_by'),
     params: jsonb('params'),
 
     started_at: timestamp('started_at', { mode: 'date' })
@@ -145,8 +141,7 @@ export const $brief_runs = pgTable(
 
     report_id: integer('report_id').references(() => $reports.id),
     error: text('error'),
-  },
-  table => [index('brief_runs_workflow_id_idx').on(table.workflow_id)]
+  }
 );
 
 // 跨期线索（读者端「事件追踪」）。一条线索 = 若干天里被判为同一条持续事件的 brief_stories。
@@ -187,7 +182,6 @@ export const $brief_stories = pgTable(
     article_count: integer('article_count'),
     article_ids: jsonb('article_ids'),
     selected_for_intel: boolean('selected_for_intel').notNull().default(false),
-    intel_report_r2_key: text('intel_report_r2_key'),
     // 跨期线索聚合（读者端「事件追踪」）。centroid = 本故事成员文章 embedding 的均值，
     // 落库而不是每次现算：匹配要拿历史故事的向量比对，现算得 join 全部 story-article 链路。
     centroid: vector('centroid', { dimensions: 384 }),

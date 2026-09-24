@@ -192,7 +192,6 @@ function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
     compatibility_flags: flags,
     services: [{ binding: 'AI', service: 'meridian-replay-ai', entrypoint: 'ReplayAI' }],
     r2_buckets: [{ binding: 'ARTICLES_BUCKET', bucket_name: BUCKET }],
-    version_metadata: { binding: 'CF_VERSION_METADATA' },
   };
   const awPath = writeConfig('ai-worker', aw, {});
 

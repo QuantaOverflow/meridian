@@ -54,7 +54,7 @@ cron 0 13 * * *（UTC）──► AutoBriefGenerationWorkflow（每天一期）
 | 1 | `准备文章数据集` | 按时间窗取已分析、有 embedding 的文章；embeddings 卸到 R2、step 只回 key（1MB 输出上限） | — |
 | 2 | `执行聚类分析` | 不降维 + 余弦距离 average linkage 凝聚（阈值 0.10、最小 3 篇成簇，参数见 `lib/core/constants.ts` 的 `BRIEF_CLUSTERING_OPTIONS`；UMAP+HDBSCAN 仅作回滚开关）。簇成员落 R2 `observability/clustering/<wf>.json` | ml-service `/ai-worker/clustering` |
 | 3 | `簇判定` | **一簇 = 简报里一块**，每簇一次调用判 EVENT / NO_EVENT / UNSURE 并起名。判定失败或 NO_EVENT 仍出块（只进计数），标题退化成零 LLM 的主导专名。块的 importance 由 `blockImportance`（独立源数 + 篇数的对数公式，`lib/core/storyline.ts`）给出，不是 LLM 打分 | ai-worker `/meridian/cluster/judge` |
-| 3b | `persist:brief_stories_and_rejections`、`compute:source_coverage` | 块写 `brief_stories`、拒绝写 `cluster_rejections`；算每块独立源数 | — |
+| 3b | `persist:brief_stories_and_rejections`、`compute:source_coverage` | 块写 `brief_stories`（step 名里的 rejections 是历史遗留，`cluster_rejections` 表已于 2026-09-24 删除）；算每块独立源数 | — |
 | 4 | `故事重要性排序` | 对**全部**候选跑三轮洗牌 + Borda 聚合；失败则退回机械分（`lib/core/story-ranking.ts`，源覆盖加权）并在观测里记一笔。再按同事件配额（`PER_EVENT_BLOCK_CAP`）取前 `maxStoriesToGenerate` | ai-worker `/meridian/stories/rank` |
 | 5 | 每个选中故事一个 step | 簇原文（R2 取正文，`pickSpreadArticles` 截到 30 篇）→ 一块逐句带出处的简报。端点内部：切句 → 切窗 → 每窗标重点 → 一次写作（lead/more 3–5 句、brief 1–2 句）→ 机械补出处。step 只回写出的句子，不回切句表 | ai-worker `/meridian/brief-block-v6` |
 | 6 | `简报标题` | `assignTiers` 分 lead / more / brief 三节（写作前已算好），`renderBriefV3` 用代码拼 markdown；块记录落 R2 `observability/brief-v3/<wf>.json` | ai-worker `/meridian/brief-title` |

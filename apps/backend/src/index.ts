@@ -1,5 +1,4 @@
-import { Hono } from 'hono';
-import importedApp from './app';
+import app from './app';
 import { SourceScraperDO } from './durable_objects/sourceScraperDO';
 import { startProcessArticleWorkflow } from './workflows/processArticles.workflow';
 import { Logger } from './lib/core/logger';
@@ -34,7 +33,6 @@ export type Env = {
 // Create a base logger for the queue handler
 const queueLogger = new Logger({ service: 'article-queue-handler' });
 
-const app = importedApp || new Hono<{ Bindings: Env }>();
 
 export default {
   fetch: app.fetch,

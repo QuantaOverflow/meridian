@@ -60,7 +60,6 @@ export const CRON_BRIEF_PARAMS = {
   // 出现就该调回。写这条注释时先写成「日志里 N 篇与 M 篇两数不等」,而那行日志并不存在,
   // 于是把信号补成了代码。
   ARTICLE_LIMIT: 1000,
-  MIN_IMPORTANCE: 3,
   // 15 → 25(2026-08-22)。旧值卡住的是**召回**不是成本:08-20 全天 154 个候选故事里约 137 个
   // 是真事件,15 的帽子把约 123 个真故事挡在简报外,损失量级压过管线其余所有环节之和。
   // 名次段实测(人工严口径):1-15 精度 93%/imp 中位 7,16-20 100%/6,21-25 100%/6,
@@ -69,7 +68,6 @@ export const CRON_BRIEF_PARAMS = {
   // 成本:情报分析每故事一次 LLM,并发 6 下 15 条约 3 分钟,25 条约 5 分钟(该步预算 30 分钟)。
   // 不撞 CF Workflow 单 step ~1MB 上限:情报报告已卸 R2、step 只回传 key(见 auto-brief-generation.ts)。
   MAX_STORIES_TO_GENERATE: 25,
-  STORY_MIN_IMPORTANCE: 0.1,
   // 判定"上一次还在跑"的时间窗。单次实测 11-15 分钟,取 2 小时;
   // 超出此窗的 RUNNING 视为崩溃遗留(workflow 挂掉时不会回写终态),否则 cron 会被永久卡死。
   IN_FLIGHT_WINDOW_HOURS: 2,

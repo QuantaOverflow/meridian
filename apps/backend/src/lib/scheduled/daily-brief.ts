@@ -55,10 +55,7 @@ export async function runDailyBriefCron(env: Env): Promise<DailyBriefCronResult>
       params: {
         timeRangeDays: CRON_BRIEF_PARAMS.TIME_RANGE_DAYS,
         articleLimit: CRON_BRIEF_PARAMS.ARTICLE_LIMIT,
-        minImportance: CRON_BRIEF_PARAMS.MIN_IMPORTANCE,
         maxStoriesToGenerate: CRON_BRIEF_PARAMS.MAX_STORIES_TO_GENERATE,
-        storyMinImportance: CRON_BRIEF_PARAMS.STORY_MIN_IMPORTANCE,
-        // 必须显式传:不传会落到 auto-brief-generation 的启发式分支,聚类参数与手动触发不一致
         clusteringOptions: BRIEF_CLUSTERING_OPTIONS,
         triggeredBy: 'cron',
       },

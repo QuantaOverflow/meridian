@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, $brief_runs, $brief_stories, $cluster_rejections, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { $articles, $reports, $sources, $brief_runs, $brief_stories, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
@@ -26,23 +26,11 @@ import type { Env } from '../index';
 // 数据接口定义 - 轻量级版本，避免SQLITE_TOOBIG错误
 // ============================================================================
 
+// validateContentQuality 读的那几个字段（入参是库里整行，这里只声明被读到的）
 interface ArticleRecord {
-  id: number;
   title: string;
-  url: string;
-  contentFileKey?: string | null;
-  publish_date: Date | null;
-  embedding?: number[] | null;
-  // 从 processArticles 工作流存储的分析结果字段
-  language?: string | null;
-  primary_location?: string | null;
   completeness?: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS' | null;
   content_quality?: 'OK' | 'LOW_QUALITY' | 'JUNK' | null;
-  event_summary_points?: string[] | null;
-  thematic_keywords?: string[] | null;
-  topic_tags?: string[] | null;
-  key_entities?: string[] | null;
-  content_focus?: string[] | null;
 }
 
 // 轻量级数据集接口 - 不包含完整内容，只保留引用
@@ -72,7 +60,6 @@ export interface BriefGenerationParams {
   triggeredBy?: string;
   dateFrom?: Date;
   dateTo?: Date;
-  minImportance?: number;
   
   // 简化的配置参数
   articleLimit?: number;
@@ -87,7 +74,6 @@ export interface BriefGenerationParams {
   
   // 业务控制参数
   maxStoriesToGenerate?: number;
-  storyMinImportance?: number;
 }
 
 // 简报生成结果接口
@@ -313,13 +299,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       triggeredBy = 'system', 
       dateFrom, 
       dateTo, 
-      minImportance = 3,
       
       articleLimit = 30, // 降低默认限制以避免SQLITE_TOOBIG错误
       timeRangeDays = 2,
       clusteringOptions,
-      maxStoriesToGenerate = 25,
-      storyMinImportance = 0.1
+      maxStoriesToGenerate = 25
     } = event.payload;
 
     // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
@@ -330,10 +314,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       triggeredBy,
       articleLimit,
       timeRangeDays,
-      minImportance,
       customClusteringOptions: !!clusteringOptions,
       maxStoriesToGenerate,
-      storyMinImportance,
       article_ids_provided: article_ids.length
     });
 
@@ -913,7 +895,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         };
         
         // effectiveClusteringOptions 在 step 外取值（原因见那里的注释）
-        console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'heuristic-default'}):`, JSON.stringify(effectiveClusteringOptions));
+        console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'BRIEF_CLUSTERING_OPTIONS'}):`, JSON.stringify(effectiveClusteringOptions));
 
         const response = await clusteringService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
         
@@ -1050,7 +1032,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
       const validatedStories = await step.do('簇判定', storylineStepConfig, async (): Promise<{
         stories: StoryBlock[];
-        rejectedClusters: any[];
         judgeCalls: number;
         judgeFailures: number;
         pocketFlagged: number;
@@ -1175,9 +1156,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             `判定输入超 ${PLAN_TITLE_CAP} 条被取样 ${judgeTitleCapped} 簇，跨簇同名合并 ${crossClusterMerges} 次，` +
             `超 ${DEFAULT_ARTICLE_CAP} 篇被截 ${cappedBlocks} 块共丢 ${droppedArticles} 篇）`
         );
-        // rejectedClusters 恒为空：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
-        // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。保留字段是为下游形状不变。
-        return { stories, rejectedClusters: [], judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
+        // 不拒绝整簇：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
+        // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。
+        return { stories, judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
           cappedBlocks, droppedArticles, judgeTitleCapped, crossClusterMerges };
       });
 
@@ -1208,7 +1189,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         noEventRate: Number(noEventRate.toFixed(4)),
         noEventRateThreshold: NO_EVENT_RATE_ALERT,
         validStoriesCount: validatedStories.stories.length,
-        rejectedClustersCount: validatedStories.rejectedClusters.length,
         judgeCalls: validatedStories.judgeCalls,
         judgeFailures: validatedStories.judgeFailures,
         pocketFlagged: validatedStories.pocketFlagged,
@@ -1217,10 +1197,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         cappedBlocks: validatedStories.cappedBlocks,
         droppedArticles: validatedStories.droppedArticles,
         stories: validatedStories.stories,
-        rejectedClusters: validatedStories.rejectedClusters,
       });
 
-      // 观测性：写入 brief_stories + cluster_rejections。delete+insert 保证 step 重试时幂等。
+      // 观测性：写入 brief_stories。delete+insert 保证 step 重试时幂等。
       //
       // 返回插入行的自增主键(按 validatedStories.stories 顺序)：下游 mark_selected_for_intel
       // 要精确标记「被选中送情报分析的那几条」，而 cluster_id 在 2026-08-21 换架构后**不再唯一**
@@ -1229,7 +1208,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const briefStoryRowIds = await step.do('persist:brief_stories_and_rejections', dbStepConfig, async (): Promise<number[]> => {
         const db = getDb(this.env.HYPERDRIVE);
         await db.delete($brief_stories).where(eq($brief_stories.workflow_id, workflowId));
-        await db.delete($cluster_rejections).where(eq($cluster_rejections.workflow_id, workflowId));
         let insertedIds: number[] = [];
         if (validatedStories.stories.length > 0) {
           const inserted = await db.insert($brief_stories).values(
@@ -1248,24 +1226,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           ).returning({ id: $brief_stories.id });
           insertedIds = inserted.map(r => r.id);
         }
-        if (validatedStories.rejectedClusters.length > 0) {
-          await db.insert($cluster_rejections).values(
-            validatedStories.rejectedClusters.map((c: any) => ({
-              workflow_id: workflowId,
-              cluster_id: typeof c.clusterId === 'number' ? c.clusterId : null,
-              reason: c.rejectionReason ?? null,
-              article_count: Array.isArray(c.originalArticleIds) ? c.originalArticleIds.length : null,
-              // 成员 id 一并落库：此前只存 count，"哪些文章从未进入任何故事"就只能去 R2 手翻。
-              // -1 噪声桶已占窗口文章约 70%，是最需要复盘的一批。
-              article_ids: Array.isArray(c.originalArticleIds) ? c.originalArticleIds : null,
-            }))
-          );
-        }
         return insertedIds;
       });
 
       // 第 2 关 judged：进了某一块 = 过关。
-      // ⚠️ 这一关**没有**「被判官毙掉」这条去向：rejectedClusters 恒为空，NO_EVENT / UNSURE
+      // ⚠️ 这一关**没有**「被判官毙掉」这条去向：不拒绝整簇，NO_EVENT / UNSURE
       // 只标记不丢弃（见上方簇判定的注释）。所以过了聚类却不在任何块里，只可能是块物化时
       // 被 DEFAULT_ARTICLE_CAP 截掉或跨簇同名合并时去重掉——两者都发生在「簇判定」step
       // **内部**（assembleBlocks），步外只拿得到合计数 droppedArticles，分不出是哪一种，
@@ -1295,20 +1260,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           analysis: {
             totalArticles: dataset.articles.length,
             clustersFound: clusteringResult.statistics.totalClusters,
-            validStories: 0,
-            rejectedClusters: validatedStories.rejectedClusters.length,
-            rejectionReasons: validatedStories.rejectedClusters.reduce((acc: Record<string, number>, cluster: any) => {
-              acc[cluster.rejectionReason] = (acc[cluster.rejectionReason] || 0) + 1;
-              return acc;
-            }, {}),
-            clusterBreakdown: validatedStories.rejectedClusters.map((cluster: any) => ({
-              clusterId: cluster.clusterId,
-              articleCount: cluster.originalArticleIds?.length || 0,
-              rejectionReason: cluster.rejectionReason
-            }))
+            validStories: 0
           },
           recommendations: [
-            '考虑降低故事重要性阈值 (storyMinImportance)',
             '增加文章数据的时间范围 (timeRangeDays)',
             '调整聚类参数以产生更大的聚类',
             '检查文章质量和多样性'
@@ -1362,95 +1316,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       console.log('[AutoBrief] ✅ 故事质量检查通过');
       console.log(`[AutoBrief] 📈 故事统计: 平均重要性 ${storyQualityMetrics.averageImportance.toFixed(2)}, 分布: ${JSON.stringify(storyQualityMetrics.importanceDistribution)}`);
-
-      // =====================================================================
-      // 故事重要性评估观测 - 使用可观测性框架记录详细的故事选择指标
-      // =====================================================================
-      const totalCandidateStories = validatedStories.stories.length + validatedStories.rejectedClusters.length;
-      const importanceThreshold = storyMinImportance;
-      
-      // 构建故事明细分析
-      const storyBreakdown: Array<{
-        storyId: number;
-        title: string;
-        importance: number;
-        articleCount: number;
-        clusterId: number;
-        selected: boolean;
-        rejectionReason?: string;
-        marginFromThreshold: number;
-        selectionCategory: string;
-      }> = [];
-      
-      // 添加接受的故事
-      validatedStories.stories.forEach((story: any, index: number) => {
-        storyBreakdown.push({
-          storyId: index + 1,
-          title: story.title,
-          importance: story.importance,
-          articleCount: story.articleIds.length,
-          clusterId: story.clusterId || (index + 1), // 如果没有clusterId使用索引
-          selected: true,
-          marginFromThreshold: story.importance - importanceThreshold,
-          selectionCategory: story.importance >= 8 ? 'high_confidence' : story.importance >= 5 ? 'medium_confidence' : 'low_confidence'
-        });
-      });
-      
-      // 添加拒绝的聚类作为拒绝的故事
-      validatedStories.rejectedClusters.forEach((cluster: any, index: number) => {
-        storyBreakdown.push({
-          storyId: validatedStories.stories.length + index + 1,
-          title: `[拒绝聚类] ${cluster.rejectionReason}`,
-          importance: 0, // 拒绝的聚类重要性为0
-          articleCount: cluster.originalArticleIds?.length || 0,
-          clusterId: cluster.clusterId,
-          selected: false,
-          rejectionReason: cluster.rejectionReason,
-          marginFromThreshold: 0 - importanceThreshold, // 负值表示低于阈值
-          selectionCategory: 'rejected'
-        });
-      });
-      
-      // 计算阈值分析统计
-      const passedStories = storyBreakdown.filter(s => s.selected && s.importance >= importanceThreshold);
-      const rejectedStories = storyBreakdown.filter(s => !s.selected);
-      const highConfidenceSelections = storyBreakdown.filter(s => s.selected && s.importance >= 8);
-      const borderlineCases = storyBreakdown.filter(s => s.selected && s.importance >= importanceThreshold && s.importance < (importanceThreshold + 2));
-      const selectedStories = storyBreakdown.filter(s => s.selected);
-      
-      const avgMarginForSelected = selectedStories.length > 0 
-        ? selectedStories.reduce((sum, s) => sum + s.marginFromThreshold, 0) / selectedStories.length 
-        : 0;
-      const avgMarginForRejected = rejectedStories.length > 0 
-        ? rejectedStories.reduce((sum, s) => sum + s.marginFromThreshold, 0) / rejectedStories.length 
-        : 0;
-      
-      // 构建详细的故事选择指标
-      const storySelectionMetrics = {
-        candidateStories: totalCandidateStories,
-        selectedStories: validatedStories.stories.length,
-        rejectedStories: validatedStories.rejectedClusters.length,
-        importanceThreshold,
-        qualityFilters: ['AI_VALIDATION', 'CLUSTER_SIZE', 'CONTENT_QUALITY'],
-        avgImportanceScore: storyQualityMetrics.averageImportance,
-        storyBreakdown,
-        thresholdAnalysis: {
-          passedStories: passedStories.length,
-          rejectedStories: rejectedStories.length,
-          highConfidenceSelections: highConfidenceSelections.length,
-          borderlineCases: borderlineCases.length,
-          avgMarginForSelected,
-          avgMarginForRejected
-        },
-        selectionConfidence: {
-          highConfidence: highConfidenceSelections.length,
-          borderlineCases: borderlineCases.length,
-          avgSelectionMargin: avgMarginForSelected
-        }
-      };
-      
-      // 使用可观测性框架记录故事选择过程
-      await observability.logStorySelection(storySelectionMetrics);
 
       // =====================================================================
       // 步骤 4: 简报块生成 (AI Worker)

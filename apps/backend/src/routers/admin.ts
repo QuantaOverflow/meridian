@@ -35,9 +35,7 @@ const briefGenerateSchema = z.object({
   dateTo: z.string().optional(),
   timeRangeDays: z.number().optional(),
   articleLimit: z.number().int().positive().optional(),
-  minImportance: z.number().optional(),
   maxStoriesToGenerate: z.number().int().positive().optional(),
-  storyMinImportance: z.number().optional(),
   clusteringOptions: z.any().optional(),
   triggeredBy: z.string().optional(),
 });
@@ -129,9 +127,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       articleLimit = 500, // 默认500篇（embeddings 已卸载 R2，不再受 1MB step 输出限制）
       
       // 业务参数
-      minImportance = 3, // 降低默认重要性阈值，增加故事识别率
       maxStoriesToGenerate = 25,
-      storyMinImportance = 0.1,
       
       // 高级参数（可选）
       clusteringOptions,
@@ -160,9 +156,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       articleLimit,
       
       // 业务控制参数
-      minImportance,
       maxStoriesToGenerate,
-      storyMinImportance,
 
       // 聚类参数（如果提供）
       clusteringOptions: clusteringOptions || BRIEF_CLUSTERING_OPTIONS,
@@ -176,7 +170,6 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       dateTo: parsedDateTo?.toISOString(),
       timeRangeDays: parsedDateFrom || parsedDateTo ? undefined : timeRangeDays,
       articleLimit,
-      minImportance,
       article_ids_provided: Array.isArray(article_ids) ? article_ids.length : 0
     });
 
@@ -201,8 +194,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
             ? `从 ${parsedDateFrom?.toLocaleDateString()} 到 ${parsedDateTo?.toLocaleDateString()}`
             : `最近${timeRangeDays}天内的文章`,
           articleLimit,
-          expectedStories: `最多${maxStoriesToGenerate}个故事`,
-          minImportance
+          expectedStories: `最多${maxStoriesToGenerate}个故事`
         }
       },
       '简报生成工作流已启动，预计需要1-2分钟完成。如果未发现有效故事，工作流将提前终止并提供分析报告。'

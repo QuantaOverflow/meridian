@@ -134,7 +134,7 @@ POST /admin/briefs/generate         # trigger a brief workflow
 POST /admin/articles/by-ids         # fetch articles by id
 POST /admin/articles/process        # re-run article processing
 POST /do/admin/initialize-dos       # initialize all scraper DOs
-GET  /observability/runs/:workflowId   # one run: status, stories, rejections, step metrics
+GET  /observability/runs/:workflowId   # one run: status, stories, step metrics
 GET  /observability/health/summary     # recent runs and 24h article stats
 ```
 

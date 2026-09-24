@@ -11,39 +11,6 @@ export interface WorkflowMetrics {
   error?: string;
 }
 
-export interface StorySelectionMetrics {
-  candidateStories: number;
-  selectedStories: number;
-  rejectedStories: number;
-  importanceThreshold: number;
-  qualityFilters: string[];
-  avgImportanceScore: number;
-  storyBreakdown: Array<{
-    storyId: number;
-    title?: string;
-    importance: number;
-    articleCount: number;
-    clusterId: number;
-    selected: boolean;
-    rejectionReason?: string;
-    marginFromThreshold?: number;
-    selectionCategory?: string;
-  }>;
-  thresholdAnalysis?: {
-    passedStories: number;
-    rejectedStories: number;
-    highConfidenceSelections: number;
-    borderlineCases: number;
-    avgMarginForSelected: number;
-    avgMarginForRejected: number;
-  };
-  selectionConfidence?: {
-    highConfidence: number;
-    borderlineCases: number;
-    avgSelectionMargin: number;
-  };
-}
-
 // 核心可观测性类
 export class WorkflowObservability {
   private workflowId: string;
@@ -90,31 +57,6 @@ export class WorkflowObservability {
 
     // 每次状态变化都持久化，保证 mid-flight 崩溃的 workflow 也能在 R2 中查到
     await this.persistMetrics();
-  }
-
-  // 记录故事选择过程
-  async logStorySelection(metrics: StorySelectionMetrics) {
-    const selectionData = {
-      工作流ID: this.workflowId,
-      候选故事: metrics.candidateStories,
-      选中故事: metrics.selectedStories,
-      拒绝故事: metrics.rejectedStories,
-      重要性阈值: metrics.importanceThreshold,
-      质量过滤器: metrics.qualityFilters,
-      平均重要性: metrics.avgImportanceScore,
-      选择率: `${((metrics.selectedStories / metrics.candidateStories) * 100).toFixed(1)}%`
-    };
-
-    console.log(`[故事选择]`, selectionData);
-
-    // 详细记录每个故事的选择情况
-    console.log(`[故事选择详情]`);
-    metrics.storyBreakdown.forEach(story => {
-      console.log(`  故事 #${story.storyId}: ${story.selected ? '✅选中' : '❌拒绝'} - 重要性:${story.importance}, 文章数:${story.articleCount}, 聚类:${story.clusterId}`, 
-        story.rejectionReason ? `(原因: ${story.rejectionReason})` : '');
-    });
-
-    await this.logStep('story_selection', 'completed', metrics);
   }
 
   // 生成工作流摘要报告

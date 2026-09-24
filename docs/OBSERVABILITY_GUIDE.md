@@ -12,7 +12,6 @@ ai-worker 侧在 `services/meridian-ai-worker/src/services/observe.ts` 与 `llm-
 |---|---|---|
 | DB `brief_runs` | 每个 run 一行：状态（`RUNNING` / `COMPLETED` / `DEGRADED` / `FAILED` / `TERMINATED_NO_STORIES`）、各阶段计数、`error` | 简报 workflow 的 `persist:brief_run_*` step |
 | DB `brief_stories` | 每个候选块一行：标题、importance、article_ids、是否被选中（`selected_for_intel`） | `persist:brief_stories_and_rejections` |
-| DB `cluster_rejections` | 被拒的簇 | 同上 |
 | DB `reports` | 成稿 | `保存简报` |
 | R2 `observability/<wf>.json` | `summary` + `detailedMetrics`（每次 `logStep` 都重写，run 中途崩溃也查得到） | `WorkflowObservability` |
 | R2 `observability/clustering/<wf>.json` | `cluster_id → article_ids`（簇成员不进 DB，只在这里） | `执行聚类分析` |
@@ -29,7 +28,7 @@ ProcessArticles workflow 同样用 `WorkflowObservability` 写 `observability/<w
 
 | 端点 | 给什么 |
 |---|---|
-| `GET /observability/runs/:workflowId` | `brief_runs` 行 + 该 run 的 `brief_stories` 与 `cluster_rejections` + R2 `observability/<wf>.json` |
+| `GET /observability/runs/:workflowId` | `brief_runs` 行 + 该 run 的 `brief_stories` + R2 `observability/<wf>.json` |
 | `GET /observability/runs/:workflowId/clustering` | R2 `observability/clustering/<wf>.json` |
 | `GET /observability/runs/:workflowId/llm-calls` | 该 run 的 LLM 调用列表（key、大小、简要 metadata，不含正文） |
 | `GET /observability/llm-calls/*` | 按 key 取单次调用的完整 JSON |

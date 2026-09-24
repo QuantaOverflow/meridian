@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { getDb } from '../lib/database';
-import { $reports, $brief_runs, $brief_stories, $cluster_rejections, $articles, eq, desc, gte, sql } from '@meridian/database';
+import { $reports, $brief_runs, $brief_stories, $articles, eq, desc, gte, sql } from '@meridian/database';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // ========== 新观测性聚合查询（Phase 3） ==========
 
 /**
- * 一次拉到 brief workflow 的完整链路：brief_runs + stories + rejections + 可观测性快照 + 关联报告
+ * 一次拉到 brief workflow 的完整链路：brief_runs + stories + 可观测性快照 + 关联报告
  */
 app.get('/runs/:workflowId', async (c) => {
   try {
@@ -26,17 +26,11 @@ app.get('/runs/:workflowId', async (c) => {
     }
     const run = runs[0];
 
-    const [stories, rejections] = await Promise.all([
-      db
-        .select()
-        .from($brief_stories)
-        .where(eq($brief_stories.workflow_id, workflowId))
-        .orderBy(desc($brief_stories.importance)),
-      db
-        .select()
-        .from($cluster_rejections)
-        .where(eq($cluster_rejections.workflow_id, workflowId)),
-    ]);
+    const stories = await db
+      .select()
+      .from($brief_stories)
+      .where(eq($brief_stories.workflow_id, workflowId))
+      .orderBy(desc($brief_stories.importance));
 
     // R2 可观测性快照（Phase 1 起以稳定 key 存储）
     let observabilitySnapshot: any = null;
@@ -51,7 +45,6 @@ app.get('/runs/:workflowId', async (c) => {
       success: true,
       run,
       stories,
-      rejections,
       observability: observabilitySnapshot,
     });
   } catch (error) {

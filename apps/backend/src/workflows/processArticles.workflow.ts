@@ -134,7 +134,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
       const articlesDbFetchStartTime = Date.now();
       const articles = await step.do('get articles', dbStepConfig, async () =>
         db
-          .select({ id: $articles.id, url: $articles.url, title: $articles.title, publishedAt: $articles.publishDate })
+          .select({ id: $articles.id, url: $articles.url, title: $articles.title })
           .from($articles)
           .where(
 
@@ -157,7 +157,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
       fetchLogger.info('Fetching article contents');
 
       // Create rate limiter with article processing specific settings
-      const rateLimiter = new DomainRateLimiter<{ id: number; url: string; title: string; publishedAt: Date | null }>({
+      const rateLimiter = new DomainRateLimiter<{ id: number; url: string; title: string }>({
         maxConcurrent: 8,
         globalCooldownMs: 1000,
         domainCooldownMs: 5000,

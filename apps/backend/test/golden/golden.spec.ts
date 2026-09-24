@@ -9,9 +9,21 @@
 import { describe, expect, it } from 'vitest';
 import { GOLDEN_CASES, toJson } from './cases';
 import storyline from './__golden__/storyline.json';
+import storyDedup from './__golden__/storyDedup.json';
+import clusterBlocks from './__golden__/clusterBlocks.json';
+import storyRanking from './__golden__/storyRanking.json';
+import briefV3 from './__golden__/briefV3.json';
+import searchText from './__golden__/searchText.json';
+import extractionQuality from './__golden__/extractionQuality.json';
 
 const GOLDEN: Record<string, unknown> = {
   storyline,
+  storyDedup,
+  clusterBlocks,
+  storyRanking,
+  briefV3,
+  searchText,
+  extractionQuality,
 };
 
 describe('golden: 简报链路纯函数', () => {

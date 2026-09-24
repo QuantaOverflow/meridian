@@ -1,0 +1,506 @@
+{
+  "tiersMechanical": [
+    {
+      "idx": 0,
+      "articles": 11,
+      "sources": 8,
+      "score": 88,
+      "tier": "lead"
+    },
+    {
+      "idx": 1,
+      "articles": 11,
+      "sources": 7,
+      "score": 77,
+      "tier": "lead"
+    },
+    {
+      "idx": 2,
+      "articles": 7,
+      "sources": 7,
+      "score": 49,
+      "tier": "lead"
+    },
+    {
+      "idx": 3,
+      "articles": 7,
+      "sources": 7,
+      "score": 49,
+      "tier": "lead"
+    },
+    {
+      "idx": 4,
+      "articles": 8,
+      "sources": 5,
+      "score": 40,
+      "tier": "more"
+    },
+    {
+      "idx": 6,
+      "articles": 8,
+      "sources": 4,
+      "score": 32,
+      "tier": "more"
+    },
+    {
+      "idx": 5,
+      "articles": 6,
+      "sources": 5,
+      "score": 30,
+      "tier": "more"
+    },
+    {
+      "idx": 7,
+      "articles": 6,
+      "sources": 4,
+      "score": 24,
+      "tier": "more"
+    },
+    {
+      "idx": 8,
+      "articles": 6,
+      "sources": 4,
+      "score": 24,
+      "tier": "more"
+    },
+    {
+      "idx": 9,
+      "articles": 5,
+      "sources": 4,
+      "score": 20,
+      "tier": "more"
+    },
+    {
+      "idx": 10,
+      "articles": 5,
+      "sources": 4,
+      "score": 20,
+      "tier": "more"
+    },
+    {
+      "idx": 11,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "more"
+    },
+    {
+      "idx": 12,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "more"
+    },
+    {
+      "idx": 13,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "more"
+    },
+    {
+      "idx": 14,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "brief"
+    },
+    {
+      "idx": 15,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 16,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 17,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 18,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 19,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 20,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 21,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 22,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 23,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 24,
+      "articles": 4,
+      "sources": 2,
+      "score": 8,
+      "tier": "brief"
+    }
+  ],
+  "tiersLlmPreserveOrder": [
+    {
+      "idx": 0,
+      "articles": 7,
+      "sources": 7,
+      "score": 49,
+      "tier": "lead"
+    },
+    {
+      "idx": 1,
+      "articles": 11,
+      "sources": 7,
+      "score": 77,
+      "tier": "lead"
+    },
+    {
+      "idx": 2,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "lead"
+    },
+    {
+      "idx": 3,
+      "articles": 5,
+      "sources": 1,
+      "score": 5,
+      "tier": "lead"
+    },
+    {
+      "idx": 4,
+      "articles": 8,
+      "sources": 5,
+      "score": 40,
+      "tier": "more"
+    },
+    {
+      "idx": 5,
+      "articles": 6,
+      "sources": 4,
+      "score": 24,
+      "tier": "more"
+    },
+    {
+      "idx": 6,
+      "articles": 11,
+      "sources": 8,
+      "score": 88,
+      "tier": "more"
+    },
+    {
+      "idx": 7,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "more"
+    },
+    {
+      "idx": 8,
+      "articles": 8,
+      "sources": 4,
+      "score": 32,
+      "tier": "more"
+    },
+    {
+      "idx": 9,
+      "articles": 5,
+      "sources": 4,
+      "score": 20,
+      "tier": "more"
+    },
+    {
+      "idx": 10,
+      "articles": 7,
+      "sources": 7,
+      "score": 49,
+      "tier": "more"
+    },
+    {
+      "idx": 11,
+      "articles": 3,
+      "sources": 2,
+      "score": 6,
+      "tier": "more"
+    },
+    {
+      "idx": 12,
+      "articles": 6,
+      "sources": 5,
+      "score": 30,
+      "tier": "more"
+    },
+    {
+      "idx": 13,
+      "articles": 6,
+      "sources": 4,
+      "score": 24,
+      "tier": "more"
+    },
+    {
+      "idx": 14,
+      "articles": 5,
+      "sources": 4,
+      "score": 20,
+      "tier": "brief"
+    },
+    {
+      "idx": 15,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "brief"
+    },
+    {
+      "idx": 16,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "brief"
+    },
+    {
+      "idx": 17,
+      "articles": 4,
+      "sources": 4,
+      "score": 16,
+      "tier": "brief"
+    },
+    {
+      "idx": 18,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 19,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 20,
+      "articles": 4,
+      "sources": 3,
+      "score": 12,
+      "tier": "brief"
+    },
+    {
+      "idx": 21,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 22,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 23,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    },
+    {
+      "idx": 24,
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "brief"
+    }
+  ],
+  "renderedMechanical": {
+    "content": "## top stories\n\n<u>**us, denmark, greenland sign arctic security deal**</u>\nPlaceholder for \"US, Denmark, Greenland sign Arctic security deal\": 11 articles, 8 sources.\n\n<u>**us-iran talks at un**</u>\nPlaceholder for \"US-Iran talks at UN\": 11 articles, 7 sources.\n\n<u>**durban mass shooting leaves 11 dead**</u>\nPlaceholder for \"Durban Mass Shooting Leaves 11 Dead\": 7 articles, 7 sources.\n\n## more news\n\n<u>**trump's un speech on iran**</u>\nPlaceholder for \"Trump's UN Speech on Iran\": 8 articles, 5 sources.\n\n<u>**trump-xi summit and us ai policy**</u>\nPlaceholder for \"Trump-Xi Summit and US AI Policy\": 8 articles, 4 sources.\n\n<u>**sri lanka easter bombings verdict**</u>\nPlaceholder for \"Sri Lanka Easter Bombings Verdict\": 6 articles, 5 sources.\n\n<u>**marco rubio defends trump's media ban**</u>\nPlaceholder for \"Marco Rubio defends Trump's media ban\": 6 articles, 4 sources.\n\n<u>**trump and burnham's first meeting in new york**</u>\nPlaceholder for \"Trump and Burnham's First Meeting in New York\": 6 articles, 4 sources.\n\n<u>**trump's unga speech and iran talks**</u>\nPlaceholder for \"Trump's UNGA Speech and Iran Talks\": 5 articles, 4 sources.\n\n<u>**us f-16 crash near spangdahlem air base**</u>\nPlaceholder for \"US F-16 crash near Spangdahlem Air Base\": 5 articles, 4 sources.\n\n<u>**trump jr. wedding paid by russian oligarch**</u>\nPlaceholder for \"Trump Jr. Wedding Paid by Russian Oligarch\": 4 articles, 4 sources.\n\n<u>**ethiopia's tigray conflict reignites**</u>\nPlaceholder for \"Ethiopia's Tigray conflict reignites\": 4 articles, 4 sources.\n\n<u>**hayden panettiere's cause of death confirmed**</u>\nPlaceholder for \"Hayden Panettiere's Cause of Death Confirmed\": 4 articles, 4 sources.\n\n## in brief\n\n<u>**german amateur archaeologist finds massive roman silver hoard**</u>\nPlaceholder for \"German amateur archaeologist finds massive Roman silver hoard\": 4 articles, 4 sources.\n\n<u>**trump vs. cnn at the un**</u>\nPlaceholder for \"Trump vs. CNN at the UN\": 4 articles, 3 sources.\n\n<u>**hurricane polo intensifies to cat 5 off mexico**</u>\nPlaceholder for \"Hurricane Polo intensifies to Cat 5 off Mexico\": 4 articles, 3 sources.\n\n<u>**trump, pezeshkian, and iran at unga**</u>\nPlaceholder for \"Trump, Pezeshkian, and Iran at UNGA\": 4 articles, 3 sources.\n\n<u>**eu sanctions list changes amid russia deadline**</u>\nPlaceholder for \"EU sanctions list changes amid Russia deadline\": 3 articles, 3 sources.\n\n<u>**morocco parliamentary election amid ceuta migrant surge**</u>\nPlaceholder for \"Morocco parliamentary election amid Ceuta migrant surge\": 3 articles, 3 sources.\n\n<u>**looksmaxxing influencer clavicular charged with rape**</u>\nPlaceholder for \"Looksmaxxing influencer Clavicular charged with rape\": 3 articles, 3 sources.\n\n<u>**doordash $131m settlement for nyc workers**</u>\nPlaceholder for \"DoorDash $131M Settlement for NYC Workers\": 3 articles, 3 sources.\n\n<u>**uk chagos archipelago deal controversy**</u>\nPlaceholder for \"UK Chagos Archipelago Deal Controversy\": 3 articles, 3 sources.\n\n<u>**six-year-old girl sets rubik's cube world record**</u>\nPlaceholder for \"Six-year-old girl sets Rubik's Cube world record\": 3 articles, 3 sources.\n\n<u>**ice shooting of doordash driver**</u>\nPlaceholder for \"ICE shooting of DoorDash driver\": 4 articles, 2 sources.",
+    "sections": 3
+  },
+  "renderedLlm": {
+    "content": "## top stories\n\n<u>**durban mass shooting leaves 11 dead**</u>\nPlaceholder for \"Durban Mass Shooting Leaves 11 Dead\": 7 articles, 7 sources.\n\n<u>**us-iran talks at un**</u>\nPlaceholder for \"US-Iran talks at UN\": 11 articles, 7 sources.\n\n<u>**qatar's diplomatic stance on gulf tensions and iran**</u>\nPlaceholder for \"Qatar's diplomatic stance on Gulf tensions and Iran\": 5 articles, 1 sources.\n\n## more news\n\n<u>**trump's un speech on iran**</u>\nPlaceholder for \"Trump's UN Speech on Iran\": 8 articles, 5 sources.\n\n<u>**trump and burnham's first meeting in new york**</u>\nPlaceholder for \"Trump and Burnham's First Meeting in New York\": 6 articles, 4 sources.\n\n<u>**us, denmark, greenland sign arctic security deal**</u>\nPlaceholder for \"US, Denmark, Greenland sign Arctic security deal\": 11 articles, 8 sources.\n\n<u>**german amateur archaeologist finds massive roman silver hoard**</u>\nPlaceholder for \"German amateur archaeologist finds massive Roman silver hoard\": 4 articles, 4 sources.\n\n<u>**trump-xi summit and us ai policy**</u>\nPlaceholder for \"Trump-Xi Summit and US AI Policy\": 8 articles, 4 sources.\n\n<u>**trump's unga speech and iran talks**</u>\nPlaceholder for \"Trump's UNGA Speech and Iran Talks\": 5 articles, 4 sources.\n\n<u>**zelensky's talks with trump and push for energy truce**</u>\nPlaceholder for \"Zelensky's talks with Trump and push for energy truce\": 7 articles, 7 sources.\n\n<u>**houthis battle for red sea coastal heights**</u>\nPlaceholder for \"Houthis battle for Red Sea coastal heights\": 3 articles, 2 sources.\n\n<u>**sri lanka easter bombings verdict**</u>\nPlaceholder for \"Sri Lanka Easter Bombings Verdict\": 6 articles, 5 sources.\n\n<u>**marco rubio defends trump's media ban**</u>\nPlaceholder for \"Marco Rubio defends Trump's media ban\": 6 articles, 4 sources.\n\n## in brief\n\n<u>**us f-16 crash near spangdahlem air base**</u>\nPlaceholder for \"US F-16 crash near Spangdahlem Air Base\": 5 articles, 4 sources.\n\n<u>**trump jr. wedding paid by russian oligarch**</u>\nPlaceholder for \"Trump Jr. Wedding Paid by Russian Oligarch\": 4 articles, 4 sources.\n\n<u>**ethiopia's tigray conflict reignites**</u>\nPlaceholder for \"Ethiopia's Tigray conflict reignites\": 4 articles, 4 sources.\n\n<u>**hayden panettiere's cause of death confirmed**</u>\nPlaceholder for \"Hayden Panettiere's Cause of Death Confirmed\": 4 articles, 4 sources.\n\n<u>**trump vs. cnn at the un**</u>\nPlaceholder for \"Trump vs. CNN at the UN\": 4 articles, 3 sources.\n\n<u>**hurricane polo intensifies to cat 5 off mexico**</u>\nPlaceholder for \"Hurricane Polo intensifies to Cat 5 off Mexico\": 4 articles, 3 sources.\n\n<u>**trump, pezeshkian, and iran at unga**</u>\nPlaceholder for \"Trump, Pezeshkian, and Iran at UNGA\": 4 articles, 3 sources.\n\n<u>**eu sanctions list changes amid russia deadline**</u>\nPlaceholder for \"EU sanctions list changes amid Russia deadline\": 3 articles, 3 sources.\n\n<u>**morocco parliamentary election amid ceuta migrant surge**</u>\nPlaceholder for \"Morocco parliamentary election amid Ceuta migrant surge\": 3 articles, 3 sources.\n\n<u>**looksmaxxing influencer clavicular charged with rape**</u>\nPlaceholder for \"Looksmaxxing influencer Clavicular charged with rape\": 3 articles, 3 sources.\n\n<u>**doordash $131m settlement for nyc workers**</u>\nPlaceholder for \"DoorDash $131M Settlement for NYC Workers\": 3 articles, 3 sources.",
+    "sections": 3
+  },
+  "renderEmpty": {
+    "content": "",
+    "sections": 0
+  },
+  "renderOnlyBrief": {
+    "content": "## in brief\n\n<u>**mixed case**</u>\nonly",
+    "sections": 1
+  },
+  "tiersFew": [
+    {
+      "articles": 3,
+      "sources": 3,
+      "score": 9,
+      "tier": "lead"
+    },
+    {
+      "articles": 2,
+      "sources": 1,
+      "score": 2,
+      "tier": "lead"
+    },
+    {
+      "articles": 1,
+      "sources": 1,
+      "score": 1,
+      "tier": "lead"
+    }
+  ],
+  "tiersTies": [
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 0,
+      "score": 8,
+      "tier": "lead"
+    },
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 3,
+      "score": 8,
+      "tier": "lead"
+    },
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 6,
+      "score": 8,
+      "tier": "lead"
+    },
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 9,
+      "score": 8,
+      "tier": "lead"
+    },
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 12,
+      "score": 8,
+      "tier": "more"
+    },
+    {
+      "articles": 4,
+      "sources": 2,
+      "i": 15,
+      "score": 8,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 1,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 2,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 4,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 5,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 7,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 8,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 10,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 11,
+      "score": 4,
+      "tier": "more"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 13,
+      "score": 4,
+      "tier": "brief"
+    },
+    {
+      "articles": 2,
+      "sources": 2,
+      "i": 14,
+      "score": 4,
+      "tier": "brief"
+    }
+  ]
+}

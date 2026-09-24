@@ -1,0 +1,109 @@
+[
+  {
+    "len": 0,
+    "head": "",
+    "result": {
+      "fail": true,
+      "reason": "empty"
+    }
+  },
+  {
+    "len": 5,
+    "head": "   \n ",
+    "result": {
+      "fail": true,
+      "reason": "empty"
+    }
+  },
+  {
+    "len": 102,
+    "head": "To display this content from YouTube, you must enable advert",
+    "result": {
+      "fail": true,
+      "reason": "video_stub"
+    }
+  },
+  {
+    "len": 1087,
+    "head": "To display this content from YouTube. filler filler filler f",
+    "result": {
+      "fail": false
+    }
+  },
+  {
+    "len": 63,
+    "head": "Access Denied. You don't have permission to access this serv",
+    "result": {
+      "fail": true,
+      "reason": "block_page"
+    }
+  },
+  {
+    "len": 1064,
+    "head": "Page not found filler filler filler filler filler filler fil",
+    "result": {
+      "fail": true,
+      "reason": "block_page"
+    }
+  },
+  {
+    "len": 31,
+    "head": "Please log in to see this page.",
+    "result": {
+      "fail": true,
+      "reason": "login_wall"
+    }
+  },
+  {
+    "len": 56,
+    "head": "Our abuse detection mechanism flagged too many requests.",
+    "result": {
+      "fail": true,
+      "reason": "rate_limit"
+    }
+  },
+  {
+    "len": 55,
+    "head": "All trademarks are property of their respective owners.",
+    "result": {
+      "fail": true,
+      "reason": "non_article"
+    }
+  },
+  {
+    "len": 1093,
+    "head": "This stream is best experienced in the app. filler filler fi",
+    "result": {
+      "fail": false
+    }
+  },
+  {
+    "len": 38,
+    "head": "Skip to main content. Navigation menu.",
+    "result": {
+      "fail": true,
+      "reason": "nav_stub"
+    }
+  },
+  {
+    "len": 1065,
+    "head": "Skip to content filler filler filler filler filler filler fi",
+    "result": {
+      "fail": false
+    }
+  },
+  {
+    "len": 52,
+    "head": "A normal short news sentence about a flood in Nepal.",
+    "result": {
+      "fail": false
+    }
+  },
+  {
+    "len": 1072,
+    "head": "A normal long article. filler filler filler filler filler fi",
+    "result": {
+      "fail": false
+    }
+  }
+]

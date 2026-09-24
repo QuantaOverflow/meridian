@@ -1,0 +1,1001 @@
+{
+  "mechanical": {
+    "ranked": [
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal",
+        "eventKey": "Greenland",
+        "srcs": 8,
+        "score": 12.169925001442312
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN",
+        "eventKey": "Iran",
+        "srcs": 7,
+        "score": 12
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce",
+        "eventKey": "Ukraine",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead",
+        "eventKey": "Africa",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran",
+        "eventKey": "Trump",
+        "srcs": 5,
+        "score": 10.584962500721156
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict",
+        "eventKey": "Easter",
+        "srcs": 5,
+        "score": 9.584962500721156
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York",
+        "eventKey": "Burnham",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks",
+        "eventKey": "Iran",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 28,
+        "title": "US F-16 crash near Spangdahlem Air Base",
+        "eventKey": "Germany",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 40,
+        "title": "Trump Jr. Wedding Paid by Russian Oligarch",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 43,
+        "title": "Ethiopia's Tigray conflict reignites",
+        "eventKey": "Ethiopia",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 204,
+        "title": "Hayden Panettiere's Cause of Death Confirmed",
+        "eventKey": "Hayden",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 97,
+        "title": "German amateur archaeologist finds massive Roman silver hoard",
+        "eventKey": "Roman",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 51,
+        "title": "Trump vs. CNN at the UN",
+        "eventKey": "CNN",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 62,
+        "title": "Hurricane Polo intensifies to Cat 5 off Mexico",
+        "eventKey": "Hurricane",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 109,
+        "title": "Trump, Pezeshkian, and Iran at UNGA",
+        "eventKey": "Iran",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 9,
+        "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 13,
+        "title": "EU sanctions list changes amid Russia deadline",
+        "eventKey": "Russia",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 19,
+        "title": "Trump's July SpaceX Stock Trades",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 24,
+        "title": "Trump",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 52,
+        "title": "Morocco parliamentary election amid Ceuta migrant surge",
+        "eventKey": "Ceuta",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 60,
+        "title": "Looksmaxxing influencer Clavicular charged with rape",
+        "eventKey": "Clavicular",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 67,
+        "title": "DoorDash $131M Settlement for NYC Workers",
+        "eventKey": "DoorDash",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 100,
+        "title": "UK Chagos Archipelago Deal Controversy",
+        "eventKey": "Chagos",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 123,
+        "title": "Six-year-old girl sets Rubik's Cube world record",
+        "eventKey": "Cube",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 1,
+        "title": "ICE shooting of DoorDash driver",
+        "eventKey": "ICE",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 54,
+        "title": "Trump's 'Super Intelligence' Rename at UN",
+        "eventKey": "Trump",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 0,
+        "title": "Rwanda",
+        "eventKey": "Rwanda",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 26,
+        "title": "Trump TV: rocky launch and media criticism",
+        "eventKey": "Trump",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 29,
+        "title": "UK PM Burnham's anti-disinformation unit",
+        "eventKey": "Burnham",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 48,
+        "title": "Houthis battle for Red Sea coastal heights",
+        "eventKey": "Yemen",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 69,
+        "title": "Mirabai Chanu wins Asian Games silver",
+        "eventKey": "Asian",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 15,
+        "title": "India's EC voter roll revision row",
+        "eventKey": "SIR",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 50,
+        "title": "Qatar's diplomatic stance on Gulf tensions and Iran",
+        "eventKey": "Qatar",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 32,
+        "title": "Kalkaji Gangrape and Safety Audit",
+        "eventKey": "Kalkaji",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 55,
+        "title": "IIT Bombay Student Suicide Case",
+        "eventKey": "Bombay",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 102,
+        "title": "India's Badminton Journey at Asian Games 2026",
+        "eventKey": "Asian",
+        "srcs": 1,
+        "score": 5
+      }
+    ],
+    "selected": [
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal"
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN"
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce"
+      },
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead"
+      },
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran"
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict"
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy"
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban"
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York"
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks"
+      },
+      {
+        "clusterId": 28,
+        "title": "US F-16 crash near Spangdahlem Air Base"
+      },
+      {
+        "clusterId": 40,
+        "title": "Trump Jr. Wedding Paid by Russian Oligarch"
+      },
+      {
+        "clusterId": 43,
+        "title": "Ethiopia's Tigray conflict reignites"
+      },
+      {
+        "clusterId": 204,
+        "title": "Hayden Panettiere's Cause of Death Confirmed"
+      },
+      {
+        "clusterId": 97,
+        "title": "German amateur archaeologist finds massive Roman silver hoard"
+      },
+      {
+        "clusterId": 51,
+        "title": "Trump vs. CNN at the UN"
+      },
+      {
+        "clusterId": 62,
+        "title": "Hurricane Polo intensifies to Cat 5 off Mexico"
+      },
+      {
+        "clusterId": 109,
+        "title": "Trump, Pezeshkian, and Iran at UNGA"
+      },
+      {
+        "clusterId": 13,
+        "title": "EU sanctions list changes amid Russia deadline"
+      },
+      {
+        "clusterId": 52,
+        "title": "Morocco parliamentary election amid Ceuta migrant surge"
+      },
+      {
+        "clusterId": 60,
+        "title": "Looksmaxxing influencer Clavicular charged with rape"
+      },
+      {
+        "clusterId": 67,
+        "title": "DoorDash $131M Settlement for NYC Workers"
+      },
+      {
+        "clusterId": 100,
+        "title": "UK Chagos Archipelago Deal Controversy"
+      },
+      {
+        "clusterId": 123,
+        "title": "Six-year-old girl sets Rubik's Cube world record"
+      },
+      {
+        "clusterId": 1,
+        "title": "ICE shooting of DoorDash driver"
+      }
+    ],
+    "capped": [
+      {
+        "clusterId": 9,
+        "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting"
+      },
+      {
+        "clusterId": 19,
+        "title": "Trump's July SpaceX Stock Trades"
+      },
+      {
+        "clusterId": 24,
+        "title": "Trump"
+      }
+    ]
+  },
+  "withLlmOrder": {
+    "ranked": [
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead",
+        "eventKey": "Africa",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN",
+        "eventKey": "Iran",
+        "srcs": 7,
+        "score": 12
+      },
+      {
+        "clusterId": 123,
+        "title": "Six-year-old girl sets Rubik's Cube world record",
+        "eventKey": "Cube",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 50,
+        "title": "Qatar's diplomatic stance on Gulf tensions and Iran",
+        "eventKey": "Qatar",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran",
+        "eventKey": "Trump",
+        "srcs": 5,
+        "score": 10.584962500721156
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York",
+        "eventKey": "Burnham",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal",
+        "eventKey": "Greenland",
+        "srcs": 8,
+        "score": 12.169925001442312
+      },
+      {
+        "clusterId": 97,
+        "title": "German amateur archaeologist finds massive Roman silver hoard",
+        "eventKey": "Roman",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks",
+        "eventKey": "Iran",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce",
+        "eventKey": "Ukraine",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 48,
+        "title": "Houthis battle for Red Sea coastal heights",
+        "eventKey": "Yemen",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict",
+        "eventKey": "Easter",
+        "srcs": 5,
+        "score": 9.584962500721156
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 28,
+        "title": "US F-16 crash near Spangdahlem Air Base",
+        "eventKey": "Germany",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 40,
+        "title": "Trump Jr. Wedding Paid by Russian Oligarch",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 43,
+        "title": "Ethiopia's Tigray conflict reignites",
+        "eventKey": "Ethiopia",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 204,
+        "title": "Hayden Panettiere's Cause of Death Confirmed",
+        "eventKey": "Hayden",
+        "srcs": 4,
+        "score": 8.321928094887362
+      },
+      {
+        "clusterId": 51,
+        "title": "Trump vs. CNN at the UN",
+        "eventKey": "CNN",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 62,
+        "title": "Hurricane Polo intensifies to Cat 5 off Mexico",
+        "eventKey": "Hurricane",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 109,
+        "title": "Trump, Pezeshkian, and Iran at UNGA",
+        "eventKey": "Iran",
+        "srcs": 3,
+        "score": 8
+      },
+      {
+        "clusterId": 9,
+        "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 13,
+        "title": "EU sanctions list changes amid Russia deadline",
+        "eventKey": "Russia",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 19,
+        "title": "Trump's July SpaceX Stock Trades",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 24,
+        "title": "Trump",
+        "eventKey": "Trump",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 52,
+        "title": "Morocco parliamentary election amid Ceuta migrant surge",
+        "eventKey": "Ceuta",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 60,
+        "title": "Looksmaxxing influencer Clavicular charged with rape",
+        "eventKey": "Clavicular",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 67,
+        "title": "DoorDash $131M Settlement for NYC Workers",
+        "eventKey": "DoorDash",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 100,
+        "title": "UK Chagos Archipelago Deal Controversy",
+        "eventKey": "Chagos",
+        "srcs": 3,
+        "score": 7
+      },
+      {
+        "clusterId": 1,
+        "title": "ICE shooting of DoorDash driver",
+        "eventKey": "ICE",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 54,
+        "title": "Trump's 'Super Intelligence' Rename at UN",
+        "eventKey": "Trump",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 0,
+        "title": "Rwanda",
+        "eventKey": "Rwanda",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 26,
+        "title": "Trump TV: rocky launch and media criticism",
+        "eventKey": "Trump",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 29,
+        "title": "UK PM Burnham's anti-disinformation unit",
+        "eventKey": "Burnham",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 69,
+        "title": "Mirabai Chanu wins Asian Games silver",
+        "eventKey": "Asian",
+        "srcs": 2,
+        "score": 6.584962500721156
+      },
+      {
+        "clusterId": 15,
+        "title": "India's EC voter roll revision row",
+        "eventKey": "SIR",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 32,
+        "title": "Kalkaji Gangrape and Safety Audit",
+        "eventKey": "Kalkaji",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 55,
+        "title": "IIT Bombay Student Suicide Case",
+        "eventKey": "Bombay",
+        "srcs": 1,
+        "score": 5
+      },
+      {
+        "clusterId": 102,
+        "title": "India's Badminton Journey at Asian Games 2026",
+        "eventKey": "Asian",
+        "srcs": 1,
+        "score": 5
+      }
+    ],
+    "selected": [
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead"
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN"
+      },
+      {
+        "clusterId": 123,
+        "title": "Six-year-old girl sets Rubik's Cube world record"
+      },
+      {
+        "clusterId": 50,
+        "title": "Qatar's diplomatic stance on Gulf tensions and Iran"
+      },
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran"
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York"
+      },
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal"
+      },
+      {
+        "clusterId": 97,
+        "title": "German amateur archaeologist finds massive Roman silver hoard"
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy"
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks"
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce"
+      },
+      {
+        "clusterId": 48,
+        "title": "Houthis battle for Red Sea coastal heights"
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict"
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban"
+      },
+      {
+        "clusterId": 28,
+        "title": "US F-16 crash near Spangdahlem Air Base"
+      },
+      {
+        "clusterId": 40,
+        "title": "Trump Jr. Wedding Paid by Russian Oligarch"
+      },
+      {
+        "clusterId": 43,
+        "title": "Ethiopia's Tigray conflict reignites"
+      },
+      {
+        "clusterId": 204,
+        "title": "Hayden Panettiere's Cause of Death Confirmed"
+      },
+      {
+        "clusterId": 51,
+        "title": "Trump vs. CNN at the UN"
+      },
+      {
+        "clusterId": 62,
+        "title": "Hurricane Polo intensifies to Cat 5 off Mexico"
+      },
+      {
+        "clusterId": 109,
+        "title": "Trump, Pezeshkian, and Iran at UNGA"
+      },
+      {
+        "clusterId": 13,
+        "title": "EU sanctions list changes amid Russia deadline"
+      },
+      {
+        "clusterId": 52,
+        "title": "Morocco parliamentary election amid Ceuta migrant surge"
+      },
+      {
+        "clusterId": 60,
+        "title": "Looksmaxxing influencer Clavicular charged with rape"
+      },
+      {
+        "clusterId": 67,
+        "title": "DoorDash $131M Settlement for NYC Workers"
+      }
+    ],
+    "capped": [
+      {
+        "clusterId": 9,
+        "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting"
+      },
+      {
+        "clusterId": 19,
+        "title": "Trump's July SpaceX Stock Trades"
+      },
+      {
+        "clusterId": 24,
+        "title": "Trump"
+      }
+    ]
+  },
+  "allSameEventKey": {
+    "ranked": [
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal",
+        "eventKey": "Trump",
+        "srcs": 8,
+        "score": 12.169925001442312
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN",
+        "eventKey": "Trump",
+        "srcs": 7,
+        "score": 12
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce",
+        "eventKey": "Trump",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead",
+        "eventKey": "Trump",
+        "srcs": 7,
+        "score": 11
+      },
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran",
+        "eventKey": "Trump",
+        "srcs": 5,
+        "score": 10.584962500721156
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict",
+        "eventKey": "Trump",
+        "srcs": 5,
+        "score": 9.584962500721156
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks",
+        "eventKey": "Trump",
+        "srcs": 4,
+        "score": 9.321928094887362
+      }
+    ],
+    "selected": [
+      {
+        "clusterId": 61,
+        "title": "US, Denmark, Greenland sign Arctic security deal"
+      },
+      {
+        "clusterId": 12,
+        "title": "US-Iran talks at UN"
+      },
+      {
+        "clusterId": 34,
+        "title": "Zelensky's talks with Trump and push for energy truce"
+      },
+      {
+        "clusterId": 41,
+        "title": "Durban Mass Shooting Leaves 11 Dead"
+      }
+    ],
+    "capped": [
+      {
+        "clusterId": 10,
+        "title": "Trump's UN Speech on Iran"
+      },
+      {
+        "clusterId": 65,
+        "title": "Sri Lanka Easter Bombings Verdict"
+      },
+      {
+        "clusterId": 5,
+        "title": "Trump-Xi Summit and US AI Policy"
+      },
+      {
+        "clusterId": 14,
+        "title": "Marco Rubio defends Trump's media ban"
+      },
+      {
+        "clusterId": 16,
+        "title": "Trump and Burnham's First Meeting in New York"
+      },
+      {
+        "clusterId": 4,
+        "title": "Trump's UNGA Speech and Iran Talks"
+      }
+    ]
+  },
+  "noCapNoKey": {
+    "ranked": [
+      {
+        "story": {
+          "title": "US-Iran talks at UN",
+          "importance": 9
+        },
+        "srcs": 3,
+        "score": 10
+      },
+      {
+        "story": {
+          "title": "US, Denmark, Greenland sign Arctic security deal",
+          "importance": 9
+        },
+        "srcs": 0,
+        "score": 9
+      },
+      {
+        "story": {
+          "title": "Trump-Xi Summit and US AI Policy",
+          "importance": 7
+        },
+        "srcs": 9,
+        "score": 8.66096404744368
+      },
+      {
+        "story": {
+          "title": "Durban Mass Shooting Leaves 11 Dead",
+          "importance": 8
+        },
+        "srcs": 1,
+        "score": 8.5
+      },
+      {
+        "story": {
+          "title": "Trump's UN Speech on Iran",
+          "importance": 8
+        },
+        "srcs": 0,
+        "score": 8
+      },
+      {
+        "story": {
+          "title": "Zelensky's talks with Trump and push for energy truce",
+          "importance": 8
+        },
+        "srcs": 0,
+        "score": 8
+      },
+      {
+        "story": {
+          "title": "Marco Rubio defends Trump's media ban",
+          "importance": 7
+        },
+        "srcs": 0,
+        "score": 7
+      },
+      {
+        "story": {
+          "title": "Trump and Burnham's First Meeting in New York",
+          "importance": 7
+        },
+        "srcs": 0,
+        "score": 7
+      }
+    ],
+    "selected": [
+      {
+        "title": "US-Iran talks at UN",
+        "importance": 9
+      },
+      {
+        "title": "US, Denmark, Greenland sign Arctic security deal",
+        "importance": 9
+      },
+      {
+        "title": "Trump-Xi Summit and US AI Policy",
+        "importance": 7
+      },
+      {
+        "title": "Durban Mass Shooting Leaves 11 Dead",
+        "importance": 8
+      },
+      {
+        "title": "Trump's UN Speech on Iran",
+        "importance": 8
+      },
+      {
+        "title": "Zelensky's talks with Trump and push for energy truce",
+        "importance": 8
+      }
+    ],
+    "capped": []
+  }
+}

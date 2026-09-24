@@ -1,0 +1,1288 @@
+{
+  "prod": {
+    "plan": {
+      "pending": [
+        {
+          "clusterId": 12,
+          "title": "US-Iran talks at UN",
+          "covers": "",
+          "ids": [
+            1099652,
+            1102027,
+            1104015,
+            1105550,
+            1107180,
+            1107866,
+            1108194,
+            1108495,
+            1110636,
+            1111080,
+            1111154
+          ]
+        },
+        {
+          "clusterId": 61,
+          "title": "US, Denmark, Greenland sign Arctic security deal",
+          "covers": "",
+          "ids": [
+            1099375,
+            1100207,
+            1100538,
+            1100933,
+            1101184,
+            1101479,
+            1101908,
+            1102381,
+            1103485,
+            1107727,
+            1111385
+          ]
+        },
+        {
+          "clusterId": 5,
+          "title": "Trump-Xi Summit and US AI Policy",
+          "covers": "",
+          "ids": [
+            1101602,
+            1102480,
+            1102482,
+            1111167,
+            1111191,
+            1111507,
+            1111509,
+            1111740
+          ]
+        },
+        {
+          "clusterId": 10,
+          "title": "Trump's UN Speech on Iran",
+          "covers": "",
+          "ids": [
+            1100533,
+            1101210,
+            1101254,
+            1101604,
+            1101684,
+            1102336,
+            1103565,
+            1107720
+          ]
+        },
+        {
+          "clusterId": 34,
+          "title": "Zelensky's talks with Trump and push for energy truce",
+          "covers": "",
+          "ids": [
+            1103685,
+            1103970,
+            1104315,
+            1105664,
+            1107640,
+            1109487,
+            1110093
+          ]
+        },
+        {
+          "clusterId": 41,
+          "title": "Durban Mass Shooting Leaves 11 Dead",
+          "covers": "",
+          "ids": [
+            1108286,
+            1108617,
+            1109050,
+            1109235,
+            1109517,
+            1109799,
+            1110405
+          ]
+        },
+        {
+          "clusterId": 14,
+          "title": "Marco Rubio defends Trump's media ban",
+          "covers": "",
+          "ids": [
+            1099424,
+            1100732,
+            1101060,
+            1108276,
+            1109049,
+            1111508
+          ]
+        },
+        {
+          "clusterId": 16,
+          "title": "Trump and Burnham's First Meeting in New York",
+          "covers": "",
+          "ids": [
+            1101812,
+            1102101,
+            1102577,
+            1102914,
+            1103585,
+            1108399
+          ]
+        },
+        {
+          "clusterId": 65,
+          "title": "Sri Lanka Easter Bombings Verdict",
+          "covers": "",
+          "ids": [
+            1099124,
+            1099853,
+            1100068,
+            1101282,
+            1105645,
+            1107315
+          ]
+        },
+        {
+          "clusterId": 4,
+          "title": "Trump's UNGA Speech and Iran Talks",
+          "covers": "",
+          "ids": [
+            1100613,
+            1100734,
+            1104139,
+            1104591,
+            1105047
+          ]
+        },
+        {
+          "clusterId": 15,
+          "title": "India's EC voter roll revision row",
+          "covers": "",
+          "ids": [
+            1108271,
+            1109924,
+            1109926,
+            1111032,
+            1111038
+          ]
+        },
+        {
+          "clusterId": 28,
+          "title": "US F-16 crash near Spangdahlem Air Base",
+          "covers": "",
+          "ids": [
+            1099978,
+            1100407,
+            1101183,
+            1101251,
+            1105048
+          ]
+        },
+        {
+          "clusterId": 50,
+          "title": "Qatar's diplomatic stance on Gulf tensions and Iran",
+          "covers": "",
+          "ids": [
+            1102380,
+            1102382,
+            1102935,
+            1103486,
+            1105143
+          ]
+        },
+        {
+          "clusterId": 1,
+          "title": "ICE shooting of DoorDash driver",
+          "covers": "",
+          "ids": [
+            1100539,
+            1103573,
+            1110399,
+            1111510
+          ]
+        },
+        {
+          "clusterId": 40,
+          "title": "Trump Jr. Wedding Paid by Russian Oligarch",
+          "covers": "",
+          "ids": [
+            1099425,
+            1100193,
+            1104593,
+            1108833
+          ]
+        },
+        {
+          "clusterId": 43,
+          "title": "Ethiopia's Tigray conflict reignites",
+          "covers": "",
+          "ids": [
+            1109782,
+            1110635,
+            1110851,
+            1111260
+          ]
+        },
+        {
+          "clusterId": 51,
+          "title": "Trump vs. CNN at the UN",
+          "covers": "",
+          "ids": [
+            1099982,
+            1101140,
+            1101266,
+            1109846
+          ]
+        },
+        {
+          "clusterId": 54,
+          "title": "Trump's 'Super Intelligence' Rename at UN",
+          "covers": "",
+          "ids": [
+            1100060,
+            1106936,
+            1108283,
+            1110297
+          ]
+        },
+        {
+          "clusterId": 62,
+          "title": "Hurricane Polo intensifies to Cat 5 off Mexico",
+          "covers": "",
+          "ids": [
+            1102335,
+            1103258,
+            1108741,
+            1110153
+          ]
+        },
+        {
+          "clusterId": 204,
+          "title": "Hayden Panettiere's Cause of Death Confirmed",
+          "covers": "",
+          "ids": [
+            1099736,
+            1100196,
+            1101007,
+            1102244
+          ]
+        },
+        {
+          "clusterId": 97,
+          "title": "German amateur archaeologist finds massive Roman silver hoard",
+          "covers": "",
+          "ids": [
+            1099854,
+            1099986,
+            1100107,
+            1100177
+          ]
+        },
+        {
+          "clusterId": 109,
+          "title": "Trump, Pezeshkian, and Iran at UNGA",
+          "covers": "",
+          "ids": [
+            1101135,
+            1105665,
+            1109847,
+            1109927
+          ]
+        },
+        {
+          "clusterId": 0,
+          "title": "Rwanda",
+          "covers": "",
+          "ids": [
+            1100209,
+            1100408,
+            1102936
+          ]
+        },
+        {
+          "clusterId": 9,
+          "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting",
+          "covers": "",
+          "ids": [
+            1106767,
+            1107590,
+            1108189
+          ]
+        },
+        {
+          "clusterId": 13,
+          "title": "EU sanctions list changes amid Russia deadline",
+          "covers": "",
+          "ids": [
+            1101249,
+            1102461,
+            1109453
+          ]
+        },
+        {
+          "clusterId": 19,
+          "title": "Trump's July SpaceX Stock Trades",
+          "covers": "",
+          "ids": [
+            1102919,
+            1103811,
+            1107179
+          ]
+        },
+        {
+          "clusterId": 24,
+          "title": "Trump",
+          "covers": "",
+          "ids": [
+            1100532,
+            1110611,
+            1111178
+          ]
+        },
+        {
+          "clusterId": 26,
+          "title": "Trump TV: rocky launch and media criticism",
+          "covers": "",
+          "ids": [
+            1099428,
+            1100730,
+            1103259
+          ]
+        },
+        {
+          "clusterId": 29,
+          "title": "UK PM Burnham's anti-disinformation unit",
+          "covers": "",
+          "ids": [
+            1105666,
+            1107847,
+            1109500
+          ]
+        },
+        {
+          "clusterId": 32,
+          "title": "Kalkaji Gangrape and Safety Audit",
+          "covers": "",
+          "ids": [
+            1101685,
+            1107729,
+            1109939
+          ]
+        },
+        {
+          "clusterId": 48,
+          "title": "Houthis battle for Red Sea coastal heights",
+          "covers": "",
+          "ids": [
+            1099627,
+            1100205,
+            1110632
+          ]
+        },
+        {
+          "clusterId": 52,
+          "title": "Morocco parliamentary election amid Ceuta migrant surge",
+          "covers": "",
+          "ids": [
+            1103568,
+            1108666,
+            1108897
+          ]
+        },
+        {
+          "clusterId": 55,
+          "title": "IIT Bombay Student Suicide Case",
+          "covers": "",
+          "ids": [
+            1100614,
+            1106625,
+            1109377
+          ]
+        },
+        {
+          "clusterId": 60,
+          "title": "Looksmaxxing influencer Clavicular charged with rape",
+          "covers": "",
+          "ids": [
+            1099639,
+            1099984,
+            1103761
+          ]
+        },
+        {
+          "clusterId": 67,
+          "title": "DoorDash $131M Settlement for NYC Workers",
+          "covers": "",
+          "ids": [
+            1100536,
+            1102366,
+            1102931
+          ]
+        },
+        {
+          "clusterId": 69,
+          "title": "Mirabai Chanu wins Asian Games silver",
+          "covers": "",
+          "ids": [
+            1108825,
+            1110070,
+            1110485
+          ]
+        },
+        {
+          "clusterId": 100,
+          "title": "UK Chagos Archipelago Deal Controversy",
+          "covers": "",
+          "ids": [
+            1109845,
+            1110605,
+            1111407
+          ]
+        },
+        {
+          "clusterId": 102,
+          "title": "India's Badminton Journey at Asian Games 2026",
+          "covers": "",
+          "ids": [
+            1099508,
+            1100061,
+            1111035
+          ]
+        },
+        {
+          "clusterId": 123,
+          "title": "Six-year-old girl sets Rubik's Cube world record",
+          "covers": "",
+          "ids": [
+            1101790,
+            1107865,
+            1110850
+          ]
+        }
+      ],
+      "stats": {
+        "judgeFailures": 0,
+        "pocketFlagged": 2,
+        "unsureClusters": 0
+      }
+    },
+    "assembled": {
+      "blocks": [
+        {
+          "title": "US-Iran talks at UN",
+          "importance": 9,
+          "articleIds": [
+            1099652,
+            1102027,
+            1104015,
+            1105550,
+            1107180,
+            1107866,
+            1108194,
+            1108495,
+            1110636,
+            1111154,
+            1111080
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 12,
+          "covers": "",
+          "eventKey": "Iran"
+        },
+        {
+          "title": "US, Denmark, Greenland sign Arctic security deal",
+          "importance": 9,
+          "articleIds": [
+            1099375,
+            1100207,
+            1100538,
+            1101184,
+            1100933,
+            1101479,
+            1107727,
+            1101908,
+            1102381,
+            1103485,
+            1111385
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 61,
+          "covers": "",
+          "eventKey": "Greenland"
+        },
+        {
+          "title": "Trump-Xi Summit and US AI Policy",
+          "importance": 7,
+          "articleIds": [
+            1102482,
+            1102480,
+            1101602,
+            1111191,
+            1111167,
+            1111509,
+            1111507,
+            1111740
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 5,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Trump's UN Speech on Iran",
+          "importance": 8,
+          "articleIds": [
+            1100533,
+            1101254,
+            1101210,
+            1101604,
+            1101684,
+            1102336,
+            1103565,
+            1107720
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 10,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Zelensky's talks with Trump and push for energy truce",
+          "importance": 8,
+          "articleIds": [
+            1103685,
+            1103970,
+            1104315,
+            1105664,
+            1107640,
+            1109487,
+            1110093
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 34,
+          "covers": "",
+          "eventKey": "Ukraine"
+        },
+        {
+          "title": "Durban Mass Shooting Leaves 11 Dead",
+          "importance": 8,
+          "articleIds": [
+            1108286,
+            1108617,
+            1109050,
+            1109235,
+            1109517,
+            1109799,
+            1110405
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 41,
+          "covers": "",
+          "eventKey": "Africa"
+        },
+        {
+          "title": "Marco Rubio defends Trump's media ban",
+          "importance": 7,
+          "articleIds": [
+            1099424,
+            1100732,
+            1101060,
+            1108276,
+            1109049,
+            1111508
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 14,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Trump and Burnham's First Meeting in New York",
+          "importance": 7,
+          "articleIds": [
+            1101812,
+            1102101,
+            1103585,
+            1102914,
+            1102577,
+            1108399
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 16,
+          "covers": "",
+          "eventKey": "Burnham"
+        },
+        {
+          "title": "Sri Lanka Easter Bombings Verdict",
+          "importance": 7,
+          "articleIds": [
+            1099124,
+            1099853,
+            1100068,
+            1101282,
+            1105645,
+            1107315
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 65,
+          "covers": "",
+          "eventKey": "Easter"
+        },
+        {
+          "title": "Trump's UNGA Speech and Iran Talks",
+          "importance": 7,
+          "articleIds": [
+            1100613,
+            1100734,
+            1104139,
+            1104591,
+            1105047
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 4,
+          "covers": "",
+          "eventKey": "Iran"
+        },
+        {
+          "title": "India's EC voter roll revision row",
+          "importance": 4,
+          "articleIds": [
+            1108271,
+            1109926,
+            1109924,
+            1111038,
+            1111032
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 15,
+          "covers": "",
+          "eventKey": "SIR"
+        },
+        {
+          "title": "US F-16 crash near Spangdahlem Air Base",
+          "importance": 7,
+          "articleIds": [
+            1099978,
+            1100407,
+            1101183,
+            1101251,
+            1105048
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 28,
+          "covers": "",
+          "eventKey": "Germany"
+        },
+        {
+          "title": "Qatar's diplomatic stance on Gulf tensions and Iran",
+          "importance": 4,
+          "articleIds": [
+            1102382,
+            1102380,
+            1102935,
+            1103486,
+            1105143
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 50,
+          "covers": "",
+          "eventKey": "Qatar"
+        },
+        {
+          "title": "ICE shooting of DoorDash driver",
+          "importance": 5,
+          "articleIds": [
+            1100539,
+            1103573,
+            1110399,
+            1111510
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 1,
+          "covers": "",
+          "eventKey": "ICE"
+        },
+        {
+          "title": "Trump Jr. Wedding Paid by Russian Oligarch",
+          "importance": 6,
+          "articleIds": [
+            1099425,
+            1100193,
+            1104593,
+            1108833
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 40,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Ethiopia's Tigray conflict reignites",
+          "importance": 6,
+          "articleIds": [
+            1109782,
+            1110635,
+            1110851,
+            1111260
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 43,
+          "covers": "",
+          "eventKey": "Ethiopia"
+        },
+        {
+          "title": "Trump vs. CNN at the UN",
+          "importance": 6,
+          "articleIds": [
+            1099982,
+            1101140,
+            1101266,
+            1109846
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 51,
+          "covers": "",
+          "eventKey": "CNN"
+        },
+        {
+          "title": "Trump's 'Super Intelligence' Rename at UN",
+          "importance": 5,
+          "articleIds": [
+            1100060,
+            1108283,
+            1106936,
+            1110297
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 54,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Hurricane Polo intensifies to Cat 5 off Mexico",
+          "importance": 6,
+          "articleIds": [
+            1102335,
+            1103258,
+            1110153,
+            1108741
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 62,
+          "covers": "",
+          "eventKey": "Hurricane"
+        },
+        {
+          "title": "Hayden Panettiere's Cause of Death Confirmed",
+          "importance": 6,
+          "articleIds": [
+            1100196,
+            1099736,
+            1102244,
+            1101007
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 204,
+          "covers": "",
+          "eventKey": "Hayden"
+        },
+        {
+          "title": "German amateur archaeologist finds massive Roman silver hoard",
+          "importance": 6,
+          "articleIds": [
+            1099854,
+            1099986,
+            1100177,
+            1100107
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 97,
+          "covers": "",
+          "eventKey": "Roman"
+        },
+        {
+          "title": "Trump, Pezeshkian, and Iran at UNGA",
+          "importance": 6,
+          "articleIds": [
+            1101135,
+            1105665,
+            1109927,
+            1109847
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 109,
+          "covers": "",
+          "eventKey": "Iran"
+        },
+        {
+          "title": "Rwanda",
+          "importance": 5,
+          "articleIds": [
+            1100209,
+            1100408,
+            1102936
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 0,
+          "covers": "",
+          "eventKey": "Rwanda"
+        },
+        {
+          "title": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting",
+          "importance": 5,
+          "articleIds": [
+            1106767,
+            1107590,
+            1108189
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 9,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "EU sanctions list changes amid Russia deadline",
+          "importance": 5,
+          "articleIds": [
+            1101249,
+            1102461,
+            1109453
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 13,
+          "covers": "",
+          "eventKey": "Russia"
+        },
+        {
+          "title": "Trump's July SpaceX Stock Trades",
+          "importance": 5,
+          "articleIds": [
+            1102919,
+            1103811,
+            1107179
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 19,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Trump",
+          "importance": 5,
+          "articleIds": [
+            1100532,
+            1110611,
+            1111178
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 24,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Trump TV: rocky launch and media criticism",
+          "importance": 5,
+          "articleIds": [
+            1099428,
+            1100730,
+            1103259
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 26,
+          "covers": "",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "UK PM Burnham's anti-disinformation unit",
+          "importance": 5,
+          "articleIds": [
+            1105666,
+            1107847,
+            1109500
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 29,
+          "covers": "",
+          "eventKey": "Burnham"
+        },
+        {
+          "title": "Kalkaji Gangrape and Safety Audit",
+          "importance": 4,
+          "articleIds": [
+            1101685,
+            1107729,
+            1109939
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 32,
+          "covers": "",
+          "eventKey": "Kalkaji"
+        },
+        {
+          "title": "Houthis battle for Red Sea coastal heights",
+          "importance": 5,
+          "articleIds": [
+            1099627,
+            1100205,
+            1110632
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 48,
+          "covers": "",
+          "eventKey": "Yemen"
+        },
+        {
+          "title": "Morocco parliamentary election amid Ceuta migrant surge",
+          "importance": 5,
+          "articleIds": [
+            1103568,
+            1108666,
+            1108897
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 52,
+          "covers": "",
+          "eventKey": "Ceuta"
+        },
+        {
+          "title": "IIT Bombay Student Suicide Case",
+          "importance": 4,
+          "articleIds": [
+            1100614,
+            1106625,
+            1109377
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 55,
+          "covers": "",
+          "eventKey": "Bombay"
+        },
+        {
+          "title": "Looksmaxxing influencer Clavicular charged with rape",
+          "importance": 5,
+          "articleIds": [
+            1099639,
+            1099984,
+            1103761
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 60,
+          "covers": "",
+          "eventKey": "Clavicular"
+        },
+        {
+          "title": "DoorDash $131M Settlement for NYC Workers",
+          "importance": 5,
+          "articleIds": [
+            1100536,
+            1102366,
+            1102931
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 67,
+          "covers": "",
+          "eventKey": "DoorDash"
+        },
+        {
+          "title": "Mirabai Chanu wins Asian Games silver",
+          "importance": 5,
+          "articleIds": [
+            1108825,
+            1110485,
+            1110070
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 69,
+          "covers": "",
+          "eventKey": "Asian"
+        },
+        {
+          "title": "UK Chagos Archipelago Deal Controversy",
+          "importance": 5,
+          "articleIds": [
+            1109845,
+            1110605,
+            1111407
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 100,
+          "covers": "",
+          "eventKey": "Chagos"
+        },
+        {
+          "title": "India's Badminton Journey at Asian Games 2026",
+          "importance": 4,
+          "articleIds": [
+            1099508,
+            1100061,
+            1111035
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 102,
+          "covers": "",
+          "eventKey": "Asian"
+        },
+        {
+          "title": "Six-year-old girl sets Rubik's Cube world record",
+          "importance": 5,
+          "articleIds": [
+            1101790,
+            1107865,
+            1110850
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 123,
+          "covers": "",
+          "eventKey": "Cube"
+        }
+      ],
+      "stats": {
+        "cappedBlocks": 0,
+        "droppedArticles": 0,
+        "crossClusterMerges": 0
+      }
+    }
+  },
+  "edge": {
+    "plan": {
+      "pending": [
+        {
+          "clusterId": 12,
+          "title": "Iran",
+          "covers": "",
+          "ids": [
+            1099652,
+            1102027,
+            1104015,
+            1105550,
+            1107180,
+            1107866,
+            1108194,
+            1108495,
+            1110636,
+            1111080,
+            1111154
+          ]
+        },
+        {
+          "clusterId": 10,
+          "title": "Trump",
+          "covers": "x",
+          "ids": [
+            1100533,
+            1101210,
+            1101254,
+            1101604,
+            1101684,
+            1102336,
+            1103565,
+            1107720
+          ]
+        },
+        {
+          "clusterId": 4,
+          "title": "Trump at the UN",
+          "covers": "a",
+          "ids": [
+            1100613,
+            1100734,
+            1104139,
+            1104591,
+            1105047
+          ]
+        },
+        {
+          "clusterId": 51,
+          "title": "trump AT the un",
+          "covers": "b",
+          "ids": [
+            1099982,
+            1101140,
+            1101266,
+            1109846
+          ]
+        },
+        {
+          "clusterId": 109,
+          "title": "Trump at the UN",
+          "covers": "c",
+          "ids": [
+            1101135,
+            1105665,
+            1109847,
+            1109927
+          ]
+        }
+      ],
+      "stats": {
+        "judgeFailures": 1,
+        "pocketFlagged": 1,
+        "unsureClusters": 1
+      }
+    },
+    "assembled": {
+      "blocks": [
+        {
+          "title": "Iran",
+          "importance": 9,
+          "articleIds": [
+            1099652,
+            1102027,
+            1104015,
+            1105550,
+            1107180,
+            1107866,
+            1108194,
+            1108495,
+            1110636,
+            1111154,
+            1111080
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 12,
+          "covers": "",
+          "eventKey": "Iran"
+        },
+        {
+          "title": "Trump",
+          "importance": 8,
+          "articleIds": [
+            1100533,
+            1101254,
+            1101210,
+            1101604,
+            1101684,
+            1102336,
+            1103565,
+            1107720
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 10,
+          "covers": "x",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Trump at the UN",
+          "importance": 8,
+          "articleIds": [
+            1099982,
+            1100613,
+            1100734,
+            1101135,
+            1101140,
+            1101266,
+            1104139,
+            1104591,
+            1105047,
+            1105665,
+            1109927,
+            1109847,
+            1109846
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 4,
+          "covers": "a",
+          "eventKey": "Trump"
+        }
+      ],
+      "stats": {
+        "cappedBlocks": 0,
+        "droppedArticles": 0,
+        "crossClusterMerges": 2
+      }
+    },
+    "oversize": {
+      "blocks": [
+        {
+          "title": "Oversize block",
+          "importance": 10,
+          "articleIds": [
+            1099652,
+            1100207,
+            1100538,
+            1100533,
+            1101184,
+            1101479,
+            1101210,
+            1101604,
+            1107727,
+            1102336,
+            1102381,
+            1102027,
+            1103685,
+            1103970,
+            1104315,
+            1105550,
+            1107180,
+            1107866,
+            1108194,
+            1108286,
+            1108617,
+            1109235,
+            1109487,
+            1110093,
+            1110405,
+            1111191,
+            1111080,
+            1111167,
+            1111509,
+            1111740
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 900,
+          "covers": "big",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Solo",
+          "importance": 3,
+          "articleIds": [
+            1099124
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 902,
+          "covers": "",
+          "eventKey": "Easter"
+        }
+      ],
+      "stats": {
+        "cappedBlocks": 1,
+        "droppedArticles": 22,
+        "crossClusterMerges": 1
+      }
+    },
+    "oversizeCap10": {
+      "blocks": [
+        {
+          "title": "Oversize block",
+          "importance": 9,
+          "articleIds": [
+            1099652,
+            1102480,
+            1101210,
+            1101908,
+            1103970,
+            1107180,
+            1108495,
+            1110093,
+            1111154,
+            1111740
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 900,
+          "covers": "big",
+          "eventKey": "Trump"
+        },
+        {
+          "title": "Solo",
+          "importance": 3,
+          "articleIds": [
+            1099124
+          ],
+          "storyType": "SINGLE_STORY",
+          "clusterId": 902,
+          "covers": "",
+          "eventKey": "Easter"
+        }
+      ],
+      "stats": {
+        "cappedBlocks": 1,
+        "droppedArticles": 42,
+        "crossClusterMerges": 1
+      }
+    }
+  }
+}

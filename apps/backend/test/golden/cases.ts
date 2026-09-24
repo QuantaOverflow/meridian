@@ -236,7 +236,7 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
         { title: '  Title.  ', primary_location: 'Global' },
         { title: 'T', primary_location: ' n/a ', key_entities: ['', ' A ', 'B.'] },
         { title: 'T', primary_location: 'Kathmandu', thematic_keywords: null, topic_tags: ['x'] },
-      ].map((d) => generateSearchText(d as Parameters<typeof generateSearchText>[0])),
+      ].map((d) => generateSearchText(d as unknown as Parameters<typeof generateSearchText>[0])),
     };
   },
 

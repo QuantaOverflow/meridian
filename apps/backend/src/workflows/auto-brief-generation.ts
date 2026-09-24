@@ -80,18 +80,6 @@ export interface BriefGenerationParams {
   
   // 聚类配置选项
   clusteringOptions?: {
-    umapParams?: {
-      n_neighbors?: number;
-      n_components?: number;
-      min_dist?: number;
-      metric?: string;
-    };
-    hdbscanParams?: {
-      min_cluster_size?: number;
-      min_samples?: number;
-      epsilon?: number;
-    };
-    clusteringAlgorithm?: string;
     agglomerativeThreshold?: number;
     agglomerativeLinkage?: string;
     agglomerativeMinClusterSize?: number;
@@ -895,9 +883,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // 优先使用用户传入的 clusteringOptions（来自 generate API 的 body），否则用 BRIEF_CLUSTERING_OPTIONS。
       // 2026-09-05:启发式默认改成直接用 BRIEF_CLUSTERING_OPTIONS。
-      // 原来那套按数据规模算 min_cluster_size / n_components 的分支是 UMAP+HDBSCAN 时代的
-      // 遗留,凝聚聚类只有一个阈值参数、与数据规模无关,继续留着只会让「没传参数」这条路径
-      // 悄悄跑在另一套算法上(150 篇时 min_cluster_size 会算到 15)。
       //
       // 放在 step **外**：它只是取值，而 step 重放时回调不会再执行，
       // 写在步内的话下面落盘用的 configSent 会是 undefined。
@@ -2104,7 +2089,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 stats: briefResult.stats,
                 generatedAt: new Date().toISOString(),
                 endToEndWorkflow: true,
-                clusteringParams: clusteringResult.parameters
+                // ml 侧回显的实际生效配置（原先记的是从未生效的 umap/hdbscan 参数）
+                clusteringParams: clusteringResult.configUsed ?? null
               },
               model_author: briefResult.model_author
             })

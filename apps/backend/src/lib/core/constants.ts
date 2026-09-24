@@ -29,26 +29,12 @@ export const BRIEF_CLUSTERING_OPTIONS = {
   // 读数不在这里存:这里存过一份三个多月没人核对、与 ADR 实测对不上的读数表,是本身
   // 就会过期的陷阱。现场跑 eval/clustering/product-score.ts 拿读数,权威口径
   // 与两窗金标结果见 docs/adr/0003-cluster-as-brief-block.md。
-  //
-  // umapParams/hdbscanParams 保留:算法开关切回 'umap_hdbscan' 时它们仍是生效参数(回滚路径)。
-  clusteringAlgorithm: 'agglomerative_cosine',
   agglomerativeThreshold: 0.1,
   agglomerativeLinkage: 'average',
   // 3 而不是 2:2 篇的簇本来就进不了简报(选择层取前 25,两窗实测前 25 名里 2 篇的簇一个没有
   // ——第 25 名 blockScore 3.40/3.48,而 2 篇 2 源只有 2.38)。砍掉它们不损失会被读到的内容,
   // 却带走了大部分题材袋:F2 32→5 个、F1 15→0 个。详见 ml-service clustering.py 的注释。
   agglomerativeMinClusterSize: 3,
-  umapParams: {
-    n_neighbors: 15,
-    n_components: 5,
-    min_dist: 0.1,
-    metric: 'cosine',
-  },
-  hdbscanParams: {
-    min_cluster_size: 3,
-    min_samples: 1,
-    epsilon: 0.35,
-  },
 } as const;
 
 // 每日定时简报参数。取值来自 2026-08-13 生产实测(report 54/55,端到端 664-897 秒)。

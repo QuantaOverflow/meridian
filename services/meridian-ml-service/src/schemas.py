@@ -11,46 +11,17 @@ from pydantic import BaseModel, Field
 # ============================================================================
 
 class BaseClusteringConfig(BaseModel):
-    """核心聚类配置"""
-    
-    # UMAP参数
-    umap_n_components: int = Field(default=10, ge=2, le=50, description="UMAP降维目标维度")
-    umap_n_neighbors: int = Field(default=15, ge=2, le=100, description="UMAP邻居数量")
-    umap_min_dist: float = Field(default=0.0, ge=0.0, le=1.0, description="UMAP最小距离")
-    umap_metric: Literal['cosine', 'euclidean', 'manhattan'] = Field(default='cosine', description="UMAP距离度量")
-    
-    # HDBSCAN参数
-    hdbscan_min_cluster_size: int = Field(default=5, ge=2, description="HDBSCAN最小簇大小")
-    hdbscan_min_samples: int = Field(default=3, ge=1, description="HDBSCAN最小样本数")
-    hdbscan_metric: Literal['euclidean', 'manhattan', 'chebyshev'] = Field(default='euclidean', description="HDBSCAN距离度量")
-    hdbscan_cluster_selection_epsilon: float = Field(default=0.0, ge=0.0, description="HDBSCAN epsilon参数")
-    
-    # 聚类算法选择。见 clustering.py 的 ClusteringConfig 注释（含两窗金标实测读数）
-    clustering_algorithm: Literal['agglomerative_cosine', 'umap_hdbscan'] = Field(
-        default='agglomerative_cosine', description="聚类算法：不降维阈值凝聚(现生产) 或 UMAP+HDBSCAN(旧实现,可回滚)"
-    )
+    """核心聚类配置。算法与各参数的实测依据见 clustering.py 的 ClusteringConfig 注释。"""
     agglomerative_threshold: float = Field(default=0.10, gt=0.0, le=1.0, description="凝聚聚类合并阈值(余弦距离 1-cos)")
     agglomerative_linkage: Literal['average', 'complete'] = Field(default='average', description="凝聚聚类链接方式")
     agglomerative_min_cluster_size: int = Field(default=3, ge=2, description="成簇最小篇数，低于此数整簇记为噪声(不进简报)")
-
-    # 预处理选项
-    normalize_embeddings: bool = Field(default=True, description="是否L2归一化嵌入向量")
-    remove_outliers: bool = Field(default=False, description="是否移除异常点")
-
-    # 确定性后处理(HDBSCAN 后,原始嵌入空间余弦);None=不启用,便于 eval 扫阈值
-    postprocess_prune_threshold: Optional[float] = Field(default=None, description="成员到簇质心余弦<此值则剪为噪音(治污染)")
-    postprocess_dissolve_threshold: Optional[float] = Field(default=None, description="簇平均内聚(成员到质心余弦)<此值则整簇解散为噪音(治噪音巨团)")
-
-class ContentAnalysisConfig(BaseModel):
-    """内容分析配置"""
-    top_n_per_cluster: int = Field(default=5, ge=1, le=20, description="每个簇返回的代表性内容数量")
 
 # ============================================================================
 # 核心数据项模型
 # ============================================================================
 
 class AIWorkerEmbeddingItem(BaseModel):
-    """AI Worker标准嵌入格式"""
+    """backend 发来的聚类输入项（apps/backend/src/lib/services/clustering.ts）"""
     id: int = Field(..., description="文章ID")
     embedding: List[float] = Field(..., description="384维嵌入向量")
     
@@ -61,57 +32,6 @@ class AIWorkerEmbeddingItem(BaseModel):
     content: Optional[str] = Field(default=None, description="文章内容")
     status: Optional[str] = Field(default=None, description="处理状态")
 
-class AIWorkerArticleDataItem(BaseModel):
-    """AI Worker完整文章数据格式"""
-    id: int = Field(..., description="文章ID")
-    title: str = Field(..., description="文章标题")
-    content: str = Field(..., description="文章内容")
-    url: str = Field(..., description="文章URL")
-    embedding: List[float] = Field(..., description="384维嵌入向量")
-    publishDate: str = Field(..., description="发布日期")
-    status: str = Field(..., description="处理状态")
-    
-    # 扩展元数据字段
-    contentFileKey: Optional[str] = Field(default=None, description="内容文件键")
-    processedAt: Optional[str] = Field(default=None, description="处理时间")
-
-# ============================================================================
-# 数据格式转换器
-# ============================================================================
-
-class DataFormatConverter:
-    """数据格式检测和转换工具"""
-    
-    @staticmethod
-    def detect_format(data: List[Dict[str, Any]]) -> str:
-        """自动检测数据格式类型"""
-        if not data:
-            return "unknown"
-        
-        first_item = data[0]
-        
-        # AI Worker 嵌入格式：只有 id 和 embedding
-        if set(first_item.keys()) == {"id", "embedding"}:
-            return "ai_worker_embedding"
-        
-        # AI Worker 扩展嵌入格式：有可选字段
-        if "id" in first_item and "embedding" in first_item and len(first_item.keys()) <= 7:
-            return "ai_worker_embedding_extended"
-            
-        # AI Worker 完整文章格式
-        if all(field in first_item for field in ["id", "title", "content", "embedding", "publishDate"]):
-            return "ai_worker_article"
-        
-        # 标准向量格式
-        if "text" in first_item and "embedding" in first_item:
-            return "vector_item"
-            
-        # 纯文本格式
-        if "text" in first_item and "embedding" not in first_item:
-            return "text_item"
-        
-        return "unknown"
-
 # ============================================================================
 # 请求/响应模型
 # ============================================================================
@@ -119,7 +39,6 @@ class DataFormatConverter:
 class EmbeddingRequest(BaseModel):
     """嵌入生成请求"""
     texts: List[str] = Field(..., description="文本列表")
-    model_name: Optional[str] = Field(default=None, description="指定嵌入模型")
     normalize: bool = Field(default=True, description="是否归一化")
 
 class EmbeddingResponse(BaseModel):
@@ -140,57 +59,17 @@ class ClusteringStats(BaseModel):
     n_outliers: int = Field(..., description="异常点数量")
     outlier_ratio: float = Field(..., description="异常点比例")
     cluster_sizes: Dict[int, int] = Field(..., description="每个簇的大小")
-    dbcv_score: Optional[float] = Field(default=None, description="DBCV质量分数")
 
 class ClusterInfo(BaseModel):
     """聚类信息"""
     cluster_id: int = Field(..., description="聚类ID (-1表示异常点)")
     size: int = Field(..., description="聚类大小")
     items: List[Dict[str, Any]] = Field(..., description="聚类中的项目")
-    centroid: Optional[List[float]] = Field(default=None, description="聚类中心点")
-    representative_content: List[str] = Field(default_factory=list, description="代表性内容")
 
 class BaseClusteringResponse(BaseModel):
     """统一聚类响应"""
     clusters: List[ClusterInfo] = Field(..., description="聚类结果")
     clustering_stats: ClusteringStats = Field(..., description="聚类统计信息")
     config_used: Dict[str, Any] = Field(..., description="实际使用的配置参数")
-    
-    # 可选数据
-    embeddings: Optional[List[List[float]]] = Field(default=None, description="原始嵌入向量")
-    reduced_embeddings: Optional[List[List[float]]] = Field(default=None, description="降维后向量")
     processing_time: Optional[float] = Field(default=None, description="处理时间（秒）")
     model_info: Optional[Dict[str, Any]] = Field(default=None, description="模型信息")
-
-# ============================================================================
-# 配置转换工具函数
-# ============================================================================
-
-def convert_to_internal_config(api_config: Optional[BaseClusteringConfig]) -> Dict[str, Any]:
-    """将API配置转换为内部聚类算法配置"""
-    if api_config is None:
-        return {}
-    
-    return {
-        # UMAP配置
-        "umap_n_components": api_config.umap_n_components,
-        "umap_n_neighbors": api_config.umap_n_neighbors,
-        "umap_min_dist": api_config.umap_min_dist,
-        "umap_metric": api_config.umap_metric,
-        
-        # HDBSCAN配置
-        "hdbscan_min_cluster_size": api_config.hdbscan_min_cluster_size,
-        "hdbscan_min_samples": api_config.hdbscan_min_samples,
-        "hdbscan_metric": api_config.hdbscan_metric,
-        "hdbscan_cluster_selection_epsilon": api_config.hdbscan_cluster_selection_epsilon,
-
-        # 凝聚聚类配置
-        "clustering_algorithm": api_config.clustering_algorithm,
-        "agglomerative_threshold": api_config.agglomerative_threshold,
-        "agglomerative_linkage": api_config.agglomerative_linkage,
-        "agglomerative_min_cluster_size": api_config.agglomerative_min_cluster_size,
-        
-        # 预处理配置
-        "normalize_embeddings": api_config.normalize_embeddings,
-        "remove_outliers": api_config.remove_outliers,
-    }

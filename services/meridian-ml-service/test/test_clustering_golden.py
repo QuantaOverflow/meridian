@@ -7,7 +7,7 @@ byte-deterministic（现生产算法 agglomerative_cosine：不降维、无随�
 只判"相同输入是否还产出相同输出"——回归探测器，不是正确性证明。
 
 刻意不用 `with TestClient(app) as client`：不触发 lifespan（后台预热模型 +
-umap/hdbscan 重库 import）。/ai-worker/clustering 只吃请求里已经算好的
+sklearn import）。/ai-worker/clustering 只吃请求里已经算好的
 embedding，不需要模型，跳过预热能让测试秒起。
 
 fixture：
@@ -79,10 +79,9 @@ def request_body() -> dict:
 
 def _call_clustering(client: TestClient, request_body: dict) -> dict:
     """完全复现 apps/backend/src/lib/services/clustering.ts 的
-    aiWorkerClustering()：同一路径、同一 query 参数、同一 header 名。"""
+    aiWorkerClustering()：同一路径、同一 header 名。"""
     response = client.post(
         "/ai-worker/clustering",
-        params={"return_embeddings": "false", "return_reduced_embeddings": "false"},
         json=request_body,
         headers={"X-API-Token": API_TOKEN},
     )

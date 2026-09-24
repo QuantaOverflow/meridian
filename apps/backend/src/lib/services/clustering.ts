@@ -12,7 +12,7 @@
 import type { AIWorkerEnv } from './ai-services';
 
 /**
- * HDBSCAN 的噪声标签。ml 侧把这一组也当普通簇返回，故它会出现在 clusters 里；
+ * 噪声标签（不足最小篇数的簇里的文章）。ml 侧把这一组也当普通簇返回，故它会出现在 clusters 里；
  * 判"是不是真簇"必须显式排除它，别再靠 clusters.length。
  */
 const NOISE_CLUSTER_ID = -1;
@@ -177,19 +177,6 @@ export interface ClusteringResult {
     articleIds: number[];
     size: number;
   }>;
-  parameters: {
-    umapParams: {
-      n_neighbors: number;
-      n_components: number;
-      min_dist: number;
-      metric: string;
-    };
-    hdbscanParams: {
-      min_cluster_size: number;
-      min_samples: number;
-      epsilon: number;
-    };
-  };
   statistics: {
     totalClusters: number;
     noisePoints: number;
@@ -198,10 +185,9 @@ export interface ClusteringResult {
   /**
    * ml 侧回传的 config_used **原样**保留（不挑字段）。
    *
-   * 2026-09 教训：这里原本只把 umap/hdbscan 几个字段挑进 parameters，
-   * clustering_algorithm / agglomerative_* 全被丢掉。于是生产镜像停在 6-25、
+   * 2026-09 教训：这里原本只挑几个字段，漏掉的恰是算法开关。于是生产镜像停在 6-25、
    * 聚类算法换了却没生效，落盘的观测文件里没有任何"实际生效的配置"可对，
-   * 三个半月无人发现。新增字段而不是改 parameters：parameters 的形状下游在用。
+   * 三个半月无人发现。
    */
   configUsed?: Record<string, any>;
   /** ml 侧 clustering_stats 原样保留。**只作诊断旁证**，不得替换 statistics（原因见下方注释）。 */
@@ -250,19 +236,6 @@ export class ClusteringService {
   async analyzeClusters(
     dataset: ArticleDataset,
     options?: {
-      umapParams?: {
-        n_neighbors?: number;
-        n_components?: number;
-        min_dist?: number;
-        metric?: string;
-      };
-      hdbscanParams?: {
-        min_cluster_size?: number;
-        min_samples?: number;
-        epsilon?: number;
-      };
-      /** 'agglomerative_cosine'(默认,现生产) | 'umap_hdbscan'(旧实现,回滚用) */
-      clusteringAlgorithm?: string;
       /** 凝聚聚类合并阈值,作用在余弦距离 1-cos 上 */
       agglomerativeThreshold?: number;
       agglomerativeLinkage?: string;
@@ -321,16 +294,8 @@ export class ClusteringService {
               // 调用ML服务的AI Worker聚类端点
       const mlResponse = await this.aiWorkerClustering(items, {
         config: {
-          umap_n_components: options?.umapParams?.n_components || 10,
-          umap_n_neighbors: options?.umapParams?.n_neighbors || 15,
-          umap_min_dist: options?.umapParams?.min_dist || 0.0,
-          umap_metric: options?.umapParams?.metric || 'cosine',
-          hdbscan_min_cluster_size: options?.hdbscanParams?.min_cluster_size || 5,
-          hdbscan_min_samples: options?.hdbscanParams?.min_samples || 3,
-          hdbscan_cluster_selection_epsilon: options?.hdbscanParams?.epsilon || 0.2,
-          // 聚类算法开关。?? 而不是 ||:阈值 0 虽不合法,但 || 会把它悄悄换成默认值,
+          // ?? 而不是 ||:阈值 0 虽不合法,但 || 会把它悄悄换成默认值,
           // 与本仓库「失败不静默降级」的口径冲突,让 ml-service 的 pydantic 去拒绝更好。
-          clustering_algorithm: options?.clusteringAlgorithm ?? 'agglomerative_cosine',
           agglomerative_threshold: options?.agglomerativeThreshold ?? 0.1,
           agglomerative_linkage: options?.agglomerativeLinkage ?? 'average',
           agglomerative_min_cluster_size: options?.agglomerativeMinClusterSize ?? 3
@@ -352,9 +317,7 @@ export class ClusteringService {
           //
           // 原 0.92 的标定注释(B-cubed P 0.45→0.83)标的是 mcs5/ms3——2025-06-18 起生产已
           // 换成 mcs3/ms1,阈值与它作用的对象早已不是一对;所用金标亦已归档。
-        },
-        return_embeddings: false,
-        return_reduced_embeddings: false
+        }
       });
 
       if (!mlResponse.ok) {
@@ -372,19 +335,8 @@ export class ClusteringService {
             size: number;
             items: Array<{ id: number; [key: string]: any }>;
           }>;
-          // 索引签名：ml 侧会回传 backend 根本没发过的字段（clustering_algorithm /
-          // agglomerative_threshold 等），它们恰恰是"实际生效的配置"里最关键的部分，
-          // 不能因为类型里没写到就在解析时把它们丢掉。
-          config_used?: {
-            umap_n_neighbors?: number;
-            umap_n_components?: number;
-            umap_min_dist?: number;
-            umap_metric?: string;
-            hdbscan_min_cluster_size?: number;
-            hdbscan_min_samples?: number;
-            hdbscan_epsilon?: number;   // ML 侧字段名(clustering.py:634),非发送侧的 hdbscan_cluster_selection_epsilon
-            [key: string]: unknown;
-          };
+          // 不挑字段：ml 侧回传的是"实际生效的配置"，不能因为类型里没写到就在解析时丢掉。
+          config_used?: Record<string, unknown>;
           clustering_stats?: {
             n_clusters?: number;
             n_outliers?: number;
@@ -415,7 +367,7 @@ export class ClusteringService {
           size: cluster.size
         }));
 
-        // HDBSCAN 把"不属于任何簇"的点标成 cluster_id = -1，ml 侧照旧把它当一个簇返回。
+        // ml 侧把"不属于任何簇"的点标成 cluster_id = -1，并把它当一个簇返回。
         // 这一组**继续下传**给故事验证：它不是垃圾堆——2026-08-15 run 里 54 篇噪声中被验证
         // 层认出一条真故事（韩朝会谈），并进了第 59 期简报。删掉它会直接丢新闻。
         // 但它不能算进"簇数"，也必须作为噪声量被看见。
@@ -423,19 +375,6 @@ export class ClusteringService {
 
         const clusteringResult: ClusteringResult = {
           clusters,
-          parameters: {
-            umapParams: {
-              n_neighbors: mlResult.config_used?.umap_n_neighbors || 15,
-              n_components: mlResult.config_used?.umap_n_components || 10,
-              min_dist: mlResult.config_used?.umap_min_dist || 0.0,
-              metric: mlResult.config_used?.umap_metric || "cosine"
-            },
-            hdbscanParams: {
-              min_cluster_size: mlResult.config_used?.hdbscan_min_cluster_size || 5,
-              min_samples: mlResult.config_used?.hdbscan_min_samples || 3,
-              epsilon: mlResult.config_used?.hdbscan_epsilon ?? 0.35
-            }
-          },
           // totalClusters / noisePoints 从 clusters 自身推导，不再取 ml 侧的旁路统计字段。
           // 2026-08 四次生产 run 实测 clustering_stats.n_outliers 与真实 -1 组系统性差约 8 倍
           // （报 8/9/7/11，实际 71/70/59/54 = 输入的 36-47%）。ml 侧为何不一致尚未定位，
@@ -495,17 +434,8 @@ export class ClusteringService {
    */
   private async aiWorkerClustering(items: any[], options?: {
     config?: any;
-    return_embeddings?: boolean;
-    return_reduced_embeddings?: boolean;
   }): Promise<Response> {
     const url = new URL(`${this.env.MERIDIAN_ML_SERVICE_URL}/ai-worker/clustering`);
-    
-    if (options?.return_embeddings !== undefined) {
-      url.searchParams.set('return_embeddings', String(options.return_embeddings));
-    }
-    if (options?.return_reduced_embeddings !== undefined) {
-      url.searchParams.set('return_reduced_embeddings', String(options.return_reduced_embeddings));
-    }
 
     const request = new Request(url.toString(), {
       method: 'POST',

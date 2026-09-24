@@ -6,9 +6,9 @@ Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloud
 - `AutoBriefGenerationWorkflow` 聚类前批量补算缺失 embedding → `POST /embeddings`（客户端 `apps/backend/src/lib/services/ai-services.ts` 的 `generateEmbedding`）
 - 随后聚类 → `POST /ai-worker/clustering`（客户端 `apps/backend/src/lib/services/clustering.ts`）
 
-模型是 `intfloat/multilingual-e5-small`（384 维）。聚类现行算法是不降维的余弦距离凝聚聚类
-（`agglomerative_cosine`，average linkage）；旧的 UMAP + HDBSCAN（`umap_hdbscan`）只作回滚路径保留。
-算法选择与参数由 backend 的 `BRIEF_CLUSTERING_OPTIONS`（`apps/backend/src/lib/core/constants.ts`）随请求传入，
+模型是 `intfloat/multilingual-e5-small`（384 维）。聚类算法是不降维的余弦距离凝聚聚类
+（average linkage）；旧的 UMAP + HDBSCAN 已于 2026-09-24 删除。
+参数由 backend 的 `BRIEF_CLUSTERING_OPTIONS`（`apps/backend/src/lib/core/constants.ts`）随请求传入，
 依据见 [`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)。
 
 ## 路由（`src/main.py`）
@@ -18,7 +18,7 @@ Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloud
 | 路由 | 请求 | 响应 |
 |---|---|---|
 | `GET /health` | — | `status`、`build_identity`、`embedding_model`、`clustering_available` |
-| `POST /embeddings` | `{texts: string[], normalize?: bool, model_name?}` | `{embeddings, model_name, dimensions, processing_time}` |
+| `POST /embeddings` | `{texts: string[], normalize?: bool}` | `{embeddings, model_name, dimensions, processing_time}` |
 | `POST /ai-worker/clustering` | `{items: [{id, embedding, title?, url?, …}], config?}`；`config` 字段见 `src/schemas.py` 的 `BaseClusteringConfig` | `clusters`（`cluster_id` = -1 为噪声）、`clustering_stats`、`config_used`、`build_identity` 等 |
 
 `build_identity`（`build_sha` / `build_time` / `injected`）用来确认生产跑的是不是本次部署的镜像：

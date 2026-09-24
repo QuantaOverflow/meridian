@@ -10,15 +10,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from .schemas import (
-    AIWorkerEmbeddingItem, AIWorkerArticleDataItem,
-    BaseClusteringConfig, ContentAnalysisConfig,
+    AIWorkerEmbeddingItem,
+    BaseClusteringConfig,
     ClusteringStats, ClusterInfo,
-    convert_to_internal_config
 )
 from .embeddings import validate_embeddings
 from .clustering import (
     cluster_embeddings,
-    analyze_cluster_content,
     ClusteringConfig as InternalClusteringConfig
 )
 
@@ -108,65 +106,27 @@ class DataExtractionStage(ProcessingStage):
         context['detected_data_type'] = data_type
         print(f"[DataExtraction] 检测到数据类型: {data_type}")
         
-        # AI Worker 格式处理
-        if data_type == 'ai_worker_embedding' or data_type == 'ai_worker_embedding_extended':
-            print("[DataExtraction] 处理AI Worker嵌入格式")
-            for i, item in enumerate(items):
-                ai_item = AIWorkerEmbeddingItem(**item)
-                embeddings.append(ai_item.embedding)
-                texts.append(ai_item.title or f"Article {ai_item.id}")
-                metadata.append({
-                    'id': ai_item.id,
-                    'source': 'ai_worker',
-                    'original_format': 'ai_worker_embedding',
-                    'title': ai_item.title,
-                    'url': ai_item.url,
-                    'publish_date': ai_item.publish_date,
-                    'status': ai_item.status
-                })
-            
-            # 验证嵌入向量
-            embeddings_array = validate_embeddings(embeddings)
-            
-        elif data_type == 'ai_worker_article':
-            print("[DataExtraction] 处理AI Worker完整文章格式")
-            for i, item in enumerate(items):
-                ai_article = AIWorkerArticleDataItem(**item)
-                embeddings.append(ai_article.embedding)
-                # 组合标题和内容作为文本
-                text_content = f"{ai_article.title}\n\n{ai_article.content[:500]}..."
-                texts.append(text_content)
-                metadata.append({
-                    'id': ai_article.id,
-                    'source': 'ai_worker',
-                    'original_format': 'ai_worker_article',
-                    'title': ai_article.title,
-                    'url': ai_article.url,
-                    'publishDate': ai_article.publishDate,
-                    'status': ai_article.status,
-                    'contentFileKey': ai_article.contentFileKey,
-                    'processedAt': ai_article.processedAt
-                })
-            
-            # 验证嵌入向量
-            embeddings_array = validate_embeddings(embeddings)
-            
-        elif data_type == 'vectors':
-            # 预生成向量模式（原有逻辑）
-            for i, item in enumerate(items):
-                embeddings.append(item['embedding'])
-                texts.append(item.get('text', item.get('title', f'Item {i}')))
-                metadata.append({
-                    'id': item.get('id', i),
-                    'source': 'pre_generated',
-                    **{k: v for k, v in item.items() if k not in ['embedding', 'text']}
-                })
-
-            # 验证嵌入向量
-            embeddings_array = validate_embeddings(embeddings)
-            
-        else:
+        # backend 只发一种形状：{id, embedding, title, url, publishDate, summary}，
+        # detect_format 判为 ai_worker_embedding_extended（见 main.py）
+        if data_type not in ('ai_worker_embedding', 'ai_worker_embedding_extended'):
             raise ValueError(f"不支持的数据类型: {data_type}")
+
+        for item in items:
+            ai_item = AIWorkerEmbeddingItem(**item)
+            embeddings.append(ai_item.embedding)
+            texts.append(ai_item.title or f"Article {ai_item.id}")
+            metadata.append({
+                'id': ai_item.id,
+                'source': 'ai_worker',
+                'original_format': 'ai_worker_embedding',
+                'title': ai_item.title,
+                'url': ai_item.url,
+                'publish_date': ai_item.publish_date,
+                'status': ai_item.status
+            })
+
+        # 验证嵌入向量
+        embeddings_array = validate_embeddings(embeddings)
         
         print(f"[DataExtraction] 处理完成: {len(embeddings_array)} 个嵌入向量, 维度: {embeddings_array.shape[1]}")
         
@@ -199,47 +159,21 @@ class ClusteringStage(ProcessingStage):
         embeddings = data.embeddings
         texts = data.texts
         
-        # 转换配置
-        internal_config = convert_to_internal_config(self.config)
-        
-        internal_config_obj = InternalClusteringConfig(**internal_config) if internal_config else None
-        clustering_result = cluster_embeddings(embeddings, internal_config_obj)
-        
-        # 分析簇内容
-        cluster_labels = np.array(clustering_result['cluster_labels'])
+        internal_config = InternalClusteringConfig(**self.config.model_dump()) if self.config else InternalClusteringConfig()
+        clustering_result = cluster_embeddings(embeddings, internal_config)
 
-        # 确定性后处理:质心剪枝 + 低内聚解散(阈值来自请求 config,None=跳过)
-        pp_prune = getattr(self.config, 'postprocess_prune_threshold', None) if self.config else None
-        pp_dissolve = getattr(self.config, 'postprocess_dissolve_threshold', None) if self.config else None
-        if pp_prune is not None or pp_dissolve is not None:
-            from .clustering import postprocess_labels
-            before_noise = int((cluster_labels == -1).sum())
-            cluster_labels = postprocess_labels(embeddings, cluster_labels, pp_prune, pp_dissolve)
-            after_noise = int((cluster_labels == -1).sum())
-            print(f"[postprocess] prune={pp_prune} dissolve={pp_dissolve}: 噪音 {before_noise}->{after_noise}")
-            clustering_result['cluster_labels'] = cluster_labels.tolist()
-
-        cluster_content = analyze_cluster_content(texts, cluster_labels)
-        
-        # 构建增强的结果
-        enhanced_result = {
+        return {
             **clustering_result,
-            'cluster_content': cluster_content,
             'texts': texts,
             'metadata': data.metadata,
             'items_info': data.items_info
         }
-        
-        return enhanced_result
     
     def get_stage_name(self) -> str:
         return "clustering_analysis"
 
 class ContentAnalysisStage(ProcessingStage):
     """内容分析和结果构建阶段"""
-    
-    def __init__(self, config: Optional[ContentAnalysisConfig] = None):
-        self.config = config or ContentAnalysisConfig()
     
     async def process(self, data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """分析内容并构建最终结果"""
@@ -256,7 +190,6 @@ class ContentAnalysisStage(ProcessingStage):
             'clusters': clusters,
             'clustering_stats': stats,
             'config_used': data['config_used'],
-            'reduced_embeddings': data.get('reduced_embeddings'),
             'processing_time': context.get('total_processing_time'),
             'model_info': data.get('items_info')
         }
@@ -268,8 +201,6 @@ class ContentAnalysisStage(ProcessingStage):
         cluster_labels = data['cluster_labels']
         texts = data['texts']
         metadata = data['metadata']
-        cluster_content = data.get('cluster_content', {})
-        reduced_embeddings = data.get('reduced_embeddings', [])
         
         clusters = []
         unique_labels = set(cluster_labels)
@@ -288,21 +219,10 @@ class ContentAnalysisStage(ProcessingStage):
                 }
                 cluster_items.append(item)
             
-            # 计算中心点（如果有降维数据）
-            centroid = None
-            if reduced_embeddings and indices:
-                cluster_points = np.array([reduced_embeddings[i] for i in indices])
-                centroid = np.mean(cluster_points, axis=0).tolist()
-            
-            # 获取代表性内容
-            representative_content = cluster_content.get(cluster_id, [])[:self.config.top_n_per_cluster]
-            
             cluster_info = ClusterInfo(
                 cluster_id=cluster_id,
                 size=len(indices),
-                items=cluster_items,
-                centroid=centroid,
-                representative_content=representative_content
+                items=cluster_items
             )
             
             clusters.append(cluster_info)
@@ -321,14 +241,13 @@ class MLPipelineFactory:
     
     @staticmethod
     def create_vector_clustering_pipeline(
-        config: Optional[BaseClusteringConfig] = None,
-        content_analysis: Optional[ContentAnalysisConfig] = None
+        config: Optional[BaseClusteringConfig] = None
     ) -> MLPipeline:
         """创建向量聚类管道"""
         return (MLPipeline()
                 .add_stage(DataExtractionStage())  # 不需要model_components
                 .add_stage(ClusteringStage(config))
-                .add_stage(ContentAnalysisStage(content_analysis)))
+                .add_stage(ContentAnalysisStage()))
 
 # ============================================================================
 # 统一的处理函数 - 替代原有的分散逻辑
@@ -337,14 +256,11 @@ class MLPipelineFactory:
 async def process_clustering_request(
     items: List[Any],
     config: Optional[BaseClusteringConfig] = None,
-    content_analysis: Optional[ContentAnalysisConfig] = None,
     data_type: str = 'auto'
 ) -> Dict[str, Any]:
     """统一的聚类处理函数 - 替代所有端点中的重复逻辑"""
     
-    pipeline = MLPipelineFactory.create_vector_clustering_pipeline(
-        config, content_analysis
-    )
+    pipeline = MLPipelineFactory.create_vector_clustering_pipeline(config)
     
     # 准备输入数据
     input_data = {

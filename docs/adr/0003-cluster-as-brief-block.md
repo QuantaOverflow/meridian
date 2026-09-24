@@ -57,7 +57,9 @@
 
 **判定必须与调用失败分开。** 失败重试一次，仍失败则整簇保留成一块、名字用零 LLM 的主导专名，计数进观测。把失败读成「这簇没有故事」会让一次网络抖动毙掉一条真新闻——这个仓库栽过。
 
-**回滚路径保留。** `clustering_algorithm='umap_hdbscan'` 切回旧聚类；判定层没有对应的旧实现（storyline 已删），回滚需要 revert。
+~~**回滚路径保留。** `clustering_algorithm='umap_hdbscan'` 切回旧聚类；判定层没有对应的旧实现（storyline 已删），回滚需要 revert。~~
+
+**回滚路径已删（2026-09-24，取代上一条）。** 生产从未走过 `umap_hdbscan`，且 UMAP 已被本 ADR 实测证伪，留着只让 ml-service 多背 `umap-learn` / `hdbscan` 两个重依赖。ml-service 与 backend 里的 UMAP+HDBSCAN 代码、配置字段与 `clustering_algorithm` 开关一并删除；要参考旧实现看 git 历史。
 
 ## 执行状态
 

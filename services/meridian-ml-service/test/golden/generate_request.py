@@ -150,14 +150,6 @@ def build_titles() -> list[str]:
 # （见 apps/backend/src/lib/core/constants.ts 的 BRIEF_CLUSTERING_OPTIONS）。
 # ============================================================================
 CONFIG = {
-    "umap_n_components": 5,
-    "umap_n_neighbors": 15,
-    "umap_min_dist": 0.1,
-    "umap_metric": "cosine",
-    "hdbscan_min_cluster_size": 3,
-    "hdbscan_min_samples": 1,
-    "hdbscan_cluster_selection_epsilon": 0.35,
-    "clustering_algorithm": "agglomerative_cosine",
     "agglomerative_threshold": 0.1,
     "agglomerative_linkage": "average",
     "agglomerative_min_cluster_size": 3,

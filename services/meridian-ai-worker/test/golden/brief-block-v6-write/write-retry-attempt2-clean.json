@@ -1,0 +1,81 @@
+{
+  "note": "真实重试对 attempt 2/2：同一簇第二次尝试，5 句全干净——writeOk 应通过（[]）。与 write-retry-attempt1-multi-sentence 成对，冻住「同一簇两次尝试」的真实分叉。",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/brief_block_v6-1002.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "{\"verdict\":\"written\",\"reason\":\"\",\"title\":\"Mass shooting in South Africa kills 11\",\"sentences\":[{\"text\":\"At least 11 people were killed and three others injured in a mass shooting at a house party in the KwaMakhutha township, south of Durban, police reported [1108286:1][1109235:1].\",\"sources\":[{\"articleId\":1108286,\"sentence\":1},{\"articleId\":1109235,\"sentence\":1}]},{\"text\":\"Among the dead was a pregnant woman, and two people survived the attack, according to provincial officials [1108617:1][1109517:5].\",\"sources\":[{\"articleId\":1108617,\"sentence\":1},{\"articleId\":1109517,\"sentence\":5}]},{\"text\":\"Three assailants opened fire on the partygoers, herding everyone into a single room before setting fire to a vehicle belonging to one of the victims, local reports stated [1108617:5][1109517:8].\",\"sources\":[{\"articleId\":1108617,\"sentence\":5},{\"articleId\":1109517,\"sentence\":8}]},{\"text\":\"Police have launched a manhunt for the suspects and have not ruled out a feud between rival groupings as a motive [1109050:9][1110405:7].\",\"sources\":[{\"articleId\":1109050,\"sentence\":9},{\"articleId\":1110405,\"sentence\":7}]},{\"text\":\"The incident occurred in a country with one of the world's highest murder rates, averaging about 60 deaths daily [1108617:9][1109517:16].\",\"sources\":[{\"articleId\":1108617,\"sentence\":9},{\"articleId\":1109517,\"sentence\":16}]}]}",
+  "expected": {
+    "cleaned": {
+      "verdict": "written",
+      "reason": "",
+      "title": "Mass shooting in South Africa kills 11",
+      "sentences": [
+        {
+          "text": "At least 11 people were killed and three others injured in a mass shooting at a house party in the KwaMakhutha township, south of Durban, police reported.",
+          "sources": [
+            {
+              "articleId": 1108286,
+              "sentence": 1
+            },
+            {
+              "articleId": 1109235,
+              "sentence": 1
+            }
+          ]
+        },
+        {
+          "text": "Among the dead was a pregnant woman, and two people survived the attack, according to provincial officials.",
+          "sources": [
+            {
+              "articleId": 1108617,
+              "sentence": 1
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 5
+            }
+          ]
+        },
+        {
+          "text": "Three assailants opened fire on the partygoers, herding everyone into a single room before setting fire to a vehicle belonging to one of the victims, local reports stated.",
+          "sources": [
+            {
+              "articleId": 1108617,
+              "sentence": 5
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 8
+            }
+          ]
+        },
+        {
+          "text": "Police have launched a manhunt for the suspects and have not ruled out a feud between rival groupings as a motive.",
+          "sources": [
+            {
+              "articleId": 1109050,
+              "sentence": 9
+            },
+            {
+              "articleId": 1110405,
+              "sentence": 7
+            }
+          ]
+        },
+        {
+          "text": "The incident occurred in a country with one of the world's highest murder rates, averaging about 60 deaths daily.",
+          "sources": [
+            {
+              "articleId": 1108617,
+              "sentence": 9
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 16
+            }
+          ]
+        }
+      ]
+    },
+    "writeOkReasons": []
+  }
+}

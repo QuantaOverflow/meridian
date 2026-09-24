@@ -1,0 +1,12 @@
+{
+  "note": "cluster_judge：verdict=EVENT，无围栏、裸 JSON——练到 parseJSONFromResponse 策略 4（直接解析）",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/cluster_judge-051.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "{\n  \"verdict\": \"EVENT\",\n  \"title\": \"Trump vs. CNN at the UN\",\n  \"event\": \"Trump confronts CNN's Kaitlan Collins at the UN\",\n  \"reason\": \"这组报道围绕特朗普在联合国大会期间与CNN记者凯特兰·柯林斯的直接冲突展开，包括现场对峙、后续评论以及双方在社交媒体上的进一步交锋，属于同一事件的不同侧面与后续发展。\"\n}",
+  "expected": {
+    "verdict": "EVENT",
+    "title": "Trump vs. CNN at the UN",
+    "event": "Trump confronts CNN's Kaitlan Collins at the UN",
+    "reason": "这组报道围绕特朗普在联合国大会期间与CNN记者凯特兰·柯林斯的直接冲突展开，包括现场对峙、后续评论以及双方在社交媒体上的进一步交锋，属于同一事件的不同侧面与后续发展。"
+  }
+}

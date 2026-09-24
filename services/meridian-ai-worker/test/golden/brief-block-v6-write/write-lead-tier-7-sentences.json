@@ -1,0 +1,143 @@
+{
+  "note": "lead 档（7 句）真实产出，句尾普遍带 [articleId:sentence] 标签泄漏——cleanWrite 的stripMarkers 要把这些标签逐条剥干净，剥完后 writeOk 应通过。",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/brief_block_v6-603.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "{\"verdict\":\"written\",\"reason\":\"\",\"title\":\"US and Iran hold direct talks at UN\",\"sentences\":[{\"text\":\"US President Donald Trump said he and Iranian officials held a three-hour meeting on the sidelines of the UN General Assembly, the first confirmed direct contact since the war began in February, even as he warned he could 'annihilate' the Islamic Republic if a deal is not reached soon [1102027:1, 1104015:1, 1105550:1, 1107180:2].\",\"sources\":[{\"articleId\":1102027,\"sentence\":1},{\"articleId\":1104015,\"sentence\":1},{\"articleId\":1105550,\"sentence\":1},{\"articleId\":1107180,\"sentence\":2}]},{\"text\":\"US envoys Steve Witkoff and Jared Kushner met with Iranian Foreign Minister Abbas Araghchi and mediators, with Witkoff describing the talks as 'very good' and 'constructive and promising' [1107180:3, 1108194:1, 1108495:3, 1108495:18].\",\"sources\":[{\"articleId\":1107180,\"sentence\":3},{\"articleId\":1108194,\"sentence\":1},{\"articleId\":1108495,\"sentence\":3},{\"articleId\":1108495,\"sentence\":18}]},{\"text\":\"The discussions were conducted through Qatari mediators who shuttled between the two sides, and Iran conveyed its conditions for peace, including an end to the war on all fronts and the lifting of the US naval blockade and economic pressure [1107180:4, 1107866:10, 1108194:37, 1108495:19].\",\"sources\":[{\"articleId\":1107180,\"sentence\":4},{\"articleId\":1107866,\"sentence\":10},{\"articleId\":1108194,\"sentence\":37},{\"articleId\":1108495,\"sentence\":19}]},{\"text\":\"Iran said it is willing to reopen the Strait of Hormuz within a week if Washington reciprocates by easing military pressure and lifting its blockade of Iranian ports, a senior official told Reuters [1108194:9, 1108495:4].\",\"sources\":[{\"articleId\":1108194,\"sentence\":9},{\"articleId\":1108495,\"sentence\":4}]},{\"text\":\"Trump said he faces a 'big decision' between allowing Iran to rebuild or 'annihilate the Islamic Republic' and do it quickly, adding that he believes an agreement is possible before the US midterm elections in November [1107866:25, 1110636:19, 1110636:20, 1111080:34].\",\"sources\":[{\"articleId\":1107866,\"sentence\":25},{\"articleId\":1110636,\"sentence\":19},{\"articleId\":1110636,\"sentence\":20},{\"articleId\":1111080,\"sentence\":34}]},{\"text\":\"US Senator Bernie Sanders condemned Trump's threat to 'annihilate' Iran as a war crime and an act of barbarism, while a CNN/SRSS poll found that just about one in four Americans approve of the administration's handling of the war [1108194:21, 1108194:40, 1108194:41].\",\"sources\":[{\"articleId\":1108194,\"sentence\":21},{\"articleId\":1108194,\"sentence\":40},{\"articleId\":1108194,\"sentence\":41}]},{\"text\":\"Meanwhile, most members of Iran's delegation walked out of the UN chamber as Trump criticized the Islamic Republic in his address, and the US has denied visas to Pezeshkian's media team and imposed tight restrictions on their movement [1099652:10, 1099652:12].\",\"sources\":[{\"articleId\":1099652,\"sentence\":10},{\"articleId\":1099652,\"sentence\":12}]}]}",
+  "expected": {
+    "cleaned": {
+      "verdict": "written",
+      "reason": "",
+      "title": "US and Iran hold direct talks at UN",
+      "sentences": [
+        {
+          "text": "US President Donald Trump said he and Iranian officials held a three-hour meeting on the sidelines of the UN General Assembly, the first confirmed direct contact since the war began in February, even as he warned he could 'annihilate' the Islamic Republic if a deal is not reached soon.",
+          "sources": [
+            {
+              "articleId": 1102027,
+              "sentence": 1
+            },
+            {
+              "articleId": 1104015,
+              "sentence": 1
+            },
+            {
+              "articleId": 1105550,
+              "sentence": 1
+            },
+            {
+              "articleId": 1107180,
+              "sentence": 2
+            }
+          ]
+        },
+        {
+          "text": "US envoys Steve Witkoff and Jared Kushner met with Iranian Foreign Minister Abbas Araghchi and mediators, with Witkoff describing the talks as 'very good' and 'constructive and promising'.",
+          "sources": [
+            {
+              "articleId": 1107180,
+              "sentence": 3
+            },
+            {
+              "articleId": 1108194,
+              "sentence": 1
+            },
+            {
+              "articleId": 1108495,
+              "sentence": 3
+            },
+            {
+              "articleId": 1108495,
+              "sentence": 18
+            }
+          ]
+        },
+        {
+          "text": "The discussions were conducted through Qatari mediators who shuttled between the two sides, and Iran conveyed its conditions for peace, including an end to the war on all fronts and the lifting of the US naval blockade and economic pressure.",
+          "sources": [
+            {
+              "articleId": 1107180,
+              "sentence": 4
+            },
+            {
+              "articleId": 1107866,
+              "sentence": 10
+            },
+            {
+              "articleId": 1108194,
+              "sentence": 37
+            },
+            {
+              "articleId": 1108495,
+              "sentence": 19
+            }
+          ]
+        },
+        {
+          "text": "Iran said it is willing to reopen the Strait of Hormuz within a week if Washington reciprocates by easing military pressure and lifting its blockade of Iranian ports, a senior official told Reuters.",
+          "sources": [
+            {
+              "articleId": 1108194,
+              "sentence": 9
+            },
+            {
+              "articleId": 1108495,
+              "sentence": 4
+            }
+          ]
+        },
+        {
+          "text": "Trump said he faces a 'big decision' between allowing Iran to rebuild or 'annihilate the Islamic Republic' and do it quickly, adding that he believes an agreement is possible before the US midterm elections in November.",
+          "sources": [
+            {
+              "articleId": 1107866,
+              "sentence": 25
+            },
+            {
+              "articleId": 1110636,
+              "sentence": 19
+            },
+            {
+              "articleId": 1110636,
+              "sentence": 20
+            },
+            {
+              "articleId": 1111080,
+              "sentence": 34
+            }
+          ]
+        },
+        {
+          "text": "US Senator Bernie Sanders condemned Trump's threat to 'annihilate' Iran as a war crime and an act of barbarism, while a CNN/SRSS poll found that just about one in four Americans approve of the administration's handling of the war.",
+          "sources": [
+            {
+              "articleId": 1108194,
+              "sentence": 21
+            },
+            {
+              "articleId": 1108194,
+              "sentence": 40
+            },
+            {
+              "articleId": 1108194,
+              "sentence": 41
+            }
+          ]
+        },
+        {
+          "text": "Meanwhile, most members of Iran's delegation walked out of the UN chamber as Trump criticized the Islamic Republic in his address, and the US has denied visas to Pezeshkian's media team and imposed tight restrictions on their movement.",
+          "sources": [
+            {
+              "articleId": 1099652,
+              "sentence": 10
+            },
+            {
+              "articleId": 1099652,
+              "sentence": 12
+            }
+          ]
+        }
+      ]
+    },
+    "writeOkReasons": []
+  }
+}

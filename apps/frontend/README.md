@@ -1,76 +1,43 @@
-# Meridian Frontend
+# @meridian/frontend
 
-This is the Nuxt 3 frontend application for the [Meridian project](https://github.com/QuantaOverflow/meridian) (your personal AI intelligence agency). It provides the web interface for viewing generated intelligence briefs and managing sources (admin).
+Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CSS v4，Nitro preset `cloudflare-pages`，
+生产部署在 Cloudflare Pages（`meridian-reader.pages.dev`）。
 
-Built with:
+## 页面（`src/pages/`）
 
-- [Nuxt 3](https://nuxt.com/) (Vue 3)
-- [Tailwind CSS](https://tailwindcss.com/) (with Radix UI colors)
-- [TypeScript](https://www.typescriptlang.org/)
+| 路径 | 内容 |
+|---|---|
+| `/` | 最新一期简报 |
+| `/briefs`、`/briefs/[slug]`、`/briefs/latest` | 简报归档与单期 |
+| `/stories`、`/stories/[id]` | 跨期故事线索 |
+| `/admin/login`、`/admin`、`/admin/feed/[id]` | 源管理后台（`nuxt-auth-utils` 会话登录） |
 
-## Key Features
+## 数据从哪来（`src/server/`）
 
-- Displays daily intelligence briefs with rich formatting (`/briefs/[slug]`).
-- Interactive Table of Contents for easy navigation within briefs.
-- Subscription form for updates (`/`).
-- Consumes the Meridian API (via Nitro server routes in `/server/api` and potentially external workers).
+- 读者端 API（`server/api/briefs/*`、`server/api/stories/*`）经 `@meridian/database` **直连 Postgres** 读取，不经过 backend。
+- 后台 API（`server/api/admin/*`）需要登录会话；增、查源直接写库，初始化 / 删除源的 DO 转发到 backend 的
+  `/do/admin/source/:id/init`、`DELETE /do/admin/source/:id`（带 `NUXT_WORKER_API_TOKEN`）。
+  新增源时**不会**自动初始化 DO（`server/api/admin/sources/index.post.ts` 里这段调用被注释掉了）。
 
-## Setup
+## 环境变量
 
-Make sure you have [Node.js](https://nodejs.org/) (v22+ recommended) and [pnpm](https://pnpm.io/) installed.
+复制 `.env.example` 为 `.env`。`nuxt.config.ts` 的 `runtimeConfig` 在运行时由这些 `NUXT_*` 覆盖：
 
-From the _root_ of the Meridian monorepo:
+| 名称 | 用途 |
+|---|---|
+| `NUXT_DATABASE_URL` | Postgres 连接串 |
+| `NUXT_PUBLIC_WORKER_API` | backend 地址，默认 `http://localhost:8787` |
+| `NUXT_WORKER_API_TOKEN` | 调 backend 的 Bearer token，等于 backend 的 `API_TOKEN` |
+| `NUXT_ADMIN_USERNAME`、`NUXT_ADMIN_PASSWORD` | 后台登录账号 |
+| `NUXT_SESSION_PASSWORD` | 会话加密密钥，至少 32 字符 |
 
-```bash
-# Install all workspace dependencies
-pnpm install
-```
-
-Or, if you're only working within this app (less common in a monorepo):
-
-```bash
-cd apps/frontend
-pnpm install
-```
-
-You'll also need to ensure the necessary environment variables are configured (likely in a `.env` file in the root or this directory, depending on your setup) – particularly for the database connection (`DATABASE_URL`) and any external API endpoints (`WORKER_API`). See the [main project README](https://github.com/QuantaOverflow/meridian#setup) for full setup details.
-
-## Development Server
-
-Start the Nuxt development server (usually on `http://localhost:3000`):
+## 命令
 
 ```bash
-# From the root directory
-pnpm --filter @meridian/frontend dev
-
-# Or from the apps/frontend directory
-pnpm dev
+pnpm -F @meridian/frontend dev         # http://localhost:3000
+pnpm -F @meridian/frontend build       # Nitro cloudflare-pages 产物
+pnpm -F @meridian/frontend preview
+pnpm -F @meridian/frontend typecheck   # nuxt typecheck
 ```
 
-## Production Build
-
-Build the application for production:
-
-```bash
-# From the root directory
-pnpm --filter @meridian/frontend build
-
-# Or from the apps/frontend directory
-pnpm build
-```
-
-Locally preview the production build:
-
-```bash
-# From the root directory
-pnpm --filter @meridian/frontend preview
-
-# Or from the apps/frontend directory
-pnpm preview
-```
-
-## Deployment
-
-This application is typically deployed using [Cloudflare Pages](https://pages.cloudflare.com/).
-
-Check out the [Nuxt deployment documentation](https://nuxt.com/docs/getting-started/deployment) for general deployment information.
+`nuxt.config.ts` 只在生产开 HTTP 缓存；本地 dev 下数据改动立即可见。

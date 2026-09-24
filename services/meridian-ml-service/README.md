@@ -1,484 +1,80 @@
-# Meridian ML Service
+# meridian-ml-service
 
-An AI-driven intelligent clustering and embedding generation service designed for the Meridian project, providing core machine learning capabilities with efficient text embedding, robust clustering, and seamless integration with existing backend systems.
+Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloudflare Containers**
+（`cf-worker/` 里的 Worker 把请求转发给容器）。唯一调用方是 `apps/backend`：
 
-## 🌟 Key Features
+- `AutoBriefGenerationWorkflow` 聚类前批量补算缺失 embedding → `POST /embeddings`（客户端 `apps/backend/src/lib/services/ai-services.ts` 的 `generateEmbedding`）
+- 随后聚类 → `POST /ai-worker/clustering`（客户端 `apps/backend/src/lib/services/clustering.ts`）
 
-- **Multi-language Embedding Generation**: Uses `intfloat/multilingual-e5-small` model for high-quality text embeddings
-- **Intelligent Clustering**: agglomerative clustering on raw cosine distance (average linkage, no dimensionality reduction) as the production algorithm, with the original UMAP + HDBSCAN pipeline kept as a rollback path (see `clustering.py`)
-- **AI Worker Integration**: Perfect compatibility with Meridian backend data formats
-- **Production Ready**: Docker containerized with health checks and monitoring support
-- **Flexible API**: Auto-detects input data formats and provides multiple endpoint options
-- **Scalable Architecture**: Modular pipeline design supporting various deployment methods
+模型是 `intfloat/multilingual-e5-small`（384 维）。聚类现行算法是不降维的余弦距离凝聚聚类
+（`agglomerative_cosine`，average linkage）；旧的 UMAP + HDBSCAN（`umap_hdbscan`）只作回滚路径保留。
+算法选择与参数由 backend 的 `BRIEF_CLUSTERING_OPTIONS`（`apps/backend/src/lib/core/constants.ts`）随请求传入，
+依据见 [`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)。
 
-## 🚀 Quick Start
+## 路由（`src/main.py`）
 
-### Local Development
+除 `/health` 外都要求 `X-API-Token` 头等于 `API_TOKEN`（`src/dependencies.py` 的 `verify_token`）。
 
-1. **Install Dependencies**:
+| 路由 | 请求 | 响应 |
+|---|---|---|
+| `GET /health` | — | `status`、`build_identity`、`embedding_model`、`clustering_available` |
+| `POST /embeddings` | `{texts: string[], normalize?: bool, model_name?}` | `{embeddings, model_name, dimensions, processing_time}` |
+| `POST /ai-worker/clustering` | `{items: [{id, embedding, title?, url?, …}], config?}`；`config` 字段见 `src/schemas.py` 的 `BaseClusteringConfig` | `clusters`（`cluster_id` = -1 为噪声）、`clustering_stats`、`config_used`、`build_identity` 等 |
+
+`build_identity`（`build_sha` / `build_time` / `injected`）用来确认生产跑的是不是本次部署的镜像：
+backend 在每次聚类时断言它（`clustering.ts` 的 `assertBuildIdentity`），缺字段即判定为旧镜像。
+来历：2026-09-15 至 09-19 容器镜像没推上去，生产连续五天跑旧算法而 `brief_runs.status` 一直是 `COMPLETED`。
+
+## 环境变量（`src/config.py`、`src/main.py`）
+
+| 名称 | 默认 | 说明 |
+|---|---|---|
+| `API_TOKEN` 🔐 | 空 | 须与 backend 的 `MERIDIAN_ML_SERVICE_API_KEY` 一致；生产由 `cf-worker` 注入容器 |
+| `EMBEDDING_MODEL_NAME` | `sentence-transformers/multilingual-e5-small` | 模型名或本地目录；镜像里设为 `/home/appuser/model` |
+| `EXPECTED_EMBEDDING_DIMENSIONS` | `384` | |
+| `BATCH_SIZE` | `32` | |
+| `MERIDIAN_ML_BUILD_SHA`、`MERIDIAN_ML_BUILD_TIME`、`MERIDIAN_ML_BUILD_STAMP_FILE` | 空 | `build_identity` 的来源，由 `Dockerfile` 设置 |
+
+## 本地开发
+
+模型文件放在 `model-cache/`（gitignored，约 470MB，`Dockerfile` 也从这里 COPY）。新机器先把
+`intfloat/multilingual-e5-small` 的 `config.json`、`tokenizer*.json`、`sentencepiece.bpe.model`、
+`special_tokens_map.json`、`model.safetensors` 下到这个目录。
+
 ```bash
 cd services/meridian-ml-service
-pip install -e .
+uv venv && uv pip install -e ".[dev]"
+API_TOKEN=dev-token-123 EMBEDDING_MODEL_NAME=$PWD/model-cache \
+  .venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8081
+curl http://127.0.0.1:8081/health
 ```
 
-2. **Start Service**:
-```bash
-./start_local.sh
-```
+backend 本地指向它：`apps/backend/.dev.vars` 里设 `MERIDIAN_ML_SERVICE_URL=http://127.0.0.1:8081`。
 
-3. **Test Service**:
-```bash
-curl http://localhost:8081/health
-```
-
-### Docker Deployment
-
-#### Method 1: Using docker-compose (Recommended)
+## 测试
 
 ```bash
-# Development environment
-docker-compose up -d
-
-# Production environment (without source code mounting)
-docker-compose --profile production up -d
+cd services/meridian-ml-service
+.venv/bin/python -m pytest test/test_clustering_golden.py -q
 ```
 
-#### Method 2: Direct Docker Run
+`/ai-worker/clustering` 的 golden 快照测试：`test/golden/request.json` 是 backend 实际发送形状的请求，
+`response.json` 是期望输出。行为有意改变时加 `UPDATE_GOLDEN=1` 重写，重新生成请求见 `test/golden/generate_request.py`。
+不需要加载模型，几秒跑完。
+
+## 部署（Cloudflare Containers）
 
 ```bash
-# Build image
-docker build -t meridian-ml-service:latest .
-
-# Run container
-docker run -d \
-  --name meridian-ml-service \
-  -p 8081:8080 \
-  -e API_TOKEN=your-secure-token \
-  -e EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small \
-  meridian-ml-service:latest
+cd services/meridian-ml-service/cf-worker
+npx wrangler@4.120.0 deploy          # 用 ../Dockerfile 构建镜像并推送，Worker 名 meridian-ml-service
+npx wrangler@4.120.0 secret put API_TOKEN
 ```
 
-## 🏗️ System Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Meridian      │    │   ML Service    │    │   Models        │
-│   Backend       │────│   FastAPI       │────│   E5-Small      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                       ┌─────────────────┐
-                       │   Clustering    │
-                       │ Agglomerative   │
-                       │ (UMAP+HDBSCAN   │
-                       │  as rollback)   │
-                       └─────────────────┘
-```
-
-### Core Components
-
-The system is structured into several logical components:
-
-- **Core ML Service**: FastAPI application exposing ML functionalities via RESTful APIs
-- **ML Pipeline**: Modular processing pipeline with data extraction, clustering, and content analysis stages
-- **Embedding Engine**: Handles loading and computation of text embeddings using transformer models
-- **Clustering Engine**: Implements agglomerative clustering on cosine distance (`agglomerative_cosine`, production default) plus the original UMAP + HDBSCAN pipeline (`umap_hdbscan`, rollback path only)
-
-> **Note (history)**: commit `12a0f06` (2026-09-05) switched the caller default to `agglomerative_cosine`, but the ml-service container image failed to push, so production kept running the old `umap_hdbscan` code from 2026-09-15 through 2026-09-19 despite the code default having changed — evidenced by the cluster-judge NO_EVENT rate jumping from a normal ~2% to 52-54% during that window. This is why the docs kept describing UMAP+HDBSCAN long after it stopped being the intended default: for five days it actually was production behavior, just not what the code default said.
-- **AI Worker Integration**: Seamless compatibility with existing AI Worker data formats
-
-### Technology Stack
-
-- **Web Framework**: FastAPI + Uvicorn
-- **AI Models**: Transformers + PyTorch (CPU)
-- **Clustering**: Scikit-learn agglomerative clustering (production) + UMAP + HDBSCAN (rollback path)
-- **Data Validation**: Pydantic v2
-- **Containerization**: Docker + Docker Compose
-- **Reverse Proxy**: Nginx (production)
-- **Monitoring**: Prometheus + Grafana (optional)
-
-## 🛠️ Build and Deployment
-
-### 1. Local Build
-
-```bash
-# Build image only
-./build-and-push-multiarch.sh --build-only
-
-# Build and push to Docker Hub
-./build-and-push-multiarch.sh --push --user your-dockerhub-username
-
-# Multi-architecture build
-./build-and-push-multiarch.sh --platform linux/amd64,linux/arm64 --push
-```
-
-### 2. VPS Deployment
-
-#### Simple Deployment
-```bash
-# Deploy to VPS (auto-generate API token)
-./deploy-to-vps.sh --host user@your-vps-ip
-
-# Use custom image and token
-./deploy-to-vps.sh --host user@your-vps-ip \
-  --image your-dockerhub-user/meridian-ml-service \
-  --token your-api-token
-```
-
-#### Production Deployment (with SSL and Monitoring)
-```bash
-# Complete production environment deployment
-./deploy-to-vps.sh --host user@your-vps-ip \
-  --domain api.yourdomain.com \
-  --monitoring
-```
-
-This automatically configures:
-- ✅ SSL certificates (Let's Encrypt)
-- ✅ Nginx reverse proxy
-- ✅ Prometheus monitoring
-- ✅ Grafana dashboard
-- ✅ Auto-restart and health checks
-
-## 📋 Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_TOKEN` | API access token | Required |
-| `EMBEDDING_MODEL_NAME` | Embedding model name | `intfloat/multilingual-e5-small` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `BATCH_SIZE` | Processing batch size | `32` |
-| `PYTHONUNBUFFERED` | Python output buffering | `1` |
-
-## 🔧 API Endpoints
-
-### Core Endpoints
-
-- `GET /health` - Health check with ML functionality status
-- `POST /embeddings` - Generate text embeddings
-- `POST /ai-worker/clustering` - AI Worker format clustering
-
-### API Request Examples
-
-#### Embedding Generation
-```bash
-curl -X POST "http://localhost:8081/embeddings" \
-  -H "X-API-Token: your-api-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "texts": ["Hello world", "Machine learning is fascinating"],
-    "normalize": true
-  }'
-```
-
-#### AI Worker Clustering
-```bash
-curl -X POST "http://localhost:8081/ai-worker/clustering" \
-  -H "X-API-Token: your-api-token" \
-  -H "Content-Type: application/json" \
-  -d '[
-    {
-      "id": 1,
-      "embedding": [0.1, 0.2, ..., 0.384],
-      "title": "Article Title",
-      "url": "https://example.com/article1"
-    },
-    {
-      "id": 2,
-      "embedding": [0.3, 0.4, ..., 0.256],
-      "title": "Another Article",
-      "url": "https://example.com/article2"
-    }
-  ]'
-```
-
-## 🔍 Data Flow and Processing Pipeline
-
-The service processes data through a modular pipeline:
-
-1. **Request Reception**: Client sends HTTP POST request with JSON payload
-2. **Authentication**: Verifies `X-API-Token` header for authorized access
-3. **Input Validation**: Validates JSON using Pydantic models with auto-format detection
-4. **Data Extraction Stage**:
-   - Generates embeddings for raw text using transformer models
-   - Extracts and validates pre-computed embeddings
-   - Preserves original texts and metadata
-5. **Clustering Stage**:
-   - Production default: agglomerative clustering directly on the cosine distance matrix (average linkage), no dimensionality reduction
-   - Rollback path (`umap_hdbscan`): applies UMAP for dimensionality reduction, then HDBSCAN density-based clustering, optimizing parameters using the DBCV metric (if enabled)
-6. **Content Analysis Stage**:
-   - Combines clustering results with original content
-   - Identifies representative content for each cluster
-   - Compiles statistical summaries
-7. **Response Generation**: Returns structured results following API schema
-
-## 📊 Supported Data Formats
-
-The service automatically detects and processes multiple input formats:
-
-### Vector Format
-```json
-{
-  "items": [
-    {"embedding": [0.1, 0.2, ..., 0.384]},
-    {"embedding": [0.3, 0.4, ..., 0.256]}
-  ]
-}
-```
-
-### AI Worker Basic Format
-```json
-[
-  {
-    "id": 1,
-    "embedding": [0.1, 0.2, ..., 0.384]
-  },
-  {
-    "id": 2,
-    "embedding": [0.3, 0.4, ..., 0.256]
-  }
-]
-```
-
-### AI Worker Extended Format
-```json
-[
-  {
-    "id": 1,
-    "embedding": [0.1, 0.2, ..., 0.384],
-    "title": "Article Title",
-    "url": "https://example.com/article1"
-  }
-]
-```
-
-### AI Worker Full Article Format
-```json
-[
-  {
-    "id": 1,
-    "embedding": [0.1, 0.2, ..., 0.384],
-    "title": "Complete Article Title",
-    "url": "https://example.com/article1",
-    "content": "Full article content...",
-    "author": "Author Name",
-    "published_date": "2024-01-01",
-    "source": "Source Name"
-  }
-]
-```
-
-## 🎛️ Configuration Options
-
-### Clustering Configuration
-```json
-{
-  "config": {
-    "min_cluster_size": 5,
-    "min_samples": 3,
-    "n_neighbors": 15,
-    "n_components": 10,
-    "metric": "cosine"
-  }
-}
-```
-
-### Content Analysis Configuration
-```json
-{
-  "content_analysis": {
-    "max_representative_content": 5,
-    "include_outliers": true
-  }
-}
-```
-
-## 📈 Monitoring and Operations
-
-### Health Monitoring
-
-```bash
-# Local health check
-curl http://localhost:8081/health
-
-# VPS health check
-curl http://your-vps-ip:8080/health
-```
-
-### View Logs
-
-```bash
-# Docker Compose
-docker-compose logs -f ml-service
-
-# Single container
-docker logs meridian-ml-service -f
-```
-
-### Performance Monitoring
-
-If monitoring is enabled:
-- **Grafana**: `http://your-vps-ip:3000` (admin/admin123)
-- **Prometheus**: `http://your-vps-ip:9090`
-
-## 🛡️ Security Configuration
-
-### Production Security Checklist
-
-- [ ] Set strong API token password
-- [ ] Configure SSL certificates (HTTPS)
-- [ ] Enable firewall rules
-- [ ] Regular dependency updates
-- [ ] Configure log rotation
-- [ ] Set resource limits
-
-### Recommended Security Setup
-
-```bash
-# Generate secure API token
-openssl rand -hex 32
-
-# Configure firewall (Ubuntu/Debian)
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
-sudo ufw enable
-```
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **Image Build Failures**
-   ```bash
-   # Check Docker version
-   docker --version
-   
-   # Clean cache and rebuild
-   docker system prune -a
-   ./build-and-push-multiarch.sh --build-only
-   ```
-
-2. **Health Check Failures**
-   ```bash
-   # Check container logs
-   docker logs meridian-ml-service --tail 50
-   
-   # Check port usage
-   netstat -tulpn | grep :8080
-   ```
-
-3. **VPS Deployment Issues**
-   ```bash
-   # Test SSH connection
-   ssh user@your-vps-ip "docker --version"
-   
-   # Manual deployment
-   scp docker-compose.yml user@your-vps-ip:~/
-   ssh user@your-vps-ip "cd ~ && docker-compose up -d"
-   ```
-
-### Performance Optimization
-
-- **Memory**: Minimum 2GB RAM recommended
-- **CPU**: At least 1 core, 2+ cores recommended
-- **Storage**: Minimum 10GB available space
-- **Network**: Stable internet connection (for model downloads)
-
-## 🧪 Testing
-
-There is no automated test suite. The former manual scripts under `test/` were removed (2026-09-23): they called routes that no longer exist and were not wired into any runner.
-
-## 📚 API Documentation
-
-Access comprehensive API documentation after deployment:
-
-- **Swagger UI**: `http://your-host:8080/docs`
-- **ReDoc**: `http://your-host:8080/redoc`
-
-## 🤝 Development
-
-### Development Environment Setup
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd meridian/services/meridian-ml-service
-
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Code formatting
-ruff format .
-ruff check .
-
-# Type checking
-mypy src/
-```
-
-### Project Structure
-
-```
-src/meridian_ml_service/
-├── main.py              # FastAPI application entry point
-├── config.py            # Configuration management
-├── schemas.py           # Pydantic data models
-├── dependencies.py      # FastAPI dependency injection
-├── embeddings.py        # Embedding generation
-├── clustering.py        # Clustering algorithms
-└── pipeline.py          # ML processing pipeline
-
-docs/
-├── PROJECT_SUMMARY.md   # Project overview
-├── DOCKER_GUIDE.md      # Docker deployment guide
-├── AI_WORKER_INTEGRATION.md  # AI Worker compatibility
-└── README-DEPLOYMENT.md # Deployment instructions
-
-scripts/
-├── build-and-push.sh    # Docker build automation
-├── deploy-vps.sh        # VPS deployment
-├── download_model.py    # Model pre-download
-└── test_service.py      # Service testing
-```
-
-### Module Architecture
-
-- **`main.py`**: FastAPI application with endpoint definitions and request orchestration
-- **`config.py`**: Environment-based configuration using Pydantic Settings
-- **`schemas.py`**: Request/response models and data format detection utilities
-- **`dependencies.py`**: Shared resources and authentication management
-- **`embeddings.py`**: Transformer model loading and text-to-vector conversion
-- **`clustering.py`**: agglomerative cosine-distance clustering (production default, `agglomerative_cosine`) plus the UMAP + HDBSCAN implementation (rollback path, `umap_hdbscan`)
-- **`pipeline.py`**: Modular processing workflow with configurable stages
-
-## 🔗 Integration Points
-
-### Meridian Backend Integration
-
-The service is designed as a drop-in replacement for existing AI Worker services:
-
-- **Compatible Data Formats**: Supports all AI Worker data structures
-- **Consistent API**: Maintains familiar endpoint patterns
-- **Enhanced Features**: Adds content analysis
-- **Migration Support**: Provides automated format detection and conversion
-
-### External Dependencies
-
-- **Hugging Face Hub**: Downloads `intfloat/multilingual-e5-small` model
-- **Docker Hub**: Hosts pre-built images (`crossovo/meridian-ml-service`)
-- **Nginx**: Production reverse proxy configuration
-- **Prometheus/Grafana**: Optional monitoring and visualization
-
-## 📄 License
-
-This project is licensed under the MIT License. See [LICENSE](../../LICENSE) file for details.
-
-## 🆘 Getting Help
-
-- **Documentation**: Check the `docs/` directory
-- **Issues**: Submit issues on GitHub Issues
-- **Discussions**: Join GitHub Discussions
-- **API Reference**: Visit `/docs` endpoint after deployment
-
----
-
-**Meridian ML Service** - Making AI-powered clustering simple and efficient 🚀
+- 容器配置在 `cf-worker/wrangler.jsonc`：`standard-1`、最多 3 个实例；`cf-worker/src/index.ts` 里 `sleepAfter = '10m'`。
+- 构建前 `model-cache/` 必须就位，否则镜像里没有模型。
+- 部署后看 `/health` 的 `build_identity.build_time` 是不是刚才的时间，确认新镜像已在运行。
+- 永不从仓库根部署。
+
+仓库里的 `docker-compose.yml`、`fly.toml`、`nginx.conf`、`scripts/build-and-push.sh`、
+`scripts/deploy-vps.sh`、`scripts/quick-deploy-vps.sh`、`scripts/example-usage.sh` 是迁到 Cloudflare Containers 之前的 VPS / Fly 部署方式，
+现行生产不用它们。

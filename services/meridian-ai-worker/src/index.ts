@@ -68,8 +68,8 @@ app.post('/meridian/article/analyze', async (c) => {
       return c.json({ success: false, error: '缺少必需字段：title 和 content' }, 400)
     }
 
-    // 输入长度验证 - 利用llama-3.3-70b的24000上下文窗口
-    const maxContentLength = 20000 // 约20000字符，充分利用24000 token上下文
+    // 正文截到 20000 字符（qwen3 上下文 32k token，有余量）
+    const maxContentLength = 20000
     const truncatedContent = content.length > maxContentLength 
       ? content.substring(0, maxContentLength) + '...[内容已截断]'
       : content
@@ -155,16 +155,7 @@ app.post('/meridian/article/analyze', async (c) => {
             contractCheck.error.issues.map(i => `${i.path.join('.') || '(root)'}=${i.code}`).join(', '))
         }
 
-        return c.json({
-          success: true,
-          data: analysisResult,
-          metadata: {
-            provider: strategy.provider,
-            model: strategy.model,
-            attempts: attempt,
-            lastError: null
-          }
-        })
+        return c.json({ success: true, data: analysisResult })
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -187,13 +178,7 @@ app.post('/meridian/article/analyze', async (c) => {
     
     return c.json({
       success: false,
-      error: `文章分析失败: ${lastError?.message || '未知错误'}`,
-      metadata: {
-        provider: 'workers-ai',
-        model: '@cf/meta/llama-2-7b-chat-int8',
-        attempts: analysisStrategies.length,
-        lastError: lastError?.message
-      }
+      error: `文章分析失败（${analysisStrategies.length} 档均失败）: ${lastError?.message || '未知错误'}`,
     }, 500)
 
   } catch (error) {
@@ -203,12 +188,6 @@ app.post('/meridian/article/analyze', async (c) => {
     return c.json({
       success: false,
       error: `文章分析失败: ${errorMessage}`,
-      metadata: {
-        provider: 'workers-ai',
-        model: '@cf/meta/llama-2-7b-chat-int8',
-        attempts: 0,
-        lastError: errorMessage
-      }
     }, 500)
   }
 })
@@ -347,15 +326,7 @@ app.post('/meridian/stories/rank', async (c) => {
       }, 500)
     }
 
-    return c.json<APIResponse<typeof result>>({
-      success: true,
-      data: result,
-      metadata: {
-        candidates: candidates.length,
-        rounds_ok: result.roundsOk,
-        intersection_size: result.intersectionSize,
-      },
-    })
+    return c.json<APIResponse<typeof result>>({ success: true, data: result })
   } catch (error: any) {
     console.error('Story rank error:', error)
     return c.json<APIResponse<null>>({
@@ -367,9 +338,9 @@ app.post('/meridian/stories/rank', async (c) => {
 })
 
 // 简报块 v6：一个簇的原文 → 一块高管简报（services/brief-block-v6.ts）。
-// 请求体与 /meridian/report-v3 逐字同构（多一个可选的 tier），backend 可复用同一份文章材料。
+// 请求体 {articles:[{id,title,content,publishDate?}], tier?}。
 // tier 决定篇幅：'lead' = 5–7 句，'more' / 不传 = 原 exec 档（3–5 句），'brief' = 1 句。
-// 非法值按不传处理，不报 400——篇幅是写作风格，不是正确性约束。旧端点一个不动。
+// 非法值按不传处理，不报 400——篇幅是写作风格，不是正确性约束。
 app.post('/meridian/brief-block-v6', async (c) => {
   try {
     const body = await c.req.json()
@@ -385,7 +356,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
     }
     const service = new BriefBlockV6Service(c.env, readTraceContext(c.req.raw))
     const data = await service.generate(
-      { title: typeof body?.title === 'string' ? body.title : '', articles, tier: body?.tier }
+      { articles, tier: body?.tier }
     )
     return c.json<APIResponse<typeof data>>({ success: true, data })
   } catch (error: any) {

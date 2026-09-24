@@ -61,8 +61,7 @@ export const WRITE_MAX_SOURCES = 8;
 
 /**
  * 篇幅档。`lead` / `more` 走现有 exec 档（逐字不变，那是唯一有实测读数的配置），
- * `brief` 走 1–2 句的短档。不传 / 非法值 = `lead`（向后兼容，不报 400——篇幅是写作风格，
- * 不是正确性约束）。
+ * `brief` 走 1–2 句的短档。不传 / 非法值的处理见 `normalizeTier`。
  */
 export type V6Tier = 'lead' | 'more' | 'brief';
 export const V6_TIERS: V6Tier[] = ['lead', 'more', 'brief'];
@@ -75,8 +74,6 @@ export const V6_TIERS: V6Tier[] = ['lead', 'more', 'brief'];
  * 咬不到，但会说谎的读数不留。
  */
 export const normalizeTier = (t: unknown): V6Tier => (V6_TIERS.includes(t as V6Tier) ? (t as V6Tier) : 'more');
-/** 必写档的放宽量。MUST_SLACK 在这条路径下的推导值是 0（原型 60–64 行：试过 1，已撤回）。 */
-const MUST_SLACK = 0;
 
 /** 句子定位：{articleId, sentence} → 原句文本。越界返回 undefined。 */
 function sentenceOf(sentences: SentenceTable, articleId: number, sentence: number): string | undefined {
@@ -257,12 +254,11 @@ export const supportOf = (a: { sources: V6Source[] }): number => new Set(a.sourc
 
 /**
  * 必写档：报道篇数达到本簇最高档的重点（下限 2 篇，单篇报道的不强制）。
- * WRITE_REPAIR 下放宽到最高档与次一档（top-1）：窗口步重跑一次，c28 营救线各条重点从 4 篇变 3 篇，
- * 只取最高档时整条线掉出必写、从成稿里消失——一篇之差不该决定一整条线写不写。
+ * （原型试过放宽到「最高档与次一档」，已撤回。）
  */
-export function mustCover(anchors: V6Anchor[], slack = 0): Set<string> {
+export function mustCover(anchors: V6Anchor[]): Set<string> {
   const top = Math.max(0, ...anchors.map(supportOf));
-  const floor = Math.max(2, top - slack);
+  const floor = Math.max(2, top);
   return top >= 2 ? new Set(anchors.filter(a => supportOf(a) >= floor).map(a => a.id)) : new Set<string>();
 }
 
@@ -286,7 +282,7 @@ export function writeMaterial(
    */
   withMustCover = true
 ): string {
-  const must = withMustCover ? mustCover(anchors, MUST_SLACK) : new Set<string>();
+  const must = withMustCover ? mustCover(anchors) : new Set<string>();
   const list = [...anchors].sort((a, b) => supportOf(b) - supportOf(a));
   const line = (s: V6Source) => `[${s.articleId}:${s.sentence}] ${sentenceOf(sentences, s.articleId, s.sentence)}`;
   return list

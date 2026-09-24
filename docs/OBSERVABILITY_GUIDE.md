@@ -67,7 +67,7 @@ workflow 重跑一遍并与生产产出逐字段比对（前置条件与局限�
 - **去向按请求头选**：
   - `x-observe: inline` → 记录随 JSON 响应的 `observation` 字段带回，**不写 R2**。开发 / 验收脚本用
     （本地 `wrangler dev` 直连生产桶，写了就是污染）
-  - 只有 `x-trace-id` → LLM I/O 由 `llm-call-logger` 落 `llm-calls/`；span 只有 kind=step 的才写 `observability/spans/`，目前没有代码产生
+  - 只有 `x-trace-id` → LLM I/O 由 `llm-call-logger` 落 `llm-calls/`，不记 span
   - 都没有 → 不记
 - **跨请求**（backend → ai-worker、step 重试）靠 `x-trace-id` 头传；ALS 只在一次请求内有效
 - **没经过 `loggedChat` 的 LLM 调用记不到**（如 `/meridian/chat` 直接调 `AIGatewayService.chat`）

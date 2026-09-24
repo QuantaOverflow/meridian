@@ -58,9 +58,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 |---|---|
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
 | `ARTICLES_BUCKET`（R2 binding） | 观测落盘 + 读文章正文，与 backend 同一个桶 `meridian-articles-prod` |
-| `CF_VERSION_METADATA`（binding） | span 里的 `deployment_version` |
 | `ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | `services/logger.ts` 的日志开关 |
-| `ENVIRONMENT` | `wrangler.toml` 的 `[env.*].vars` 设置；只写进 span 的 `runtime_env` |
 
 ## 观测数据落在哪
 
@@ -68,7 +66,6 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 
 - `llm-calls/{trace_id}/{phase}-{idx}.json`：一次 LLM 调用的完整输入/输出（`services/llm-call-logger.ts`）；`idx` 取 `x-call-index` 头或 `callLLM` 的 `callIndex`
 - `observability/sensors/{trace_id}/{kind}-{idx}.json`：传感器读数，例如输出语言告警（`services/sensor-log.ts`）
-- `observability/spans/{trace_id}/…`：管线内部各段的结构化记录（`services/span-log.ts`）
 
 请求带 `x-observe: inline` 时不写 R2，记录随响应的 `observation` 字段返回（`services/observe.ts`），用于本地验收。
 读这些数据的入口是 backend 的 `/observability/*` 路由，见 [`docs/OBSERVABILITY_GUIDE.md`](../../docs/OBSERVABILITY_GUIDE.md)。

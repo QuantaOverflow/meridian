@@ -50,7 +50,7 @@ const CONCURRENCY = 2;
 /** 原型 chatJson 的重试策略：三次、温度依次这三个值、退避 3s → 8s。 */
 const TEMPERATURES = [0.1, 0.3, 0.3];
 const BACKOFF_MS = [3000, 8000];
-/** callIndex 起点：与写作层（700）、整篇标题（690）、报告层（900）错开，免得同一 trace 下 R2 key 互相覆盖。 */
+/** callIndex 起点：与整篇标题（690）错开，免得同一 trace 下 R2 key 互相覆盖。 */
 const CALL_INDEX_BASE = 600;
 /**
  * 每块（story）占的 callIndex 槽位数。
@@ -60,7 +60,7 @@ const CALL_INDEX_BASE = 600;
  * 用 backend 传进来的 story 序号乘上这个步长把块彼此隔开。
  *
  * 100 是够用的上界：一块最多 = 窗口数 × 3 次尝试 + 写作 3 次尝试，最大的簇也只有 3 个窗口。
- * 日志 key 里带 phase 段（`brief_block_v6`），与 report_v3(900)/brief_generation(700)/标题(690)
+ * 日志 key 里带 phase 段（`brief_block_v6`），与 brief_generation 的标题(690)
  * 天然分开，所以这里只需要块间唯一，基数取多少都不会跨 phase 撞车。
  */
 const CALL_INDEX_PER_STORY = 100;
@@ -69,13 +69,11 @@ interface BriefBlockV6ArticleInput {
   id: number;
   title: string;
   content: string;
-  url?: string;
   publishDate?: string;
   sourceId?: number | null;
 }
 
 export interface BriefBlockV6Input {
-  title?: string;
   articles: BriefBlockV6ArticleInput[];
   /**
    * 篇幅档。`lead` / `more` / 不传 = 现有 exec 档（3–5 句），`brief` = 1–2 句短档。
@@ -110,8 +108,6 @@ export interface BriefBlockV6Result {
   verdict: 'written' | 'not_a_single_event';
   reason?: string;
   block: null | { title: string; sentences: V6Sentence[] };
-  /** articleId → 切句表，0 起下标；`sources[].sentence` 是 1 起，即 sentences[aid][n-1]。 */
-  sentences: SentenceTable;
   trace: BriefBlockV6Trace;
 }
 
@@ -137,12 +133,8 @@ export class BriefBlockV6Service {
   private repetitionRetries = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
-  /** dev-only：模型 spike 用；不传就是 PHASE_DEFAULTS 里的 glm-4.7-flash。 */
-  private readonly model: string;
-
-  constructor(private env: CloudflareEnv, private traceContext: TraceContext = {}, modelOverride?: string) {
+  constructor(private env: CloudflareEnv, private traceContext: TraceContext = {}) {
     this.ai = new AIGatewayService(env);
-    this.model = modelOverride || MODEL;
   }
 
   /**
@@ -175,7 +167,7 @@ export class BriefBlockV6Service {
       let err: unknown = null;
       try {
         const res = await callLLM(this.ai, this.env, this.traceContext, 'brief_block_v6', [{ role: 'user', content: attemptPrompt }], {
-          model: this.model,
+          model: MODEL,
           temperature: TEMPERATURES[attempt],
           callIndex,
           responseFormat: { type: 'json_schema' as const, json_schema: schema },
@@ -292,7 +284,6 @@ export class BriefBlockV6Service {
       verdict: written.verdict,
       ...(written.verdict === 'not_a_single_event' ? { reason: String(written.reason) } : {}),
       block,
-      sentences,
       trace: {
         articles: articles.length,
         windows: windows.length,
@@ -303,7 +294,7 @@ export class BriefBlockV6Service {
         writeRejects: this.writeRejects,
         llmCalls: this.llmCalls,
         neurons: this.neurons,
-        model: this.model,
+        model: MODEL,
         windowChars: WINDOW_CHARS,
         tier,
       },

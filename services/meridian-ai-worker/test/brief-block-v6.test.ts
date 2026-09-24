@@ -126,7 +126,7 @@ describe.skipIf(!dataReady)('brief-block-v6 纯函数 vs 原型导出', () => {
 
     it(`c${cid}: mustCover 结果集合逐个 id 相同`, () => {
       const anchors = loadAnchors(cid);
-      const mine = [...mustCover(anchors, 0)].sort();
+      const mine = [...mustCover(anchors)].sort();
       const theirs = [...proto.mustCover(anchors, 0)].sort();
       expect(mine).toEqual(theirs);
       expect(mine.length).toBeGreaterThan(0);

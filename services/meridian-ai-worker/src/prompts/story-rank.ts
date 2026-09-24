@@ -61,7 +61,7 @@
  * （实测一轮把一场国葬选进前 12，聚合把它挤掉了）。
  */
 
-/** 数据块起始标记。泛化断言只扫这之前的指令段。 */
+/** 数据块起始标记（指令段与候选数据的分隔）。 */
 const RANK_DATA_BLOCK_MARK = '\n# Stories\n';
 
 export interface RankCandidate {

@@ -7,12 +7,6 @@ compatibility_flags = ["nodejs_compat"]
 # 公网口此前全无鉴权（/meridian/chat 可直接烧 LLM 额度）。eval 脚本默认打本地 wrangler dev。
 workers_dev = false
 
-[env.production]
-vars = { ENVIRONMENT = "production" }
-
-[env.development]
-vars = { ENVIRONMENT = "development" }
-
 # AI Binding for Cloudflare Workers AI
 [ai]
 binding = "AI"
@@ -28,12 +22,6 @@ bucket_name = "meridian-articles-prod"
 # preview_bucket_name 一并删掉：它优先于 bucket_name 生效，会把 dev 指向空的
 # meridian-articles-dev；正文只在 prod 桶里。代价是本地 dev 的写入也落生产桶。
 remote = true
-
-# span 落盘里的 deployment_version 取自这里。原型用 git HEAD 标版本，生产没有 git，
-# CF 的 version_metadata 给的是这次**部署**的 version id——同一个 commit 重部署两次会变，
-# 所以它只能当"哪次部署"读，不能当"哪版代码"读（span 里另有 runtime_env 区分本地/生产）。
-[version_metadata]
-binding = "CF_VERSION_METADATA"
 
 # wrangler.toml (wrangler v3.88.0^)
 [observability.logs]

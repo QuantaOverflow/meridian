@@ -87,12 +87,7 @@ export const $reports = pgTable('reports', {
   // 而 usedArticles 按拿到情报报告的故事算。
   usedSources: integer('used_sources').notNull(),
 
-  // ⚠️ 面向机器，不是面向读者的摘要。由 tldrGeneration prompt 产出，格式是每行
-  // `故事标识 | 状态 | 关键实体 | 5-10 词要点`，供**次日**的简报模型读取当天覆盖了什么。
-  // 读者端要展示的摘要请用 tldr_prose，别把这一列渲染给人看。
-  tldr: text('tldr'),
-  // 面向读者的散文摘要（2-3 句），读者端简报页头部展示。与 tldr 分开存是因为 tldr 被
-  // 次日管线消费，格式不能动。
+  // 面向读者的散文摘要（2-3 句），读者端简报页头部展示。
   tldr_prose: text('tldr_prose'),
 
   clustering_params: jsonb('clustering_params'),

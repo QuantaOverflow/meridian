@@ -8,8 +8,7 @@ import { recordLLMCall } from './observe'
 export type LLMCallPhase =
   | 'article_analysis'
   | 'brief_generation'
-  | 'tldr_generation'
-  // 读者端的散文摘要，与 tldr_generation 用途不同（那个是给次日模型读的机器格式）
+  // 读者端的散文摘要
   | 'tldr_prose_generation'
   // 簇判定：一簇一次，判「是不是一件事」+ 起名。2026-09-05 起取代 storyline 两段式
   // （命名主线 + 逐篇归类），后者已随之删除。

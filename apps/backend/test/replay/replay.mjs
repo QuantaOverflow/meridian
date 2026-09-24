@@ -267,7 +267,7 @@ async function startWrangler(configs, port, databaseUrl) {
 
 // ── 比对 ──────────────────────────────────────────────────────────────────
 const STORY_FIELDS = ['cluster_id', 'title', 'importance', 'article_count', 'article_ids', 'selected_for_intel'];
-const REPORT_FIELDS = ['title', 'content', 'tldr', 'tldr_prose', 'total_articles', 'used_articles', 'used_sources', 'model_author'];
+const REPORT_FIELDS = ['title', 'content', 'tldr_prose', 'total_articles', 'used_articles', 'used_sources', 'model_author'];
 const RUN_FIELDS = ['status', 'total_articles', 'clusters_found', 'stories_identified', 'intelligence_analyses', 'brief_content_length'];
 const BLOCK_FIELDS = ['clusterId', 'storyIdx', 'title', 'v6Title', 'tier', 'articles', 'tierArticles', 'sources', 'score', 'ok', 'text', 'sentences', 'anchors', 'windows', 'windowFailures', 'citationsRepaired', 'writeRejects', 'llmCalls', 'error'];
 

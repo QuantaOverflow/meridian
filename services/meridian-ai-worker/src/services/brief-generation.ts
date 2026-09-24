@@ -1,12 +1,12 @@
 /**
- * 简报 tldr / 散文摘要生成服务
+ * 简报散文摘要生成服务
  * 生产环境错误处理，直接抛出错误而不使用fallback
  */
 
 import { AIGatewayService } from './ai-gateway';
 import { TraceContext, LLMCallPhase } from './llm-call-logger';
 import { callLLM } from './call-llm';
-import { getTldrGenerationPrompt, getTldrProsePrompt } from '../prompts/tldrGeneration';
+import { getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { CloudflareEnv, ChatResponse } from '../types';
 import { QuotaHandler } from '../utils/quota-handler';
 
@@ -24,52 +24,9 @@ export class BriefGenerationService {
   }
 
   /**
-   * 生成TLDR摘要 - 生产环境版本，直接抛出错误
-   */
-  async generateTLDR(
-    briefTitle: string, 
-    briefContent: string
-  ): Promise<{ success: boolean; data?: { tldr: string }; error?: string }> {
-    try {
-      console.log(`[TLDR Generation] 为简报生成TLDR`);
-
-      // AI生成（带重试策略，失败时直接抛出错误）
-      const aiOperation = async () => {
-        const tldrPrompt = getTldrGenerationPrompt(briefTitle, briefContent);
-        
-        const response = await this.callAI(tldrPrompt, 'tldr_generation');
-        
-        // 清理TLDR内容
-        let content = response.trim();
-        if (content.startsWith('```') && content.endsWith('```')) {
-          content = content.slice(3, -3).trim();
-        }
-
-        return content;
-      };
-
-      const tldrContent = await QuotaHandler.retryWithBackoff(aiOperation);
-
-      console.log(`[TLDR Generation] TLDR生成完成`);
-      return {
-        success: true,
-        data: { tldr: tldrContent }
-      };
-
-    } catch (error) {
-      console.error('[TLDR Generation] 生成失败:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
-      };
-    }
-  }
-
-  /**
    * 生成面向读者的散文摘要（reports.tldr_prose）。
    *
-   * 与 generateTLDR 并列但用途相反：那个产出给次日模型读的机器格式，这个产出给人读的
-   * 2-3 句导语。temperature 取 0 与 generateTLDR 一致——摘要要可复现，不需要创造性。
+   * 给人读的 2-3 句导语。temperature 取 0——摘要要可复现，不需要创造性。
    */
   async generateProseTldr(
     briefTitle: string,

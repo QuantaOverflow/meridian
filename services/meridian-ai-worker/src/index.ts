@@ -392,57 +392,6 @@ app.post('/meridian/brief-title', async (c) => {
   }
 })
 
-// ============================================================================
-// TLDR Generation - 基于数据契约的完整实现
-// ============================================================================
-
-app.post('/meridian/generate-brief-tldr', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    if (!body.briefTitle || !body.briefContent) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'briefTitle and briefContent are required'
-      }, 400)
-    }
-
-    console.log(`[TLDR Generation] 为简报生成TLDR`)
-
-    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
-    
-    const result = await briefService.generateTLDR(body.briefTitle, body.briefContent)
-    
-    if (!result.success) {
-      return c.json<APIResponse<null>>({ 
-        success: false,
-        error: 'Failed to generate TLDR',
-        metadata: { details: result.error }
-      }, 500)
-    }
-
-    console.log(`[TLDR Generation] TLDR生成完成`)
-
-    return c.json<APIResponse<{ tldr: string }>>({
-      success: true,
-      data: result.data!,
-      metadata: {
-        brief_title: body.briefTitle,
-        brief_length: body.briefContent.length,
-        story_count: result.data!.tldr.split('\n').filter(line => line.trim()).length
-      }
-    })
-
-  } catch (error: any) {
-    console.error('TLDR generation error:', error)
-    return c.json<APIResponse<null>>({ 
-      success: false,
-      error: 'Failed to generate TLDR',
-      metadata: { details: error.message }
-    }, 500)
-  }
-})
-
 app.post('/meridian/generate-brief-summary', async (c) => {
   try {
     const body = await c.req.json()

@@ -31,7 +31,7 @@ RSS sources ──► SourceScraperDO (one Durable Object per source)
                                          fetch body → analyze (AI Worker) → body to R2
 daily cron ──► AutoBriefGenerationWorkflow
                  embeddings (ML Service) → clustering (ML Service) → cluster judge →
-                 importance ranking → one brief block per cluster (AI Worker) → title / TLDR → Postgres
+                 importance ranking → one brief block per cluster (AI Worker) → title / summary → Postgres
                                                      │
 Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) + R2
 ```
@@ -64,7 +64,7 @@ The full step-by-step pipeline is in [`docs/meridian-workflow-architecture.md`](
 3. **Cluster judging** — `/meridian/cluster/judge`: one call per cluster decides EVENT / NO_EVENT and names the story. Importance comes from a source-count formula (`blockImportance`), not an LLM score
 4. **Importance ranking** — `/meridian/stories/rank`: three shuffled LLM rounds + Borda aggregation over all candidates, with a per-event cap
 5. **Brief blocks** — `/meridian/brief-block-v6`: each selected cluster's articles become one block of 3–5 cited sentences (1–2 for the "in brief" tier)
-6. **Assembly** — code renders three sections (lead / more / in brief); `/meridian/brief-title`, `/meridian/generate-brief-tldr`, `/meridian/generate-brief-summary` add the title and summaries; the report is saved to Postgres
+6. **Assembly** — code renders three sections (lead / more / in brief); `/meridian/brief-title`, `/meridian/generate-brief-summary` add the title and reader summary; the report is saved to Postgres
 
 ### 4. Delivery
 - Nuxt 3 reader: today's brief, archive (`/briefs`), cross-day story threads (`/stories`)
@@ -145,7 +145,6 @@ POST /meridian/cluster/judge
 POST /meridian/stories/rank
 POST /meridian/brief-block-v6
 POST /meridian/brief-title
-POST /meridian/generate-brief-tldr
 POST /meridian/generate-brief-summary
 ```
 

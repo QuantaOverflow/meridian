@@ -58,7 +58,7 @@ cron 0 13 * * *（UTC）──► AutoBriefGenerationWorkflow（每天一期）
 | 4 | `故事重要性排序` | 对**全部**候选跑三轮洗牌 + Borda 聚合；失败则退回机械分（`lib/core/story-ranking.ts`，源覆盖加权）并在观测里记一笔。再按同事件配额（`PER_EVENT_BLOCK_CAP`）取前 `maxStoriesToGenerate` | ai-worker `/meridian/stories/rank` |
 | 5 | 每个选中故事一个 step | 簇原文（R2 取正文，`pickSpreadArticles` 截到 30 篇）→ 一块逐句带出处的简报。端点内部：切句 → 切窗 → 每窗标重点 → 一次写作（lead/more 3–5 句、brief 1–2 句）→ 机械补出处。step 只回写出的句子，不回切句表 | ai-worker `/meridian/brief-block-v6` |
 | 6 | `简报标题` | `assignTiers` 分 lead / more / brief 三节（写作前已算好），`renderBriefV3` 用代码拼 markdown；块记录落 R2 `observability/brief-v3/<wf>.json` | ai-worker `/meridian/brief-title` |
-| 7 | `简报摘要` | 次日上下文用的 TLDR + 读者端散文摘要（best-effort，失败留 null） | ai-worker `/meridian/generate-brief-tldr`、`/meridian/generate-brief-summary` |
+| 7 | `简报摘要` | 读者端散文摘要（best-effort，失败留 null） | ai-worker `/meridian/generate-brief-summary` |
 | 8 | `保存简报`、`persist:story_clusters` | 写 `reports`；跨期线索归并（best-effort，失败下次补） | — |
 
 **为什么逐块一个 step**：CF 约 2% 的 invocation 会被平台 canceled，把 N 次调用挤进一个 step 等于一次抖动丢整期。

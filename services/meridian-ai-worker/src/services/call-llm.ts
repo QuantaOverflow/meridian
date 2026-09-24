@@ -24,14 +24,13 @@ interface PhaseDefault {
 // 选 glm-4.7-flash：131k 上下文 + $0.0605/M 输入（同档最便宜）。
 //
 // maxTokens 沿用迁移前的值——本地实测（真实 prompt，服务端日志判定）实际 completion_tokens：
-//   brief_generation 429-563 / 8000、tldr 40-42 / 8000，均 4x 以上余量。
+//   brief_generation 429-563 / 8000，4x 以上余量。
 //
 // ⚠️ glm-4.7-flash 是 reasoning 模型且**默认开思维链**，thinking token 计入 max_tokens 且先于正文生成
 // ——不关的话小预算 phase 会被思维链吃光、正文为空。关闭名单在 config/thinking.ts，
 // 下发动作在 ai-gateway.ts executeWorkersAIViaBinding，不在这层。
 const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
-  tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；
   // temperature 0 —— 摘要要可复现，不需要创造性。
   tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800 },

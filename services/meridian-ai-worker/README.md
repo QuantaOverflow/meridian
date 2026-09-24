@@ -12,13 +12,13 @@ AutoBriefGeneration ─► ml-service /embeddings          （聚类前批量补
                     ─► /meridian/cluster/judge        （一簇一次）
                     ─► blockImportance（backend 代码）+ /meridian/stories/rank
                     ─► /meridian/brief-block-v6       （一块一次）
-                    ─► /meridian/brief-title → /meridian/generate-brief-tldr → /meridian/generate-brief-summary
+                    ─► /meridian/brief-title → /meridian/generate-brief-summary
 ```
 
 embedding 和聚类不在本服务，在 `services/meridian-ml-service`。
 backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，那里的客户端方法就是契约。
 
-## 路由（`src/index.ts`，共 9 条）
+## 路由（`src/index.ts`，共 8 条）
 
 请求/响应形状以 handler 为准；除 `/health` 外都返回 `{ success, data?, error?, metadata? }`。
 
@@ -30,7 +30,6 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `POST /meridian/stories/rank` | `{candidates:[{id,title,articles}]}` → 三轮洗牌 + Borda 聚合取前 12（`services/story-rank.ts`）；三轮全败回 500 | AutoBriefGeneration |
 | `POST /meridian/brief-block-v6` | `{title, articles:[{id,title,content}], tier?}` → 一簇写成一块简报（`services/brief-block-v6.ts`）；`tier` = `lead` / `more` / `brief` | AutoBriefGeneration |
 | `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
-| `POST /meridian/generate-brief-tldr` | `{briefTitle, briefContent}` → `tldr`（机器格式，给次日管线读，不给读者看） | AutoBriefGeneration |
 | `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
 | `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 `workers-ai` / `@cf/zai-org/glm-4.7-flash` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`） |
 

@@ -23,7 +23,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
    批量补算缺失 embedding（ml-service `/embeddings`）→ 聚类（ml-service `/ai-worker/clustering`，
    客户端 `src/lib/services/clustering.ts`）→ 每簇 ai-worker `/meridian/cluster/judge` →
    `blockImportance` + `/meridian/stories/rank` 排序 → 每块 `/meridian/brief-block-v6` →
-   `/meridian/brief-title`、`/meridian/generate-brief-tldr`、`/meridian/generate-brief-summary` → 写 `reports`。
+   `/meridian/brief-title`、`/meridian/generate-brief-summary` → 写 `reports`。
 
 编排细节见 [`docs/meridian-workflow-architecture.md`](../../docs/meridian-workflow-architecture.md)；
 现行链路与已证伪路线见 [`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)。

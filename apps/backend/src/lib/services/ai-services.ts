@@ -3,7 +3,7 @@
  * 专注于服务调用和结果转发，不处理具体实现细节
  *
  * 跨 service 调用的接缝：brief workflow 相关方法（generateEmbedding / rankStories / judgeCluster /
- * briefBlockV6 / briefTitle / generateBriefTldr / generateBriefSummary）返回
+ * briefBlockV6 / briefTitle / generateBriefSummary）返回
  * ServiceResult<T> —— 把「status 检查 / .json() / .success 检查 / dispose RPC stub」这套仪式
  * 收进模块内，调用方只拿判别式结果并施加自己的错误策略（throw / 跳过 / fail-open）。
  * 注：analyzeArticle 属文章管线，返回 Response 不变（不在此接缝内）。
@@ -21,10 +21,6 @@ interface EmbeddingData {
   model?: string;
   dimensions?: number;
 }
-interface BriefTldrData {
-  tldr: string;
-}
-
 interface BriefSummaryData {
   tldrProse: string;
 }
@@ -245,26 +241,7 @@ class AIWorkerService {
   }
 
   /**
-   * 生成简报 TLDR
-   */
-  async generateBriefTldr(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefTldrData>> {
-    const request = new Request(`${this.baseUrl}/meridian/generate-brief-tldr`, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({
-        briefTitle,
-        briefContent
-      })
-    });
-
-    return await this.callJson<BriefTldrData>(request);
-  }
-
-  /**
-   * 生成面向读者的散文摘要（reports.tldr_prose）
-   *
-   * 与 generateBriefTldr 是两件事：那个产出给次日模型读的机器格式记忆状态，
-   * 这个产出读者端展示的 2-3 句导语。
+   * 生成面向读者的散文摘要（reports.tldr_prose）：读者端展示的 2-3 句导语。
    */
   async generateBriefSummary(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefSummaryData>> {
     const request = new Request(`${this.baseUrl}/meridian/generate-brief-summary`, {

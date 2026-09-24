@@ -92,6 +92,13 @@
       "when": 1790260075466,
       "tag": "0012_spooky_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790261804496,
+      "tag": "0013_steep_silverclaw",
+      "breakpoints": true
     }
   ]
 }

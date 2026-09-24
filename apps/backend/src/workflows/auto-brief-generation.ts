@@ -80,7 +80,6 @@ export interface BriefGenerationParams {
 interface BriefGenerationResultData {
   title: string;
   content: string;
-  tldr: string;
   /** 面向读者的散文摘要；生成失败时为 null（不阻断简报落库） */
   tldrProse: string | null;
   model_author: string;
@@ -1832,7 +1831,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         `[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符，${rendered.sections} 节）`
       );
 
-      // 5d 摘要：次日模型用的 TLDR + 读者端展示的散文导语。与拼装分开成 step，
+      // 5d 摘要：读者端展示的散文导语。与拼装分开成 step，
       // 是为了让"简报正文已经生成好了"这件事不被摘要环节的失败拖累。
       const briefSummaryStepConfig: WorkflowStepConfig = {
         retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
@@ -1840,17 +1839,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
       const summaries = await step.do('简报摘要', briefSummaryStepConfig, async () => {
         const aiServices = createAIServices(this.env, workflowId);
-        const tldr = await aiServices.aiWorker.generateBriefTldr(assembled.title, assembled.content);
-        if (!tldr.ok) {
-          throw new Error(`TLDR生成失败: ${tldr.error}`);
-        }
         // 读者端展示用的散文摘要。刻意 best-effort：摘要只影响读者端标题下那一段的显示，
         // 为它整步失败、丢掉一份已经生成好的简报是不划算的。失败留 null，前端自然不渲染。
         const tldrProse = await aiServices.aiWorker.generateBriefSummary(assembled.title, assembled.content);
         if (!tldrProse.ok) {
           console.warn(`[AutoBrief] 散文摘要生成失败（不阻断简报）: ${tldrProse.error}`);
         }
-        return { tldr: tldr.value.tldr, tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null };
+        return { tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null };
       });
 
       // used_articles 是真正喂进简报的去重文章数 = 出了块的那些 story 的 articleIds 并集
@@ -1867,7 +1862,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const briefResult: BriefGenerationResultData = {
         title: assembled.title,
         content: assembled.content,
-        tldr: summaries.tldr,
         tldrProse: summaries.tldrProse,
         model_author: 'meridian-ai-worker',
         stats: {
@@ -1923,7 +1917,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               totalArticles: briefResult.stats.total_articles,
               usedArticles: briefResult.stats.used_articles,
               usedSources: usedSources,
-              tldr: briefResult.tldr,
               tldr_prose: briefResult.tldrProse,
               clustering_params: {
                 workflowId,
@@ -2014,7 +2007,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         reportId,
         title: briefResult.title,
         contentLength: briefResult.content.length,
-        tldrLength: briefResult.tldr?.length || 0,
+        tldrProseLength: briefResult.tldrProse?.length || 0,
         stats: briefResult.stats
       });
 

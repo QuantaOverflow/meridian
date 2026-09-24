@@ -5,12 +5,6 @@
 // 退役，其代码于 2026-09-22 清理时删除——聚类换成不降维凝聚之后一簇 ≈ 一件事，切分层
 // 不存在了，也就没有「把切碎的并回去」这件事。
 //
-// 删掉的那些代码里有一批实测读数，已蒸馏进 docs/knowledge/，删代码前落库：
-//   lesson-llm-oversplits-single-large-event   过拆病灶（91 篇切 22 条、占 11/25 个名额）
-//   measure-story-merge-threshold-094          阈值 0.94 的来历与它的失效边界（金标已丢失）
-//   lesson-single-link-merge-falsified         单链 vs 全链 7 期对照 + Hassanzadeh VLDB'09
-//   mechanism-spread-sampling-article-cap      下面这个函数的依据
-//
 // 现在只剩取样：合并后（或簇本身）篇数超上限时，按发布时间跨度均匀取。
 
 /** 单条 story 的文章上限。见 pickSpreadArticles 的注释。 */

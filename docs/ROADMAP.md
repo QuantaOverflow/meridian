@@ -152,7 +152,7 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
   3 条写进正文，真实 update/冲突召回 0）；`renderReportForWriter` 没把 `fact.sources` 渲染进
   `<key_points>`，写作时可回溯率 0/83（数据就在对象上，`numberedPoints` 已带）；`marks` check
   精确率 33%/召回 20%、`groundingFixes` 全空，只标不改
-- 验收判据要换层级：句级门答不了 block 级问题，详见 `docs/knowledge/nodes/lesson-acceptance-unit-block-not-sentence.md`
+- 验收判据要换层级：句级门答不了 block 级问题
 
 **下一步候选**：错误来源归因（报告层 vs 写作层，决定要不要让报告层补冲突 / 时间标注）；两段式检测（逐句判官多标 → 整簇判官复核，未测）
 

@@ -37,9 +37,5 @@
     "样本极小（15 条），按形状分之后每类只有 1-9 条，分类别的召回没有统计意义",
     "证据是已退役的 v3 写作层产物，属 retired_intermediate —— 这份是消耗品，读数已蒸馏，语料留着只为看例子",
     "harness 脚本留在 eval/scorer-recall/ 但跑不起来（README 自陈）。留着是因为它们记录了重建方法"
-  ],
-  "distilled": [
-    "docs/knowledge/nodes/experiment-scorer-detection-recall-natural.md",
-    "docs/knowledge/nodes/lesson-source-stripping-undetected.md"
   ]
 }

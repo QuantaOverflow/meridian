@@ -62,8 +62,6 @@
 - 观测：`services/observe.ts` 的 `traced()` + `x-observe: inline`，新组件每步包一行即可（见 `docs/OBSERVABILITY_GUIDE.md` 第 5 节）
 - 验收：`apps/backend/prototypes/brief-writer-v3/verify.ts`（`--replay` 可重判落盘不重新生成）
 - 开发期判官用 Claude subagent 或 codex，不花 Workers AI 的钱
-- **证据链与证伪清单的可查索引**：`docs/knowledge/INDEX.md`（按「你要做什么」分组；本 ADR 的
-  证伪条目在那里各有一个节点，带不变量、失效条件与读数出处）。开新 spike 前先查那份索引
 
 ## 未做
 

@@ -70,7 +70,7 @@ cron 0 13 * * *（UTC）──► AutoBriefGenerationWorkflow（每天一期）
 - b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账 —— 已删
 - ProcessArticles 内逐篇 embedding —— 2026-07 改为简报 workflow 批量补算
 
-依据与读数见 `docs/adr/0003-cluster-as-brief-block.md`、`docs/adr/0004-brief-writer-v3.md` 与 `docs/knowledge/INDEX.md`。
+依据与读数见 `docs/adr/0003-cluster-as-brief-block.md`、`docs/adr/0004-brief-writer-v3.md`。
 
 ## 观测与测试
 

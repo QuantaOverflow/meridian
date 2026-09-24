@@ -2,9 +2,7 @@
 
 - 状态：已采纳（方法论；配套实现已入库：`eval/cluster-to-brief/CONTRACTS.md` 与 dataset / policy / judges 三层）
 - 日期：2026-09-20
-- 相关：ADR 0003（一簇即一条）、ADR 0004（写作层 v3）、`docs/knowledge/nodes/decision-eval-module-contracts.md`、
-  `lesson-coverage-metric-pushes-listing`、`lesson-handpicked-fixtures-dont-extrapolate`、`lesson-judge-needs-alignment`、
-  `lesson-run-variance-needs-epochs`
+- 相关：ADR 0003（一簇即一条）、ADR 0004（写作层 v3）
 
 ## 背景：这一轮发生了什么
 

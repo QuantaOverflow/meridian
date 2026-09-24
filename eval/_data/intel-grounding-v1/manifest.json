@@ -45,9 +45,5 @@
     "rubric §6 要求过采稀有类，本批没做到（见上一条）",
     "self-preference 泄漏：被评对象由 qwen-long 生成、judge 是 qwen-max，同家族。claude-secondlabel.jsonl 是为此做的对照",
     "Claude judge 的 κ=0.779 是离线核算，真 API 复验从未留痕；out/judge-meta/ 七份产物里没有任何一份 judge_model=claude-*。真实 API 重跑过的只有 qwen-max（κ=0.407 FAIL）与 deepseek-v3（同样 FAIL）"
-  ],
-  "distilled": [
-    "docs/knowledge/nodes/experiment-intel-grounding-judge-selection.md",
-    "docs/knowledge/nodes/lesson-intel-grounding-readme-stale.md"
   ]
 }

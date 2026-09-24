@@ -132,7 +132,7 @@ china      116篇   杂质 48/116 = 41% → judge 判 NO_EVENT 仍放行
 
 ## 探索范围的约束
 
-**不许走(全部有据,理由见 `docs/knowledge/`)**
+**不许走(全部有据)**
 
 - multi-agent debate / 多 agent 互相质疑 —— 等算力下弱于简单多数投票(ICML 2024)
 - 无外部证据的自我修正 —— 准确率反而下降(Huang 2023;本仓 RARR 误删 20/43)

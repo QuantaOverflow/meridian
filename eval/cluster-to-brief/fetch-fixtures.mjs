@@ -57,7 +57,7 @@ async function getJSON(url, tries = 4) {
     try {
       const r = await fetch(url, {
         signal: AbortSignal.timeout(120_000),
-        // /events 已在挂载处加鉴权（与 eval/_shared/backend.ts 同一约定：API_TOKEN 未设则不带头，打生产会 401）
+        // /events 已在挂载处加鉴权（API_TOKEN 未设则不带头，打生产会 401）
         headers: process.env.API_TOKEN ? { Authorization: `Bearer ${process.env.API_TOKEN}` } : {},
       });
       if (!r.ok) { last = `HTTP ${r.status}`; continue; }

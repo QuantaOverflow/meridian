@@ -109,4 +109,3 @@
 ## 禁区（未明确要求不要碰）
 - `packages/database/migrations/` — 历史 migration 不可变
 - `services/meridian-ml-service/model-cache/` — 470MB 模型，gitignored
-- `apps/backend/src/tests/` — gitignored

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
 
   "workspaces": {
     ".": {
@@ -29,14 +29,17 @@
     },
 
     "packages/database": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["drizzle/**"]
+      "project": ["src/**/*.ts"]
     },
 
     "eval/*": {
       "entry": ["**/*.{ts,mjs}"],
+      "project": ["**/*.{ts,mjs}"]
+    },
+
+    "eval/cluster-to-brief": {
+      "entry": ["**/*.{ts,mjs}"],
       "project": ["**/*.{ts,mjs}"],
-      "ignore": ["out/**", "scratch/**", "fixtures/**", "datasets/**"],
       "ignoreBinaries": ["wrangler"]
     }
   },
@@ -47,7 +50,7 @@
     "services/meridian-ml-service/cf-worker"
   ],
 
-  "ignore": ["**/prototypes/**", "**/out/**", "**/scratch/**"],
+  "ignore": ["**/prototypes/**"],
 
   "ignoreIssues": {
     "eval/cluster-to-brief/lib.mjs": ["duplicates"]

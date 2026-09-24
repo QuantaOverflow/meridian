@@ -1,25 +1,5 @@
 // 确定性聚类指标 —— 纯函数，零依赖、零 LLM、零网络。这是 eval 的"地面真值打分器"。
-import type { Partition, BcubedMetrics, ClusteringSnapshot, ReferencePartition } from './types.js';
-
-// 把聚类快照转成 Partition。噪声点(clusterId=-1)在 toPartition 阶段保留为 -1，
-// 由 bcubed 内部展开成独立单例簇(语义：噪声里的每篇都自成一组)。
-export function snapshotToPartition(snap: ClusteringSnapshot): Partition {
-  const p: Partition = new Map();
-  for (const c of snap.clusters) {
-    for (const id of c.articleIds) p.set(id, c.clusterId);
-  }
-  return p;
-}
-
-// 把参考划分转成 Partition。unassigned 的文章各自单例(用负的唯一标签)。
-export function referenceToPartition(ref: ReferencePartition): Partition {
-  const p: Partition = new Map();
-  ref.stories.forEach((s, idx) => {
-    for (const id of s.articleIds) p.set(id, `S${idx}`);
-  });
-  (ref.unassigned || []).forEach((id, k) => p.set(id, `U${k}`));
-  return p;
-}
+import type { Partition, BcubedMetrics } from './types.js';
 
 // 把"噪声 -1"展开成各自独立的单例簇标签，避免所有噪声被当成同一个大簇。
 function expandNoise(part: Partition): Map<number, string> {

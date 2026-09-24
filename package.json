@@ -6,7 +6,6 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "typecheck": "node scripts/check-rules.mjs && turbo run typecheck",
     "knowledge": "node node_modules/.pnpm/tsx@4.19.3/node_modules/tsx/dist/cli.mjs scripts/knowledge/build.ts"

@@ -9,7 +9,7 @@ export class Logger {
     this.enableDetailedLogging = env.ENABLE_DETAILED_LOGGING === 'true'
   }
 
-  log(level: LogLevel, message: string, metadata?: Record<string, any>, error?: Error, duration?: number): void {
+  log(level: LogLevel, message: string, metadata?: Record<string, any>, error?: Error): void {
     if (!this.shouldLog(level)) {
       return
     }
@@ -20,8 +20,7 @@ export class Logger {
       requestId: metadata?.requestId || 'unknown',
       message,
       metadata: this.enableDetailedLogging ? metadata : this.sanitizeMetadata(metadata),
-      error,
-      duration
+      error
     }
 
     this.writeLog(entry)
@@ -90,8 +89,7 @@ export class Logger {
           message: entry.error.message,
           stack: this.enableDetailedLogging ? entry.error.stack : undefined
         }
-      }),
-      ...(entry.duration && { duration: `${entry.duration}ms` })
+      })
     }
 
     // Use console methods based on log level

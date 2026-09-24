@@ -541,7 +541,6 @@ app.post('/meridian/chat', async (c) => {
       // ?? 而非 ||：调用方显式传 temperature: 0（judge 场景）时必须生效，|| 会吞成 0.7
       temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
-      stream: body.options?.stream || false,
       // 解码参数透传。不传就是原行为（provider 侧不下发），向后兼容。
       // 这里是显式白名单：不在名单上的 options 会被静默丢弃且照样 200，加参数必须同时改这里
       // 和 ai-gateway.ts 的 executeWorkersAIViaBinding。

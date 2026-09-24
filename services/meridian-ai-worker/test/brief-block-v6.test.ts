@@ -17,7 +17,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { splitSentences } from '../src/utils/report-v3';
-import { WRITE_SCHEMA, getWritePrompt, getWriteSchema } from '../src/prompts/briefBlockV6';
+import { getWritePrompt, getWriteSchema } from '../src/prompts/briefBlockV6';
 import {
   contextOf,
   retryInstruction,
@@ -94,7 +94,7 @@ describe.skipIf(!dataReady)('brief-block-v6 纯函数 vs 金标（d0916 c12/c23/
 
     it(`c${cid}: writeMaterial 与金标逐字相等`, () => {
       const { sentences } = loadCluster(cid);
-      const material = writeMaterial(loadAnchors(cid), sentences, true, true);
+      const material = writeMaterial(loadAnchors(cid), sentences);
       expect(material).toBe(GOLDEN[cid].material);
       expect(sha16(material)).toBe(MATERIAL_SHA[cid].sha);
     });
@@ -307,7 +307,6 @@ describe('brief-block-v6 篇幅档（tier）', () => {
     expect(promptOf(undefined)).toBe(FIX_PROMPT);
     expect(JSON.stringify(getWriteSchema('more'), null, 2) + '\n').toBe(FIX_SCHEMA);
     expect(JSON.stringify(getWriteSchema(undefined), null, 2) + '\n').toBe(FIX_SCHEMA);
-    expect(JSON.stringify(WRITE_SCHEMA)).toBe(JSON.stringify(getWriteSchema('more')));
 
     // 反向对照：改动前 lead 与 more 逐字相同，改动后必须分开——否则上面四条等于没查
     expect(promptOf('lead')).not.toBe(FIX_PROMPT);

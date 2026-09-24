@@ -1,6 +1,5 @@
 /**
- * 简报生成服务
- * 基于 intelligence-pipeline.test.ts 的简报生成契约
+ * 简报 tldr / 散文摘要生成服务
  * 生产环境错误处理，直接抛出错误而不使用fallback
  */
 
@@ -38,11 +37,7 @@ export class BriefGenerationService {
       const aiOperation = async () => {
         const tldrPrompt = getTldrGenerationPrompt(briefTitle, briefContent);
         
-        const response = await this.callAI(tldrPrompt, undefined, {
-          temperature: 0,
-          phase: 'tldr_generation',
-          callIndex: 0
-        });
+        const response = await this.callAI(tldrPrompt, 'tldr_generation');
         
         // 清理TLDR内容
         let content = response.trim();
@@ -86,11 +81,7 @@ export class BriefGenerationService {
       const aiOperation = async () => {
         const prompt = getTldrProsePrompt(briefTitle, briefContent);
 
-        const response = await this.callAI(prompt, undefined, {
-          temperature: 0,
-          phase: 'tldr_prose_generation',
-          callIndex: 0
-        });
+        const response = await this.callAI(prompt, 'tldr_prose_generation');
 
         let content = response.trim();
         if (content.startsWith('```') && content.endsWith('```')) {
@@ -128,45 +119,18 @@ export class BriefGenerationService {
   // 私有辅助方法
   // ============================================================================
 
-  private async callAI(
-    prompt: string,
-    systemPrompt?: string,
-    options: {
-      provider?: string; model?: string; temperature?: number; maxTokens?: number;
-      phase?: LLMCallPhase; callIndex?: number;
-      /** 约束式解码。不传即原行为。 */
-      responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
-      /** 复读抑制。见 CallLLMOverrides 的注释：生效已实测，但会一并压正常重复。 */
-      frequencyPenalty?: number;
-      presencePenalty?: number;
-      /** 内部用：标记这次已经是「截断后加倍预算」的重问，防止无限翻倍。 */
-      __retriedForLength?: boolean;
-    } = {}
-  ): Promise<string> {
-    const messages = systemPrompt
-      ? [
-          { role: 'system' as const, content: systemPrompt },
-          { role: 'user' as const, content: prompt }
-        ]
-      : [{ role: 'user' as const, content: prompt }];
-
+  private async callAI(prompt: string, phase: LLMCallPhase): Promise<string> {
     try {
-      // 配置走 call-llm 单一入口按 phase 定默认；temperature ?? 语义保留（5 处显式 0 不被吞）。
+      // 配置走 call-llm 单一入口按 phase 定默认；temperature 显式 0（摘要要可复现）。
       const result = await callLLM(
         this.aiGatewayService,
         this.env,
         this.traceContext,
-        options.phase ?? 'brief_generation',
-        messages,
+        phase,
+        [{ role: 'user' as const, content: prompt }],
         {
-          provider: options.provider,
-          model: options.model,
-          temperature: options.temperature,
-          maxTokens: options.maxTokens,
-          callIndex: options.callIndex ?? this.traceContext.callIndex,
-          responseFormat: options.responseFormat,
-          frequencyPenalty: options.frequencyPenalty,
-          presencePenalty: options.presencePenalty,
+          temperature: 0,
+          callIndex: 0,
           metadata: {
             requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
             timestamp: Date.now(),
@@ -190,23 +154,9 @@ export class BriefGenerationService {
         throw new Error('AI Gateway returned empty content');
       }
 
-      // 截断绝不能静默。约束式解码只管形状不管长度：数组能合法地一直长下去，写到预算用尽
-      // 就断在半个字符串里，下游 parseLooseJSON 拿不到东西，报的却是「响应无 X 字段」——
-      // 读起来像模型不配合，实际是我们给少了。2026-09-09 实测 18 块里 12 块栽在这上面。
+      // 截断绝不能静默：打满 max_tokens 时留痕，免得下游把残缺输出当正常摘要。
       if (choice?.finish_reason === 'length') {
-        const budget = options.maxTokens ?? 0;
-        console.warn(
-          `[Brief Generation] 输出被 max_tokens 截断（phase=${options.phase ?? 'brief_generation'} ` +
-            `callIndex=${options.callIndex ?? '-'} budget=${budget} chars=${content.length}）`
-        );
-        // 结构化输出的调用截断就是废品（残缺 JSON），加倍预算重问一次。
-        // 只重问一次：连续两次打满说明是 prompt 让它停不下来，那是别的问题，别在这里烧钱。
-        if (options.responseFormat && budget > 0 && !options.__retriedForLength) {
-          console.warn(`[Brief Generation] 结构化输出被截断 → 预算 ${budget} → ${budget * 2} 重问一次`);
-          return await this.callAI(prompt, systemPrompt, {
-            ...options, maxTokens: budget * 2, __retriedForLength: true,
-          });
-        }
+        console.warn(`[Brief Generation] 输出被 max_tokens 截断（phase=${phase} chars=${content.length}）`);
       }
 
       return content;

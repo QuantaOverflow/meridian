@@ -7,7 +7,6 @@ import { getProviderConfig } from '../../config/providers'
  * 本类只提供模型表查找与响应解析（mapResponse）。
  */
 export class WorkersAIProvider extends AbstractProvider {
-  name = 'workers-ai'
   config: ProviderConfig
 
   constructor() {

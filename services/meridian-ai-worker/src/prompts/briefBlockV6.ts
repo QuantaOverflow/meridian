@@ -148,9 +148,6 @@ const writeSchemaOf = (len: WriteLen) => ({
   },
 });
 
-/** `more` 档（= 原 exec 档）的写作 schema。逐字等同改动前的 `WRITE_SCHEMA`。 */
-export const WRITE_SCHEMA = writeSchemaOf(WRITE_LEN.more);
-
 export const getWriteSchema = (tier?: V6Tier | string) => writeSchemaOf(writeLenOf(tier));
 
 /**
@@ -178,7 +175,7 @@ cluster, each followed by the original source sentences, labeled [articleId:sent
 are for citing only.
 
 <material>
-${writeMaterial(anchors, sentences, true, true, !isBrief)}
+${writeMaterial(anchors, sentences, !isBrief)}
 </material>
 
 Decide first: if the material has no single dominant story (a miscellaneous topic bag), return

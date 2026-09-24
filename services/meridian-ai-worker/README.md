@@ -41,7 +41,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 
 - 除 article analyze 与 `/meridian/chat` 外，所有调用都经 `src/services/call-llm.ts` 的
   `callLLM(phase)`：每个 phase 在 `PHASE_DEFAULTS` 里有一套 provider / model / temperature /
-  maxTokens / skipCache 默认值，caller 只覆盖真不同的。
+  maxTokens 默认值，caller 只覆盖真不同的。
 - 现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
   （`AIGatewayService.executeWorkersAIViaBinding`）。思维链由 `config/thinking.ts` 关掉。
 - article analyze 在 `index.ts` 自带两档重试：`@cf/qwen/qwen3-30b-a3b-fp8` → `@cf/zai-org/glm-4.7-flash`。
@@ -51,7 +51,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 
 ## 环境变量与 secret
 
-本地复制 `.dev.vars.example` 为 `.dev.vars`；生产在本目录 `npx wrangler@4.120.0 secret put <NAME>`。
+本地复制 `.dev.vars.example` 为 `.dev.vars`；生产不需要任何 secret。
 代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `ai-gateway.ts`）：
 
 | 名称 | 作用 |

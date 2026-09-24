@@ -15,11 +15,7 @@ import { Logger } from './logger'
  * 无法在其上声明对象属性，故单独定义、在取用处断言。
  */
 interface WorkersAIBinding {
-  run(
-    model: string,
-    inputs: Record<string, unknown>,
-    options?: { gateway?: { id: string; skipCache?: boolean; cacheTtl?: number } }
-  ): Promise<any>
+  run(model: string, inputs: Record<string, unknown>): Promise<any>
 }
 
 // 需要显式关闭思维链的模型名单已移到 config/thinking.ts——capabilities/chat.ts 的
@@ -145,16 +141,15 @@ export class AIGatewayService {
     // 屡屡超时的请求，服务端日志显示 worker 早已正常完成。故"带 gateway 会挂起"未经
     // 服务端证据确认，不可当作事实。若要恢复 gateway 观测（日志/缓存/成本统计），
     // 加回参数后**必须用 worker 日志（而非客户端响应）判定成败**。
-    const options = undefined
 
     this.logger.log('debug', 'Workers AI via binding', {
       model: modelName,
-      viaGateway: false, // 见上：binding + authenticated gateway 会静默挂起
+      viaGateway: false, // 见上：不传 gateway 参数
       thinkingDisabled: inputs.chat_template_kwargs != null, // 生产判定 thinking 是否真关掉的凭据
       requestId: request.metadata?.requestId,
     })
 
-    const body = await ai.run(modelName, inputs, options)
+    const body = await ai.run(modelName, inputs)
     return provider.mapResponse(body, { ...request, model: modelName })
   }
 

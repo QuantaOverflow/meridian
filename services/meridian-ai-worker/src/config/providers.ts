@@ -4,7 +4,6 @@ import { ProviderConfig } from '../types'
 // 以及请求没带 model 时取 default_model。价格、上下文长度等以 Cloudflare 模型页为准。
 const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   'workers-ai': {
-    name: 'workers-ai',
     default_model: '@cf/zai-org/glm-4.7-flash',
     models: [
       // 文章分析第一档（index.ts 的 analysisStrategies）

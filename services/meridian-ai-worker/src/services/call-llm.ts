@@ -18,21 +18,17 @@ interface PhaseDefault {
   model: string;
   temperature: number;
   maxTokens: number;
-  /** 复读抑制，按 phase 配。不填就不下发（保持原行为）。 */
-  frequencyPenalty?: number;
 }
 
-// 2026-08-12：简报管线五个 phase 从 DashScope 迁到 Workers AI（CF 原生），摆脱阿里云凭证依赖。
-// 背景：DashScope key 自 2026-07-29 起 401，文章管线已靠 Workers AI 兜底恢复，但这五个 phase
-// 无兜底 → 简报完全生成不了。选 glm-4.7-flash：131k 上下文 + $0.0605/M 输入（同档最便宜）。
+// 2026-08-12：简报管线 phase 从 DashScope 迁到 Workers AI（CF 原生），摆脱阿里云凭证依赖。
+// 选 glm-4.7-flash：131k 上下文 + $0.0605/M 输入（同档最便宜）。
 //
-// maxTokens 全部沿用迁移前的值——本地实测（真实 prompt，服务端日志判定）各 phase 实际 completion_tokens：
-//   intelligence_analysis 1510-1618 / 8192、story_validation 609-793 / 4000、
-//   brief_generation 429-563 / 8000、tldr 40-42 / 8000、faithfulness 172-196 / 800，均 4x 以上余量。
+// maxTokens 沿用迁移前的值——本地实测（真实 prompt，服务端日志判定）实际 completion_tokens：
+//   brief_generation 429-563 / 8000、tldr 40-42 / 8000，均 4x 以上余量。
 //
 // ⚠️ glm-4.7-flash 是 reasoning 模型且**默认开思维链**，thinking token 计入 max_tokens 且先于正文生成
-// ——不关的话 faithfulness 的 800 预算会被思维链吃光、正文为空。关闭动作在 ai-gateway.ts
-// executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
+// ——不关的话小预算 phase 会被思维链吃光、正文为空。关闭名单在 config/thinking.ts，
+// 下发动作在 ai-gateway.ts executeWorkersAIViaBinding，不在这层。
 const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
@@ -57,7 +53,7 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
 };
 
 // —— 输出语言传感器 ——
-// 这五个 phase 产出的是英文（生产历史如此：reports 表全英文），但**没有任何 prompt 约束语言**
+// 这些 phase 产出的是英文（生产历史如此：reports 表全英文），但**没有任何 prompt 约束语言**
 // ——一直是"模型默认恰好对上"。换模型让这份运气变成风险，而 Workers AI / OpenAI 兼容 schema
 // 里**没有任何控制输出语言的参数**（查过 31 个入参，无 language/lang/locale；chat_template_kwargs
 // 只管 thinking）。故不改 prompt（改了要重跑 eval，且给已验证正确的行为加约束本身有扰动风险），
@@ -97,19 +93,6 @@ export interface CallLLMOverrides {
    * 调用方必须自己核验产出是否真被约束住，不能因为返回 200 就当它生效。
    */
   responseFormat?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' };
-  /**
-   * 复读抑制。glm-4.7-flash 的模型页列了 frequency_penalty / presence_penalty，
-   * 2026-09-09 实测确认真下发：同 prompt、temperature 0、seed 42，带与不带产出不同
-   * （72 → 113 token）。确定性设置下输出还变，说明参数到了模型而不是被静默丢弃。
-   *
-   * 为什么需要：写作调用会偶发打满 maxTokens 复读同一句（实测 25 块里 1 块，
-   * 12,407 字符 / 同句 80 遍）。
-   *
-   * ⚠️ 生效 ≠ 有益：penalty 会一并压制**正常的重复**（专有名词、当事方名字在一段里
-   * 反复出现是新闻文体的常态）。调大到伤文风的临界点没测过，别随手往上调。
-   */
-  frequencyPenalty?: number;
-  presencePenalty?: number;
 }
 
 // phase 默认 + caller 覆盖 → 建 chat 请求 → loggedChat（观测+发送）→ 返回 AIResponse。
@@ -132,11 +115,6 @@ export function callLLM(
     temperature: overrides.temperature ?? d.temperature,
     max_tokens: overrides.maxTokens ?? d.maxTokens,
     ...(overrides.responseFormat ? { response_format: overrides.responseFormat } : {}),
-    // 先 overrides 后 phase 默认——只读 overrides 会让写在 PHASE_DEFAULTS 里的值静默不下发
-    // （2026-09-10 加 intelligence_analysis 的 frequencyPenalty 时就踩了这个）。
-    ...((overrides.frequencyPenalty ?? d.frequencyPenalty) != null
-      ? { frequency_penalty: overrides.frequencyPenalty ?? d.frequencyPenalty } : {}),
-    ...(overrides.presencePenalty != null ? { presence_penalty: overrides.presencePenalty } : {}),
     metadata: overrides.metadata ?? { requestId: `${phase}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, timestamp: Date.now() },
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;

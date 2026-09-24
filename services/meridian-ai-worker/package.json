@@ -1,7 +1,7 @@
 {
   "name": "meridian-ai-worker",
   "version": "1.0.0",
-  "description": "Simplified AI Gateway Worker for multiple LLM providers",
+  "description": "Meridian LLM worker (Workers AI binding)",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
@@ -13,13 +13,7 @@
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
-    "health": "curl http://localhost:8787/health | jq .",
-    "prototype:skeleton": "node --experimental-strip-types prototypes/skeleton-planner/tui.ts",
-    "prototype:skeleton:batch": "node --experimental-strip-types prototypes/skeleton-planner/batch.ts",
-    "prototype:anchor": "node --experimental-strip-types prototypes/skeleton-planner/anchor-ab.ts",
-    "prototype:bprime": "node --experimental-strip-types prototypes/skeleton-planner/bprime.ts",
-    "prototype:rarr": "node --experimental-strip-types prototypes/skeleton-planner/rarr-perblock.ts",
-    "prototype:slim": "node --experimental-strip-types prototypes/article-prompt-slim/tui.ts"
+    "health": "curl http://localhost:8787/health | jq ."
   },
   "dependencies": {
     "hono": "^3.12.0",
@@ -38,8 +32,7 @@
     "cloudflare",
     "workers",
     "ai",
-    "llm",
-    "gateway"
+    "llm"
   ],
   "author": "QuantaOverflow",
   "license": "MIT"

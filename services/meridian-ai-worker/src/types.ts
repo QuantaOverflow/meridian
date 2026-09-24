@@ -20,7 +20,6 @@ export interface LogEntry {
   message: string
   metadata?: Record<string, any>
   error?: Error
-  duration?: number
 }
 
 // =============================================================================
@@ -32,7 +31,6 @@ interface BaseAIRequest {
   provider?: string
   temperature?: number
   max_tokens?: number
-  stream?: boolean
   // 解码参数。加它们是因为 glm-4.7-flash 有已知的复读退化（同一条 JSON 逐字重复到 max_tokens
   // 被硬截断，实测同批输入 15 次里发作 4 次），而 frequency_penalty 正是对症的那个旋钮。
   // 此前这三个参数在 /meridian/chat 与 workers-ai binding 两处白名单里都不在，
@@ -102,7 +100,6 @@ export interface ModelConfig {
 }
 
 export interface ProviderConfig {
-  name: string
   models: ModelConfig[]
   default_model?: string
 }
@@ -112,7 +109,6 @@ export interface ProviderConfig {
 // =============================================================================
 
 export interface BaseProvider {
-  name: string
   config: ProviderConfig
   
   getSupportedCapabilities(): AICapability[]
@@ -127,8 +123,7 @@ export interface BaseProvider {
 // =============================================================================
 
 export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends AIResponse> {
-  capability: AICapability
-  parseProviderResponse(response: any, request: TRequest, model: ModelConfig): TResponse
+  parseProviderResponse(response: any, model: ModelConfig): TResponse
 }
 
 // Cloudflare Workers environment with string index signature

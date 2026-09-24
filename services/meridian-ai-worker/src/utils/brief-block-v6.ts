@@ -279,26 +279,22 @@ export function contextOf(sentences: SentenceTable, s: V6Source): V6Source | nul
 export function writeMaterial(
   anchors: V6Anchor[],
   sentences: SentenceTable,
-  withSupport = false,
-  withContext = false,
   /**
-   * 是否给达到必写档的重点打 ` — MUST COVER`。默认跟随 withSupport（老口径，金标据此冻结）。
+   * 是否给达到必写档的重点打 ` — MUST COVER`（默认开，金标据此冻结）。
    * brief 档单独关掉：那一档只准写 2 句，而一个簇常有 5–12 条 MUST COVER，
    * 「每条都要写进去」与「最多 2 句」是自相矛盾的指令。排序照旧保留。
    */
-  withMustCover = withSupport
+  withMustCover = true
 ): string {
   const must = withMustCover ? mustCover(anchors, MUST_SLACK) : new Set<string>();
-  const list = withSupport ? [...anchors].sort((a, b) => supportOf(b) - supportOf(a)) : anchors;
+  const list = [...anchors].sort((a, b) => supportOf(b) - supportOf(a));
   const line = (s: V6Source) => `[${s.articleId}:${s.sentence}] ${sentenceOf(sentences, s.articleId, s.sentence)}`;
   return list
     .map(a => {
-      const head = withSupport
-        ? `### ${a.topic} — reported by ${supportOf(a)} article(s)${must.has(a.id) ? ' — MUST COVER' : ''}`
-        : `### ${a.topic}`;
+      const head = `### ${a.topic} — reported by ${supportOf(a)} article(s)${must.has(a.id) ? ' — MUST COVER' : ''}`;
       return `${head}\n${a.sources
         .map(s => {
-          const ctx = withContext ? contextOf(sentences, s) : null;
+          const ctx = contextOf(sentences, s);
           return ctx ? `(preceding sentence, for who is speaking) ${line(ctx)}\n${line(s)}` : line(s);
         })
         .join('\n')}`;

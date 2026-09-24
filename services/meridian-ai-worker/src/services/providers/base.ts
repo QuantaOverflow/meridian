@@ -10,7 +10,6 @@ import {
 import { getCapabilityHandler } from '../../capabilities'
 
 export abstract class AbstractProvider implements BaseProvider {
-  abstract name: string
   abstract config: ProviderConfig
 
   getSupportedCapabilities(): AICapability[] {
@@ -56,6 +55,6 @@ export abstract class AbstractProvider implements BaseProvider {
 
     // Get capability handler and parse response
     const handler = getCapabilityHandler(originalRequest.capability)
-    return handler.parseProviderResponse(response, originalRequest, model)
+    return handler.parseProviderResponse(response, model)
   }
 }

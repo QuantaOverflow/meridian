@@ -60,17 +60,6 @@ DATABASE_URL=... pnpm -C packages/database exec tsx ../../apps/backend/scripts/a
 # 可选：--reset（先清空再重跑）、--threshold 0.96、--lookback 21
 ```
 
-### 5. 补写读者摘要 - `backfill-tldr-prose.ts`
-
-**功能**：给 `reports.tldr_prose` 为空的历史简报补写读者摘要，逐期调 ai-worker `/meridian/generate-brief-summary`
-（真实 LLM 调用）。
-
-**使用方法**（仓库根目录；先另开终端起 ai-worker，或把 `AI_WORKER_URL` 指向已部署的 worker）：
-```bash
-DATABASE_URL=... pnpm -C packages/database exec tsx ../../apps/backend/scripts/backfill-tldr-prose.ts
-# 可选：--dry-run、--ids 70,71,72、--force；环境变量 AI_WORKER_URL（默认 http://localhost:8787）、CONCURRENCY（默认 4）
-```
-
 ## 🚀 快速开始
 
 ### 环境准备
@@ -105,8 +94,7 @@ DATABASE_URL=... pnpm -C packages/database exec tsx ../../apps/backend/scripts/b
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `DATABASE_URL` | PostgreSQL连接字符串（两个 `.ts` 脚本也认 `NUXT_DATABASE_URL`） | `.sh`/`.js` 脚本默认 `postgresql://postgres@localhost:5432/shiwenjie`；`.ts` 脚本无默认，必填 |
-| `AI_WORKER_URL` | `backfill-tldr-prose.ts` 调用的 ai-worker | `http://localhost:8787` |
+| `DATABASE_URL` | PostgreSQL连接字符串（`.ts` 脚本也认 `NUXT_DATABASE_URL`） | `.sh`/`.js` 脚本默认 `postgresql://postgres@localhost:5432/shiwenjie`；`.ts` 脚本无默认，必填 |
 
 ## 🐛 故障排除
 
@@ -142,7 +130,6 @@ apps/backend/scripts/
 ├── db-stats.sh          # 数据库统计概览
 ├── quick-test.sh        # 快速测试启动器
 ├── assign-story-clusters.ts  # 跨期线索归并
-├── backfill-tldr-prose.ts    # 补写读者摘要
 └── README.md           # 使用指南（本文件）
 ```
 

@@ -112,7 +112,7 @@ node verify.mjs --arm=out/arm-a --cluster=36     # 单簇
 > **最终验收没有干净的 heldout**;要泛化证据须另取未接触、跨事件的簇。
 
 在 dev 上反复调,**heldout 只在最后报一次**。混用就是过拟合 —— 这条抄
-`eval/article-quality/meta-eval.ts` 的设计(「迭代 prompt 时只对 dev 调,
+原 `eval/article-quality/meta-eval.ts`（已删）的设计(「迭代 prompt 时只对 dev 调,
 最终 κ/召回只在 heldout 报」)。
 
 ### 一条贯穿全部簇的实测分界线

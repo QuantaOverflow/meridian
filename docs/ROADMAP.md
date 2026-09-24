@@ -9,7 +9,7 @@
 - **简报链路已切到 v6**（`961aeca`，2026-09-21）：簇判定 → LLM 重要性排序（三轮洗牌 + Borda，`86633c5` / `0ae2592`）
   → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见 `docs/meridian-workflow-architecture.md`
 - **已删代码**：情报报告层、b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账、story-validation、候选分组、debug 路由与一批无调用方的 admin/observability 路由
-- **eval 只剩 5 个 harness**（`article-quality`、`cluster-to-brief`、`clustering`、`scorer-recall`、`scrape-quality`）；
+- **eval 只剩 4 个 harness**（`cluster-to-brief`、`clustering`、`scorer-recall`、`scrape-quality`）；
   `selection`、`faithfulness`、`intel-grounding`、`coverage-judge`、`offline-review` 等 9 个因结构上验不了 v6 删除（`0fcbd9a`）
 - **测试**：golden 快照（backend / ai-worker / ml-service）与整期录像回放 `pnpm -F @meridian/backend replay <workflowId>` 已建
 - 上线状态以 CF Current Version 与 DB 产出为准，本节不断言

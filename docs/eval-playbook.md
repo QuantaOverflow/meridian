@@ -15,7 +15,6 @@
 | 环节(管线步) | harness | 真相源 | 状态 |
 |------|------|------|------|
 | 抓取/解析 | `eval/scrape-quality` | 人金标 | 机械签名检测器已上线 |
-| 文章质量门 articleAnalysis | `eval/article-quality` | 人金标 | 判官已对齐人工 |
 | 聚类 | `eval/clustering` / 产品口径打分 | 两窗人读全覆盖金标 | 已用于 2026-09 聚类重做（ADR 0003） |
 | 簇原文 → 简报块 | `eval/cluster-to-brief`（契约 `CONTRACTS.md`） | 事件清单 + `citation-support` 人工金标 | 生产 v6 写作层即由其 `arms/direct-raw` 移植 |
 | 判官检出能力 | `eval/scorer-recall` | 人金标 | 量判官能认出多少真错、误拦多少 |

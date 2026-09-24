@@ -55,7 +55,6 @@ node eval/_data/check.mjs
 | `clustering-F1` | product | 119 事件 | raw_source | 调参集，已耗尽 |
 | `clustering-F2` | product | 130 事件 | raw_source | holdout，用过一次 |
 | `intel-grounding-v1` | judge | 100 | raw_source | 88% 是同一类，κ 不能当硬读数 |
-| `article-quality-v1` | judge | 73 | raw_source | meta-eval 实调 LLM，读数不可复现 |
 | `scrape-quality-v1` | product | 73 | raw_source | 判定是确定性代码，读数可复现 |
 | `scorer-recall-v1` | judge | 15 | retired_intermediate | 语料已丢，只能读不能跑 |
 | `ctb-citation-support-v1` | judge | 60 | retired_intermediate | 29 pass / 31 fail，带完整对齐读数 |

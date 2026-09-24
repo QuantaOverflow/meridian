@@ -33,7 +33,7 @@ pnpm score     # 对金标算 precision/recall + 混淆 + 接受闸
 
 - 检测器 **precision 1.00 / recall 0.93**（28/30，0 误报）。FN 3=长尾（单句截断 stub、产品页/github blob）。
 - 生产 FP 扩验（独立 40 篇随机 OK）：**0 误伤**。
-- pipeline 对比：**JUNK 精度 100%**（门判 junk 可信）；**LOW_QUALITY 61% 是被误降级的真新闻**（→ articleAnalysis 的 LOW 判据问题，属 `article-quality` eval 线，另修）；现机械门 `validateContentQuality`(len<2×标题) 只逮 6/30。
+- pipeline 对比：**JUNK 精度 100%**（门判 junk 可信）；**LOW_QUALITY 61% 是被误降级的真新闻**（→ articleAnalysis 的 LOW 判据问题，原属 `article-quality` eval 线，该 eval 已于 2026-09-24 删除，此项未修）；现机械门 `validateContentQuality`(len<2×标题) 只逮 6/30。
 
 ## 局限
 

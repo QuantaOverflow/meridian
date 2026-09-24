@@ -6,7 +6,7 @@
 - Monorepo: **pnpm + turbo**, Node ≥22, pnpm 10.9.0
 - `apps/backend` — CF Worker (Durable Objects + Workflows + Queue + Hyperdrive)
 - `apps/frontend` — Nuxt 3
-- `services/meridian-ai-worker` — CF Worker，LLM 经 AI Gateway；简报链路走 Workers AI `glm-4.7-flash`（DashScope 只剩 `other` phase）
+- `services/meridian-ai-worker` — CF Worker，LLM 只走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
 
@@ -19,7 +19,7 @@
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
 - DB: Neon `ap-southeast-1`，连接走 Hyperdrive
-- AI Gateway：本地 `.dev.vars` 的 `CLOUDFLARE_GATEWAY_ID` 是 `meridian-ai`（线上 secret 未核）。走 REST 的 provider 经 Gateway；Workers AI 走 `env.AI` binding，embedding 走 ml-service，均不经 Gateway
+- AI Gateway：现在没有任何调用经过它（2026-09-24 删掉了最后一个走 Gateway 的 DashScope）。要接非 CF 厂商时经 CF AI Gateway 接入；embedding 走 ml-service
 - Secrets：`wrangler secret put` 或 CF Secrets Store，**永不入库**
 - 本地 secrets 在每个 worker 的 `.dev.vars`（已 gitignored）
 

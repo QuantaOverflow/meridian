@@ -36,8 +36,8 @@ binding 路径**（`executeWorkersAIViaBinding`），不是 REST。prompt 构造
 | 输入文章 | 生产那期聚类快照里全部 article id，以 `article_ids` 传给 `/admin/briefs/generate`；其余参数取 `brief_runs.params` |
 
 生成的 wrangler 配置在 `data/<wf>/out/<时间>/gen/`，从仓库里的 `wrangler.jsonc` / `wrangler.toml`
-派生，只改外部依赖；它们的 `.dev.vars` **不含任何真实密钥**（ai-worker 拿不到 DashScope /
-CF API token，就不可能绕过替身打真模型）。
+派生，只改外部依赖；它们的 `.dev.vars` **不含任何真实密钥**（ai-worker 唯一的模型通道是 `AI`
+binding，已指向替身，不可能绕过替身打真模型）。
 
 ## 准备
 

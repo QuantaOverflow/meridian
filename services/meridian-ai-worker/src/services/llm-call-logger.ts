@@ -18,7 +18,6 @@ export type LLMCallPhase =
   // 简报块 v6：一个簇的原文 → 窗口标重点 + 一次写作。与 brief_generation 分开，
   // 免得两条链路的 R2 观测记录互相覆盖。
   | 'brief_block_v6'
-  | 'other'
 
 export interface TraceContext {
   traceId?: string
@@ -72,7 +71,6 @@ export async function loggedChat(
         max_tokens: request.max_tokens,
         frequency_penalty: (request as any).frequency_penalty,
         response_format: (request as any).response_format,
-        skip_cache: (request as any).skipCache,
       },
       messages: request.messages,
       content: chat?.choices?.[0]?.message?.content,

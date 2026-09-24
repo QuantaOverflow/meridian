@@ -42,9 +42,7 @@ enabled = true
 
 
 
-# Secrets / vars（wrangler secret put；本地见 .dev.vars.example）:
-# CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_GATEWAY_ID, AI_GATEWAY_TOKEN, DASHSCOPE_API_KEY
-# LOG_LEVEL, ENABLE_DETAILED_LOGGING（可选）
+# 不需要 secret。可选 vars：LOG_LEVEL, ENABLE_DETAILED_LOGGING（本地见 .dev.vars.example）
 
 # Note: ML Service integration has been decoupled from AI Worker
 # For clustering functionality, directly call meridian-ml-service endpoints

@@ -242,7 +242,7 @@ class AIWorkerService {
     const request = new Request(`${this.baseUrl}/meridian/brief-block-v6`, {
       method: 'POST',
       headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
-      body: JSON.stringify({ title, articles, tier, skipCache: true }),
+      body: JSON.stringify({ title, articles, tier }),
     });
 
     return await this.callJson<BriefBlockV6Data>(request);

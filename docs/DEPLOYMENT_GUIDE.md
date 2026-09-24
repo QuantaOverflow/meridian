@@ -4,7 +4,7 @@
 变量清单以各目录的 `.dev.vars.example` 为准（标 🔐 的在生产用 `wrangler secret put`）。
 
 ```
-backend ──service binding AI_WORKER──► meridian-ai-worker ──► AI Gateway ──► Workers AI / DashScope
+backend ──service binding AI_WORKER──► meridian-ai-worker ──AI binding──► Workers AI
    │
    └──公网 MERIDIAN_ML_SERVICE_URL + X-API-Token──► meridian-ml-service（Worker 壳 + Container）
 frontend（Cloudflare Pages）──► Neon Postgres（直连）+ backend API
@@ -28,13 +28,10 @@ pnpm -F @meridian/database migrate
 
 ```bash
 cd services/meridian-ai-worker
-wrangler secret put AI_GATEWAY_TOKEN      # AI Gateway 启用鉴权时
-wrangler secret put DASHSCOPE_API_KEY     # `other` phase 用
 wrangler deploy
 ```
 
-`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_GATEWAY_ID` 等其余变量见 `.dev.vars.example`。
-简报链路的模型走 Workers AI binding `AI`（无需 key），各 phase 的模型在 `src/services/call-llm.ts` 的 `PHASE_DEFAULTS`。
+不需要任何 secret：模型全走 Workers AI binding `AI`，各 phase 的模型在 `src/services/call-llm.ts` 的 `PHASE_DEFAULTS`。
 
 ### 3. ML Service（`services/meridian-ml-service/cf-worker`）
 

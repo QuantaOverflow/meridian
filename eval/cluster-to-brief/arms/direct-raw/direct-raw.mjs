@@ -486,7 +486,7 @@ async function chatJson(tag, prompt, schema, ok, callsPath) {
         body: JSON.stringify({
           messages: [{ role: 'user', content: prompt }],
           options: {
-            provider: 'workers-ai', model: MODEL, temperature, max_tokens: 8000, skipCache: true,
+            provider: 'workers-ai', model: MODEL, temperature, max_tokens: 8000,
             response_format: { type: 'json_schema', json_schema: schema },
           },
         }),

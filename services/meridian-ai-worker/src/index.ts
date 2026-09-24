@@ -385,8 +385,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
     }
     const service = new BriefBlockV6Service(c.env, readTraceContext(c.req.raw))
     const data = await service.generate(
-      { title: typeof body?.title === 'string' ? body.title : '', articles, tier: body?.tier },
-      body?.skipCache === true
+      { title: typeof body?.title === 'string' ? body.title : '', articles, tier: body?.tier }
     )
     return c.json<APIResponse<typeof data>>({ success: true, data })
   } catch (error: any) {
@@ -406,7 +405,7 @@ app.post('/meridian/brief-title', async (c) => {
     }
     const res = await callLLM(new AIGatewayService(c.env), c.env, readTraceContext(c.req.raw), 'brief_generation',
       [{ role: 'user', content: getBriefTitlePrompt(content) }],
-      { temperature: 0.3, maxTokens: 300, skipCache: true, callIndex: 690 })
+      { temperature: 0.3, maxTokens: 300, callIndex: 690 })
     const raw = res.capability === 'chat' ? String((res as ChatResponse).choices?.[0]?.message?.content ?? '') : ''
     const parsed = parseJSONFromResponse(raw)
     // 解析失败不静默套通用名：留痕，让「模型没给标题」与「本来就叫这个」分得开
@@ -537,14 +536,12 @@ app.post('/meridian/chat', async (c) => {
     const chatRequest = {
       capability: 'chat' as const,
       messages: body.messages,
-      provider: body.options?.provider || 'dashscope',
-      model: body.options?.model || 'qwen-plus',
+      provider: body.options?.provider || 'workers-ai',
+      model: body.options?.model || '@cf/zai-org/glm-4.7-flash',
       // ?? 而非 ||：调用方显式传 temperature: 0（judge 场景）时必须生效，|| 会吞成 0.7
       temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
       stream: body.options?.stream || false,
-      // 离线 eval 的 A/B 需要独立采样：默认 false（生产照常走缓存），显式传 true 才跳过
-      skipCache: body.options?.skipCache === true,
       // 解码参数透传。不传就是原行为（provider 侧不下发），向后兼容。
       // 这里是显式白名单：不在名单上的 options 会被静默丢弃且照样 200，加参数必须同时改这里
       // 和 ai-gateway.ts 的 executeWorkersAIViaBinding。

@@ -32,7 +32,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
 | `POST /meridian/generate-brief-tldr` | `{briefTitle, briefContent}` → `tldr`（机器格式，给次日管线读，不给读者看） | AutoBriefGeneration |
 | `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
-| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`） |
+| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 `workers-ai` / `@cf/zai-org/glm-4.7-flash` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`） |
 
 路由本身**没有鉴权**。靠 `wrangler.toml` 的 `workers_dev = false` 不开公网地址：
 生产只有 backend 经 service binding（`AI_WORKER`）能调到；eval 脚本打本地 `wrangler dev`。
@@ -45,9 +45,8 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 - 现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
   （`AIGatewayService.executeWorkersAIViaBinding`）。思维链由 `config/thinking.ts` 关掉。
 - article analyze 在 `index.ts` 自带两档重试：`@cf/qwen/qwen3-30b-a3b-fp8` → `@cf/zai-org/glm-4.7-flash`。
-- **Workers AI binding 调用目前不经 AI Gateway**：`executeWorkersAIViaBinding` 刻意不传 `gateway`
-  参数（原因见该处注释）。只有非 workers-ai 的 provider（如 `/meridian/chat` 默认的 dashscope）走
-  `https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}`。
+- **只有这一个 provider，且不经 AI Gateway**：`executeWorkersAIViaBinding` 刻意不传 `gateway`
+  参数（原因见该处注释），因此也没有网关缓存。要接非 CF 厂商时经 CF AI Gateway 接入。
 - 经 `callLLM` 的调用都会做输出语言检测（`checkOutputLanguage`），CJK 占比超阈值只告警、落 sensor，不改输出。
 
 ## 环境变量与 secret
@@ -60,9 +59,6 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
 | `ARTICLES_BUCKET`（R2 binding） | 观测落盘 + 读文章正文，与 backend 同一个桶 `meridian-articles-prod` |
 | `CF_VERSION_METADATA`（binding） | span 里的 `deployment_version` |
-| `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_GATEWAY_ID` | 拼 AI Gateway URL（只有 dashscope 用） |
-| `AI_GATEWAY_TOKEN` 🔐 | Gateway 开了鉴权时发 `cf-aig-authorization` |
-| `DASHSCOPE_API_KEY` 🔐 | 注册 dashscope provider（`/meridian/chat` 默认用它）；2026-07-29 起该 key 返回 401，现行管线不依赖它 |
 | `ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | `services/logger.ts` 的日志开关 |
 | `ENVIRONMENT` | `wrangler.toml` 的 `[env.*].vars` 设置；只写进 span 的 `runtime_env` |
 

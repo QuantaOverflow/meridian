@@ -11,7 +11,7 @@ paths:
 ## 验证 ai-worker 单个端点（最常用，覆盖 90% 场景）
 
 ```bash
-# Terminal 1：启动 ai-worker（secrets 从 .dev.vars 读，LLM 走真实 DashScope 会计费）
+# Terminal 1：启动 ai-worker（LLM 走真实 Workers AI binding，会计费）
 cd services/meridian-ai-worker && pnpm wrangler dev --port 8787
 
 # Terminal 2：curl 打端点

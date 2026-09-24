@@ -46,10 +46,6 @@ interface BaseAIRequest {
   // 每个 token 都要符合 schema 文法，这种形态结构上不可能。
   // 不传就是原行为（provider 侧不下发），向后兼容。
   response_format?: { type: 'json_schema'; json_schema: Record<string, unknown> } | { type: 'json_object' }
-  // 跳过 AI Gateway 缓存。默认 false（生产走缓存）。
-  // 离线 eval 需要独立采样：同 prompt 重问若吃缓存会拿回同一份答案，
-  // 把"模型稳定"和"缓存命中"混为一谈，A/B 的真实样本量退化成 1（见 judge 模型 cache_ttl:0 同因）。
-  skipCache?: boolean
   metadata?: Partial<RequestMetadata>
 }
 
@@ -103,40 +99,12 @@ export type AIResponse = ChatResponse
 export interface ModelConfig {
   name: string
   capabilities: AICapability[]
-  endpoint: string
-  max_tokens?: number
-  supports_streaming?: boolean
-  cost_per_token?: {
-    input: number
-    output: number
-  }
-  ai_gateway_config?: {
-    cache_ttl?: number // Time to live in seconds
-    enable_cost_tracking?: boolean
-    custom_tags?: string[] // Custom tags for cost tracking and analytics
-    cache_namespace?: string
-    enable_metrics?: boolean
-    enable_logging?: boolean
-  }
 }
 
 export interface ProviderConfig {
   name: string
-  base_url: string
   models: ModelConfig[]
-  auth_header: string
   default_model?: string
-}
-
-// =============================================================================
-// AI Gateway Types
-// =============================================================================
-
-export interface AIGatewayRequest {
-  provider: string
-  endpoint: string
-  headers: Record<string, string>
-  query: any
 }
 
 // =============================================================================
@@ -151,7 +119,6 @@ export interface BaseProvider {
   getModelsForCapability(capability: AICapability): ModelConfig[]
   getDefaultModel(capability: AICapability): string | undefined
   
-  buildRequest(request: AIRequest): AIGatewayRequest
   mapResponse(response: any, originalRequest: AIRequest): AIResponse
 }
 
@@ -161,16 +128,11 @@ export interface BaseProvider {
 
 export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends AIResponse> {
   capability: AICapability
-  buildProviderRequest(request: TRequest, model: ModelConfig): any
   parseProviderResponse(response: any, request: TRequest, model: ModelConfig): TResponse
 }
 
 // Cloudflare Workers environment with string index signature
 export interface CloudflareEnv extends Record<string, string | undefined> {
-  CLOUDFLARE_ACCOUNT_ID: string
-  CLOUDFLARE_GATEWAY_ID: string
-  DASHSCOPE_API_KEY?: string
-  AI_GATEWAY_TOKEN?: string
   // Logging configuration
   LOG_LEVEL?: string
   ENABLE_DETAILED_LOGGING?: string

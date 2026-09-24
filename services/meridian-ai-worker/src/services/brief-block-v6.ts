@@ -214,7 +214,7 @@ export class BriefBlockV6Service {
     throw new Error(`${tag}: all model attempts failed validation`);
   }
 
-  async generate(input: BriefBlockV6Input, _skipCache = false): Promise<BriefBlockV6Result> {
+  async generate(input: BriefBlockV6Input): Promise<BriefBlockV6Result> {
     // 时间升序、同期按 id 升序：窗口切分依赖这个顺序（原型 loadClusterFrom 就是这个序）
     const articles: V6Article[] = input.articles
       .map(a => ({

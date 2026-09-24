@@ -163,7 +163,7 @@ The route tables in `apps/backend/src/app.ts` + `src/routers/`, `services/meridi
 The `.dev.vars.example` files listed above are the source of truth for each Worker's variables. Key ones:
 
 - **Backend**: `API_TOKEN`, `CLOUDFLARE_API_TOKEN` (browser rendering), `MERIDIAN_ML_SERVICE_API_KEY` (must equal the ML service's `API_TOKEN`), `MERIDIAN_ML_SERVICE_URL` (var in `wrangler.jsonc`)
-- **AI Worker**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_GATEWAY_ID`, `AI_GATEWAY_TOKEN`, `DASHSCOPE_API_KEY`
+- **AI Worker**: 无 secret（模型走 Workers AI binding）
 - **ML Service**: `API_TOKEN`
 
 Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `MY_WORKFLOW` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`.

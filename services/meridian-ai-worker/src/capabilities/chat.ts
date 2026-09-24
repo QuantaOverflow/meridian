@@ -10,26 +10,7 @@ import { isThinkingDisabled } from '../config/thinking'
 export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, ChatResponse> {
   capability = 'chat' as const
 
-  buildProviderRequest(request: ChatRequest, model: ModelConfig): any {
-    // 确保max_tokens为正数且在合理范围内
-    const requestedTokens = request.max_tokens ?? 1024
-    const modelMaxTokens = model.max_tokens ?? 1024
-    const maxTokens = Math.max(1, Math.min(requestedTokens, modelMaxTokens)) // 至少为1
-    
-    const baseRequest = {
-      model: model.name,
-      messages: request.messages,
-      temperature: request.temperature ?? 0.7,
-      max_tokens: maxTokens,
-      stream: request.stream ?? false
-    }
-
-    // Workers AI 走 binding，不经这里；只剩 DashScope（OpenAI 兼容格式）
-    return baseRequest
-  }
-
   parseProviderResponse(response: any, request: ChatRequest, model: ModelConfig): ChatResponse {
-    // Handle different provider response formats
     let choices: Array<{ message: ChatMessage, finish_reason: string }>
     let usage: any
     let id: string
@@ -76,18 +57,13 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       usage = cfBody.usage
       id = cfBody.id || `chatcmpl-${Date.now()}`
     } else {
-      // OpenAI format (default)
-      choices = response.choices || []
-      usage = response.usage
-      id = response.id || `chatcmpl-${Date.now()}`
+      throw new Error(`只支持 Workers AI 模型，收到: ${model.name}`)
     }
-
-    const provider = model.name.startsWith('@cf') ? 'workers-ai' : 'dashscope'
 
     return {
       capability: 'chat',
       id,
-      provider,
+      provider: 'workers-ai',
       model: model.name,
       choices,
       usage,

@@ -20,7 +20,7 @@ import net from 'node:net';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import {
-  HERE, BACKEND_DIR, AI_WORKER_DIR, ML_DIR, WRANGLER, CF_ACCOUNT_ID,
+  HERE, BACKEND_DIR, AI_WORKER_DIR, ML_DIR, WRANGLER,
   credentials, pg, parseJsonc, runDir, resolveLocalOnly, mapLimit,
   requestKey, renderRequest, unifiedDiff, similarity,
 } from './lib.mjs';
@@ -160,7 +160,7 @@ function writeConfig(name, config, devVars) {
   fs.mkdirSync(d, { recursive: true });
   fs.writeFileSync(path.join(d, 'wrangler.json'), JSON.stringify(config, null, 2));
   // .dev.vars 从 config 所在目录读。这里只放重放需要的值，**不含任何真实密钥**：
-  // ai-worker 没有 DASHSCOPE/CLOUDFLARE_API_TOKEN 就不可能绕过替身去打真模型。
+  // ai-worker 唯一的模型通道是 AI binding，已指向替身，不可能绕过替身去打真模型。
   fs.writeFileSync(path.join(d, '.dev.vars'), Object.entries(devVars).map(([k, v]) => `${k}=${v}`).join('\n') + '\n');
   return path.join(d, 'wrangler.json');
 }
@@ -191,7 +191,7 @@ function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
     r2_buckets: [{ binding: 'ARTICLES_BUCKET', bucket_name: BUCKET }],
     version_metadata: { binding: 'CF_VERSION_METADATA' },
   };
-  const awPath = writeConfig('ai-worker', aw, { CLOUDFLARE_ACCOUNT_ID: CF_ACCOUNT_ID, CLOUDFLARE_GATEWAY_ID: 'meridian-gateway' });
+  const awPath = writeConfig('ai-worker', aw, {});
 
   const ra = {
     name: 'meridian-replay-ai',

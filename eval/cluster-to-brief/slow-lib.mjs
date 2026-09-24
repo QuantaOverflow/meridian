@@ -43,8 +43,8 @@ let callsPath = null;
 export function setCallsPath(p) { callsPath = p; mkdirSync(p.replace(/\/[^/]+$/, ''), { recursive: true }); }
 
 /**
- * 一次 chat。**每次都 skipCache**——AI Gateway 默认缓存会把多次采样静默退化成一次
- * (本仓踩过:ai-gateway-cache-eval-trap)。
+ * 一次 chat。ai-worker 的 Workers AI 调用走 binding、不经 AI Gateway，没有网关缓存；
+ * 若将来改回经 Gateway，要确认缓存不会把多次采样静默退化成一次(本仓踩过:ai-gateway-cache-eval-trap)。
  */
 export async function chat(tag, prompt, maxTokens = MAX_TOKENS, temperature = 0.1, extra = {}, reqOptions = {}) {
   return slot(async () => {
@@ -56,7 +56,7 @@ export async function chat(tag, prompt, maxTokens = MAX_TOKENS, temperature = 0.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [{ role: 'user', content: prompt }],
-          options: { provider: PROVIDER, model: MODEL, temperature, max_tokens: maxTokens, skipCache: true, ...reqOptions },
+          options: { provider: PROVIDER, model: MODEL, temperature, max_tokens: maxTokens, ...reqOptions },
         }),
         signal: AbortSignal.timeout(600_000),
       });

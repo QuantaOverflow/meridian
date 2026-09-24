@@ -3,16 +3,12 @@ import type { AIResponse, ChatMessage, CloudflareEnv } from '../types';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 import { recordSensor } from './sensor-log';
 
-// 「调 LLM」的单一配置入口（候选 A）。抽此层前，provider/model/temperature/skipCache 散在
+// 「调 LLM」的单一配置入口（候选 A）。抽此层前，provider/model/temperature 散在
 // 各 service 的 callAI/callJudge helper 里各写一份并已漂移：temperature 默认 `?? 0.1` 五份副本、
-// skipCache 忘传(story_validation/brief/tldr/faithfulness 全没传)、model/provider 四处重抄。
+// model/provider 四处重抄。
 //
 // 形状：phase 给一套默认，caller 只覆盖真不同的（确定性子调用传 temperature:0、主生成传 model）。
 // 只管配置解析；观测落盘仍是下一层 loggedChat 的职责（各司一职）。
-//
-// skipCache=true 是 Q6-B 的「填对」：原本忘传的 DashScope phase 现在恒 skipCache——因 DashScope
-// 的正向缓存 cache_ttl 从未接通(custom-path 绕开 enhancementService)，此刻是 no-op(行为不变)，
-// 但把「判官/生成须独立采样」的正确性锁死，防将来缓存修活时旧「忘传」复发。
 //
 // 未收编：article_analysis（index.ts strategy-driven，provider/model/temp 每次重试换，
 // 不适合 phase-default）、/meridian/chat（外部透传口）。
@@ -22,7 +18,6 @@ interface PhaseDefault {
   model: string;
   temperature: number;
   maxTokens: number;
-  skipCache: boolean;
   /** 复读抑制，按 phase 配。不填就不下发（保持原行为）。 */
   frequencyPenalty?: number;
 }
@@ -39,17 +34,15 @@ interface PhaseDefault {
 // ——不关的话 faithfulness 的 800 预算会被思维链吃光、正文为空。关闭动作在 ai-gateway.ts
 // executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
 const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
-  brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
-  tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
+  brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
+  tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；
   // temperature 0 —— 摘要要可复现，不需要创造性。
-  tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
-  cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200, skipCache: true },
+  tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800 },
+  cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200 },
   // 故事排序：一次看当期全部候选标题（46-51 条约 1400 词），输出前 12 + 5 条落选。
   // maxTokens 3000 沿用离线实测值（两期各 3 轮，6 次调用 completion 全部在预算内，无截断）。
-  // skipCache 必须为 true：三轮洗牌虽然 prompt 不同不会互相命中，但跨期若有相同候选集
-  // 会静默复用旧排序——Gateway 默认缓存曾把一次 eval 的样本量退化成 1。
-  story_rank: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000, skipCache: true },
+  story_rank: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000 },
   // 简报块 v6：窗口标重点 + 一次写作，两种调用共用这个 phase（callIndex 区分 R2 key）。
   // maxTokens 8000 与 temperature 0.1 沿用原型实测值（原型 chatJson 的 max_tokens=8000）。
   // **不设 frequency_penalty**：原型没有它，而 v6 与生产的那份对比读数（同 3 簇，写作层
@@ -58,10 +51,9 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 越界句号）、丢掉 4 篇材料，而原型同一输入 4 窗全过。是不是它导致的没有验，但这里的取舍
   // 很清楚：实测过的配置优先于未实测的约定。复读由解析处的 detectRepetition 挡（见
   // services/brief-block-v6.ts），那才是真正拦得住的那层。
-  brief_block_v6: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
+  brief_block_v6: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
-  article_analysis: { provider: 'workers-ai', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', temperature: 0, maxTokens: 6000, skipCache: false },
-  other: { provider: 'dashscope', model: 'qwen-plus', temperature: 0.1, maxTokens: 4000, skipCache: false },
+  article_analysis: { provider: 'workers-ai', model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
 };
 
 // —— 输出语言传感器 ——
@@ -94,7 +86,6 @@ export interface CallLLMOverrides {
   model?: string;
   temperature?: number;
   maxTokens?: number;
-  skipCache?: boolean;
   metadata?: any;
   /** 合并进 trace 的 callIndex（同 phase 多次调用去重 R2 key）。 */
   callIndex?: number;
@@ -140,7 +131,6 @@ export function callLLM(
     // ?? 而非 ||：确定性子调用显式传 temperature:0，|| 会吞成默认
     temperature: overrides.temperature ?? d.temperature,
     max_tokens: overrides.maxTokens ?? d.maxTokens,
-    skipCache: overrides.skipCache ?? d.skipCache,
     ...(overrides.responseFormat ? { response_format: overrides.responseFormat } : {}),
     // 先 overrides 后 phase 默认——只读 overrides 会让写在 PHASE_DEFAULTS 里的值静默不下发
     // （2026-09-10 加 intelligence_analysis 的 frequencyPenalty 时就踩了这个）。

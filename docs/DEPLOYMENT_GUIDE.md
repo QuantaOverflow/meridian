@@ -88,8 +88,7 @@ Pages 配置在仓库根的 `wrangler.toml`（`pages_build_output_dir = "apps/fr
 
 ## CI
 
-`.github/workflows/deploy-services.yaml` 只在 push 到 `main` 时触发，而本仓主干是 `meridian-dev`、没有 `main`，
-所以**目前不会自动部署**，以上步骤都是手动的。
+没有 CI，不会自动部署，以上步骤都是手动的。
 
 ## 排错
 

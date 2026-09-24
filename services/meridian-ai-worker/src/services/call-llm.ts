@@ -39,17 +39,11 @@ interface PhaseDefault {
 // ——不关的话 faithfulness 的 800 预算会被思维链吃光、正文为空。关闭动作在 ai-gateway.ts
 // executeWorkersAIViaBinding（THINKING_OFF_MODELS），不在这层。
 const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
-  story_validation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000, skipCache: true },
-  // 去重确认 + 起标题：输出只有一个布尔加一句标题，300 token 绰绰有余。
-  // temperature 0 —— 同一组故事每次都该得到同一个判定，这是判定不是创作。
-  story_merge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 300, skipCache: true },
   brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   tldr_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000, skipCache: true },
   // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；
   // temperature 0 —— 摘要要可复现，不需要创造性。
   tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
-  faithfulness_check: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
-  faithfulness_revise: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800, skipCache: true },
   cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200, skipCache: true },
   // 故事排序：一次看当期全部候选标题（46-51 条约 1400 词），输出前 12 + 5 条落选。
   // maxTokens 3000 沿用离线实测值（两期各 3 轮，6 次调用 completion 全部在预算内，无截断）。

@@ -19,7 +19,7 @@
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
 - DB: Neon `ap-southeast-1`，连接走 Hyperdrive
-- AI Gateway: `meridian-gateway`——所有 LLM / embedding 流量走这里
+- AI Gateway：本地 `.dev.vars` 的 `CLOUDFLARE_GATEWAY_ID` 是 `meridian-ai`（线上 secret 未核）。走 REST 的 provider 经 Gateway；Workers AI 走 `env.AI` binding，embedding 走 ml-service，均不经 Gateway
 - Secrets：`wrangler secret put` 或 CF Secrets Store，**永不入库**
 - 本地 secrets 在每个 worker 的 `.dev.vars`（已 gitignored）
 

@@ -87,6 +87,7 @@
 ### D11. 过时文档 `apps/backend/docs/clustering-service-usage.md`
 - 现象：通篇介绍已删的 `analyzeArticleClusters` / `MLService` 与不存在的 `MockClusteringService`。
 - 待裁决：删除，还是按现行 `ClusteringService` 重写。
+- **已结（2026-09-24）**：删除。聚类契约以 `apps/backend/src/lib/services/clustering.ts` 为准。
 
 ### D12. knip 的盲区
 - 现象：knip 看不到 wrangler binding 与 HTTP 路由，所以 D9、D10 以及已删的 `AI` binding 都没被上一轮死代码清理发现。
@@ -100,11 +101,13 @@
 - 待裁决：字段改名或弃用、删读取点、删死 phase。
 
 - 进展（2026-09-24）：第二条的读取点随 `a311349` 删无调用方的 observability 路由一并消失。`intelligence_analyses` 现写的是出了块的故事数（`writtenBlocks.length`），不再恒为 25，但字段名仍误导；死 phase 与 `story_validation_parse` 仍在。
+- 进展（2026-09-24）：死 phase `story_validation` / `story_merge` / `faithfulness_check` / `faithfulness_revise` 与死 SensorKind `brief_hygiene` / `story_validation_parse` 已删。剩：`intelligence_analyses` 字段名、workflow 里 `logStep('story_validation', …)` 的 step 标签名（改名会断开历史观测数据的连续性）。
 
 ### D14. ai-worker 文档大面积过时
 - `services/meridian-ai-worker/README.md` 仍列出已不存在的 `/meridian/story/validate`、`/analyze-stories`、`/generate-final-brief` 及 `StoryValidationService`；`docs/quota-limit-handling.md` 通篇以已删的 `IntelligenceService` 为例；`docs/ARCHITECTURE.md` 的服务列表同样过时。本次只删了直接指向已删代码的行。
 - 进展：`services/meridian-ai-worker/docs/` 11 份文档经逐份核对全部过时，已整目录删除。
 - 待裁决：README 正文（架构图、端点表、环境变量、npm 命令）按现状重写，还是删减到只剩指路。
+- **已结（2026-09-24）**：README 已按现行代码重写（9 条路由、`callLLM(phase)`、实际读取的 env、pnpm / wrangler@4.120.0 命令）。
 
 ---
 

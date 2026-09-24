@@ -16,7 +16,7 @@
 import type { CloudflareEnv } from '../types';
 import type { TraceContext } from './llm-call-logger';
 
-export type SensorKind = 'brief_hygiene' | 'story_validation_parse' | 'output_language'
+export type SensorKind = 'output_language'
   // 块间数值一致性：b′ 分段写独有的缺陷类（每块独立调用，无跨块仲裁者）
   | 'block_consistency';
 

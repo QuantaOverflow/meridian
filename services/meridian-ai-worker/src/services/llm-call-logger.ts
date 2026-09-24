@@ -7,17 +7,10 @@ import { recordLLMCall } from './observe'
  */
 export type LLMCallPhase =
   | 'article_analysis'
-  | 'story_validation'
   | 'brief_generation'
   | 'tldr_generation'
   // 读者端的散文摘要，与 tldr_generation 用途不同（那个是给次日模型读的机器格式）
   | 'tldr_prose_generation'
-  // 观测性：运行时忠实度门也走 loggedChat，单独 phase 便于和 brief 生成区分。
-  | 'faithfulness_check'
-  | 'faithfulness_revise'
-  // 去重层：确认两条 story 是不是同一个发生 + 给合并后的故事起标题。单独 phase 的理由与
-  // intel_grounding_verify 相同——和 story_validation 共用会让两者的 R2 观测记录互相覆盖。
-  | 'story_merge'
   // 簇判定：一簇一次，判「是不是一件事」+ 起名。2026-09-05 起取代 storyline 两段式
   // （命名主线 + 逐篇归类），后者已随之删除。
   | 'cluster_judge'

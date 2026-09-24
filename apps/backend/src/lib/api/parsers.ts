@@ -73,12 +73,22 @@ export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedS
       }
     }
 
+    // 链接解析不了（缺 link、guid 不是 URL 等）只跳过这一条：cleanUrl 会抛错，
+    // 不接住的话一条坏条目就让整个 feed 解析失败、这一轮一篇都进不来。
+    let cleanedLink: string;
+    try {
+      cleanedLink = cleanUrl(cleanString(link));
+    } catch {
+      console.warn(`[RSS] 跳过链接无法解析的条目: title=${JSON.stringify(title).slice(0, 120)} link=${JSON.stringify(link).slice(0, 200)}`);
+      return null;
+    }
+
     return {
       title: cleanString(title),
-      link: cleanUrl(cleanString(link)),
+      link: cleanedLink,
       pubDate,
     };
-  });
+  }).filter((item: unknown) => item !== null);
 
   // standardize the items
   const parsedItems = z.array(rssFeedSchema).safeParse(properItems);

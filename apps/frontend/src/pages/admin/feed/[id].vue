@@ -12,7 +12,19 @@ const qualityFilter = ref<string>('all');
 const sortBy = ref<string>('createdAt');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 
-const statuses = ['PENDING_FETCH', 'CONTENT_FETCHED', 'PROCESSED', 'FETCH_FAILED', 'RENDER_FAILED', 'PROCESS_FAILED'];
+// 与 packages/database 的 articleStatusEnum 一致；details.get.ts 只认枚举内的值，其余等于不筛选
+const statuses = [
+  'PENDING_FETCH',
+  'CONTENT_FETCHED',
+  'PROCESSED',
+  'SKIPPED_PDF',
+  'SKIPPED_TOO_OLD',
+  'FETCH_FAILED',
+  'RENDER_FAILED',
+  'AI_ANALYSIS_FAILED',
+  'EMBEDDING_FAILED',
+  'R2_UPLOAD_FAILED',
+];
 const completenessLevels = ['COMPLETE', 'PARTIAL_USEFUL', 'PARTIAL_USELESS'];
 const qualityLevels = ['OK', 'LOW_QUALITY', 'JUNK'];
 

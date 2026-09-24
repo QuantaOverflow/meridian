@@ -141,9 +141,14 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
     // 验证日期范围（如果提供）
     let parsedDateFrom, parsedDateTo;
     if (dateFrom || dateTo) {
-      const dateRange = validateDateRange(dateFrom, dateTo);
-      parsedDateFrom = dateRange.from;
-      parsedDateTo = dateRange.to;
+      // 参数错是调用方的错，回 400；不接住的话落到下面的 catch 被当成 500 Internal server error
+      try {
+        const dateRange = validateDateRange(dateFrom, dateTo);
+        parsedDateFrom = dateRange.from;
+        parsedDateTo = dateRange.to;
+      } catch (e) {
+        return c.json(createErrorResponse(e instanceof Error ? e.message : String(e)), 400);
+      }
     }
 
     // 构建完整的工作流参数

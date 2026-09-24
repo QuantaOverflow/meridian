@@ -18,16 +18,12 @@ export default defineEventHandler(async event => {
       sourceId: true,
       status: true,
       content_quality: true,
-      createdAt: true,
     },
   });
 
   // calculate per-source stats
   const sourceStats = sources.map(source => {
     const sourceArticles = articleStats.filter(a => a.sourceId === source.id);
-    const last24hArticles = sourceArticles.filter(
-      a => a.createdAt && new Date(a.createdAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)
-    );
 
     // calculate health metrics
     const totalArticles = sourceArticles.length;
@@ -48,7 +44,8 @@ export default defineEventHandler(async event => {
 
       // article counts
       totalArticles: sourceArticles.length,
-      avgPerDay: last24hArticles.length / 24,
+      // articleStats 取的是近 7 天（见上），日均 = 7 天总数 / 7。原先是近 24 小时 / 24，实为「每小时」
+      avgPerDay: sourceArticles.length / 7,
 
       // health metrics
       processSuccessRate: totalArticles ? (processedArticles.length / totalArticles) * 100 : null,

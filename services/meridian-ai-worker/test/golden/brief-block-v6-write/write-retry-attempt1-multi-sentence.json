@@ -1,0 +1,83 @@
+{
+  "note": "真实重试对 attempt 1/2：句 5 把一句带内部句号的引语当一句写（\"...it. It's like a movie'.\"），splitSentences 在引语内部的句号处又切一刀 —— writeOk 应报 multi_sentence，这正是它在生产里被拒、触发第二次尝试（1002）的原因。cited 集合取自本条响应自身引用的坐标（不需要文章原文，只是「这些坐标是本条自称引用的」这一层自洽）。",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/brief_block_v6-1001.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "{\"verdict\":\"written\",\"reason\":\"\",\"title\":\"Mass shooting in South Africa kills 11\",\"sentences\":[{\"text\":\"At least 11 people were killed and three others injured when three gunmen opened fire on a house party in KwaMakhutha township near Durban, police said [1108286:1][1109235:3].\",\"sources\":[{\"articleId\":1108286,\"sentence\":1},{\"articleId\":1109235,\"sentence\":3}]},{\"text\":\"Among the dead was a pregnant woman, and two people survived the attack [1108617:1][1109517:5].\",\"sources\":[{\"articleId\":1108617,\"sentence\":1},{\"articleId\":1109517,\"sentence\":5}]},{\"text\":\"The assailants herded everyone into a single room before opening fire and set fire to a vehicle belonging to one of the victims, local broadcaster eNCA reported [1108617:5][1109517:8].\",\"sources\":[{\"articleId\":1108617,\"sentence\":5},{\"articleId\":1109517,\"sentence\":8}]},{\"text\":\"Police have launched a manhunt for the suspects and are combing the scene for evidence, while the motive remains unclear but a feud between rival groupings cannot be ruled out [1109050:9][1110405:7].\",\"sources\":[{\"articleId\":1109050,\"sentence\":9},{\"articleId\":1110405,\"sentence\":7}]},{\"text\":\"One resident likened the scene to something out of a film, telling eNCA, 'I can’t believe it. It’s like a movie' [1109517:11][1109517:12].\",\"sources\":[{\"articleId\":1109517,\"sentence\":11},{\"articleId\":1109517,\"sentence\":12}]}]}",
+  "expected": {
+    "cleaned": {
+      "verdict": "written",
+      "reason": "",
+      "title": "Mass shooting in South Africa kills 11",
+      "sentences": [
+        {
+          "text": "At least 11 people were killed and three others injured when three gunmen opened fire on a house party in KwaMakhutha township near Durban, police said.",
+          "sources": [
+            {
+              "articleId": 1108286,
+              "sentence": 1
+            },
+            {
+              "articleId": 1109235,
+              "sentence": 3
+            }
+          ]
+        },
+        {
+          "text": "Among the dead was a pregnant woman, and two people survived the attack.",
+          "sources": [
+            {
+              "articleId": 1108617,
+              "sentence": 1
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 5
+            }
+          ]
+        },
+        {
+          "text": "The assailants herded everyone into a single room before opening fire and set fire to a vehicle belonging to one of the victims, local broadcaster eNCA reported.",
+          "sources": [
+            {
+              "articleId": 1108617,
+              "sentence": 5
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 8
+            }
+          ]
+        },
+        {
+          "text": "Police have launched a manhunt for the suspects and are combing the scene for evidence, while the motive remains unclear but a feud between rival groupings cannot be ruled out.",
+          "sources": [
+            {
+              "articleId": 1109050,
+              "sentence": 9
+            },
+            {
+              "articleId": 1110405,
+              "sentence": 7
+            }
+          ]
+        },
+        {
+          "text": "One resident likened the scene to something out of a film, telling eNCA, 'I can’t believe it. It’s like a movie'.",
+          "sources": [
+            {
+              "articleId": 1109517,
+              "sentence": 11
+            },
+            {
+              "articleId": 1109517,
+              "sentence": 12
+            }
+          ]
+        }
+      ]
+    },
+    "writeOkReasons": [
+      "sentence 5: multi_sentence"
+    ]
+  }
+}

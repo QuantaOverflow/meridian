@@ -1,0 +1,37 @@
+{
+  "note": "brief 档（1 句）真实产出，同样带标签泄漏，句子更短——覆盖三档篇幅里最短的一档。",
+  "sourceKey": "llm-calls/cron-brief-1790168539876/brief_block_v6-2001.json",
+  "sourceRun": "cron-brief-1790168539876",
+  "input": "{\"verdict\":\"written\",\"reason\":\"The material focuses on a single news cluster: a Republican senator's call for a Senate investigation into Donald Trump Jr. and Hunter Biden, triggered by a ProPublica report that a Russian oligarch funded Trump Jr.'s wedding.\",\"title\":\"GOP senator calls for Senate probe of Trump Jr., Hunter Biden\",\"sentences\":[{\"text\":\"Utah Senator John Curtis called for the Senate Judiciary Committee to subpoena Donald Trump Jr. and Hunter Biden over foreign business dealings and gifts, citing a ProPublica report that Russian oligarch Umar Kremlev funded Trump Jr.'s Bahamian wedding [1099425:1][1100193:2][1104593:4][1108833:14].\",\"sources\":[{\"articleId\":1099425,\"sentence\":1},{\"articleId\":1100193,\"sentence\":2},{\"articleId\":1104593,\"sentence\":4},{\"articleId\":1108833,\"sentence\":14}]}]}",
+  "expected": {
+    "cleaned": {
+      "verdict": "written",
+      "reason": "The material focuses on a single news cluster: a Republican senator's call for a Senate investigation into Donald Trump Jr. and Hunter Biden, triggered by a ProPublica report that a Russian oligarch funded Trump Jr.'s wedding.",
+      "title": "GOP senator calls for Senate probe of Trump Jr., Hunter Biden",
+      "sentences": [
+        {
+          "text": "Utah Senator John Curtis called for the Senate Judiciary Committee to subpoena Donald Trump Jr. and Hunter Biden over foreign business dealings and gifts, citing a ProPublica report that Russian oligarch Umar Kremlev funded Trump Jr.'s Bahamian wedding.",
+          "sources": [
+            {
+              "articleId": 1099425,
+              "sentence": 1
+            },
+            {
+              "articleId": 1100193,
+              "sentence": 2
+            },
+            {
+              "articleId": 1104593,
+              "sentence": 4
+            },
+            {
+              "articleId": 1108833,
+              "sentence": 14
+            }
+          ]
+        }
+      ]
+    },
+    "writeOkReasons": []
+  }
+}

@@ -3,7 +3,7 @@ import type { H3Event } from 'h3';
 import type { BriefDetail } from '~/shared/types';
 import { getBriefSources } from './briefSources';
 import { parseBriefContent, stripInlineMarkdown } from './briefContent';
-import { ensureDate, formatReportDate, formatReportDateCN, getDB } from './utils';
+import { ensureDate, formatReportDateCN, getDB } from './utils';
 
 const BRIEF_COLUMNS = {
   id: true,
@@ -11,9 +11,6 @@ const BRIEF_COLUMNS = {
   title: true,
   content: true,
   tldr_prose: true,
-  model_author: true,
-  totalArticles: true,
-  totalSources: true,
   usedSources: true,
   usedArticles: true,
 } as const;
@@ -68,15 +65,11 @@ export async function loadBriefDetail(
     slug: String(report.id),
     title: report.title,
     createdAt,
-    date: formatReportDate(createdAt),
     dateCN: formatReportDateCN(createdAt),
     tldrProse: report.tldr_prose === null ? null : stripInlineMarkdown(report.tldr_prose),
     sections: parsed.sections,
     storyCount: parsed.storyCount,
     readingMinutes: parsed.readingMinutes,
-    modelAuthor: report.model_author,
-    totalArticles: report.totalArticles,
-    totalSources: report.totalSources,
     usedArticles: report.usedArticles,
     usedSources: report.usedSources,
     sources: sourceList.sources,

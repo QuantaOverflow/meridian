@@ -14,8 +14,7 @@
  * 核对办法：CSS 嵌在 dist/_worker.js/chunks/build/entry-styles.*.mjs 的 JS 字符串里，
  * 转义被双写——disabled:opacity-50 编译成 disabled\\:opacity-50:disabled，方括号类的
  * \[ 成 \\[。直接 grep 原始类名，带变体或方括号的一定查不到，会误报「缺失」。
- *
- * 另注：根目录 tailwind.config.ts 仍是死配置（本文件无 @config 指令，v4 不读它）。 */
+ */
 
 /* ---------------------------------------------------------------------------
  * 设计令牌（Meridian 读者端重设计 v3）
@@ -188,13 +187,6 @@ a {
 
 .brief-prose blockquote p:last-child {
   margin-bottom: 0;
-}
-
-/* 归档条目摘要等短文本：无衬线、次级色 */
-.brief-prose-compact {
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--text2);
 }
 
 /* ---------------------------------------------------------------------------

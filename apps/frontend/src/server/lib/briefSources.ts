@@ -29,7 +29,7 @@ export interface BriefSourceList {
   articleCount: number;
 }
 
-export async function getBriefSources(event: H3Event, reportId: ReturnType<typeof sql> | number): Promise<BriefSourceList> {
+export async function getBriefSources(event: H3Event, reportId: ReturnType<typeof sql>): Promise<BriefSourceList> {
   const rows = (await getDB(event).execute(sql`
     SELECT DISTINCT s.name AS source_name, a.title AS article_title, a.url AS article_url
     FROM brief_runs br

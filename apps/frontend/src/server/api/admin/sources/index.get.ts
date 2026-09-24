@@ -19,7 +19,6 @@ export default defineEventHandler(async event => {
       status: true,
       content_quality: true,
       createdAt: true,
-      processedAt: true,
     },
   });
 
@@ -38,17 +37,6 @@ export default defineEventHandler(async event => {
       a => a.content_quality === 'LOW_QUALITY' || a.content_quality === 'JUNK'
     );
 
-    // calculate processing time for processed articles
-    const processingTimes = processedArticles
-      .map(a =>
-        a.processedAt && a.createdAt ? new Date(a.processedAt).getTime() - new Date(a.createdAt).getTime() : null
-      )
-      .filter(time => time !== null);
-
-    const avgProcessingTime = processingTimes.length
-      ? Math.round(processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length / 1000) // in seconds
-      : null;
-
     return {
       id: source.id,
       name: source.name,
@@ -66,7 +54,6 @@ export default defineEventHandler(async event => {
       processSuccessRate: totalArticles ? (processedArticles.length / totalArticles) * 100 : null,
       errorRate: totalArticles ? (failedArticles.length / totalArticles) * 100 : null,
       lowQualityRate: processedArticles.length ? (lowQualityArticles.length / processedArticles.length) * 100 : null,
-      avgProcessingTime,
     };
   });
 

@@ -16,7 +16,6 @@
     "@heroicons/vue": "^2.2.0",
     "@meridian/database": "workspace:*",
     "@nuxtjs/color-mode": "3.5.2",
-    "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.4",
     "@types/markdown-it": "^14.1.2",
     "@unhead/vue": "^2.0.8",

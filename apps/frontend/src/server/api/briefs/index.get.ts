@@ -4,7 +4,6 @@ import type { BriefListResponse, BriefSummary } from '~/shared/types';
 import { stripInlineMarkdown } from '~/server/lib/briefContent';
 import {
   ensureDate,
-  formatReportDate,
   formatReportDateCN,
   formatReportDateShortCN,
   getDB,
@@ -94,8 +93,6 @@ export default defineEventHandler(async (event): Promise<BriefListResponse> => {
       // 期号而不是日期：同一天可能有多期，日期 slug 会点到别的期上去
       slug: String(row.id),
       title: row.title,
-      createdAt,
-      date: formatReportDate(createdAt),
       dateShortCN: formatReportDateShortCN(createdAt),
       excerpt: toExcerpt(row.tldr_prose),
       storyCount: Number(row.story_count ?? 0),
@@ -107,7 +104,6 @@ export default defineEventHandler(async (event): Promise<BriefListResponse> => {
   return {
     items,
     matched,
-    hasMore: offset + items.length < matched,
     total: overall.total,
     earliestDateCN: overall.earliest === null ? null : formatReportDateCN(ensureDate(overall.earliest)),
   };

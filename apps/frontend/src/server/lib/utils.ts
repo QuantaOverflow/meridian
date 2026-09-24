@@ -1,35 +1,6 @@
 import { getDb } from '@meridian/database';
 import type { H3Event } from 'h3';
 
-export const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-export interface FormattedDate {
-  month: string;
-  day: number;
-  year: number;
-}
-
-export function formatReportDate(date: Date): FormattedDate {
-  return {
-    month: MONTH_NAMES[date.getUTCMonth()],
-    day: date.getUTCDate(),
-    year: date.getUTCFullYear(),
-  };
-}
-
 export function ensureDate(dateInput: Date | string | null | undefined): Date {
   return dateInput ? new Date(dateInput) : new Date();
 }
@@ -81,9 +52,8 @@ export function getDB(event: H3Event): ReturnType<typeof getDb> {
 /**
  * 中文长日期，如「2026 年 8 月 25 日」。
  *
- * 刻意和 formatReportDate / generateReportSlug 一样取 UTC 字段：slug 就是按 UTC 日期
- * 生成的，展示若换成本地时区，跨零点的那几个小时会出现「页面写 8 月 26 日、URL 却是
- * august-25」的错位。
+ * 取 UTC 字段：旧的日期 slug（如 august-25-2026）按 UTC 日期解析，展示若换成本地时区，
+ * 跨零点的那几个小时会出现「页面写 8 月 26 日、URL 却是 august-25」的错位。
  */
 export function formatReportDateCN(date: Date): string {
   return `${date.getUTCFullYear()} 年 ${date.getUTCMonth() + 1} 月 ${date.getUTCDate()} 日`;

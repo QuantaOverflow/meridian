@@ -70,6 +70,21 @@ export default defineEventHandler(async event => {
     orderBy: sortOrder === 'asc' ? sortField : desc(sortField),
     limit: pageSize,
     offset: (page - 1) * pageSize,
+    // 只取页面用到的列（不带 content 全文；embedding 只为判 hasEmbedding）
+    columns: {
+      id: true,
+      title: true,
+      url: true,
+      publishDate: true,
+      status: true,
+      completeness: true,
+      content_quality: true,
+      failReason: true,
+      language: true,
+      primary_location: true,
+      processedAt: true,
+      embedding: true,
+    },
   });
 
   // get total count with filters
@@ -79,7 +94,6 @@ export default defineEventHandler(async event => {
   });
 
   return {
-    id: source.id,
     name: source.name,
     url: source.url,
     initialized: source.do_initialized_at !== null,
@@ -97,15 +111,7 @@ export default defineEventHandler(async event => {
       language: article.language,
       primary_location: article.primary_location,
       processedAt: article.processedAt?.toISOString(),
-      createdAt: article.createdAt?.toISOString(),
       hasEmbedding: article.embedding !== null,
-      analysis: {
-        event_summary_points: article.event_summary_points,
-        thematic_keywords: article.thematic_keywords,
-        topic_tags: article.topic_tags,
-        key_entities: article.key_entities,
-        content_focus: article.content_focus,
-      },
     })),
     pagination: {
       currentPage: page,

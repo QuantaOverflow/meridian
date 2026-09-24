@@ -1,12 +1,6 @@
 import type { BriefSection } from '~/server/lib/briefContent';
 import type { BriefSource } from '~/server/lib/briefSources';
 
-interface ReportDate {
-  month: string;
-  day: number;
-  year: number;
-}
-
 /** 一期简报的完整读者视图，由 /api/briefs/:slug 返回 */
 export interface BriefDetail {
   id: number;
@@ -14,7 +8,6 @@ export interface BriefDetail {
   /** 由模型产出的关键词串，不是一句标题 */
   title: string;
   createdAt: Date;
-  date: ReportDate;
   /** 「2026 年 8 月 25 日」 */
   dateCN: string;
   /** 面向读者的散文摘要；历史期在回填前为 null */
@@ -22,9 +15,6 @@ export interface BriefDetail {
   sections: BriefSection[];
   storyCount: number;
   readingMinutes: number;
-  modelAuthor: string | null;
-  totalArticles: number;
-  totalSources: number;
   usedArticles: number;
   usedSources: number;
   sources: BriefSource[];
@@ -36,8 +26,6 @@ export interface BriefSummary {
   id: number;
   slug: string;
   title: string;
-  createdAt: Date;
-  date: ReportDate;
   /** 「8 月 25 日」 */
   dateShortCN: string;
   excerpt: string | null;
@@ -51,7 +39,6 @@ export interface BriefListResponse {
   items: BriefSummary[];
   /** 命中当前检索条件的期数 */
   matched: number;
-  hasMore: boolean;
   /** 全部期数，与检索条件无关，用于副标题 */
   total: number;
   /** 最早一期的日期，用于副标题「覆盖 X 至今」 */

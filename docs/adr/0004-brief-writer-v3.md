@@ -59,7 +59,7 @@
 
 ## 配套
 
-- 观测：`services/observe.ts` 的 `traced()` + `x-observe: inline`，新组件每步包一行即可（见 `docs/OBSERVABILITY_GUIDE.md` 第 5 节）
+- 观测：`services/observe.ts` 的 `traced()` + `x-observe: inline`，新组件每步包一行即可（见 `.claude/rules/workers.md` 第 3 节）
 - 验收：`apps/backend/prototypes/brief-writer-v3/verify.ts`（`--replay` 可重判落盘不重新生成）
 - 开发期判官用 Claude subagent 或 codex，不花 Workers AI 的钱
 

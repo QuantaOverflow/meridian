@@ -259,6 +259,8 @@ docs/*-handoff.md
 docs/engineering-notes/
 # 探索记录卡片只留本地，供开发时检索（2026-09-24 定）；要公开的结论写进 docs/adr/
 docs/knowledge/
+# 设计交付稿只留本地：前端按它实现后以代码为准（2026-09-24 定）
+docs/design/
 apps/*/prototypes/
 services/*/prototypes/
-scripts/eval/*/prototypes/
+eval/*/prototypes/

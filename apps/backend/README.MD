@@ -25,7 +25,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
    `blockImportance` + `/meridian/stories/rank` 排序 → 每块 `/meridian/brief-block-v6` →
    `/meridian/brief-title`、`/meridian/generate-brief-summary` → 写 `reports`。
 
-编排细节见 [`docs/meridian-workflow-architecture.md`](../../docs/meridian-workflow-architecture.md)；
+编排细节见根 `README.md` 的「How It Works」一节；
 现行链路与已证伪路线见 [`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)。
 跨服务调用的契约是 `src/lib/services/ai-services.ts` 里的客户端方法。
 
@@ -61,7 +61,7 @@ cd apps/backend && npx wrangler@4.120.0 deploy
 ```
 
 包名必须写 `@meridian/backend`；写成 `meridian-backend` 时 pnpm 找不到包却静默退出 0。
-backend 与 ai-worker 本地联调、R2 注意事项见 `.claude/rules/local-verification.md`。
+backend 与 ai-worker 本地联调、R2 注意事项见 `.claude/rules/workers.md`。
 
 ## 测试
 
@@ -86,6 +86,6 @@ docs/API_GUIDE.md          HTTP 路由表
 
 ## 相关文档
 
-- 部署：[`docs/DEPLOYMENT_GUIDE.md`](../../docs/DEPLOYMENT_GUIDE.md)
-- 观测与排错：[`docs/OBSERVABILITY_GUIDE.md`](../../docs/OBSERVABILITY_GUIDE.md)
+- 部署：根 `README.md` 的「Deployment」一节
+- 观测与排错：根 `README.md` 的「Monitoring & Observability」一节
 - 数据表：[`packages/database/README.MD`](../../packages/database/README.MD)

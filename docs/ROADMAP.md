@@ -7,7 +7,7 @@
 ## 2026-09-24 · 现状（代码层面）
 
 - **简报链路已切到 v6**（`961aeca`，2026-09-21）：簇判定 → LLM 重要性排序（三轮洗牌 + Borda，`86633c5` / `0ae2592`）
-  → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见 `docs/meridian-workflow-architecture.md`
+  → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见根 `README.md` 的「How It Works」一节
 - **已删代码**：情报报告层、b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账、story-validation、候选分组、debug 路由与一批无调用方的 admin/observability 路由
 - **eval 只剩 4 个 harness**（`cluster-to-brief`、`clustering`、`scorer-recall`、`scrape-quality`）；
   `selection`、`faithfulness`、`intel-grounding`、`coverage-judge`、`offline-review` 等 9 个因结构上验不了 v6 删除（`0fcbd9a`）
@@ -264,6 +264,5 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 
 ## 方法论
 
-- **`docs/eval-playbook.md`** — 如何为 LLM 管线做好 eval（error-analysis 优先、验 LLM-judge、CI 闸、反模式）
 - **`docs/engineering-notes/eval-design-principles.md`** — 五条原则，第五条（参考划分必须全覆盖）来自 2026-09-05 的实测教训
 - **`docs/adr/`** — 决策记录。0001 Claimify、0002 判官指标统一、0003 一簇即一条、0004 写作层 v3、0005 backend 协调约定、0006 eval 自举与尺子重校

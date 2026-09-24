@@ -26,24 +26,20 @@
 ## 工作规则
 - 分支：`meridian-dev` 是主干（没有 `main`）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
-- 改 LLM prompt：编辑 `services/meridian-ai-worker/src/prompts/` → 跑 `eval/` 评估 → 再合
 - 完成前跑 `pnpm typecheck` + 相关测试。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
   `pnpm -F @meridian/backend test`、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`；
   整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
 - 报错先 `wrangler tail`，再加 console.log
 
 ## 已知坑
-- **CF Workflow 单 step 输出 ~1MB 上限**——曾因情报 step 内联返回全部 story 报告而触发 `WorkflowInternalError`（当时靠 `maxStoriesToGenerate=3` 规避）。**已解决（2026-06）**：大对象卸 R2、step 只回传 key（`auto-brief-generation.ts` 的 embeddings 即如此；v6 块 step 只回写出的 3–5 句），现 cron 取 `MAX_STORIES_TO_GENERATE=25`。新增 step 若要传大对象，沿用"卸 R2 + 传 key"模式
 - `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点
-- 调试三件套：`wrangler tail` / `wrangler workflows instances describe` / R2 `observability/*.json`
 - **更多 LLM pipeline 踩坑** → 读 `docs/engineering-notes/llm-pipeline-pitfalls.md`（仅本地）
 
 ## 何时读哪份 docs
-- 改工作流编排 → `docs/meridian-workflow-architecture.md`
+- 链路总览、部署、观测/排错 → 根 `README.md` 的 How It Works / Deployment / Monitoring 三节
+- 改 backend / ai-worker 代码 → `.claude/rules/workers.md` 自动载入（本地验证、workflow、观测、LLM 调用的硬规矩）；编排以 `apps/backend/src/workflows/` 代码为准
 - 跨 service 调用 → `apps/backend/src/lib/services/ai-services.ts`（客户端方法即契约，比文档准）
-- 部署前 → `docs/DEPLOYMENT_GUIDE.md`
-- 观测/排错 → `docs/OBSERVABILITY_GUIDE.md`
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
@@ -52,16 +48,12 @@
 
 ## 知识蒸馏（每个 spike / goal 结束时做）
 
-> **开工前先查 `docs/knowledge/INDEX.md`**（或 `rg` 搜 `nodes/`）：找到相关的旧记录，说清
-> 本轮相对旧尝试的变化、为什么可能绕过失败、希望获得的唯一新信息。不要把相同机制换措辞当新架构。
+> **开工前先查本地知识库 `docs/knowledge/`**（不入 git，没有就跳过）：说清本轮相对旧尝试的变化、
+> 为什么可能绕过失败、希望获得的唯一新信息。不要把相同机制换措辞当新架构。
+> 什么时候查/写/整理、记录格式，都以本地 `docs/knowledge/README.md` 为准。
 >
 > **GOAL 节点只在我主动提起时才写。** 不要提议"要不要起个 GOAL"——它不产生任何新信息，
 > 拿它当下一步动作只是用仪式占掉真正该做的事。上面那三个问题照答，但答在对话里，不是先立节点。
->
-> spike 结束写一条扁平记录（`kind`: approach / fact / decision，approach 另带 `verdict`: failed / works / open）：结论写进标题，
-> 正文留结果（分子/分母）、条件、成本与没验证的部分，未知标未知；小样本通过与扩展失败分开记。
-> LLM 自报状态和机械通过不是独立语义验收。旧结论被推翻标 `superseded`，不删。
-> 格式见 `docs/knowledge/README.md`；跑 `pnpm -s knowledge` 校验并重建索引。
 
 调研笔记、原型（2026-09-12 定）和探索记录卡片（2026-09-24 定）都只留本地、不入 git，所以**要让别人看得到的结论必须蒸馏进入库的文档**：
 - 探索记录（一次尝试或一个结论一条，JSON frontmatter + 正文）→ `docs/knowledge/nodes/`（**只留本地**，开发时检索用），详细产物用 `source` 指过去
@@ -89,8 +81,10 @@
 | 探索记录卡片 | `docs/knowledge/nodes/` | ❌ 只留本地（根 `.gitignore` 挡） |
 | 决定与证伪清单 | `docs/adr/` | ✅ |
 | 术语表 | `CONTEXT.md` | ✅ |
-| 工程/架构/运维文档、路线图 | `docs/`（架构、部署、观测、ROADMAP） | ✅ |
-| 设计交付稿（design handoff） | `docs/design/<name>/` | ✅ |
+| 链路总览、部署、观测排错（给人读） | 根 `README.md` | ✅ |
+| 写代码时的硬规矩（给 agent） | `.claude/rules/<topic>.md`，`paths:` 写到包一级 | ✅ |
+| 路线图、技术债 | `docs/ROADMAP.md`、`docs/debt.md` | ✅ |
+| 设计交付稿（design handoff） | `docs/design/<name>/`；前端实现后以代码为准 | ❌ 只留本地（根 `.gitignore` 挡） |
 | session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
 | 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |
 
@@ -103,12 +97,13 @@
 
 ## 路径触发的规则（`.claude/rules/`）
 
-按路径自动载入，不占常驻上下文。改到对应目录时才进来：
+按路径自动载入，不占常驻上下文。改到对应目录时才进来。`paths:` 写错不会报错、只会悄悄不载入，
+所以 `pnpm typecheck` 先跑 `scripts/check-rules.mjs`：每条 `paths:` 必须匹配到文件，rules 与本文件里反引号写的仓库路径必须存在。
 
 | 文件 | 触发路径 | 内容 |
 |---|---|---|
 | `eval.md` | `eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
-| `local-verification.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | wrangler dev 单端点与联调、R2 注意事项、typecheck 的两个坑 |
+| `workers.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | 本地验证（dev 直连生产 R2）、workflow step 规矩、观测、LLM 调用的坑、typecheck 的两个坑 |
 | `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
 ## 禁区（未明确要求不要碰）

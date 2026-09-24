@@ -29,9 +29,9 @@ RSS sources ──► SourceScraperDO (one Durable Object per source)
                     ▼
           ARTICLE_PROCESSING_QUEUE ──► ProcessArticles workflow
                                          fetch body → analyze (AI Worker) → body to R2
-daily cron ──► AutoBriefGenerationWorkflow
-                 embeddings (ML Service) → clustering (ML Service) → cluster judge →
-                 importance ranking → one brief block per cluster (AI Worker) → title / summary → Postgres
+cron `0 13 * * *` UTC ──► AutoBriefGenerationWorkflow (one brief/day)
+                 embeddings backfill → clustering (ML Service) → cluster judging →
+                 importance ranking → per-block writing (AI Worker) → tier assembly → title / summary → Postgres
                                                      │
 Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) + R2
 ```
@@ -39,12 +39,12 @@ Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) +
 | Component | Role |
 |---|---|
 | `apps/backend` | Hono API, Durable Object scrapers, queue consumer, both Workflows, admin / observability routes |
-| `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`) through Cloudflare AI Gateway. Called via service binding `AI_WORKER` |
+| `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`, mostly) via the `AI` binding, no AI Gateway. Called via service binding `AI_WORKER` |
 | `services/meridian-ml-service` | FastAPI on a Cloudflare Container: `multilingual-e5-small` embeddings and agglomerative cosine clustering |
 | `apps/frontend` | Nuxt 3 reader (today's brief, archive, story threads) + admin pages |
 | `packages/database` | Drizzle schema and migrations for Neon Postgres |
 
-The full step-by-step pipeline is in [`docs/meridian-workflow-architecture.md`](docs/meridian-workflow-architecture.md); design decisions and falsified alternatives are in [`docs/adr/`](docs/adr/).
+The step-by-step pipeline is below in "How It Works"; design decisions and falsified alternatives are in [`docs/adr/`](docs/adr/).
 
 ## 🔄 How It Works
 
@@ -53,18 +53,21 @@ The full step-by-step pipeline is in [`docs/meridian-workflow-architecture.md`](
 - Each source gets its own Durable Object (`SourceScraperDO`) that fetches on its frequency tier and deduplicates via DB constraints
 - New article ids are queued for processing
 
-### 2. Article processing (`ProcessArticles`)
-- Fetches the article body (plain fetch, browser rendering for tricky domains, Mozilla Readability for extraction); PDFs and blocked/stub pages are marked and skipped
+### 2. Article processing (`ProcessArticles` workflow, per queued batch)
+- Fetches the article body (`DomainRateLimiter`: concurrency 8, 1s global / 5s per-domain cooldown); tricky domains go through browser rendering, others fetch first and degrade; PDFs and blocked/stub pages (junk extraction, player shells) are marked and skipped, not analyzed
 - AI Worker `POST /meridian/article/analyze` extracts language, location, quality, event summary points, keywords, entities
 - Body goes to R2, metadata and analysis to Postgres
+- Embeddings are **not** computed here (since 2026-07) — batch-computed later, right before clustering, so the ML container isn't kept warm by one-at-a-time calls
 
-### 3. Brief generation (`AutoBriefGenerationWorkflow`, daily cron)
-1. **Embeddings** — missing embeddings are batch-computed right before clustering (ML Service `POST /embeddings`)
-2. **Clustering** — no dimensionality reduction, cosine-distance average-linkage clustering (ML Service `POST /ai-worker/clustering`). One cluster ≈ one event
-3. **Cluster judging** — `/meridian/cluster/judge`: one call per cluster decides EVENT / NO_EVENT and names the story. Importance comes from a source-count formula (`blockImportance`), not an LLM score
-4. **Importance ranking** — `/meridian/stories/rank`: three shuffled LLM rounds + Borda aggregation over all candidates, with a per-event cap
-5. **Brief blocks** — `/meridian/brief-block-v6`: each selected cluster's articles become one block of 3–5 cited sentences (1–2 for the "in brief" tier)
+### 3. Brief generation (`AutoBriefGenerationWorkflow`, cron `0 13 * * *` UTC, one run/day)
+1. **Embeddings backfill** — missing embeddings for the window are computed in batches of 50 right before clustering (ML Service `POST /embeddings`)
+2. **Clustering** — no dimensionality reduction, cosine-distance average-linkage agglomerative clustering (ML Service `POST /ai-worker/clustering`). One cluster ≈ one event
+3. **Cluster judging** — `/meridian/cluster/judge`: one call per cluster decides EVENT / NO_EVENT and names the story. Block importance comes from a source-count formula (`blockImportance`), not an LLM score
+4. **Importance ranking** — `/meridian/stories/rank`: three shuffled LLM rounds + Borda aggregation over all candidates, then a per-event cap
+5. **Brief blocks, one workflow step per story** — `/meridian/brief-block-v6`: each selected cluster's articles become one block of 3–5 cited sentences (1–2 for the "in brief" tier). One step per story because ~2% of Workflow step invocations get canceled by the platform; batching many LLM calls into one step would drop a whole run on a single blip
 6. **Assembly** — code renders three sections (lead / more / in brief); `/meridian/brief-title`, `/meridian/generate-brief-summary` add the title and reader summary; the report is saved to Postgres
+
+Retired (code deleted, do not look for these): the story-validation layer, candidate grouping, two-stage storyline, the intel-report layer, b′ segmented writing, and whole-brief synthesis + faithfulness gate + RARR — see `docs/adr/0003-cluster-as-brief-block.md` and `docs/adr/0004-brief-writer-v3.md` for why.
 
 ### 4. Delivery
 - Nuxt 3 reader: today's brief, archive (`/briefs`), cross-day story threads (`/stories`)
@@ -120,7 +123,46 @@ curl -X POST -H "Authorization: Bearer $API_TOKEN" \
 
 ### Deployment
 
-Deploy each service from its own directory with `wrangler deploy` — never from the repo root. Secrets are set with `wrangler secret put`. See [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md).
+Four deployable units, each deployed from its own directory — **never `wrangler deploy` from the repo root**. Variables for each are documented in that directory's `.dev.vars.example`; production secrets are set with `wrangler secret put`.
+
+Deploy in dependency order: DB migration → AI Worker → ML Service → backend → frontend. The backend's service binding points at `meridian-ai-worker`, so backend deploy fails if that isn't live yet.
+
+1. **DB migration** — `pnpm -F @meridian/database migrate` (`DATABASE_URL` from `packages/database/.env.example`). Schema-change flow (`generate` → review SQL → commit together) is in `CLAUDE.md`; files under `packages/database/migrations/` are historical and must not be edited.
+2. **AI Worker** (`services/meridian-ai-worker`, `wrangler.toml`)
+   ```bash
+   cd services/meridian-ai-worker
+   wrangler deploy
+   ```
+   No secrets needed — every model call goes through the Workers AI binding `AI`; per-phase models live in `src/services/call-llm.ts`'s `PHASE_DEFAULTS`.
+3. **ML Service** (`services/meridian-ml-service/cf-worker`) — one deploy is two things: the Durable Object shell (`cf-worker/src/index.ts`) and the container image built from `wrangler.jsonc`'s `"image": "../Dockerfile"` (the clustering/embedding code lives in the image). Needs Docker locally and a populated `services/meridian-ml-service/model-cache/` (gitignored, ~470MB — the Dockerfile `COPY`s it directly).
+   ```bash
+   cd services/meridian-ml-service/cf-worker
+   wrangler secret put API_TOKEN     # must match backend's MERIDIAN_ML_SERVICE_API_KEY
+   wrangler deploy
+   ```
+   **A successful shell deploy does not mean the image was updated** (the clustering algorithm once shipped three and a half months late because of this, 2026-06→09). After deploying, run:
+   ```bash
+   scripts/check-container-deploy.sh    # 0 = image not older than code; 1 = image stale; 2 = tooling error
+   ```
+   Production `GET /health`'s `build_identity` (build SHA + build time) also shows which build is live.
+4. **Backend** (`apps/backend`, `wrangler.jsonc`)
+   ```bash
+   cd apps/backend
+   wrangler secret put API_TOKEN                     # Bearer token for /admin/* and /observability/*
+   wrangler secret put CLOUDFLARE_API_TOKEN          # browser rendering for scraping
+   wrangler secret put MERIDIAN_ML_SERVICE_API_KEY   # = ml-service's API_TOKEN
+   wrangler deploy
+   ```
+   Bindings — see "Configuration" below. After adding a new RSS source, initialize its DO: `POST /do/admin/initialize-dos` (Bearer token).
+5. **Frontend** (Cloudflare Pages) — Pages config is in the repo-root `wrangler.toml` (`pages_build_output_dir = "apps/frontend/dist"`, production vars under `[env.production.vars]`). Secrets via `wrangler pages secret put`: `DATABASE_URL`, `SESSION_PASSWORD`, `WORKER_API_TOKEN`, `ADMIN_PASSWORD`. Build: `pnpm -F @meridian/frontend build`.
+
+**Judging whether a deploy worked**
+- `wrangler deploy` uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.
+- Upload succeeds but activation hangs: usually an OAuth token missing write scope; `wrangler whoami` will warn — `wrangler login` again.
+- ML Service also needs to pass `scripts/check-container-deploy.sh`.
+- "Deployed" isn't "ran": new brief-generation code only proves itself on the next cron run (or a manual `POST /admin/briefs/generate`).
+
+**CI**: none. Nothing deploys automatically; every step above is manual.
 
 ## 📊 API Reference
 
@@ -165,13 +207,52 @@ The `.dev.vars.example` files listed above are the source of truth for each Work
 - **AI Worker**: 无 secret（模型走 Workers AI binding）
 - **ML Service**: `API_TOKEN`
 
-Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `MY_WORKFLOW` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`.
+Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `MY_WORKFLOW` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
 
 ## 📈 Monitoring & Observability
 
-- Every workflow step is logged to R2 `observability/<workflowId>.json`; raw LLM I/O to `llm-calls/<workflowId>/`
-- Query a run via `/observability/runs/:workflowId`, trends via `/observability/trends`
-- See [`docs/OBSERVABILITY_GUIDE.md`](docs/OBSERVABILITY_GUIDE.md)
+Runbook for figuring out what went wrong with a given brief run. Recording code: `apps/backend/src/lib/observability/index.ts` and `auto-brief-generation.ts`; query code: `apps/backend/src/routers/observability.ts`. Everything keys on `workflow_id` (cron runs look like `cron-brief-<ts>`).
+
+**Where data lands**
+
+| Location | Content | Written by |
+|---|---|---|
+| DB `brief_runs` | one row per run: status (`RUNNING` / `COMPLETED` / `DEGRADED` / `FAILED` / `TERMINATED_NO_STORIES`), per-phase counts, `error` | the workflow's `persist:brief_run_*` steps |
+| DB `brief_stories` | one row per candidate block: title, importance, article ids, whether it was selected (`selected_for_intel`) | `persist:brief_stories_and_rejections` |
+| DB `reports` | the finished brief | the save-brief step |
+| R2 `observability/<workflowId>.json` | `summary` + `detailedMetrics`, rewritten on every step (readable even if the run crashes mid-way) | `WorkflowObservability` |
+| R2 `observability/clustering/<workflowId>.json` | `cluster_id → article_ids` (cluster membership never hits the DB) | the clustering step |
+| R2 `observability/article-journey/<workflowId>.json` | per-article trace: which gate it hit, which block it landed in | end of the brief workflow |
+| R2 `observability/brief-v3/<workflowId>.json` | each block's tier, text, sources and cost; failed blocks kept with `ok:false` | the title step |
+| R2 `llm-calls/<workflowId>/<phase>-<NNN>.json` | raw input/output of every LLM call | ai-worker's `llm-call-logger` |
+| R2 `observability/sensors/<trace>/` | ai-worker-side sensors (`output_language`, `brief_hygiene`, …) | ai-worker's `sensor-log` |
+
+`ProcessArticles` writes the same `observability/<workflowId>.json` shape.
+
+**Query endpoints** (backend, need `Authorization: Bearer $API_TOKEN`)
+
+| Endpoint | Returns |
+|---|---|
+| `GET /observability/runs/:workflowId` | `brief_runs` row + that run's `brief_stories` + R2 `observability/<workflowId>.json` |
+| `GET /observability/runs/:workflowId/clustering` | R2 `observability/clustering/<workflowId>.json` |
+| `GET /observability/runs/:workflowId/llm-calls` | list of that run's LLM calls (key, size, brief metadata — no bodies) |
+| `GET /observability/llm-calls/*` | full JSON of one call, by key |
+| `GET /observability/trends?days=14` | daily run outcomes and story metrics (1–90 days) |
+| `GET /observability/health/summary` | recent runs, last brief, 24h article stats |
+
+R2 objects with no endpoint (article-journey, brief-v3) need `wrangler r2 object get meridian-articles-prod/<key> --remote`.
+
+**Common troubleshooting paths**
+
+1. **A brief didn't come out / errored**: `/health/summary` to find the run → `/runs/:wf` for `run.status` and any `detailedMetrics` step with `status === 'failed'` and its `error`; cross-check `wrangler workflows instances describe` for platform-level state
+2. **Status is `DEGRADED`**: two triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block, or a cluster NO_EVENT rate above 15% (normally 2–3%) — check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image: `build_identity: missing` in the clustering response means it's running the old one
+3. **Why didn't a big story make the brief**: look up the article in article-journey to see which gate stopped it; a selected-but-missing block shows up as `ok:false` in the brief-v3 record
+4. **A block reads wrong**: find its `brief_block_v6` call under `/runs/:wf/llm-calls` and pull the raw input/output
+5. **Why this ranking**: `detailedMetrics.story_rank` (rounds succeeded, `intersectionSize`, failure reason) and `story_validation` (judge counts: `judgeFailures` / `pocketFlagged` / `unsureClusters`, normally ~0)
+
+**Replaying a run locally**: `pnpm -F @meridian/backend replay <workflowId>` answers with that run's recorded LLM I/O from `llm-calls/` and re-runs the whole workflow locally, diffing the result against production field by field (preconditions and limits in `apps/backend/test/replay/README.md`).
+
+**Other entry points**: production logs via `wrangler tail` (CF Dashboard → Workers → Logs when a local session won't open); cost and usage via CF GraphQL / Dashboard; `*.workers.dev` gets RST'd from mainland China, use a proxy locally.
 
 ## 🧪 Testing
 

@@ -2,7 +2,7 @@
 
 - **状态**：Accepted（2026-06-17）
 - **决策者**：shiwj
-- **关联**：`docs/eval-playbook.md`、`docs/engineering-notes/faithfulness-eval-best-practices.md`、knowledge 笔记 `claim-extraction-for-faithfulness.md`、memory `eval-program-direction`、ROADMAP P0/P1
+- **关联**：`docs/engineering-notes/faithfulness-eval-best-practices.md`、knowledge 笔记 `claim-extraction-for-faithfulness.md`、memory `eval-program-direction`、ROADMAP P0/P1
 
 ---
 

@@ -67,7 +67,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 - `observability/sensors/{trace_id}/{kind}-{idx}.json`：传感器读数，例如输出语言告警（`services/sensor-log.ts`）
 
 请求带 `x-observe: inline` 时不写 R2，记录随响应的 `observation` 字段返回（`services/observe.ts`），用于本地验收。
-读这些数据的入口是 backend 的 `/observability/*` 路由，见 [`docs/OBSERVABILITY_GUIDE.md`](../../docs/OBSERVABILITY_GUIDE.md)。
+读这些数据的入口是 backend 的 `/observability/*` 路由，见根 `README.md` 的「Monitoring & Observability」一节。
 
 ## 开发、测试、部署
 
@@ -93,5 +93,5 @@ cd services/meridian-ai-worker && npx wrangler@4.120.0 deploy
 
 - 现行简报链路与已证伪路线：[`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)
 - 写作层：[`docs/adr/0004-brief-writer-v3.md`](../../docs/adr/0004-brief-writer-v3.md)
-- 工作流编排：[`docs/meridian-workflow-architecture.md`](../../docs/meridian-workflow-architecture.md)
-- 部署：[`docs/DEPLOYMENT_GUIDE.md`](../../docs/DEPLOYMENT_GUIDE.md)
+- 工作流编排：根 `README.md` 的「How It Works」一节
+- 部署：根 `README.md` 的「Deployment」一节

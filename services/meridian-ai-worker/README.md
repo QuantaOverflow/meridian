@@ -31,8 +31,8 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `POST /meridian/brief-block-v6` | `{title, articles:[{id,title,content}], tier?}` → 一簇写成一块简报（`services/brief-block-v6.ts`）；`tier` = `lead` / `more` / `brief` | AutoBriefGeneration |
 | `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
 | `POST /meridian/generate-brief-tldr` | `{briefTitle, briefContent}` → `tldr`（机器格式，给次日管线读，不给读者看） | AutoBriefGeneration |
-| `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration、`apps/backend/scripts/backfill-tldr-prose.ts` |
-| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | eval 判官（`eval/_shared/judge-llm.ts`） |
+| `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
+| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`）、手动脚本 `tests/test-llama-3.3.js` |
 
 所有路由都**没有鉴权**：`services/auth.ts` 的 `AuthenticationService` 只在
 `AIGatewayService.processRequestWithAuth` 里用到，而这个方法没有调用方。

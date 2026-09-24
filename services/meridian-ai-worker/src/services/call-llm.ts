@@ -15,7 +15,7 @@ import { recordSensor } from './sensor-log';
 // 但把「判官/生成须独立采样」的正确性锁死，防将来缓存修活时旧「忘传」复发。
 //
 // 未收编：article_analysis（index.ts strategy-driven，provider/model/temp 每次重试换，
-// 不适合 phase-default）、/meridian/chat（外部/eval 透传口，由 eval 侧 _shared/judge-llm.ts 管）。
+// 不适合 phase-default）、/meridian/chat（外部透传口）。
 
 interface PhaseDefault {
   provider: string;

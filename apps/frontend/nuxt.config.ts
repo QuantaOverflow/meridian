@@ -44,15 +44,8 @@ export default defineNuxtConfig({
     preset: 'cloudflare-pages',
     prerender: { autoSubfolderIndex: false },
     cloudflare: {
-      // 仅保留这一个配置即可启用 Node.js 兼容性
+      // 启用 Node.js 兼容性。（cloudflare-pages preset 不生成 wrangler 配置，别在这里写 wrangler 块）
       nodeCompat: true,
-      
-      // wrangler 配置（可选，但建议保留）
-      wrangler: {
-        compatibility_date: '2025-04-30',
-        compatibility_flags: ['nodejs_compat'],
-        minify: false
-      }
     }
   },
 

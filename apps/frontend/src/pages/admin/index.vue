@@ -57,8 +57,6 @@ const stats = computed(() => {
   };
 });
 const filteredSources = computed(() => {
-  if (!sources.value) return [];
-
   let filtered = sources.value;
 
   // frequency filter

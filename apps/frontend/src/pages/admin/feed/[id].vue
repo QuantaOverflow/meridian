@@ -112,12 +112,7 @@ async function deleteSource() {
 </script>
 
 <template>
-  <!-- Main container div removed, handled by layout -->
   <div>
-    <!-- Back link removed, can be part of page content if needed -->
-    <!-- <div class="mb-4">
-      <NuxtLink to="/admin" class="text-blue-600 hover:underline">&larr; Back to Sources</NuxtLink>
-    </div> -->
 
     <div v-if="feedDetails" class="space-y-4">
       <!-- Source Info -->

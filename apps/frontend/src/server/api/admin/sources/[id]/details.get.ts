@@ -114,7 +114,6 @@ export default defineEventHandler(async event => {
       hasEmbedding: article.embedding !== null,
     })),
     pagination: {
-      currentPage: page,
       totalPages: Math.ceil(totalCount.length / pageSize),
       totalItems: totalCount.length,
     },

@@ -250,13 +250,13 @@ export function retryInstruction(reasons: string[]): string {
 
 // ── 写作材料 ────────────────────────────────────────────────────────────
 /** 一条重点的报道篇数 = 它引到的不同文章数。窗口步每条最多引 4 句，所以 4 即「4 篇及以上」。 */
-export const supportOf = (a: { sources: V6Source[] }): number => new Set(a.sources.map(s => s.articleId)).size;
+const supportOf = (a: { sources: V6Source[] }): number => new Set(a.sources.map(s => s.articleId)).size;
 
 /**
  * 必写档：报道篇数达到本簇最高档的重点（下限 2 篇，单篇报道的不强制）。
  * （原型试过放宽到「最高档与次一档」，已撤回。）
  */
-export function mustCover(anchors: V6Anchor[]): Set<string> {
+function mustCover(anchors: V6Anchor[]): Set<string> {
   const top = Math.max(0, ...anchors.map(supportOf));
   const floor = Math.max(2, top);
   return top >= 2 ? new Set(anchors.filter(a => supportOf(a) >= floor).map(a => a.id)) : new Set<string>();

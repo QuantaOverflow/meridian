@@ -1,6 +1,6 @@
 ---
 name: record-knowledge
-description: 在 Meridian 项目中，用户要求记录、保存、补充或整理探索知识、实验、经验或决定时使用，支持显式调用 $record-knowledge。将已有对话和真实证据写入项目知识图谱并重建校验；不用于一般解释、无记录意图的代码修改或全局个人记忆。
+description: 在 Meridian 项目中，用户要求记录、保存、补充或整理探索知识、实验、经验或决定时使用，支持显式调用 $record-knowledge。将已有对话和真实证据写入项目探索记录并重建校验；不用于一般解释、无记录意图的代码修改或全局个人记忆。
 ---
 
 # Record Knowledge
@@ -16,19 +16,19 @@ description: 在 Meridian 项目中，用户要求记录、保存、补充或整
 ## 1. 规则与历史
 
 1. 定位包含本 skill 的 Meridian 仓库根目录（本目录向上三级），后续路径与命令以该根目录为准，不依赖启动工作目录。
-2. 完整读取 `AGENTS.md`、`docs/knowledge/README.md`、`scripts/knowledge/schema.json`，读取 `CLAUDE.md` 的知识蒸馏与文件归属部分；以当前规则为准，不维护重复 schema。
+2. 完整读取 `AGENTS.md`、`docs/knowledge/README.md`，读取 `CLAUDE.md` 的知识蒸馏与文件归属部分；以当前规则为准，不维护重复 schema。
 3. 检查 `git status --short`，保护用户及其他 agent 的未完成修改。
-4. 用 `rg` 在 `docs/knowledge/INDEX.md` 按任务检索，只读相关节点和证据，不加载整个图谱。需要起始格式时读取 `docs/knowledge/templates.json`，不要保留占位内容。
+4. 用 `rg` 在 `docs/knowledge/INDEX.md` 按任务检索，只读相关记录和证据，不加载整个知识库。格式照 README 里的示例，不要保留占位内容。
 5. 简短说明准备记录什么、相对历史新增什么。证据不清时收窄结论，不补造事实。
 
 ## 2. 最小、真实的记录
 
-- 按需要选择 attempt / experiment / lesson / mechanism / decision，不凑齐六类。只有用户主动要求目标节点时才创建 goal，不建议把建 goal 当下一步。
-- 新实验条件或结果追加 experiment，关联对应尝试；没有新认识复用已有 lesson，不制造新经验。一次模型调用不必单独入图。
+- 一次尝试或一个结论写一条，`kind` 选 approach / fact / decision，approach 另填 `verdict`（failed / works / open）；标题写结论句。不建议把建 goal 当下一步。
+- 新实验条件或结果追加一条记录，用 `[[id]]` 指向相关旧记录；没有新认识就更新已有记录，不制造新经验。一次模型调用不必单独入库。
 - 未执行方案标 proposed；阶段未结束保留已有信号与未完成事项。采用决定、代码接入、部署、端到端达标分别描述。
-- 保留失败、正常对照及不同条件的实验历史，不为消除矛盾或通过校验删除历史；收窄范围或用合法替代关系保留演进。
+- 保留失败、正常对照及不同条件的实验历史，不为消除矛盾或通过校验删除历史；收窄范围或标 `superseded` + `superseded_by` 保留演进。
 
-## 3. 证据与关系
+## 3. 证据
 
 只维护 `docs/knowledge/nodes/<id>.md`，使用 README 规定的 JSON frontmatter 与可读正文，用 `apply_patch` 局部编辑。
 
@@ -42,7 +42,7 @@ description: 在 Meridian 项目中，用户要求记录、保存、补充或整
 
 读取可访问来源后再归纳。来源不可访问时明确是会话摘要或未核实引用，不声称已读；正文保存关键结果，不只依赖易丢失的临时文件。不要复制凭证或敏感原始数据。
 
-按当前 schema 检查关系方向、端点类型与必填 attributes，目标节点必须存在。不按文件名前缀猜类型，不造空壳节点消除悬空引用。本轮相互引用的节点一次写完后再生成。
+`[[id]]` 与 `superseded_by` 的目标必须存在；不造空壳记录消除悬空引用。本轮相互引用的记录一次写完后再生成。
 
 ## 4. 重建和只读校验
 
@@ -53,7 +53,7 @@ pnpm -s knowledge
 pnpm -s knowledge --check-generated
 ```
 
-不要手改 `INDEX.md` 或 `graph.json`；无需修改节点时只执行只读检查。
+不要手改 `INDEX.md`；无需修改记录时只执行只读检查。
 
 若明确遇到 tsx IPC 的 `listen EPERM`，使用同一构建入口绕过启动器：
 

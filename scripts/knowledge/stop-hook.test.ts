@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -16,8 +16,16 @@ function fixture() {
   return { dir, root, cache: resolve(dir, 'cache') };
 }
 const stop = { hook_event_name: 'Stop' };
+// 知识库只留本地（不入 git）；新克隆里没有它时跳过依赖真实记录的测试。
+const t = existsSync(resolve(source, 'nodes')) ? test : test.skip;
 
-test('first Stop validates; unchanged snapshot reuses success without writing cache or graph', () => {
+test('missing local knowledge base is not an error', () => {
+  const dir = mkdtempSync(resolve(tmpdir(), 'knowledge-stop-test-'));
+  try { assert.deepEqual(checkStop(stop, resolve(dir, 'knowledge'), resolve(dir, 'cache')), {}); }
+  finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t('first Stop validates; unchanged snapshot reuses success without rewriting cache', () => {
   const { dir, root, cache } = fixture();
   try {
     const before = fingerprint(root);
@@ -32,12 +40,12 @@ test('first Stop validates; unchanged snapshot reuses success without writing ca
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('source change triggers check; failure is not cached; rebuild permits success', () => {
+t('source change triggers check; failure is not cached; rebuild permits success', () => {
   const { dir, root, cache } = fixture();
   try {
     checkStop(stop, root, cache);
     const file = resolve(root, 'nodes', readdirSync(resolve(root, 'nodes'))[0]);
-    writeFileSync(file, readFileSync(file, 'utf8') + '\n新增证据说明\n');
+    writeFileSync(file, readFileSync(file, 'utf8').replace('"title": "', '"title": "改标题 '));
     const result = checkStop(stop, root, cache);
     assert.equal(result.decision, 'block');
     assert.match(result.reason!, /过期/);
@@ -50,8 +58,8 @@ test('source change triggers check; failure is not cached; rebuild permits succe
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('generated corruption/deletion and node deletion bypass cached success', () => {
-  for (const target of ['INDEX.md', 'graph.json', 'node']) {
+t('generated corruption/deletion and node deletion bypass cached success', () => {
+  for (const target of ['INDEX.md', 'node']) {
     const { dir, root, cache } = fixture();
     try {
       checkStop(stop, root, cache);
@@ -64,7 +72,7 @@ test('generated corruption/deletion and node deletion bypass cached success', ()
   }
 });
 
-test('invalid graph blocks; irrelevant events do nothing; corrupt cache is rebuilt', () => {
+t('invalid record blocks; irrelevant events do nothing; corrupt cache is rebuilt', () => {
   const { dir, root, cache } = fixture();
   try {
     assert.deepEqual(checkStop({ hook_event_name: 'PostToolUse' }, root, cache), {});
@@ -74,7 +82,7 @@ test('invalid graph blocks; irrelevant events do nothing; corrupt cache is rebui
     assert.deepEqual(checkStop(stop, root, cache), {});
     assert.ok(JSON.parse(readFileSync(cacheFile, 'utf8')).fingerprint);
     const file = resolve(root, 'nodes', readdirSync(resolve(root, 'nodes'))[0]);
-    writeFileSync(file, readFileSync(file, 'utf8').replace('"relations": [', '"relations": [{"type":"addresses","to":"missing"},'));
+    writeFileSync(file, readFileSync(file, 'utf8').replace('"kind": "', '"kind": "bogus-'));
     assert.equal(checkStop(stop, root, cache).decision, 'block');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

@@ -257,6 +257,8 @@ docs/*-handoff.md
 
 # 调研笔记与原型只留本地，不入库（2026-09-12 定；结论蒸馏进 docs/adr/ 与 CONTEXT.md）
 docs/engineering-notes/
+# 探索记录卡片只留本地，供开发时检索（2026-09-24 定）；要公开的结论写进 docs/adr/
+docs/knowledge/
 apps/*/prototypes/
 services/*/prototypes/
 scripts/eval/*/prototypes/

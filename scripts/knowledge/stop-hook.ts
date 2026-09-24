@@ -1,5 +1,5 @@
 /** Codex Stop hook: deterministic, read-only, at most one continuation per turn. */
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -16,8 +16,8 @@ export function fingerprint(root: string): string {
   const hash = createHash('sha256');
   const files = [
     ...readdirSync(resolve(root, 'nodes')).filter(f => f.endsWith('.md')).sort().map(f => resolve(root, 'nodes', f)),
-    ...['INDEX.md', 'graph.json'].map(f => resolve(root, f)),
-    ...['schema.json', 'build.ts', 'stop-hook.ts'].map(f => resolve(HERE, f)),
+    ...['INDEX.md'].map(f => resolve(root, f)),
+    ...['build.ts', 'stop-hook.ts'].map(f => resolve(HERE, f)),
   ];
   for (const file of files) {
     hash.update(JSON.stringify(file));
@@ -37,6 +37,8 @@ export function checkStop(
   cacheDir = resolve(tmpdir(), 'meridian-knowledge-stop'),
 ): StopOutput {
   if (input.hook_event_name !== 'Stop') return {};
+  // 知识库只留本地（不入 git）；新克隆的仓库里没有它，不算错误。
+  if (!existsSync(resolve(root, 'nodes'))) return {};
   try {
     const cacheFile = resolve(cacheDir, createHash('sha256').update(resolve(root)).digest('hex') + '.json');
     const current = fingerprint(root);

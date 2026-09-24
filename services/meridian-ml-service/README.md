@@ -74,7 +74,3 @@ npx wrangler@4.120.0 secret put API_TOKEN
 - 构建前 `model-cache/` 必须就位，否则镜像里没有模型。
 - 部署后看 `/health` 的 `build_identity.build_time` 是不是刚才的时间，确认新镜像已在运行。
 - 永不从仓库根部署。
-
-仓库里的 `docker-compose.yml`、`fly.toml`、`nginx.conf`、`scripts/build-and-push.sh`、
-`scripts/deploy-vps.sh`、`scripts/quick-deploy-vps.sh`、`scripts/example-usage.sh` 是迁到 Cloudflare Containers 之前的 VPS / Fly 部署方式，
-现行生产不用它们。

@@ -2225,30 +2225,3 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     }
   }
 }
-
-/**
- * 启动自动简报生成工作流
- * 用于从上游工作流（如 processArticles.workflow.ts）触发
- *
- * @param env Application environment
- * @param params 工作流参数，包含文章ID列表
- * @returns 结果包含创建的工作流实例或错误信息
- */
-export async function startAutoBriefGenerationWorkflow(env: Env, params: BriefGenerationParams) {
-  try {
-    // 使用 wrangler.jsonc 中配置的工作流绑定名称 'MY_WORKFLOW'
-    const workflow = await env.MY_WORKFLOW.create({ 
-      id: crypto.randomUUID(), 
-      params 
-    });
-    
-    console.log(`[AutoBrief] 简报生成工作流已启动，ID: ${workflow.id}`);
-    return { success: true, data: workflow };
-  } catch (error) {
-    console.error('[AutoBrief] 启动简报生成工作流失败:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-} 

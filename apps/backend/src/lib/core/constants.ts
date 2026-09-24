@@ -22,8 +22,7 @@ export const DATABASE_CONFIG = {
 
 // 简报聚类参数。
 // 单一真源:admin 手动触发与 cron 自动触发必须用同一组,否则两条路径产出不可比。
-// 注意:auto-brief-generation 里"未传 clusteringOptions"不是走这组值,而是走按数据规模的
-// 启发式分支(150 篇时 min_cluster_size 会算到 15),所以调用方必须显式传,不能省略。
+// auto-brief-generation 未收到 clusteringOptions 时也回落到这组值。
 export const BRIEF_CLUSTERING_OPTIONS = {
   // 2026-09-05:UMAP+HDBSCAN → 不降维 + 余弦阈值凝聚(average linkage)。
   //

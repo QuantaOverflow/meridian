@@ -58,7 +58,7 @@ function readExpectedBuildSha(env: AIWorkerEnv): string | undefined {
  */
 type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected' | 'mismatch';
 
-export interface BuildIdentityAssertion {
+interface BuildIdentityAssertion {
   status: BuildIdentityStatus;
   /** true 仅当 status === 'ok'；调用方可以只看这一位做门禁。 */
   verified: boolean;
@@ -517,54 +517,6 @@ export class ClusteringService {
     });
 
     return await fetch(request);
-  }
-
-  /**
-   * 健康检查
-   */
-  async healthCheck(): Promise<{
-    success: boolean;
-    error?: string;
-    /** /health 也带镜像身份：不跑聚类就能先探"镜像是不是旧的"（部署后冒烟用）。 */
-    buildIdentity?: Record<string, any>;
-    buildIdentityCheck?: BuildIdentityAssertion;
-  }> {
-    try {
-      const request = new Request(`${this.env.MERIDIAN_ML_SERVICE_URL}/health`, {
-        headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
-      });
-
-      const response = await fetch(request);
-
-      if (response.ok) {
-        let buildIdentity: Record<string, any> | undefined;
-        let parsedBody = true;
-        try {
-          const body = await response.json() as { build_identity?: Record<string, any> };
-          buildIdentity = body?.build_identity;
-        } catch {
-          // /health 体解析失败：不能据此断言"镜像旧"，否则把解析问题伪装成部署问题。
-          parsedBody = false;
-        }
-        return {
-          success: true,
-          buildIdentity,
-          buildIdentityCheck: parsedBody
-            ? assertBuildIdentity(buildIdentity, readExpectedBuildSha(this.env))
-            : undefined,
-        };
-      } else {
-        return { 
-          success: false, 
-          error: `ML service health check failed: ${response.status}` 
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Health check error: ${error instanceof Error ? error.message : String(error)}`
-      };
-    }
   }
 }
 

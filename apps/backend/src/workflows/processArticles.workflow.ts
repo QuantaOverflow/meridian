@@ -356,7 +356,6 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 const response = await aiServices.aiWorker.analyzeArticle(
                   article.title,
                   article.text,
-                  undefined,
                   // 观测性：传每篇文章在本批次中的序号，和 trace_id 一起组成稳定 R2 key。
                   analysisIndex
                 );

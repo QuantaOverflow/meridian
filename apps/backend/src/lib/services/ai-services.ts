@@ -2,11 +2,11 @@
  * 轻量级AI服务协调器
  * 专注于服务调用和结果转发，不处理具体实现细节
  *
- * 跨 service 调用的接缝：brief workflow 相关方法（validateStory / analyzeStoryIntelligence /
- * generateEmbedding + generateFinalBrief / generateBriefTldr / faithfulnessCheck）返回
+ * 跨 service 调用的接缝：brief workflow 相关方法（generateEmbedding / rankStories / judgeCluster /
+ * briefBlockV6 / briefTitle / generateBriefTldr / generateBriefSummary）返回
  * ServiceResult<T> —— 把「status 检查 / .json() / .success 检查 / dispose RPC stub」这套仪式
  * 收进模块内，调用方只拿判别式结果并施加自己的错误策略（throw / 跳过 / fail-open）。
- * 注：analyzeArticle / healthCheck 属文章管线 & 健康检查，返回 Response 不变（不在此接缝内）。
+ * 注：analyzeArticle 属文章管线，返回 Response 不变（不在此接缝内）。
  */
 
 // 跨 service 调用的判别式结果：成功给 value(+可选 metadata)，失败给 status+error。
@@ -147,22 +147,14 @@ class AIWorkerService {
   /**
    * 分析文章内容（文章管线用，非 brief 接缝——返回 Response 不变）
    */
-  // options 当前被端点忽略（/meridian/article/analyze 只解构 { title, content }）；保留参数与默认值不改动。
-  async analyzeArticle(title: string, content: string, options?: any, callIndex?: number): Promise<Response> {
+  async analyzeArticle(title: string, content: string, callIndex?: number): Promise<Response> {
     // 观测性：同一 workflow 会并行分析多篇文章，用 call index 避免 R2 LLM 日志 key 互相覆盖。
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/article/analyze`, {
       method: 'POST',
       headers: this.buildHeaders(extra),
-      body: JSON.stringify({
-        title,
-        content,
-        options: options || {
-          provider: 'workers-ai',
-          model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
-        }
-      })
+      body: JSON.stringify({ title, content })
     });
 
     return await this.env.AI_WORKER.fetch(request);

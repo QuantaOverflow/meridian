@@ -18,7 +18,7 @@ _Avoid_: 评委、打分器。
 它的 `model_graded_qa` 本身就是一个 scorer。借入 Inspect 结构词之后不能再留一个反义的本地定义。）
 
 **检测型判官 (Detection-judge / 桶①)**:
-"对每个条目做一个分类/取舍判断"这一族 eval harness——`intel-grounding`、`faithfulness`、`article-quality`、`coverage-judge`。与之并列的另三种问题形式各用各的指标族:**聚类**(B-cubed)、**排序**(NDCG)、**生成**(含错率/漏报率)。只有检测型判官共用召回/精确率那套指标。
+"对每个条目做一个分类/取舍判断"这一族 eval harness——现存 `eval/article-quality`；`intel-grounding`、`faithfulness`、`coverage-judge` 已随报告层与整篇合成退役删除。与之并列的另三种问题形式各用各的指标族:**聚类**(B-cubed)、**排序**(NDCG)、**生成**(含错率/漏报率)。只有检测型判官共用召回/精确率那套指标。
 
 **投票占比 (Vote share)**:
 同一条判 N 次,某一类占 k 票,投票占比 = k/N。这是 Meridian 唯一采信的判官确定度——**不用 LLM 自报的置信度**(业界公认不可靠)。
@@ -108,6 +108,7 @@ _Avoid_: 尺（临时造的词，指代不清——既可能指 scorer，也可�
 ## 写作层 / 事实准确性(见 ADR 0004)
 
 **要点 (Key point)**:
+（报告层已于 2026-09-21 随 brief-block-v6 退役，本条与下条「关系表」只在读 ADR 0004 与旧读数时用。）
 报告里被 ≥2 篇文章报道的事实(报告的 `facts` 中 `articles ≥ 2` 的那些),写作前按出处文章最早的完整发布时间排序,交给写作层当骨架。
 _Avoid_: 骨架事实(同义,正式用"要点")、主线
 

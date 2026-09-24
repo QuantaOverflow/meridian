@@ -465,7 +465,10 @@ Archivo:wght@400;500;600
 - `Meridian 新设计 v2.dc.html` —— 上一版，仅供追溯（白底 + Medium 绿、无深色模式、中文字体未落地）。
 - `Meridian 现有界面复刻.dc.html` —— 现有线上界面的像素级复刻，用于对照改动幅度。
 
-原始代码位置（用户本地 `meridian` 仓库）：
+原始代码位置（用户本地 `meridian` 仓库；2026-08 交付时的状态）：
+
+> 2026-09-24 注：reader v3 已按本稿实现，`SubscriptionForm.vue`、`BriefTableOfContents.vue` 已不在仓库里，
+> 现组件见 `apps/frontend/src/components/`；本包按交付时原样保留，作为设计依据。
 
 - `apps/frontend/src/pages/index.vue`、`pages/briefs/index.vue`、`pages/briefs/[slug].vue`
 - `apps/frontend/src/layouts/default.vue`（顶栏与深浅色切换）

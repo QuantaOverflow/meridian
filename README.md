@@ -1,11 +1,10 @@
 # Meridian: Your Personal Intelligence Agency
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/QuantaOverflow/meridian/deploy-services.yaml?branch=meridian-dev)](https://github.com/QuantaOverflow/meridian/actions/workflows/deploy-services.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Presidential-level intelligence briefings, built with AI, tailored for you.**
 
-Meridian is a sophisticated AI-powered intelligence briefing system that transforms the overwhelming flow of global news into concise, personalized daily intelligence reports. By leveraging advanced machine learning, natural language processing, and Cloudflare's edge computing platform, Meridian delivers the kind of analytical intelligence traditionally reserved for high-level government officials.
+Meridian turns the daily flood of global news into one concise executive brief. It scrapes RSS sources, groups articles about the same event, and has an LLM write a short, source-cited block per event — all running on Cloudflare's edge platform.
 
 <p align="center">
   <img src="./screenshot.png" alt="Meridian Brief Example" width="700"/>
@@ -16,479 +15,190 @@ Meridian is a sophisticated AI-powered intelligence briefing system that transfo
 In an era of information overload, decision-makers need clarity, not more noise. Meridian addresses this by:
 
 - **Cutting Through Noise**: Filters hundreds of sources to surface truly important developments
-- **Providing Context**: Goes beyond headlines to analyze underlying drivers and implications
-- **Delivering Intelligence**: Structured analysis with executive summaries, stakeholder mapping, and forward-looking assessments
+- **Executive Format**: Conclusion-first blocks of a few sentences per event, not a list of headlines
+- **Traceable**: Every sentence in a brief block carries a citation back to the source article
 - **Ensuring Transparency**: Open-source approach with full visibility into analysis methodology
 
 Built for executives, researchers, analysts, and curious minds who need strategic intelligence without the time investment.
 
 ## 🏗️ System Architecture
 
-Meridian employs a sophisticated microservices architecture built on Cloudflare's edge computing platform, where the Backend orchestrates independent AI and ML services:
-
 ```
-┌─────────────────┐                    ┌─────────────────┐
-│   Frontend      │◄──────────────────►│   Backend       │
-│   (Nuxt 3)      │   Admin APIs &     │   (Hono API)    │
-│                 │   Brief Display    │                 │
-└─────────────────┘                    └─────────────────┘
-         │                                       │
-         ▼                                       │
-┌─────────────────┐                             │
-│ Cloudflare      │                             ▼
-│ Pages           │              ┌─────────────────────────────────┐
-└─────────────────┘              │    Workflow Orchestration       │
-                                 │  ┌─────────────────────────────┐ │
-                                 │  │ 1. Source Scraping          │ │
-                                 │  │ 2. Article Processing       │ │
-                                 │  │ 3. Brief Generation         │ │
-                                 │  └─────────────────────────────┘ │
-                                 └─────────────────────────────────┘
-                                              │
-                     ┌────────────────────────┼────────────────────────┐
-                     ▼                        ▼                        ▼
-          ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-          │   AI Worker     │    │   ML Service    │    │Source Scraper DO│
-          │   (Analysis)    │    │  (Clustering)   │    │ (RSS Fetching)  │
-          │                 │    │                 │    │                 │
-          │• Article Analyze│    │• Embeddings     │    │• Periodic Fetch │
-          │• Story Validate │    │• UMAP+HDBSCAN   │    │• Deduplication  │
-          │• Intelligence   │    │• Auto-tuning    │    │• Queue Articles │
-          │• Brief Generate │    │                 │    │                 │
-          └─────────────────┘    └─────────────────┘    └─────────────────┘
-                     ▲                        ▲                        │
-                     │                        │                        ▼
-                     └────────────────────────┼────────────────────────┐
-                                              │                        │
-                                              ▼                        ▼
-                              ┌─────────────────────────────────────────────┐
-                              │            Data Layer                       │
-                              │                                             │
-                              │  ┌─────────────────┐  ┌─────────────────┐  │
-                              │  │   PostgreSQL    │  │   R2 Storage    │  │
-                              │  │  + pgvector     │  │ (Content/Logs)  │  │
-                              │  │                 │  │                 │  │
-                              │  │• Article Meta   │  │• Full Content   │  │
-                              │  │• Embeddings     │  │• Observability  │  │
-                              │  │• Briefs         │  │• Media Files    │  │
-                              │  └─────────────────┘  └─────────────────┘  │
-                              └─────────────────────────────────────────────┘
-                                              ▲
-                                              │
-                              ┌─────────────────────────────────────────────┐
-                              │          Infrastructure                     │
-                              │                                             │
-                              │  ┌─────────────────┐  ┌─────────────────┐  │
-                              │  │   Queues        │  │  Observability  │  │
-                              │  │ (Async Proc.)   │  │   & Monitoring  │  │
-                              │  └─────────────────┘  └─────────────────┘  │
-                              └─────────────────────────────────────────────┘
+RSS sources ──► SourceScraperDO (one Durable Object per source)
+                    │ new article ids
+                    ▼
+          ARTICLE_PROCESSING_QUEUE ──► ProcessArticles workflow
+                                         fetch body → analyze (AI Worker) → body to R2
+daily cron ──► AutoBriefGenerationWorkflow
+                 embeddings (ML Service) → clustering (ML Service) → cluster judge →
+                 importance ranking → one brief block per cluster (AI Worker) → title / TLDR → Postgres
+                                                     │
+Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) + R2
 ```
 
-### **Key Architectural Principles:**
+| Component | Role |
+|---|---|
+| `apps/backend` | Hono API, Durable Object scrapers, queue consumer, both Workflows, admin / observability routes |
+| `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`) through Cloudflare AI Gateway. Called via service binding `AI_WORKER` |
+| `services/meridian-ml-service` | FastAPI on a Cloudflare Container: `multilingual-e5-small` embeddings and agglomerative cosine clustering |
+| `apps/frontend` | Nuxt 3 reader (today's brief, archive, story threads) + admin pages |
+| `packages/database` | Drizzle schema and migrations for Neon Postgres |
 
-- **🎯 Independent Service Calls**: Backend directly calls both AI Worker and ML Service independently - no chain dependencies
-- **🔄 Workflow Orchestration**: Cloudflare Workflows coordinate multi-step processes with automatic retries and state management
-- **⚡ Edge Computing**: Global distribution via Cloudflare Workers for low latency
-- **📊 Separation of Concerns**: Clear boundaries between data ingestion, AI analysis, ML processing, and presentation
-- **🔧 Service Isolation**: Each service can scale and deploy independently
-
-## 🚀 Key Features
-
-### Core Intelligence Pipeline
-- **Multi-Source Ingestion**: Automated scraping of 100+ diverse RSS sources
-- **Intelligent Content Extraction**: Handles paywalls, JavaScript rendering, and complex layouts
-- **AI-Powered Analysis**: Multi-stage LLM processing using Google Gemini for deep content understanding
-- **Advanced Clustering**: Semantic grouping using multilingual embeddings, currently agglomerative cosine-distance clustering (UMAP + HDBSCAN retired to a rollback path — see ADR 0003)
-- **Cluster Judging**: One LLM call per cluster decides EVENT/NO_EVENT and names the story, replacing the retired story-validation stage (see ADR 0003)
-- **Story Importance Ranking**: Three-round LLM shuffle + Borda aggregation (`/meridian/stories/rank`) orders candidates before selection, replacing plain popularity sorting
-- **Intelligence Synthesis**: ~~Structured analysis with executive summaries, stakeholder mapping, and impact assessment~~ — this stage (report layer) is retired; see below
-
-> ⚠️ **Retired pipeline notice**: several bullets and the step list below describe the pre-2026-09 "cluster → intelligence report → writer" architecture, which no longer runs in production. It was replaced by "cluster → brief-block-v6" (commit `961aeca`, 2026-09-21). See ADR 0003 (`docs/adr/0003-cluster-as-brief-block.md`) and ADR 0004 (`docs/adr/0004-brief-writer-v3.md`) for the current design and the falsified alternatives.
-
-### Technical Excellence
-- **Edge Computing**: Global distribution via Cloudflare Workers for low latency
-- **Durable Execution**: Workflow orchestration with automatic retries and state management
-- **Scalable Storage**: Efficient data architecture with PostgreSQL + R2 object storage
-- **Comprehensive Monitoring**: Full observability with structured logging and performance metrics
-- **Service-Oriented Architecture**: Modular design with clear separation of concerns
-
-### User Experience
-- **Clean Web Interface**: Modern Nuxt 3 frontend with responsive design
-- **Interactive Briefings**: Table of contents, reading progress, and rich formatting
-- **Admin Dashboard**: Source management, system monitoring, and briefing generation controls
-- **API Access**: RESTful APIs for programmatic access to all functionality
+The full step-by-step pipeline is in [`docs/meridian-workflow-architecture.md`](docs/meridian-workflow-architecture.md); design decisions and falsified alternatives are in [`docs/adr/`](docs/adr/).
 
 ## 🔄 How It Works
 
-### **1. News Source Management & Scraping**
-- **RSS Source Management**: Admin API (`/admin/sources`) manages RSS feed configurations
-- **Durable Object Scrapers**: Each RSS source gets its own Durable Object with configurable frequency tiers
-- **Intelligent Deduplication**: Automatic detection of new articles using database constraints
-- **Queue-Based Processing**: New articles are queued for asynchronous content processing
+### 1. Scraping
+- RSS sources live in the `sources` table and are managed via `POST /admin/sources` / `PUT /admin/sources/:id`
+- Each source gets its own Durable Object (`SourceScraperDO`) that fetches on its frequency tier and deduplicates via DB constraints
+- New article ids are queued for processing
 
-### **2. Content Processing Workflow** (`ProcessArticles`)
-- **Intelligent Content Extraction**:
-  - Standard HTTP requests for regular sites
-  - Browser rendering fallback for complex sites (anti-bot protection, paywalls, JavaScript-heavy)
-  - Mozilla Readability for clean text extraction
-- **AI-Powered Analysis** (via **AI Worker**):
-  - Language detection and location extraction
-  - Content quality assessment and thematic analysis  
-  - Event summary extraction and entity identification
-- **Content Storage**: Full article content stored in R2, metadata in PostgreSQL
+### 2. Article processing (`ProcessArticles`)
+- Fetches the article body (plain fetch, browser rendering for tricky domains, Mozilla Readability for extraction); PDFs and blocked/stub pages are marked and skipped
+- AI Worker `POST /meridian/article/analyze` extracts language, location, quality, event summary points, keywords, entities
+- Body goes to R2, metadata and analysis to Postgres
 
-### **3. Intelligence Brief Generation Workflow** (`AutoBriefGeneration`)
+### 3. Brief generation (`AutoBriefGenerationWorkflow`, daily cron)
+1. **Embeddings** — missing embeddings are batch-computed right before clustering (ML Service `POST /embeddings`)
+2. **Clustering** — no dimensionality reduction, cosine-distance average-linkage clustering (ML Service `POST /ai-worker/clustering`). One cluster ≈ one event
+3. **Cluster judging** — `/meridian/cluster/judge`: one call per cluster decides EVENT / NO_EVENT and names the story. Importance comes from a source-count formula (`blockImportance`), not an LLM score
+4. **Importance ranking** — `/meridian/stories/rank`: three shuffled LLM rounds + Borda aggregation over all candidates, with a per-event cap
+5. **Brief blocks** — `/meridian/brief-block-v6`: each selected cluster's articles become one block of 3–5 cited sentences (1–2 for the "in brief" tier)
+6. **Assembly** — code renders three sections (lead / more / in brief); `/meridian/brief-title`, `/meridian/generate-brief-tldr`, `/meridian/generate-brief-summary` add the title and summaries; the report is saved to Postgres
 
-> ⚠️ Steps 3-5 below (Story Validation, Intelligence Analysis, Brief Generation) describe the **retired** pipeline; Step 2's algorithm description (UMAP + HDBSCAN) is also outdated — see the Advanced Clustering note above. Current step sequence is summarized after this list, sourced from `apps/backend/src/workflows/auto-brief-generation.ts`.
-
-#### **Step 1: Dataset Preparation**
-- Retrieves processed articles from PostgreSQL (with embeddings)
-- Loads full content from R2 storage in parallel batches
-- Applies quality filters and content validation
-
-#### **Step 2: Clustering Analysis** (via **ML Service**)
-- Backend calls ML Service independently with article embeddings
-- UMAP dimensionality reduction + HDBSCAN clustering
-- Automatic parameter optimization using DBCV metrics
-- Returns clustered article groups
-
-#### **Step 3: Story Validation** (via **AI Worker**)
-- Backend calls AI Worker independently with clustering results
-- AI evaluates each cluster for newsworthiness and coherence
-- Filters out noise and identifies meaningful stories
-- Returns validated stories with importance scores
-
-#### **Step 4: Intelligence Analysis** (via **AI Worker**)
-- Backend calls AI Worker for deep analysis of each validated story
-- Generates comprehensive intelligence reports with:
-  - Executive summaries and key developments
-  - Stakeholder mapping and impact assessment
-  - Timeline analysis and contradiction detection
-  - Forward-looking outlook and implications
-
-#### **Step 5: Brief Generation & TLDR** (via **AI Worker**)
-- Backend calls AI Worker to synthesize intelligence reports
-- Structured briefing generation with contextual continuity
-- TLDR generation for quick consumption
-- Final brief saved to PostgreSQL
-
-#### **Current pipeline (as of 2026-09-22, see ADR 0003 / ADR 0004)**
-1. Clustering analysis (via **ML Service**) — agglomerative cosine-distance clustering, production default
-2. Cluster judging (`/meridian/cluster/judge`) — one call per cluster decides EVENT/NO_EVENT and names the story
-3. Story importance ranking (`/meridian/stories/rank`) — three-round LLM shuffle + Borda aggregation, replacing plain popularity sorting (commits `86633c5`, `0ae2592`)
-4. Brief block generation (`/meridian/brief-block-v6`) — one cluster's judged articles become one brief block directly, no intermediate intelligence-report stage
-
-### **4. Delivery & Presentation**
-- **Web Interface**: Clean Nuxt 3 frontend with interactive navigation
-- **Admin Dashboard**: Source management, briefing generation controls, system monitoring
-- **OpenGraph Integration**: Social sharing with auto-generated images
-- **API Access**: RESTful endpoints for programmatic access
+### 4. Delivery
+- Nuxt 3 reader: today's brief, archive (`/briefs`), cross-day story threads (`/stories`)
+- OpenGraph images via `GET /openGraph/default`
 
 ## 🛠️ Technology Stack
 
-### **Core Infrastructure**
-- **Monorepo Management**: Turborepo with pnpm workspaces
-- **Edge Computing**: Cloudflare Workers, Durable Objects, Workflows
-- **Database**: PostgreSQL with Hyperdrive acceleration and pgvector for embeddings
-- **Storage**: Cloudflare R2 for content and observability data
-- **Queues**: Cloudflare Queues for asynchronous processing
-
-### **Backend Services**
-- **API Framework**: Hono.js for high-performance HTTP handling
-- **ORM**: Drizzle for type-safe database interactions
-- **Language**: TypeScript with strict type checking
-- **Error Handling**: Neverthrow for functional error management
-- **Validation**: Zod for runtime type validation
-
-### **AI & Machine Learning**
-- **Language Models**: Google Gemini 2.0 Flash and Gemini 2.5 Pro
-- **Embeddings**: Multilingual E5-Small transformer model
-- **Clustering**: UMAP + HDBSCAN with automatic parameter optimization
-- **Content Processing**: Mozilla Readability + linkedom for DOM manipulation
-- **ML Service**: FastAPI + PyTorch for embedding and clustering pipeline
-
-### **Frontend**
-- **Framework**: Nuxt 3 with Vue 3 composition API
-- **Styling**: Tailwind CSS with Radix UI color system
-- **Language**: TypeScript throughout
-- **Deployment**: Cloudflare Pages with edge functions
-
-### **DevOps & Monitoring**
-- **CLI Tools**: Wrangler for Cloudflare deployment
-- **Testing**: Vitest for unit testing, Miniflare for Workers simulation
-- **Containerization**: Docker with multi-architecture support
-- **Monitoring**: Structured logging, health checks, performance metrics
-
-## 📋 Component Overview
-
-### **Meridian Backend** (`apps/backend/`)
-Core data ingestion, processing, and API layer built on Cloudflare Workers:
-- **Source Management**: RSS feed handling with Durable Objects
-- **Article Processing**: Intelligent content extraction and AI analysis
-- **Workflow Orchestration**: Durable execution for complex multi-step processes
-- **API Layer**: RESTful endpoints for all system functionality
-- **Observability**: Comprehensive monitoring and logging infrastructure
-
-### **Meridian AI Worker** (`services/meridian-ai-worker/`)
-Specialized AI gateway service providing unified access to multiple AI providers:
-- **Multi-Provider Support**: OpenAI, Anthropic, Google AI, Cloudflare Workers AI
-- **Intelligent Routing**: Provider selection based on capability and performance
-- **Enhanced Features**: Caching, cost tracking, retry mechanisms, quota handling
-- **Business Logic**: Article analysis, story validation, intelligence synthesis, brief generation
-- **Clean Architecture**: Layered design with clear separation of concerns
-
-### **Meridian ML Service** (`services/meridian-ml-service/`)
-Dedicated machine learning service for clustering and embedding generation:
-- **High-Quality Embeddings**: Multilingual E5-Small model for semantic understanding
-- **Advanced Clustering**: UMAP + HDBSCAN with automatic parameter optimization
-- **Production Ready**: Docker containerized with health checks and monitoring
-- **AI Worker Integration**: Seamless compatibility with existing backend formats
-- **Scalable Architecture**: Modular pipeline supporting various deployment methods
-
-### **Meridian Frontend** (`apps/frontend/`)
-Modern web interface built with Nuxt 3:
-- **Rich Briefing Display**: Interactive table of contents, reading progress tracking
-- **Admin Interface**: Source management and system monitoring
-- **Responsive Design**: Mobile-first approach with clean, professional styling
-- **Performance Optimized**: Edge deployment with Cloudflare Pages
+- **Monorepo**: pnpm workspaces + Turborepo
+- **Edge**: Cloudflare Workers, Durable Objects, Workflows, Queues, R2, Containers, AI Gateway, Workers AI
+- **Database**: Neon Postgres (pgvector) via Hyperdrive, Drizzle ORM
+- **Backend**: Hono, Zod, Mozilla Readability + linkedom
+- **ML**: FastAPI, PyTorch (CPU), `intfloat/multilingual-e5-small`, scikit-learn
+- **Frontend**: Nuxt 3, Vue 3, Tailwind CSS v4
+- **Testing**: Vitest (golden snapshot tests), pytest, a record/replay test for the full brief workflow
 
 ## 🚀 Getting Started
 
-### **Prerequisites**
-- Node.js v22+ with pnpm v9.15+
-- Python 3.10+ (for ML service)
-- PostgreSQL with pgvector extension
-- Docker (optional, for containerized deployment)
-- Cloudflare account with Workers enabled
-- Google AI API key for Gemini models
+### Prerequisites
+- Node.js v22+ and pnpm 10.9.0
+- Python 3.11 + [uv](https://github.com/astral-sh/uv) (ML service)
+- A Postgres with pgvector (production uses Neon)
+- A Cloudflare account (Workers, Workers AI, AI Gateway, R2, Queues, Containers)
 
-### **Quick Setup**
+### Local setup
 
-1. **Clone and Install**:
 ```bash
 git clone https://github.com/QuantaOverflow/meridian.git
 cd meridian
 pnpm install
+
+# Database migrations (needs DATABASE_URL, see packages/database/.env.example)
+pnpm -F @meridian/database migrate
 ```
 
-2. **Database Setup**:
+Secrets: each Worker reads `.dev.vars` (gitignored). Copy the template next to it and fill it in:
+`apps/backend/.dev.vars.example`, `services/meridian-ai-worker/.dev.vars.example`,
+`services/meridian-ml-service/cf-worker/.dev.vars.example`, `apps/frontend/.env.example`.
+The backend reaches Postgres through Hyperdrive; for local dev it uses `localConnectionString` in `apps/backend/wrangler.jsonc`.
+
 ```bash
-# Start PostgreSQL with pgvector (Docker)
-docker run -p 5432:5432 -e POSTGRES_PASSWORD=password pgvector/pgvector:pg16
-
-# Run migrations
-pnpm --filter @meridian/database migrate
-
-# Optional: Seed initial sources
-pnpm --filter @meridian/database seed
+pnpm -F @meridian/backend dev        # backend
+pnpm -F meridian-ai-worker dev       # AI worker
+pnpm -F @meridian/frontend dev       # frontend
+# ML service: see services/meridian-ml-service/README.md
 ```
 
-3. **Environment Configuration**:
-Create `.dev.vars` files in each service directory with required environment variables:
+Initialize the scraper Durable Objects once:
+
 ```bash
-# Backend
-DATABASE_URL=postgresql://user:password@localhost:5432/meridian
-API_TOKEN=your-secure-api-token
-GEMINI_API_KEY=your-gemini-api-key
-
-# AI Worker
-CLOUDFLARE_ACCOUNT_ID=your-account-id
-CLOUDFLARE_AI_GATEWAY_ID=your-gateway-id
-OPENAI_API_KEY=your-openai-key
-GOOGLE_AI_API_KEY=your-google-ai-key
-```
-
-4. **Start Development Services**:
-```bash
-# Backend
-pnpm --filter @meridian/backend run dev
-
-# AI Worker
-pnpm --filter meridian-ai-worker run dev
-
-# ML Service
-cd services/meridian-ml-service && ./start_local.sh
-
-# Frontend
-pnpm --filter @meridian/frontend dev
-```
-
-5. **Initialize System**:
-```bash
-curl -X POST -H "Authorization: Bearer YOUR_API_TOKEN" \
+curl -X POST -H "Authorization: Bearer $API_TOKEN" \
   http://localhost:8787/do/admin/initialize-dos
 ```
 
-### **Production Deployment**
+### Deployment
 
-1. **Configure Secrets**:
-```bash
-npx wrangler secret put DATABASE_URL
-npx wrangler secret put API_TOKEN
-npx wrangler secret put GEMINI_API_KEY
-```
-
-2. **Deploy Services**:
-```bash
-# Backend and AI Worker
-npx wrangler deploy
-
-# ML Service (Docker)
-cd services/meridian-ml-service
-./deploy-to-vps.sh --host user@your-vps-ip
-
-# Frontend
-# Deploy via Cloudflare Pages dashboard or Wrangler
-```
+Deploy each service from its own directory with `wrangler deploy` — never from the repo root. Secrets are set with `wrangler secret put`. See [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md).
 
 ## 📊 API Reference
 
-### **Source Management**
-```bash
-# Create source
-POST /admin/sources
-{
-  "url": "https://example.com/rss",
-  "name": "Example News",
-  "category": "technology",
-  "scrape_frequency": 2
-}
+`/admin/*` and `/observability/*` require `Authorization: Bearer $API_TOKEN`.
 
-# Update source
-PUT /admin/sources/{id}
+### Backend
+```bash
+POST /admin/sources                 # create source
+PUT  /admin/sources/:id             # update source
+POST /admin/briefs/generate         # trigger a brief workflow
+POST /admin/articles/by-ids         # fetch articles by id
+POST /admin/articles/process        # re-run article processing
+POST /do/admin/initialize-dos       # initialize all scraper DOs
+GET  /observability/runs/:workflowId   # one run: status, stories, rejections, step metrics
+GET  /observability/health/summary     # recent runs and 24h article stats
 ```
 
-### **Briefing Management**
+### AI Worker
 ```bash
-# Generate new briefing
-POST /admin/briefs/generate
-```
-
-### **AI Worker APIs**
-```bash
-# Analyze article
 POST /meridian/article/analyze
-
-# Validate stories
-POST /meridian/story/validate
-
-# Generate intelligence
-POST /meridian/intelligence/analyze-stories
-
-# Generate brief
-POST /meridian/generate-final-brief
+POST /meridian/cluster/judge
+POST /meridian/stories/rank
+POST /meridian/brief-block-v6
+POST /meridian/brief-title
+POST /meridian/generate-brief-tldr
+POST /meridian/generate-brief-summary
 ```
 
-### **ML Service APIs**
+### ML Service
 ```bash
-# Generate embeddings
+GET  /health
 POST /embeddings
-
-# Cluster articles
 POST /ai-worker/clustering
 ```
 
+The route tables in `apps/backend/src/app.ts` + `src/routers/`, `services/meridian-ai-worker/src/index.ts` and `services/meridian-ml-service/src/main.py` are authoritative.
+
 ## 🔧 Configuration
 
-### **Environment Variables**
+The `.dev.vars.example` files listed above are the source of truth for each Worker's variables. Key ones:
 
-**Backend Service:**
-- `DATABASE_URL`: PostgreSQL connection string
-- `API_TOKEN`: Authentication token for admin operations
-- `GEMINI_API_KEY`: Google AI API key
-- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account identifier
-- `MERIDIAN_ML_SERVICE_URL`: ML service endpoint
+- **Backend**: `API_TOKEN`, `CLOUDFLARE_API_TOKEN` (browser rendering), `MERIDIAN_ML_SERVICE_API_KEY` (must equal the ML service's `API_TOKEN`), `MERIDIAN_ML_SERVICE_URL` (var in `wrangler.jsonc`)
+- **AI Worker**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_GATEWAY_ID`, `AI_GATEWAY_TOKEN`, `DASHSCOPE_API_KEY`, `GATEWAY_API_KEYS`
+- **ML Service**: `API_TOKEN`
 
-**AI Worker:**
-- `CLOUDFLARE_AI_GATEWAY_ID`: AI Gateway for request proxying
-- `OPENAI_API_KEY`: OpenAI API access
-- `ANTHROPIC_API_KEY`: Anthropic API access
-- `GOOGLE_AI_API_KEY`: Google AI Studio access
-
-**ML Service:**
-- `API_TOKEN`: Service authentication token
-- `EMBEDDING_MODEL_NAME`: Transformer model identifier
-- `LOG_LEVEL`: Logging verbosity
-
-### **Cloudflare Bindings**
-
-**Required Bindings** (configured in `wrangler.jsonc`):
-- **Durable Objects**: `SOURCE_SCRAPER` for stateful source management
-- **Queues**: `ARTICLE_PROCESSING_QUEUE` for async processing
-- **R2 Buckets**: `ARTICLES_BUCKET` for content storage
-- **Workflows**: `PROCESS_ARTICLES`, `AUTO_BRIEF_GENERATION`
-- **Service Bindings**: `MERIDIAN_AI_WORKER` for AI operations
-- **AI Binding**: `AI` for Cloudflare Workers AI access
+Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `MY_WORKFLOW` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`.
 
 ## 📈 Monitoring & Observability
 
-### **Available Endpoints**
-- `/health`: Service health status
-
-### **Key Metrics**
-- Article processing success rates and performance
-- AI analysis quality scores and cost tracking
-- Briefing generation frequency and user engagement
-- Source reliability and freshness metrics
-- System performance and resource utilization
-
-### **Logging & Debugging**
-- Structured JSON logging throughout the pipeline
-- Request/response tracing with correlation IDs
-- Performance profiling and bottleneck identification
-- Error categorization and alerting
+- Every workflow step is logged to R2 `observability/<workflowId>.json`; raw LLM I/O to `llm-calls/<workflowId>/`
+- Query a run via `/observability/runs/:workflowId`, trends via `/observability/trends`
+- See [`docs/OBSERVABILITY_GUIDE.md`](docs/OBSERVABILITY_GUIDE.md)
 
 ## 🧪 Testing
 
-### **Development Testing**
 ```bash
-# Backend unit tests
-pnpm --filter @meridian/backend test
-
-# AI Worker tests
-pnpm --filter meridian-ai-worker test
-
-# ML Service tests
-cd services/meridian-ml-service && pytest
-
-# Frontend tests
-pnpm --filter @meridian/frontend test
+pnpm typecheck                              # all packages
+pnpm -F @meridian/backend test              # backend golden snapshots + unit tests
+pnpm -F meridian-ai-worker test             # AI worker golden snapshots + unit tests
+cd services/meridian-ml-service && .venv/bin/python -m pytest test/   # clustering golden test
+pnpm -F @meridian/backend replay <workflowId>   # replay a production run with recorded LLM output
 ```
 
-### **Integration Testing**
-- End-to-end workflow validation
-- AI Worker integration with backend
-- ML Service clustering verification
-- API contract testing
+Golden tests freeze current behavior (they catch unintended changes, not wrong answers). LLM output quality is measured by the harnesses under `eval/`.
 
 ## 🎯 Current Status & Roadmap
 
-### **✅ Completed**
-- ✅ **Core Pipeline**: Full news processing and analysis pipeline
-- ✅ **AI Integration**: Multi-provider AI gateway with sophisticated analysis
-- ✅ **ML Capabilities**: Advanced clustering and embedding generation
-- ✅ **Web Interface**: Professional frontend with admin capabilities
-- ✅ **Observability**: Comprehensive monitoring and logging
-- ✅ **Deployment**: Production-ready with Cloudflare infrastructure
+Progress, open decisions and next steps live in [`docs/ROADMAP.md`](docs/ROADMAP.md); technical debt in [`docs/debt.md`](docs/debt.md).
 
-### **🔄 In Progress**
-- 🔄 **Automation**: Fully automated briefing generation (replacing manual Python notebooks)
-- 🔄 **Reliability**: Enhanced error handling and recovery mechanisms
-- 🔄 **Performance**: Optimization of processing pipeline and resource usage
-
-### **🔮 Future Enhancements**
-- 📧 **Distribution**: Email newsletter and notification system
-- 🎯 **Personalization**: User-specific content filtering and preferences
-- 📊 **Analytics**: Advanced metrics and user behavior tracking
-- 🌐 **Multi-language**: Support for non-English sources and analysis
-- 🔌 **Integrations**: Slack, Discord, and other platform connectors
 
 ## 🤖 AI Collaboration
 
 This project represents a significant collaboration between human engineering and artificial intelligence:
 
 ### **AI Development Partners**
+
+*(Historical: earlier versions ran on Gemini; the production pipeline now runs on Workers AI.)*
+
 - **Claude 3.5 Sonnet**: Architecture design, code generation, prompt refinement, and engineering oversight
 - **Gemini 2.0 Flash**: The production workhorse enabling economically viable large-scale analysis
 - **Gemini 2.5 Pro**: Long-context analysis, codebase review, and analytical tone development
@@ -517,10 +227,9 @@ MIT License - See [LICENSE](./LICENSE) file for complete details.
 
 ## 🆘 Support & Community
 
-- **Documentation**: Comprehensive guides in each service directory
+- **Documentation**: [`docs/`](docs/) and each package's README
 - **Issues**: GitHub Issues for bug reports and feature requests
 - **Discussions**: GitHub Discussions for community questions
-- **API Documentation**: Available at service endpoints (`/docs`)
 
 ---
 

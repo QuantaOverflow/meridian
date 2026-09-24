@@ -1,412 +1,80 @@
 # Meridian 工作流架构文档
 
-## 项目概述
+> 描述现行链路（简报块 v6，2026-09-21 起，commit `961aeca`）。代码是权威：
+> 编排在 `apps/backend/src/workflows/`，跨 service 契约在 `apps/backend/src/lib/services/ai-services.ts`
+> 与 `services/meridian-ai-worker/src/index.ts`。算法取舍与已证伪清单见 `docs/adr/0003-cluster-as-brief-block.md`。
 
-Meridian是一个AI驱动的个性化情报简报系统，基于Cloudflare生态构建。系统采用事件驱动的工作流架构，将新闻处理从文章抓取到简报生成分解为多个独立但协调的阶段。
+## 总览
 
-## 核心工作流架构
-
-### Feature: 端到端新闻情报处理管道
-
-系统由两个主要工作流组成，遵循清晰的数据流转换模式：
-
-1. **文章处理工作流** (ProcessArticles) - 将原始RSS数据转换为结构化的分析数据
-2. **情报分析管道** (Intelligence Pipeline) - 将分析数据转换为最终简报
-
-## 工作流1: 文章处理工作流 (ProcessArticles)
-
-### Given: 输入数据结构
-```typescript
-type ProcessArticlesParams = {
-  articles_id: number[]  // 待处理文章ID列表
-}
-
-// 数据库中的原始文章记录
-interface RawArticle {
-  id: number
-  url: string
-  title: string
-  publishDate: Date
-  status: null  // 未处理状态
-  processedAt: null
-}
+```
+RSS 源 ──► SourceScraperDO（每源一个 DO，按 scrape_frequency 定时抓）
+              │ 新文章写 articles 表，id 进队列
+              ▼
+        ARTICLE_PROCESSING_QUEUE ──► ProcessArticles workflow（逐篇：抓正文 → 分析 → 正文落 R2）
+                                                  │
+cron 0 13 * * *（UTC）──► AutoBriefGenerationWorkflow（每天一期）
+        补算 embedding → 聚类 → 簇判定 → 排序选材 → 逐块写 → 分层拼装 → 标题/摘要 → 落库
 ```
 
-### When: 执行文章处理管道
+三个 Worker 的分工：
 
-#### 阶段1: 文章筛选和获取
-**行为描述**: 系统根据业务规则筛选需要处理的文章
-- **输入**: 文章ID数组
-- **过滤条件**:
-  - 未处理的文章 (`processedAt` 为空)
-  - 48小时内发布的文章
-  - 无失败记录的文章
-- **输出**: 符合条件的文章记录
+| 组件 | 做什么 | 被谁调 |
+|---|---|---|
+| `apps/backend` | DO 抓取、队列、两个 workflow、admin / observability API | cron、队列、HTTP |
+| `services/meridian-ai-worker` | 所有 LLM 调用（Workers AI `glm-4.7-flash` 为主，经 AI Gateway） | backend 经 service binding `AI_WORKER` |
+| `services/meridian-ml-service` | embedding（`POST /embeddings`）与聚类（`POST /ai-worker/clustering`） | backend 经公网 URL `MERIDIAN_ML_SERVICE_URL` |
 
-#### 阶段2: 智能内容抓取
-**行为描述**: 系统使用自适应策略获取文章全文内容
+## 工作流 1：ProcessArticles（`processArticles.workflow.ts`）
 
-**组件依赖**:
-- `DomainRateLimiter` - 域名级别的速率控制
-- `getArticleWithBrowser` - 浏览器渲染抓取
-- `getArticleWithFetch` - 轻量级HTTP抓取
+触发：`index.ts` 的 `queue()` 把一批文章 id 交给 `startProcessArticleWorkflow`。参数 `{ articles_id: number[] }`。
 
-**业务规则**:
-- 特殊域名列表使用浏览器渲染策略
-- 常规域名优先使用fetch，失败时降级到浏览器
-- PDF文件直接标记为跳过
-- 并发控制: 最大8个并发，全局冷却1秒，域名冷却5秒
+1. **取文章**（`get articles`）：只处理未处理（`processedAt` 为空）、48 小时内发布、无 `failReason` 且在参数列表里的文章
+2. **抓正文**：`DomainRateLimiter`（并发 8、全局冷却 1s、同域冷却 5s）；特定域名走浏览器渲染，其余先 fetch 失败再降级；
+   PDF 直接标 `SKIPPED_PDF`；抓到的是拦截页/播放器壳等非正文时（`looksLikeNonArticleUrl` / `looksLikeExtractionFailure`）
+   标 `FETCH_FAILED` + `failReason=EXTRACTION_JUNK:*`，不进分析
+3. **文章分析**：ai-worker `POST /meridian/article/analyze`，产出 language、primary_location、completeness、
+   content_quality、event_summary_points、thematic_keywords、topic_tags、key_entities、content_focus
+4. **落盘**：正文进 R2（`ARTICLES_BUCKET`），分析字段与 `contentFileKey` 写 articles 表，状态 `PROCESSED`；
+   分析失败标 `AI_ANALYSIS_FAILED`
 
-**数据转换**:
-```
-RawArticle -> {
-  id: number
-  title: string
-  text: string        // 提取的全文内容
-  publishedTime?: string
-}
-```
+**embedding 不在这里算**（2026-07 起）：逐篇调 ml-service 会不断重置容器 sleepAfter 让它常驻，
+改到简报 workflow 聚类前批量补算。
 
-#### 阶段3: AI内容分析
-**行为描述**: 系统使用AI模型深度分析文章内容和语义
+## 工作流 2：AutoBriefGenerationWorkflow（`auto-brief-generation.ts`）
 
-**依赖服务**:
-- `AIWorkerService.analyzeArticle()` - 使用Gemini 2.0 Flash模型
+触发：cron `0 13 * * *` → `lib/scheduled/daily-brief.ts` 的 `runDailyBriefCron`（参数取 `CRON_BRIEF_PARAMS`，
+`MAX_STORIES_TO_GENERATE=25`）；也可 `POST /admin/briefs/generate` 手动触发。binding 名 `MY_WORKFLOW`。
 
-**分析维度**:
-- 语言识别
-- 地理位置标记
-- 内容完整性评估 (`COMPLETE` | `PARTIAL_USEFUL` | `PARTIAL_USELESS`)
-- 内容质量评级 (`OK` | `LOW_QUALITY` | `JUNK`)
-- 事件摘要要点提取
-- 主题关键词识别
-- 话题标签生成
-- 关键实体识别
-- 内容焦点分析
+每个 run 在 `brief_runs` 表有一行（`persist:brief_run_start` → `complete` / `failed` / `terminated`），
+有可对账的局部失败时终态记 `DEGRADED` 而非 `COMPLETED`。
 
-#### 阶段4: 语义向量化
-**行为描述**: 系统将文章内容转换为384维语义向量
+| # | step | 做什么 | 外部调用 |
+|---|---|---|---|
+| 0 | `补算:查缺失清单` + `补算 embedding 批次 N` | 窗口内缺 embedding 的文章每批 50 篇补算；单批失败跳过（该批不进聚类） | ml-service `/embeddings` |
+| 1 | `准备文章数据集` | 按时间窗取已分析、有 embedding 的文章；embeddings 卸到 R2、step 只回 key（1MB 输出上限） | — |
+| 2 | `执行聚类分析` | 不降维 + 余弦距离 average linkage 凝聚（阈值 0.10、最小 3 篇成簇，参数见 `lib/core/constants.ts` 的 `BRIEF_CLUSTERING_OPTIONS`；UMAP+HDBSCAN 仅作回滚开关）。簇成员落 R2 `observability/clustering/<wf>.json` | ml-service `/ai-worker/clustering` |
+| 3 | `簇判定` | **一簇 = 简报里一块**，每簇一次调用判 EVENT / NO_EVENT / UNSURE 并起名。判定失败或 NO_EVENT 仍出块（只进计数），标题退化成零 LLM 的主导专名。块的 importance 由 `blockImportance`（独立源数 + 篇数的对数公式，`lib/core/storyline.ts`）给出，不是 LLM 打分 | ai-worker `/meridian/cluster/judge` |
+| 3b | `persist:brief_stories_and_rejections`、`compute:source_coverage` | 块写 `brief_stories`、拒绝写 `cluster_rejections`；算每块独立源数 | — |
+| 4 | `故事重要性排序` | 对**全部**候选跑三轮洗牌 + Borda 聚合；失败则退回机械分（`lib/core/story-ranking.ts`，源覆盖加权）并在观测里记一笔。再按同事件配额（`PER_EVENT_BLOCK_CAP`）取前 `maxStoriesToGenerate` | ai-worker `/meridian/stories/rank` |
+| 5 | 每个选中故事一个 step | 簇原文（R2 取正文，`pickSpreadArticles` 截到 30 篇）→ 一块逐句带出处的简报。端点内部：切句 → 切窗 → 每窗标重点 → 一次写作（lead/more 3–5 句、brief 1–2 句）→ 机械补出处。step 只回写出的句子，不回切句表 | ai-worker `/meridian/brief-block-v6` |
+| 6 | `简报标题` | `assignTiers` 分 lead / more / brief 三节（写作前已算好），`renderBriefV3` 用代码拼 markdown；块记录落 R2 `observability/brief-v3/<wf>.json` | ai-worker `/meridian/brief-title` |
+| 7 | `简报摘要` | 次日上下文用的 TLDR + 读者端散文摘要（best-effort，失败留 null） | ai-worker `/meridian/generate-brief-tldr`、`/meridian/generate-brief-summary` |
+| 8 | `保存简报`、`persist:story_clusters` | 写 `reports`；跨期线索归并（best-effort，失败下次补） | — |
 
-**依赖服务**:
-- `AIWorkerService.generateEmbedding()` - 使用BGE-small-en-v1.5模型
-- `generateSearchText()` - 文本预处理工具
+**为什么逐块一个 step**：CF 约 2% 的 invocation 会被平台 canceled，把 N 次调用挤进一个 step 等于一次抖动丢整期。
 
-**数据转换**:
-```
-AnalyzedContent -> {
-  embedding: number[384]  // 384维语义向量
-}
-```
+## 已退役（代码已删，别按旧文档找）
 
-#### 阶段5: 持久化存储
-**行为描述**: 系统将处理结果存储到多个存储层
+- 故事验证层 `story-validation`、候选分组、storyline 两段式 —— 2026-09-05 由簇判定取代
+- 情报报告层（逐故事情报分析 → 报告 → 写作层 v3）—— 2026-09-21 由 brief-block-v6 取代，残余代码 2026-09-23 删除
+- b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账 —— 已删
+- ProcessArticles 内逐篇 embedding —— 2026-07 改为简报 workflow 批量补算
 
-**存储策略**:
-- **数据库存储**: 结构化元数据和分析结果
-- **对象存储**: 原始文章全文内容 (R2 Bucket)
+依据与读数见 `docs/adr/0003-cluster-as-brief-block.md`、`docs/adr/0004-brief-writer-v3.md` 与 `docs/knowledge/INDEX.md`。
 
-### Then: 输出数据结构
-```typescript
-interface ProcessedArticle {
-  // 基础信息
-  id: number
-  title: string
-  language: string
-  primary_location: string
-  
-  // 内容评估
-  completeness: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS'
-  content_quality: 'OK' | 'LOW_QUALITY' | 'JUNK'
-  
-  // 分析结果
-  event_summary_points: string[]
-  thematic_keywords: string[]
-  topic_tags: string[]
-  key_entities: string[]
-  content_focus: string[]
-  
-  // 技术数据
-  embedding: number[384]
-  contentFileKey: string  // R2中的文件路径
-  
-  // 状态跟踪
-  status: 'PROCESSED'
-  processedAt: Date
-  used_browser: boolean
-}
-```
+## 观测与测试
 
-## 工作流2: 情报分析管道 (Intelligence Pipeline)
-
-### Given: 输入数据结构 - ArticleDataset
-```typescript
-interface ArticleDataset {
-  articles: Array<{
-    id: number
-    title: string
-    content: string
-    publishDate: string
-    url: string
-    summary: string
-  }>
-  embeddings: Array<{
-    articleId: number
-    embedding: number[384]
-  }>
-}
-```
-
-### When: 执行情报分析管道
-
-#### 阶段1: 聚类分析 (Clustering Analysis)
-**行为描述**: 系统将相似文章聚合成有意义的故事集群
-
-**依赖服务**:
-- ML服务（不降维 + 余弦距离矩阵 + average linkage 阈值聚类；旧的 UMAP + HDBSCAN 保留为回滚路径）
-
-**业务参数**:
-- `clusteringAlgorithm`: `agglomerative_cosine`（默认）| `umap_hdbscan`（回滚）
-- 凝聚参数: `agglomerativeThreshold` 0.10、`agglomerativeLinkage` average、`agglomerativeMinClusterSize` 3
-- 回滚路径参数: UMAP `n_neighbors/n_components/min_dist/metric`、HDBSCAN `min_cluster_size/min_samples/epsilon`
-
-> 换算法的读数与已证伪清单见 `docs/adr/0003-cluster-as-brief-block.md`。
-> 2026-09-05 起簇的切分层（story-validation → 候选组 → storyline 两段式）已整层删除：
-> 一簇 = 简报里的一条，由 `/meridian/cluster/judge` 逐簇判定 + 起名。
-
-**数据转换**:
-```
-ArticleDataset -> ClusteringResult {
-  clusters: Array<{
-    clusterId: number
-    articleIds: number[]
-    size: number
-  }>
-  parameters: ClusteringParameters
-  statistics: {
-    totalClusters: number
-    noisePoints: number
-    totalArticles: number
-  }
-}
-```
-
-#### 阶段1.5: 故事重要性排序 (Story Importance Ranking)
-**行为描述**: 簇判定之后、选材之前，对全部候选跑一次重要性排序，取代原来的机械热度排序（commit `86633c5` / `0ae2592`）
-- 端点：`POST /meridian/stories/rank`
-- 机制：三轮洗牌 + Borda 聚合，一次请求返回前 12 名
-
-> ⚠️ **以下「阶段2 故事验证」「阶段3 情报深度分析」「阶段4 简报生成」已退役**，与本文档
-> 阶段1 末尾「2026-09-05 起簇的切分层已整层删除」的说明一致：现行链路是簇判定
-> （`/meridian/cluster/judge`）直接产出简报块（`/meridian/brief-block-v6`），
-> 不再有独立的故事验证、情报深度分析、报告层简报生成步骤。以下内容仅作历史记录，
-> 现行设计见 `docs/adr/0003-cluster-as-brief-block.md` 与 `docs/adr/0004-brief-writer-v3.md`。
-
-#### 阶段2: 故事验证 (Story Validation) —— 已退役，见上方标注
-**行为描述**: 系统验证聚类是否构成有效新闻故事
-
-**依赖服务**:
-- `AIWorkerService.validateStory()` - Gemini模型验证
-
-**验证规则**:
-- 尺寸过滤: 聚类大小 < 3 标记为 `INSUFFICIENT_ARTICLES`
-- AI验证: 识别故事类型 (`SINGLE_STORY` | `COLLECTION_OF_STORIES` | `PURE_NOISE` | `NO_STORIES`)
-- 重要性评分: 1-10分制
-
-**数据转换**:
-```
-ClusteringResult -> ValidatedStories {
-  stories: Array<{
-    title: string
-    importance: number  // 1-10
-    articleIds: number[]
-    storyType: 'SINGLE_STORY' | 'COLLECTION_OF_STORIES'
-  }>
-  rejectedClusters: Array<{
-    clusterId: number
-    rejectionReason: 'PURE_NOISE' | 'NO_STORIES' | 'INSUFFICIENT_ARTICLES'
-    originalArticleIds: number[]
-  }>
-}
-```
-
-#### 阶段3: 情报深度分析 (Intelligence Analysis) —— 已退役，见阶段2 前标注
-**行为描述**: 系统对验证的故事进行深度情报分析
-
-**依赖服务**:
-- `AIWorkerService.analyzeStoryIntelligence()` - Gemini Pro深度分析
-
-**分析维度**:
-- **执行摘要**: 故事的简明概述
-- **发展状态**: `DEVELOPING` | `ESCALATING` | `DE_ESCALATING` | `CONCLUDING` | `STATIC`
-- **时间线重建**: 关键事件的时序排列
-- **重要性评估**: `CRITICAL` | `HIGH` | `MODERATE` | `LOW`
-- **实体分析**: 关键参与者、角色和立场
-- **信源分析**: 来源可靠性和偏见评估
-- **事实基础**: 不争的关键事实
-- **信息缺口**: 需要补充的信息
-- **矛盾检测**: 冲突声明和立场
-
-**数据转换**:
-```
-ValidatedStories + ArticleDataset -> IntelligenceReports {
-  reports: Array<{
-    storyId: string
-    status: 'COMPLETE' | 'INCOMPLETE'
-    executiveSummary: string
-    storyStatus: StoryStatusEnum
-    timeline: TimelineEvent[]
-    significance: SignificanceAssessment
-    entities: Entity[]
-    sources: SourceAnalysis[]
-    factualBasis: string[]
-    informationGaps: string[]
-    contradictions: Contradiction[]
-  }>
-  processingStatus: {
-    totalStories: number
-    completedAnalyses: number
-    failedAnalyses: number
-  }
-}
-```
-
-#### 阶段4: 简报生成 (Brief Generation) —— 已退役，见阶段2 前标注
-**行为描述**: 系统将情报分析结果合成为结构化简报
-
-**依赖服务**:
-- AI Worker简报生成服务 - Gemini 2.5 Pro
-
-**可选输入**:
-```typescript
-interface PreviousBriefContext {
-  date: string
-  title: string
-  summary: string
-  coveredTopics: string[]
-}
-```
-
-**简报结构**:
-- **元数据**: 标题、创建时间、使用模型、TLDR
-- **内容章节**: 7个预定义章节类型
-  - `WHAT_MATTERS_NOW` - 当前重点
-  - `FRANCE_FOCUS` - 法国焦点
-  - `GLOBAL_LANDSCAPE` - 全球态势
-  - `CHINA_MONITOR` - 中国观察
-  - `TECH_SCIENCE` - 科技科学
-  - `NOTEWORTHY` - 值得关注
-  - `POSITIVE_DEVELOPMENTS` - 积极发展
-- **统计数据**: 处理文章数、使用源数、聚类参数
-
-### Then: 输出数据结构 - FinalBrief
-```typescript
-interface FinalBrief {
-  metadata: {
-    title: string
-    createdAt: string
-    model: string
-    tldr: string
-  }
-  content: {
-    sections: Array<{
-      sectionType: BriefSectionType
-      title: string
-      content: string
-      priority: number
-    }>
-    format: 'MARKDOWN' | 'JSON' | 'HTML'
-  }
-  statistics: {
-    totalArticlesProcessed: number
-    totalSourcesUsed: number
-    articlesUsedInBrief: number
-    sourcesUsedInBrief: number
-    clusteringParameters: object
-  }
-}
-```
-
-## 系统架构特性
-
-### 组件依赖关系
-
-#### 核心服务组件
-- **AIWorkerService**: AI模型调用协调器
-- **DomainRateLimiter**: 智能速率控制
-- **WorkflowObservability**: 全流程监控
-- **DataFlowObserver**: 数据流追踪
-
-#### 外部服务依赖
-- **Cloudflare Workers AI**: 嵌入向量生成
-- **Google AI Studio**: Gemini模型服务
-- **Meridian ML Service**: 聚类算法服务
-- **Hyperdrive**: PostgreSQL数据库
-- **R2 Object Storage**: 文件存储
-
-### 错误处理策略
-
-#### 重试机制
-- **指数退避**: 对AI服务调用失败
-- **线性退避**: 对数据库操作失败
-- **熔断模式**: 对外部服务不可用
-
-#### 降级处理
-- **内容抓取失败**: 标记文章状态，继续处理其他文章
-- **AI分析失败**: 保留基础元数据，标记分析状态
-- **聚类失败**: 使用简化聚类或单文章处理
-- **简报生成失败**: 生成基础版本简报
-
-### 数据一致性保证
-
-#### 状态跟踪
-每个处理阶段都有明确的状态标记:
-- `CONTENT_FETCHED` - 内容已获取
-- `PROCESSED` - 完全处理完成
-- `FETCH_FAILED` - 抓取失败
-- `AI_ANALYSIS_FAILED` - AI分析失败
-- `SKIPPED_PDF` - PDF文件跳过
-
-#### 幂等性设计
-- 工作流可以安全重试
-- 重复处理同一文章会被过滤
-- 状态机确保数据一致性
-
-### 性能优化策略
-
-#### 并发控制
-- 文章抓取: 8个并发连接
-- 域名冷却: 5秒间隔
-- 全局冷却: 1秒间隔
-
-#### 批处理优化
-- AI分析使用批量调用
-- 数据库操作合并执行
-- 缓存机制减少重复计算
-
-#### 存储策略
-- 热数据存储在数据库
-- 大文件存储在对象存储
-- 语义向量支持快速相似性搜索
-
-## 监控和可观测性
-
-### 数据流监控
-系统在每个关键节点记录数据流变化:
-- 文章数量变化
-- 聚类数量变化
-- 故事数量变化
-- 质量指标变化
-
-### 性能监控
-- 各阶段处理时间
-- 成功/失败比率
-- 资源使用情况
-- AI服务调用成本
-
-### 业务监控
-- 简报生成频率
-- 内容质量分布
-- 故事类型分布
-- 关键实体识别准确性
-
-这个架构确保了Meridian系统能够可靠地将原始RSS feeds转换为高质量的个性化情报简报，同时保持良好的性能、可维护性和可扩展性。 
+- 每步 `WorkflowObservability.logStep` 写 R2 `observability/<wf>.json`；按 run 查询见 `docs/OBSERVABILITY_GUIDE.md`
+- LLM 原始 I/O 落 R2 `llm-calls/<wf>/`
+- 纯函数有 golden 快照（`apps/backend/test/golden/`）；整期链路可用生产录像回放：
+  `pnpm -F @meridian/backend replay <workflowId>`（`apps/backend/test/replay/README.md`）

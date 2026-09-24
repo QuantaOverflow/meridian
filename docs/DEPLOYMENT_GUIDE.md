@@ -1,252 +1,100 @@
-# 🚀 Meridian AI服务解耦部署指南
+# Meridian 部署指南
 
-## 架构概览
-
-我们已经将AI服务从backend解耦到独立的`meridian-ai-worker`中，使用Cloudflare Service Bindings实现高性能通信。
+四个可部署单元，各在自己的目录里部署，**永不从仓库根目录跑 `wrangler deploy`**。
+变量清单以各目录的 `.dev.vars.example` 为准（标 🔐 的在生产用 `wrangler secret put`）。
 
 ```
-┌─────────────────┐    Service Binding     ┌─────────────────┐
-│   Backend       │◄──────────────────────►│  AI Worker      │
-│   Worker        │                        │                 │
-│                 │                        │ ┌─────────────┐ │
-│ ┌─────────────┐ │                        │ │   Gemini    │ │
-│ │  Workflows  │ │                        │ │   OpenAI    │ │
-│ │  Scrapers   │ │                        │ │ Workers AI  │ │
-│ │  APIs       │ │                        │ │ Anthropic   │ │
-│ └─────────────┘ │                        │ └─────────────┘ │
-└─────────────────┘                        └─────────────────┘
+backend ──service binding AI_WORKER──► meridian-ai-worker ──► AI Gateway ──► Workers AI / DashScope
+   │
+   └──公网 MERIDIAN_ML_SERVICE_URL + X-API-Token──► meridian-ml-service（Worker 壳 + Container）
+frontend（Cloudflare Pages）──► Neon Postgres（直连）+ backend API
 ```
 
-## 🎯 优势
+## 部署顺序
 
-- **⚡ 性能**: Service Binding避免HTTP开销
-- **🔒 安全**: 内部通信，无需公网暴露  
-- **💰 成本**: 避免出站HTTP请求费用
-- **📊 监控**: Cloudflare AI Gateway统一管理
+依赖在前：DB migration → ai-worker → ml-service → backend → frontend。
+backend 的 service binding 指向 `meridian-ai-worker`，它不存在时 backend 部署会失败。
 
-## 📋 部署步骤
-
-### 1. 部署AI Worker
+### 1. 数据库 migration
 
 ```bash
-# 进入AI Worker目录
+# DATABASE_URL 见 packages/database/.env.example
+pnpm -F @meridian/database migrate
+```
+
+改 schema 的流程见 `CLAUDE.md`（`generate` → review SQL → 一并 commit）；`packages/database/migrations/` 里的历史文件不可改。
+
+### 2. AI Worker（`services/meridian-ai-worker`，配置 `wrangler.toml`）
+
+```bash
 cd services/meridian-ai-worker
-
-# 设置环境变量（清单以 .dev.vars.example 为准）
-wrangler secret put CLOUDFLARE_ACCOUNT_ID
-wrangler secret put CLOUDFLARE_GATEWAY_ID
-wrangler secret put CLOUDFLARE_API_TOKEN
-wrangler secret put AI_GATEWAY_TOKEN
-wrangler secret put DASHSCOPE_API_KEY
-
-# 可选：其他 provider。**生产链路不走它们**——2026-08 起 LLM 全量走 Workers AI
-# （binding，无需 key），DashScope 作跨 provider 兜底。这几个只在离线对照实验里用。
-wrangler secret put GOOGLE_AI_API_KEY
-wrangler secret put OPENAI_API_KEY
-wrangler secret put ANTHROPIC_API_KEY
-
-# 部署AI Worker
+wrangler secret put AI_GATEWAY_TOKEN      # AI Gateway 启用鉴权时
+wrangler secret put DASHSCOPE_API_KEY     # `other` phase 用
+wrangler secret put GATEWAY_API_KEYS      # 调用方鉴权，逗号分隔
 wrangler deploy
 ```
 
-### 2. 配置Backend Service Binding
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_GATEWAY_ID` 等其余变量见 `.dev.vars.example`。
+简报链路的模型走 Workers AI binding `AI`（无需 key），各 phase 的模型在 `src/services/call-llm.ts` 的 `PHASE_DEFAULTS`。
 
-更新 `apps/backend/wrangler.toml`：
+### 3. ML Service（`services/meridian-ml-service/cf-worker`）
 
-```toml
-name = "meridian-backend"
-
-# 🎯 Service Binding to AI Worker
-[[services]]
-binding = "AI_WORKER"
-service = "meridian-ai-worker"
-
-# 其他绑定...
-```
-
-### 3. 部署Backend
+一次部署是两件事：`cf-worker/src/index.ts` 的 Durable Object 壳，和 `wrangler.jsonc` 里
+`"image": "../Dockerfile"` 构建出的容器镜像（算法全在镜像里）。本机需要 Docker，且
+`services/meridian-ml-service/model-cache/`（gitignored，约 470MB）里要有模型文件——Dockerfile 直接 COPY 它。
 
 ```bash
-# 进入Backend目录
+cd services/meridian-ml-service/cf-worker
+wrangler secret put API_TOKEN     # 须与 backend 的 MERIDIAN_ML_SERVICE_API_KEY 相同
+wrangler deploy
+```
+
+**壳部署成功不等于镜像已更新**（2026-06 → 09 的聚类算法曾因此三个半月没上线）。部署后跑：
+
+```bash
+scripts/check-container-deploy.sh    # 0 = 镜像不比代码旧；1 = 镜像过期；2 = 工具错误
+```
+
+线上 `GET /health` 的 `build_identity`（构建时注入的 SHA 与构建时间）也能看镜像是哪次构建的。
+
+### 4. Backend（`apps/backend`，配置 `wrangler.jsonc`）
+
+```bash
 cd apps/backend
-
-# 部署Backend（自动绑定AI Worker）
+wrangler secret put API_TOKEN                     # /admin/*、/observability/* 的 Bearer token
+wrangler secret put CLOUDFLARE_API_TOKEN          # 浏览器渲染抓取
+wrangler secret put MERIDIAN_ML_SERVICE_API_KEY   # = ml-service 的 API_TOKEN
 wrangler deploy
 ```
 
-## 🔧 使用方式
+绑定（都在 `wrangler.jsonc`）：DO `SOURCE_SCRAPER`、`HYPERDRIVE`、队列 `ARTICLE_PROCESSING_QUEUE`、
+R2 `ARTICLES_BUCKET`、workflow `PROCESS_ARTICLES` 与 `MY_WORKFLOW`（简报）、service binding `AI_WORKER`、
+cron `0 13 * * *`；`MERIDIAN_ML_SERVICE_URL` 是 `vars`。
 
-### 在Workflow中使用AI Worker
+新加 RSS 源后要初始化它的 DO：`POST /do/admin/initialize-dos`（带 Bearer token）。
 
-```typescript
-import { createAIWorkerClient } from '../lib/aiWorkerClient'
+### 5. Frontend（Cloudflare Pages）
 
-export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesParams> {
-  async run(event: WorkflowEvent<ProcessArticlesParams>, step: WorkflowStep) {
-    const env = this.env
-    
-    // 创建AI Worker客户端
-    const aiClient = createAIWorkerClient(env)
-    
-    // 分析文章
-    const analysisResult = await step.do('analyze article', async () => {
-      const result = await aiClient.analyzeArticle(article.title, article.text)
-      if (result.isErr()) throw result.error
-      return result.value
-    })
-    
-    // 生成嵌入
-    const embeddingResult = await step.do('generate embedding', async () => {
-      const searchText = generateSearchText({ title: article.title, ...analysisResult })
-      const result = await aiClient.generateEmbedding(searchText)
-      if (result.isErr()) throw result.error
-      return result.value
-    })
-  }
-}
-```
+Pages 配置在仓库根的 `wrangler.toml`（`pages_build_output_dir = "apps/frontend/dist"`，
+生产 vars 在 `[env.production.vars]`）。密钥用 `wrangler pages secret put`：
+`DATABASE_URL`、`SESSION_PASSWORD`、`WORKER_API_TOKEN`、`ADMIN_PASSWORD`。构建：`pnpm -F @meridian/frontend build`。
 
-## 🎨 API接口
+## 判断部署成没成
 
-### AI Worker服务接口
+- `wrangler deploy` = 上传 version + 激活 deployment。**只看输出里的 `Current Version ID` 且与上次不同**，
+  不看有没有 `Uploaded`、不看退出码
+- 上传成功但激活一直 hang：多半是 OAuth token 缺 write scope，`wrangler whoami` 会警告，需重新 `wrangler login`
+- ml-service 另外要过 `scripts/check-container-deploy.sh`
+- 「已部署」不等于「跑过」：新简报代码要等下一次 cron（或手动 `POST /admin/briefs/generate`）真实跑一期再算上线
 
-AI Worker提供两种调用方式：
+## CI
 
-1. **Service Binding** (推荐)
-2. **HTTP API** (外部访问)
+`.github/workflows/deploy-services.yaml` 只在 push 到 `main` 时触发，而本仓主干是 `meridian-dev`、没有 `main`，
+所以**目前不会自动部署**，以上步骤都是手动的。
 
-### Service Binding接口
+## 排错
 
-```typescript
-// 文章分析
-const result = await env.AI_WORKER.analyzeArticle({
-  title: "Article Title",
-  content: "Article Content",
-  options: {
-    provider: "workers-ai",
-    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-  }
-})
-
-// 嵌入生成
-const embedding = await env.AI_WORKER.generateEmbedding({
-  text: "Text to embed",
-  options: {
-    provider: "workers-ai",
-    model: "@cf/baai/bge-small-en-v1.5"
-  }
-})
-```
-
-### HTTP API接口
-
-```bash
-# 文章分析
-curl -X POST https://meridian-ai-worker.your-subdomain.workers.dev/meridian/article/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Article Title",
-    "content": "Article Content",
-    "options": {
-      "provider": "workers-ai"
-    }
-  }'
-```
-
-## 🔐 环境变量配置
-
-### AI Worker必需变量
-
-```bash
-# Cloudflare AI Gateway配置
-CLOUDFLARE_ACCOUNT_ID=your-account-id
-CLOUDFLARE_GATEWAY_ID=your-gateway-id
-CLOUDFLARE_API_TOKEN=your-api-token
-
-# AI提供商API密钥
-# 生产链路全量走 Workers AI（binding，无需 key）；DashScope 是唯一的必需 key，
-# 作为 `other` 兜底阶段使用（见 services/meridian-ai-worker/src/services/call-llm.ts 的 DEFAULT_MODELS）
-DASHSCOPE_API_KEY=your-dashscope-key
-```
-
-### 可选变量
-
-```bash
-# 其他AI提供商
-OPENAI_API_KEY=your-openai-key
-ANTHROPIC_API_KEY=your-anthropic-key
-
-# AI Gateway增强功能
-AI_GATEWAY_ENABLE_COST_TRACKING=true
-AI_GATEWAY_ENABLE_CACHING=true
-AI_GATEWAY_DEFAULT_CACHE_TTL=3600
-AI_GATEWAY_ENABLE_METRICS=true
-AI_GATEWAY_ENABLE_LOGGING=true
-```
-
-## 📊 监控和日志
-
-### Cloudflare Dashboard
-
-1. **Workers & Pages** → **meridian-ai-worker**
-2. 查看实时指标、日志和错误
-3. 监控AI Gateway使用情况和成本
-
-### AI Gateway分析
-
-1. **AI** → **AI Gateway** 
-2. 查看请求统计、成本分析
-3. 监控缓存命中率和性能
-
-## 🚨 故障排除
-
-### 常见问题
-
-1. **Service Binding连接失败**
-   ```bash
-   # 确保两个Worker都已部署
-   wrangler deployments list --name meridian-ai-worker
-   wrangler deployments list --name meridian-backend
-   ```
-
-2. **AI提供商认证失败**
-   ```bash
-   # 检查密钥配置
-   wrangler secret list --name meridian-ai-worker
-   ```
-
-3. **性能问题**
-   - 检查AI Gateway缓存配置
-   - 监控每个AI提供商的响应时间
-   - 优化模型选择（Flash vs Pro）
-
-### 调试命令
-
-```bash
-# 测试AI Worker健康状态
-curl https://meridian-ai-worker.your-subdomain.workers.dev/health
-
-# 查看AI Worker配置
-curl https://meridian-ai-worker.your-subdomain.workers.dev/meridian/config
-
-# 查看AI Gateway配置
-curl https://meridian-ai-worker.your-subdomain.workers.dev/ai-gateway/config
-```
-
-## 🔄 迁移清单
-
-### 从直接AI调用迁移到Service Binding
-
-- [ ] 部署AI Worker
-- [ ] 配置Service Binding
-- [ ] 更新Backend代码使用新客户端
-- [x] 移除旧的AI SDK依赖
-- [ ] 测试功能一致性
-- [ ] 监控性能和成本
-
-## 📈 预期收益
-
-- **性能提升**: 减少50-80ms的HTTP往返时间
-- **成本优化**: 避免出站请求费用，使用AI Gateway缓存
-- **运维简化**: 统一AI服务管理和监控
-- **扩展性**: 轻松添加新的AI提供商和模型 
+- 生产日志：`wrangler tail`（本机常建不起会话时走 Dashboard → Workers → Logs）
+- workflow 实例：`wrangler workflows instances describe`
+- 按 run 查观测数据：见 `docs/OBSERVABILITY_GUIDE.md`
+- `*.workers.dev` 在国内会被 RST，本机访问需走代理

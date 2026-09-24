@@ -1,6 +1,6 @@
 # Clustering eval（聚类质量）
 
-评 **RSS → 向量化 → HDBSCAN 聚类** 这一环：**同一件事的报道有没有聚在一起、不相干的有没有混进来。**
+评 **RSS → 向量化 → 聚类**（现行为不降维的余弦凝聚聚类，见 ADR 0003）这一环：**同一件事的报道有没有聚在一起、不相干的有没有混进来。**
 
 这条线此前**无尺**（2026-08-18 起金标归档，`metrics.ts` 一直空转）。2026-09-04 重建，形态与上一版
 不同：上一版用 LLM 产参考划分，这一版是**人读金标**——因为要评的下一步是特征工程，若指标本身
@@ -35,7 +35,7 @@
 
 ```bash
 cd eval/clustering
-S=../../../apps/backend/prototypes/_data/cluster-sweep
+S=../../apps/backend/prototypes/_data/cluster-sweep   # 本地原型产物，不入 git
 
 pnpm run score -- --window=F2 --min=3 $S/F2-fine-avg-t0.10.json      # 产品口径（主用）
 pnpm run score:full -- --window=F2 --loose $S/F2-fine-avg-t0.10.json # ARI / B-cubed（诊断）
@@ -49,19 +49,13 @@ pnpm run score:full -- --window=F2 --loose $S/F2-fine-avg-t0.10.json # ARI / B-c
 
 | 文件 | 是什么 |
 |---|---|
-| `gold/titles-F1.tsv` | 调参集 fixture。1142 条，`id / publish_date / source_id / title`，按时间升序 |
-| `gold/titles-F2.tsv` | **holdout fixture**。1252 条，窗口 08-26 ~ 08-27 |
-| `gold/build-titles.sh` | 上面那份的导出脚本（逐字复现生产聚类那一步的 SQL） |
-| `gold/events-F1.jsonl` | 调参集金标。117 个事件（全覆盖），一行一个，带 `topic` 字段 |
-| `gold/meta-F1.json` | 判据、caveats、`non_article`、`duplicate_pairs`、未归属的 `unverifiable` |
-| `rubric.md` | **标注规范**。改判据前必读 |
-
-窗口 `2026-08-28T00:00Z ~ 2026-08-30T02:00Z`，即生产 workflow `admin-brief-1788431559004` 的真实
-输入窗口（该次生产 `total_articles=1029`；fixture 是它的超集，多 2 篇，因为不含生产在 SQL 之后
-那道 R2 正文质量过滤）。
-
-**金标规模**：24 事件 / `members` 234 / `related` 19 / `multi_label` 7 / `non_article` 11，
-覆盖全库 26%。事件规模从 104 篇（尼泊尔洪灾）到 1 篇（四川地震）全谱覆盖。
+| `../_data/clustering-F1/titles.tsv` | 调参集 fixture。1142 条，`id / publish_date / source_id / title`，按时间升序 |
+| `../_data/clustering-F1/build-titles.sh` | 上面那份的导出脚本（逐字复现生产聚类那一步的 SQL） |
+| `../_data/clustering-F1/events.jsonl` | 调参集金标。119 个事件（全覆盖），一行一个，带 `topic` 字段 |
+| `../_data/clustering-F1/meta-extra.json` | `non_article`、`duplicate_pairs` 等打分要用的元信息 |
+| `../_data/clustering-F1/manifest.json` | 判据、来历、三人 ARI、消耗状态（`consumed`） |
+| `../_data/clustering-F2/` | **holdout**，同样的文件组，外加冻结说明 `HOLDOUT-FROZEN.md` 与三人两轮原始标注 `rounds-1/`、`rounds-2/` |
+| `rubric.md` | **标注规范**。改判据前必读（`_data` 里各有一份随金标冻结的副本） |
 
 ---
 
@@ -115,7 +109,7 @@ per-event 完整率 / 纯度   纯度分母是整个簇        → 衡量「簇�
 
 同一份聚类结果打两次分。**必须两层一起看**：以巴那 8 件事被聚进一个 24 篇的簇，事件层判纯度
 0.08，主题层接近满分——那是粒度分歧；而体育那个 58 篇的杂堆两层都低——那是真杂讯。一层的读数
-分不开这两种失败。主题分组在 `gold/topics-F1.jsonl`，判据见 `rubric.md` 三·五节。
+分不开这两种失败。主题分组取 `events.jsonl` 每个事件自带的 `topic` 字段（`product-score.ts --topic`）；`gold-score.ts --topic` 要的独立 `topics-F1.jsonl` 从未入库。判据见 `rubric.md` 三·五节。
 
 ### 两个口径
 
@@ -137,7 +131,9 @@ per-event 完整率 / 纯度   纯度分母是整个簇        → 衡量「簇�
 
 ---
 
-## 基线读数（2026-09-04）
+## 历史基线读数（2026-09-04，旧算法 UMAP+HDBSCAN，已删）
+
+> 下面是换算法前的基线，保留作对照；现行算法的读数见 ADR 0003，现场跑 `product-score.ts` 取。
 
 UMAP(`n_components=5, n_neighbors=15, min_dist=0.1, cosine`) → HDBSCAN(`mcs=3, min_samples=1, euclidean`)，
 只变 `cluster_selection_epsilon`，`random_state=42`：
@@ -163,15 +159,12 @@ UMAP(`n_components=5, n_neighbors=15, min_dist=0.1, cosine`) → HDBSCAN(`mcs=3,
 
 ## 已知限制
 
-- **只有一个窗口**。设计是「F1 调参、F2 验证」，F2 目前没有金标，验证那条腿是跛的。
-- **只覆盖 26%**。三个标注者独立通读全库 + 独立复核确认这 24 个事件无漏成员，但不保证窗口里没有
-  别的未标事件。对纯度是保守估计。
 - **「单篇被吞」的阈值（纯度 < 0.2）是拍的**，未验证。当信号别当门。
 - 其余偏差见 `rubric.md` 第四节，尤其**标题风格偏差**那条（换 fixture 必须重算）。
 
 ## 配套的无标注指标
 
-金标精度高但只覆盖 26%。另有一套覆盖全库、精度较低的机械指标（杂物袋率 / 稳定性 / 进簇率），
+金标精度高、全覆盖但只有两个窗口。另有一套覆盖任意窗口、精度较低的机械指标（杂物袋率 / 稳定性 / 进簇率），
 曾在 `prototypes/dedup-band/cluster-metrics.py`（该原型目录 2026-09-05 已删，脚本随之清掉；
 读数与判据留在 docs/engineering-notes/prototype-findings-dedup-storyline.md）。两套互补：
 
@@ -183,5 +176,5 @@ UMAP(`n_components=5, n_neighbors=15, min_dist=0.1, cosine`) → HDBSCAN(`mcs=3,
 
 ## 想扩这份金标
 
-按 `rubric.md` 第五节的建造流程走。最省力的扩法是给 F2 窗口标一批（`gold/build-titles.sh` 改窗口
-即可导出 fixture），补上「调参/验证分离」那条腿。
+按 `rubric.md` 第五节的建造流程走。F2 已用作 holdout（见 `_data/clustering-F2/HOLDOUT-FROZEN.md`，只能用一次），再验证要开新窗口：
+`_data/clustering-F1/build-titles.sh` 改窗口即可导出 fixture。

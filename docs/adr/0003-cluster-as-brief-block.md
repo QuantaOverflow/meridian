@@ -53,7 +53,7 @@
 
 **情报分析层的瓶颈被重新定位。** 原以为是输入太长导致超时（生产曾记录 91 篇 → 300 秒硬失败）。隔离探针实测：`corr(墙钟, 输入token) = +0.014`、`corr(墙钟, 输出token) = +0.848`，全部 81 篇的 prefill 只要约 14 秒。真凶是**输出的复读退化**（30% 的调用冲到 maxTokens 8192 并 `finish_reason=length`），与篇数无关。因此「拆输入降时延」这条路作废，该治的是输出退化与信息利用率。
 
-**残余杂质进写作材料。** 交付簇里约 5.6%（F2）/ 6.8%（F1）的文章不属于主导事件，且集中在持续冲突的大簇吸附相邻子事件（美伊战争簇吸进卡塔尔斡旋、Kharg 岛 AI 视频）。曾试篇级排除（让判定层同时指出哪几篇不属于），精度只有 0.20、误排 74 篇，否掉；靠下游 RARR 接地校验兜。
+**残余杂质进写作材料。** 交付簇里约 5.6%（F2）/ 6.8%（F1）的文章不属于主导事件，且集中在持续冲突的大簇吸附相邻子事件（美伊战争簇吸进卡塔尔斡旋、Kharg 岛 AI 视频）。曾试篇级排除（让判定层同时指出哪几篇不属于），精度只有 0.20、误排 74 篇，否掉；当时靠下游 RARR 接地校验兜（RARR 后已退役删除，见 ADR 0004）。
 
 **判定必须与调用失败分开。** 失败重试一次，仍失败则整簇保留成一块、名字用零 LLM 的主导专名，计数进观测。把失败读成「这簇没有故事」会让一次网络抖动毙掉一条真新闻——这个仓库栽过。
 
@@ -75,7 +75,9 @@
 
 2026-09-20 用本地重建的 ml-service 镜像在两窗金标上复跑，`product-score.ts --min=3` 宽松
 members+related 口径下五个数与本 ADR 的原始实测**精确复现**（交付率/簇纯度/题材袋率/跨簇数/
-完整率五个数全等），说明算法本身的结论未受影响，只是至今没有一次生产简报是用这版聚类跑出来的。
+完整率五个数全等），说明算法本身的结论未受影响。
+
+**2026-09-20 起生效**：镜像重建推上后，09-20、09-21、09-22 三期生产简报用的就是这版聚类，NO_EVENT 率回到 2–3%（见 `apps/backend/src/workflows/auto-brief-generation.ts` 的 NO_EVENT 率断言注释）。2026-09-24 起 ml 镜像身份断言（`build_identity` missing / mismatch）并进 DEGRADED，同类「镜像没推上」不会再静默。
 
 ## 已证伪，别重跑
 
@@ -87,7 +89,7 @@ members+related 口径下五个数与本 ADR 的原始实测**精确复现**（�
 
 ## 相关
 
-- 打分器与金标：`eval/clustering/`（`product-score.ts` 产品口径主用、`full-score.ts` ARI/B-cubed 诊断、`gold/` 两窗人读金标、`rubric.md` 标注规范）
+- 打分器与金标：`eval/clustering/`（`product-score.ts` 产品口径主用、`full-score.ts` ARI/B-cubed 诊断）；两窗人读金标与标注规范在 `eval/_data/clustering-F1`、`clustering-F2`（F2 是冻结 holdout）
 - 判据的四变体实测：`services/meridian-ai-worker/src/prompts/cluster-judge.ts` 文件头
 - 参数来历与前沿曲线：`services/meridian-ml-service/src/clustering.py` 的 `ClusteringConfig` 注释
 - 被删那层的负结果：`docs/engineering-notes/prototype-findings-dedup-storyline.md`

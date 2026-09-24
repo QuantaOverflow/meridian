@@ -231,7 +231,7 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 - 每故事一个 step（治平台 canceled，基线约 2%）
 
 **质量门与 eval**
-- 文章质量门 eval 已建并验：判官 κ 尺过线；随机 80 篇生产实测 LOW 一次没打、误杀 0/80。收紧 LOW 属可选打磨非急病
+- 文章质量门 eval 已建并验：判官 κ 尺过线；随机 80 篇生产实测 LOW 一次没打、误杀 0/80。收紧 LOW 属可选打磨非急病（该 eval 已于 2026-09-24 删除，质量门本身保留）
 - 抓取/解析正确率 eval：机械签名检测器 precision 1.0 / recall 0.87，已部署（EXTRACTION_JUNK 生产实证）
 - （已退役）环 1 grounding 判官已验（离线 Claude κ 0.779，三闸全过）
 - （已退役）覆盖对账判官已验（κ 0.965、dropped precision 1.0）
@@ -245,7 +245,7 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 
 **基础设施**
 - 容器成本：进稿逐篇 embedding 改为简报聚类前批量补算
-- 跨 provider 兜底（DashScope key 401 致文章管线静默停摆 12 天之后加的）
+- 跨 provider 兜底（DashScope key 401 致文章管线静默停摆 12 天之后加的；2026-09-24 DashScope 删除后，文章分析的两档都在 Workers AI 上，已不再跨厂商）
 - LLM 边界重构（ADR 记录在 memory `architecture-llm-boundary-review`）
 - cron 窗口收窄：`TIME_RANGE_DAYS` 2→1、`ARTICLE_LIMIT` 1500→1000，窗口截短做成告警（commit `464b5bc`）
 

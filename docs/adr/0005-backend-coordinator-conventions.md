@@ -16,5 +16,5 @@
 
 ## 已失效、不再参考的内容
 
-- 统一 API 工具库 `lib/api-utils.ts` 与当时的路由精简方案：文件已不存在，`debug.ts` 路由也还在——路由结构以现行 `apps/backend/src/routers/` 为准
+- 统一 API 工具库 `lib/api-utils.ts` 与当时的路由精简方案：文件已不存在，`debug.ts` 路由也已删除——路由结构以现行 `apps/backend/src/routers/` 为准
 - 各文档里的测试数量、耗时、性能百分比：当时的一次性读数

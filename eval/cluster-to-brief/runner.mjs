@@ -10,8 +10,7 @@
  *           产物根目录、正文加载、消耗记账
  *   臂      窗口切分、抽重点、写正文、窗口缓存与 --resume（产物根目录下怎么摆是它的事）
  *
- * 现状：arms/direct-raw 与 arms/structure-router 走这条路。
- * atomic-evidence / evidence-graph 仍是各自的老 main()，没有迁移。
+ * 现状：只剩 arms/direct-raw 一个臂（structure-router / atomic-evidence / evidence-graph 已删）。
  */
 import { loadCluster, OUT_ROOT } from './lib.mjs';
 import { loadDataset, loadClusterFrom, datasetClusters, sampleView, recordConsumption } from './dataset.mjs';
@@ -21,23 +20,6 @@ import { loadDataset, loadClusterFrom, datasetClusters, sampleView, recordConsum
 const DEV = [7, 1, 36, 37, 43];
 // dataset 模式跑多少簇以内不用确认开关(fixtures 模式不受影响,它有 DEV 白名单 + ALLOW_HELDOUT)
 const FULL_RUN_MAX = 3;
-
-/**
- * fixtures 模式下臂自己的 CLI 面。**这是第二个臂逼出来的口子，不是原设计的一部分**：
- * direct-raw 与 structure-router 的 dev 闸本来就是同一套机制（同一份 DEV、同一个
- * ALLOW_HELDOUT、同一个判断），但两边的**范围写法与报错文案**历史上各写各的
- * （structure-router 认 `--split=dev`，报错是英文那句）。机制归 runner，
- * 只把文案与「不带 --cluster 时默认跑哪些」留给臂声明——否则要么两个臂的报错被我悄悄改掉，
- * 要么 runner 里长出 `if (armName === ...)`。两边文案统一之后这个块就该删掉。
- */
-const FIXTURES_DEFAULTS = {
-  /** 不带 --cluster 时跑哪些簇。 */
-  ids: (args, dev) => dev,
-  /** 范围为空、或点了 heldout 又没加开关时的报错。 */
-  devOnlyError: offDev => `c${offDev.join(',')} 不在 dev 内。要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。`,
-  /** 放行 heldout 时的告警。 */
-  heldoutWarn: offDev => `⚠️ 正在消耗 heldout: ${offDev.map(c => 'c' + c).join(',')}`,
-};
 
 export function argsOf(argv) {
   return Object.fromEntries(argv.map(x => {
@@ -64,7 +46,6 @@ function fixtureSample(clusterId) {
  * 跑一个臂。
  *
  * @param {{meta: {name: string, consumerId: () => string, resolveOutDir?: (base: string) => string,
- *                 fixtures?: Partial<typeof FIXTURES_DEFAULTS>},
  *          runSample: (sample: object, options: object) => Promise<void>}} arm
  * @param {string[]} [argv]  默认 process.argv.slice(2)
  * @returns {Promise<{ids: number[], outDir: string}>}  跑了哪些簇、产物根目录（臂收尾打印用）
@@ -80,12 +61,11 @@ export async function runArm(arm, argv = process.argv.slice(2)) {
   // 把不可比的两套读数写进同一个文件。fixtures 模式不加后缀，路径一个字不变。
   const outDir = `${OUT_ROOT}${arm.meta.name}${ds ? `-${ds.id}` : ''}`;
 
-  const fx = { ...FIXTURES_DEFAULTS, ...arm.meta.fixtures };
-  const ids = args.cluster ? [Number(args.cluster)] : ds ? datasetClusters(ds) : fx.ids(args, DEV);
+  const ids = args.cluster ? [Number(args.cluster)] : ds ? datasetClusters(ds) : DEV;
   if (!ds) {
     const offDev = ids.filter(c => !DEV.includes(c));
-    if (!ids.length || (offDev.length && process.env.ALLOW_HELDOUT !== '1')) throw new Error(fx.devOnlyError(offDev));
-    if (offDev.length) console.error(fx.heldoutWarn(offDev));
+    if (!ids.length || (offDev.length && process.env.ALLOW_HELDOUT !== '1')) throw new Error(`c${offDev.join(',')} 不在 dev 内。要跑 heldout 加 ALLOW_HELDOUT=1(一次性资源,想清楚再跑)。`);
+    if (offDev.length) console.error(`⚠️ 正在消耗 heldout: ${offDev.map(c => 'c' + c).join(',')}`);
   } else {
     // dataset 模式：DEV 白名单与 ALLOW_HELDOUT 都不适用——新 dataset 是**整份**划 dev/holdout 的,
     // 簇级白名单(写死 fixtures 的簇号)在这个结构下没有意义,消耗改由 dataset 自己的 consumed 记。

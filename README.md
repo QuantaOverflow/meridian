@@ -76,7 +76,7 @@ Retired (code deleted, do not look for these): the story-validation layer, candi
 ## 🛠️ Technology Stack
 
 - **Monorepo**: pnpm workspaces + Turborepo
-- **Edge**: Cloudflare Workers, Durable Objects, Workflows, Queues, R2, Containers, AI Gateway, Workers AI
+- **Edge**: Cloudflare Workers, Durable Objects, Workflows, Queues, R2, Containers, Workers AI
 - **Database**: Neon Postgres (pgvector) via Hyperdrive, Drizzle ORM
 - **Backend**: Hono, Zod, Mozilla Readability + linkedom
 - **ML**: FastAPI, PyTorch (CPU), `intfloat/multilingual-e5-small`, scikit-learn
@@ -89,7 +89,7 @@ Retired (code deleted, do not look for these): the story-validation layer, candi
 - Node.js v22+ and pnpm 10.9.0
 - Python 3.11 + [uv](https://github.com/astral-sh/uv) (ML service)
 - A Postgres with pgvector (production uses Neon)
-- A Cloudflare account (Workers, Workers AI, AI Gateway, R2, Queues, Containers)
+- A Cloudflare account (Workers, Workers AI, R2, Queues, Containers)
 
 ### Local setup
 
@@ -175,7 +175,7 @@ PUT  /admin/sources/:id             # update source
 POST /admin/briefs/generate         # trigger a brief workflow
 POST /admin/articles/by-ids         # fetch articles by id
 POST /admin/articles/process        # re-run article processing
-POST /do/admin/initialize-dos       # initialize all scraper DOs
+POST /do/admin/initialize-dos       # initialize scraper DOs for sources not yet initialized
 GET  /observability/runs/:workflowId   # one run: status, stories, step metrics
 GET  /observability/health/summary     # recent runs and 24h article stats
 ```
@@ -245,7 +245,7 @@ R2 objects with no endpoint (article-journey, brief-v3) need `wrangler r2 object
 **Common troubleshooting paths**
 
 1. **A brief didn't come out / errored**: `/health/summary` to find the run → `/runs/:wf` for `run.status` and any `detailedMetrics` step with `status === 'failed'` and its `error`; cross-check `wrangler workflows instances describe` for platform-level state
-2. **Status is `DEGRADED`**: two triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block, or a cluster NO_EVENT rate above 15% (normally 2–3%) — check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image: `build_identity: missing` in the clustering response means it's running the old one
+2. **Status is `DEGRADED`**: three triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block; a cluster NO_EVENT rate above 15% (normally 2–3%); or the ML Service image identity check failing (`missing` = an old image without `build_identity`, `mismatch` = not the image of this deploy — also recorded as `buildIdentityCheck` in `observability/clustering/<wf>.json`). Check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image too
 3. **Why didn't a big story make the brief**: look up the article in article-journey to see which gate stopped it; a selected-but-missing block shows up as `ok:false` in the brief-v3 record
 4. **A block reads wrong**: find its `brief_block_v6` call under `/runs/:wf/llm-calls` and pull the raw input/output
 5. **Why this ranking**: `detailedMetrics.story_rank` (rounds succeeded, `intersectionSize`, failure reason) and `story_validation` (judge counts: `judgeFailures` / `pocketFlagged` / `unsureClusters`, normally ~0)

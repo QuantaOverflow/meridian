@@ -14,7 +14,7 @@
 - `pnpm typecheck` / `pnpm format`
 - `pnpm -F @meridian/backend dev` / `@meridian/frontend dev` / `meridian-ai-worker dev`
 - `pnpm -F @meridian/database generate` / `migrate` / `studio`
-- 部署：进对应 service 目录跑 `wrangler deploy`，**永不从 root 部署**
+- 部署：进对应 service 目录跑 `wrangler deploy`，**永不从 root 部署**（唯一例外：前端 Pages 的配置就在根目录 `wrangler.toml`，见 README）
 
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
@@ -32,7 +32,7 @@
 - 报错先 `wrangler tail`，再加 console.log
 
 ## 已知坑
-- `services/meridian-ml-service/model-cache/` gitignored，新机器需先 `bash download.sh` 拉模型（470MB）
+- `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点
 - **更多 LLM pipeline 踩坑** → 读 `docs/engineering-notes/llm-pipeline-pitfalls.md`（仅本地）
 
@@ -104,7 +104,7 @@
 |---|---|---|
 | `eval.md` | `eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
 | `workers.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | 本地验证（dev 直连生产 R2）、workflow step 规矩、观测、LLM 调用的坑、typecheck 的两个坑 |
-| `prototypes.md` | `*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
+| `prototypes.md` | `apps/*/prototypes/**`、`services/*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
 ## 禁区（未明确要求不要碰）
 - `packages/database/migrations/` — 历史 migration 不可变

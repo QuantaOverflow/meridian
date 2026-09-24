@@ -1,6 +1,6 @@
 # ADR 0001 — 忠实度门的 claim 抽取改用 Claimify 式 Selection + Decomposition
 
-- **状态**：Accepted（2026-06-17）
+- **状态**：~~Accepted（2026-06-17）~~ → **已退役**：忠实度门随报告层 / 写作层重构整体下线，相关代码与 `eval-faithfulness` 包均已删除。下文保留作历史记录，其中的红线与路径已不再适用。
 - **决策者**：shiwj
 - **关联**：`docs/engineering-notes/faithfulness-eval-best-practices.md`、knowledge 笔记 `claim-extraction-for-faithfulness.md`、memory `eval-program-direction`、ROADMAP P0/P1
 
@@ -91,5 +91,5 @@ Decomposition   把澄清后的句子拆成自包含(context-independent)的可�
 
 ## 实施
 
-（原 spec `docs/superpowers/specs/2026-06-17-claimify-claim-extraction-design.md` 已随该目录删除；实现见 `services/meridian-ai-worker/src/services/`。）
+（原 spec `docs/superpowers/specs/2026-06-17-claimify-claim-extraction-design.md` 已随该目录删除；实现曾在 `services/meridian-ai-worker/src/services/`，已随忠实度门一起删除。）
 分阶段：先固化已验的 ②③，再独立实施 ① 的 Claimify 重构（带抽取 meta-eval 护栏）。

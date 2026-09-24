@@ -7,7 +7,7 @@
  *
  * 为什么走 /events 而不是逐篇 `wrangler r2 object get`:后者一次一个对象,296 篇要十几分钟;
  * /events 按天返回 `{id,title,url,publishDate,content,...}`,三天分页几次就取完。
- * 该路由挂在 app.ts 里两道 auth 守卫(/admin/*、/observability/*)之外,无需 token。
+ * 该路由需要 Bearer token(API_TOKEN,见下方请求处)。
  *
  * 产出:
  *   fixtures/content/<id>.txt       文章正文,逐篇一个文件(rubric 的 contentOf() 同构)

@@ -191,45 +191,13 @@ export async function runSample(sample, options) { ... }
   选「runner 负责加载」而不是「只给 articleIds、臂自己读」：后者会把 `loadClusterFrom` 留在臂里，
   seam 就没抽干净。fixtures 模式没有标注，`target` 给 `null`（不是 `{}`，别让「没标注」看着像「标注是空的」）。
 - `options`：`{ plan, resume, outDir }`。**runner 决定写哪里（`outDir`），臂决定写什么。**
-- `runArm(arm, argv)` 回 `{ ids, outDir }`，给臂做收尾打印（structure-router 末尾那行 `Done:`）。
+- `runArm(arm, argv)` 回 `{ ids, outDir }`，给臂做收尾打印。
 
-### 已迁移与未迁移
+### 现存的臂
 
-`direct-raw`、`structure-router` 已迁移。**`evidence-graph` / `atomic-evidence` 仍是各自的老
-`main()`，没有迁移**，它们继续直接调 `loadCluster`。
-
-选这两个先迁是因为求解方式差得最远——direct-raw 是「切窗口 → 抽重点 → 最后一次写正文」，
-structure-router 是「批量抽事件签名 → e5 合并 → 判主线覆盖率 ≥45% → 才写」，产物形态也不同
-（后者的 `structure-c<id>.json` 是结构判定，不是简报块）。两个都装得下，才说明 `runSample`
-不是照着 direct-raw 的需要长出来的。
-
-### `meta.fixtures`：第二个臂逼出来的口子
-
-两个臂的 dev 闸**机制完全相同**（同一份 `DEV`、同一个 `ALLOW_HELDOUT`、同一个判断），
-但 CLI 与报错文案历史上各写各的：structure-router 认 `--split=dev`，报错是英文那句。
-机制收进 runner，只把这两处差异留给臂声明：
-
-```js
-meta.fixtures = {
-  ids: (args, dev) => ...,      // 不带 --cluster 时跑哪些簇（默认 = dev）
-  devOnlyError: offDev => ...,  // 范围为空 / 点了 heldout 又没加开关时的报错
-  heldoutWarn: offDev => ...,   // 放行 heldout 时的告警
-};
-```
-
-**这不是设计的一部分，是妥协**：不留这个口子，要么两个臂的报错被悄悄改掉（"行为不变"就破了），
-要么 runner 里长出 `if (armName === 'structure-router')`。两边文案统一之后这个块就该删掉。
-`direct-raw` 不声明它，走默认值，所以它的 fixtures 路径一个字节没变。
-
-### 两个已知的锋利边
-
-- **`--plan` 只有 direct-raw 有**。structure-router 没有「只切窗口不发请求」的中间态，
-  它忽略 `options.plan` —— 与迁移前把 `--plan` 当未知参数忽略掉是同一个行为，但意味着
-  `structure-router --plan` 会真的发请求。
-- **`DIRECT_RAW_ROUTE_GATE=1` / `DIRECT_RAW_STORYLINE_FILTER=1` 读的是写死的
-  `out/structure-router/structure-c<id>.json`**，不随 `outDir` 走。fixtures 模式下两边路径重合、
-  没问题；**dataset 模式下 direct-raw 会去读 fixtures 时代的那份产物**。这是迁移前就有的问题，
-  本轮没有引入也没有修——要在 dataset 上用路由门，得先让这条路径跟着 `outDir` 走。
+只剩 `direct-raw`（「切窗口 → 抽重点 → 最后一次写正文」）。当初一起迁进 runner 的 `structure-router`，
+以及没迁的 `evidence-graph` / `atomic-evidence` 都已删除；为 structure-router 开的 `meta.fixtures`
+口子（两臂 CLI 文案不同的妥协）随之收回，fixtures 模式的 dev 闸文案由 runner 统一给出。
 
 ## 2. Solver（被测系统）
 

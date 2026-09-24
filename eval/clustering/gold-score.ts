@@ -188,7 +188,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let gold = loadGold();
   if (useTopic) {
     const topics = loadTopics();
-    if (!topics) throw new Error('缺 gold/topics-F1.jsonl，无法按主题层打分');
+    if (!topics) throw new Error('缺 _data/clustering-F1/topics-F1.jsonl（从未入库，只在当初的标注机器上），无法按主题层打分；主题层读数用 product-score.ts --topic（取 events.jsonl 自带的 topic 字段）');
     gold = toTopicLayer(gold, topics);
     console.log('【主题层】同一主题的事件有没有聚在一起（判据见 rubric.md 主题层一节）');
   } else {

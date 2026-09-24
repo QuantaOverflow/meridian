@@ -16,9 +16,9 @@
 
 ## 数据
 
-- `gold/gold.jsonl` — 73 条开放编码金标。分层抽样（JUNK/LOW/OK 过采）自生产 R2 真实正文，人工读正文标类别（blind 于 pipeline 的 content_quality）。字段：`{id, url, pipeline_q, pipeline_comp, gold_cat, is_extraction_failure}`。
-- `gold/content.jsonl` — `{id, text}`，73 篇提取正文（金标语料，自包含可复跑）。
-- `rubric.md` — 分类规范（A REAL_ARTICLE / B EXTRACTION_FAILURE 子类 / C LOW_NEWS_VALUE）。
+- `../_data/scrape-quality-v1/labels.jsonl` — 73 条开放编码金标。分层抽样（JUNK/LOW/OK 过采）自生产 R2 真实正文，人工读正文标类别（blind 于 pipeline 的 content_quality）。字段：`{id, url, pipeline_q, pipeline_comp, gold_cat, is_extraction_failure}`。
+- `../_data/scrape-quality-v1/content.jsonl` — `{id, text}`，73 篇提取正文（金标语料，自包含可复跑）。
+- `../_data/scrape-quality-v1/rubric.md` — 分类规范（A REAL_ARTICLE / B EXTRACTION_FAILURE 子类 / C LOW_NEWS_VALUE）。
 
 ## 跑法
 

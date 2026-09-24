@@ -12,7 +12,7 @@
 成品里出现过：复读 80 遍漏进正文、流水线措辞漏进正文、专名写错、全小写吃坏人名。报告层同期改成 report-v3
 （`apps/backend/prototypes/srl-extractive/fixtures/report-v3/`：带出处的事实、当事方、分歧、全部原句）。
 
-## 决定：现行流程（`services/meridian-ai-worker/src/services/brief-writer-v3.ts`，端点 `POST /meridian/write-block-v3`）
+## 决定：当时的流程（原 `services/brief-writer-v3.ts` + 端点 `POST /meridian/write-block-v3`，2026-09-21 并入 v6 后删除；现行实现是 `services/meridian-ai-worker/src/services/brief-block-v6.ts` / `POST /meridian/brief-block-v6`，本流程仅剩 `src/utils/brief-writer-v3.ts` 的 `detectRepetition` 被复用）
 
 ```
 1 要点    骨架事实（≥2 篇报道），按出处文章最早的完整发布时间排序            代码
@@ -38,7 +38,7 @@
 ## 证伪清单（别再走）
 
 - **补漏 loop（找漏 → 检索 → 重写）**：覆盖只 +4–6 点，每块多 4–6 次调用，把新材料贴文末、补边角事实；去掉后覆盖反而更高
-- **RARR 默认开**：分段写那轮 78 条修改只落地 10 条；核对依据是报告不是原文；prompt 纠错精度天生低（调研：GPT-4 28.5%）。代码保留，默认关
+- **RARR 默认开**：分段写那轮 78 条修改只落地 10 条；核对依据是报告不是原文；prompt 纠错精度天生低（调研：GPT-4 28.5%）。先是默认关，后连代码一起删除
 - **为长度让模型重写**：「压到 X 字符」实测多次原样返回；长度改为 prompt 目标 + 超上限才删尾句
 - **「措辞修正」躲概述片段重合**：按词面挑参照事实，把简讯换成另一件事。概述、立场不进材料即可
 - **换更大的写作模型**：llama-3.3-70b 关系错 1.29/10 句（≈glm），成本 5×；gpt-oss-120b 2.85/10 句，成本 11×。模型变大只换错法
@@ -59,12 +59,11 @@
 
 ## 配套
 
-- 观测：`services/observe.ts` 的 `traced()` + `x-observe: inline`，新组件每步包一行即可（见 `.claude/rules/workers.md` 第 3 节）
+- 观测：请求带 `x-observe: inline` 时，请求内的 LLM 调用随响应返回（`services/observe.ts`，见 `.claude/rules/workers.md` 第 3 节）；步骤级 `traced()` 已删
 - 验收：`apps/backend/prototypes/brief-writer-v3/verify.ts`（`--replay` 可重判落盘不重新生成）
 - 开发期判官用 Claude subagent 或 codex，不花 Workers AI 的钱
 
 ## 未做
 
-- backend workflow 接线（等报告层 v3 上生产）
 - 线上检测器接入与「发布前离线 Claude 审稿」的产品决定
 - 错误来源归因（报告层 vs 写作层）未统计

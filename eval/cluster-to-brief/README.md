@@ -289,12 +289,12 @@ Workers AI 上整簇判官召回只有 26%。
 
 ### 慢档的依赖
 
-事件清单的跨批归并用**本地 e5-small**,不是 ai-worker 的 bge-m3 —— 前者与已缓存的四簇旧清单
+事件清单的跨批归并用**本地 e5-small**(与生产 embedding 同一模型)—— 与已缓存的四簇旧清单
 同一向量空间(`embed.py` 明确不加 `query:`/`passage:` 前缀、`normalize=True`,与生产一致),
 换成 1024 维的 bge-m3 会让归并阈值失去意义。所以慢档额外需要:
 
 - `services/meridian-ml-service/.venv/bin/python`
-- `services/meridian-ml-service/model-cache`(470MB,gitignored,新机器先跑 `bash download.sh`)
+- `services/meridian-ml-service/model-cache`(470MB,gitignored,新机器按 ml-service README「本地开发」一节下载)
 
 归并阈值 `MERGE_TH = 0.90` 沿用 `rubric.ts` 的取值,**没有标定记录**——偏高会让同一事件
 重复成两条(虚增分母、压低覆盖率),偏低会把不同事件并成一条。各臂共用同一份缓存清单,
@@ -332,23 +332,15 @@ cov/clm/vrd/rsc 四段自判)。本 harness 移植了它的**阶段 A 与判据�
 **启动成本**:7 簇事件清单一次生成,按 c2 那次的量级(16 次调用 / 196 秒 / 111k in_tok)估
 约 25–35 次调用。这是唯一花钱的一步,之后永久缓存。
 
-## 自测(改了 verifier 或判据就重跑)
+## 自测(改了 verifier、dataset 或判官协议就重跑)
 
 ```bash
-# 快档
-node scratch/make-synthetic-arm.mjs                      # 造两个已知答案的 arm
-node verify.mjs --arm=out/_synthetic-pass --split=all     # 期望 exit 0,全绿
-node verify.mjs --arm=out/_synthetic-fail --split=all     # 期望 exit 1,七簇全被抓
-
-# 慢档:九个边界各碰一次(pass/fatal/hard/cov/gap/nosuff/nometa/staleP/staleS → 0/1/1/1/2/2/2/2/2)
-node scratch/selftest-slow.mjs                            # 期望 exit 0
-# 它把伪造清单写进 out/_selftest-slow/,靠 score-slow 的 --checklists 指过去,
-# 绝不碰 fixtures/checklists/ —— 会覆盖真基准的自测比没有自测更危险
-
-# 切句必须与生产逐句一致,否则出处编号静默脱钩
-node ../../../node_modules/.pnpm/tsx@4.19.3/node_modules/tsx/dist/cli.mjs scratch/split-cmp.ts
-                                                          # 期望 296/296 零差异
+node verify.test.mjs     # 快档 verifier:每条判据一个「必须抓到」+ 一个「必须放过」
+node dataset.test.mjs    # dataset 层
+node judges.test.mjs     # 判官协议的两个闸(失败路径 + 齐全时放行的反向对照)
 ```
+
+三份都用临时目录里现造的合成数据,零 LLM、不联网、不依赖 out/,期望全部 exit 0。
 
 **改了核心层口径之后**用这个重算分层,不必重抽清单(事件本身不变,零 LLM):
 
@@ -362,16 +354,28 @@ node build-checklist.mjs --retier    # 任一簇核心层仍为空就 exit 1
 ## 文件
 
 ```
+CONTRACTS.md         各模块的字段与签名(参考手册)
 FIXTURES.md          七簇声明:形态/期望行为/合格标准/不合格的样子(引真实失败样本)
 expectations.json    机器可读判据 + 杂质 id 逐篇标注
+policy.json          判据策略
+dataset.mjs          dataset 层(CONTRACTS §1),输入侧唯一入口;datasets/ 是清单(入 git)
+fetch-dataset.mjs    按 dataset 清单从 /events 重建正文(断点续跑,缺一篇即 exit 1)
+fetch-fixtures.mjs   七簇 fixture 的正文重建
+runner.mjs           跑哪些样本、数据从哪来、产物落哪、花了多少;arms/ 下是各臂(现只剩 direct-raw)
 lib.mjs              切句(与生产逐句一致)+ fixture 载入 + 数字提取
-retrieval.mjs        证据检索(本地 e5-small,按簇缓存句向量),给判定包用
+verify.mjs           快档 verifier
+build-checklist.mjs / audit-checklist.mjs / apply-audit.mjs / compare-audits.mjs
+                     慢档事件清单:生成、核心层校核、应用校核结论、两模型校核对比
+build-judge-pack.mjs / score-slow.mjs / prompts.mjs / slow-lib.mjs / embed.py / retrieval.mjs
+                     慢档判定包与打分;embedding 走本地 e5-small(见「慢档的依赖」)
+judges/              六类判官的判定说明;collect-verdicts.mjs 是判官产物的验收闸
 grading-instructions.mjs  评分守则那一段。单独成模块,因为它是 scorer 的身份
 scorer-id.mjs        判定包与尺的指纹 —— 「判据变了旧读数作废」的机械形态
 compare-verdicts.mjs 两份独立判定的一致性 —— 改 scorer 时唯一的验收仪器
-fetch-fixtures.mjs   从 /events 取全量正文,断点续跑,缺一篇即 exit 1
-verify.mjs           快档 verifier
-fixtures/            clusters.json · meta.json · content/(1.6M,gitignored,可由 fetch 重建)
-scratch/             一次性工具:合成自测、切句比对
+judge-alignment.mjs  判官 vs 人工金标的真阳率 / 真阴率 / 逐条分歧
+frontier.mjs         盲判结果回填、按事先声明的轴排 Pareto frontier(依赖本地 out/_blind/,换机器需先重建)
+analyze.mjs          多 epoch 汇总,零 LLM、只读
+*.test.mjs           自测(见上一节)
+fixtures/            clusters.json · meta.json · content/(gitignored,可由 fetch 重建)
 out/                 运行产物(gitignored)
 ```

@@ -21,7 +21,7 @@
 | `POST /admin/articles/process` | token | `{article_ids: number[]}`（≥1）→ 启动 `ProcessArticles` workflow，回 202 |
 | `POST /admin/articles/by-ids` | token | `{ids: number[]}` → 文章 id/标题/url/源/摘要点（eval 用） |
 | `POST /do/admin/source/:sourceId/init` | token | 按数据库里的源（数字 id）初始化它的 `SourceScraperDO` |
-| `POST /do/admin/initialize-dos?batchSize=100` | token | 为所有源批量初始化 DO，回 `{initialized, total}` |
+| `POST /do/admin/initialize-dos?batchSize=100` | token | 为**尚未初始化**（`do_initialized_at IS NULL`）的源批量初始化 DO，回 `{initialized, total}` |
 | `DELETE /do/admin/source/:sourceId` | token | 销毁该源的 DO，**并删除该源的文章和 sources 行** |
 | `GET\|POST /do/source/:sourceKey/*` | 需要 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
 | `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + R2 观测快照 |

@@ -61,7 +61,7 @@ binding，已指向替身，不可能绕过替身打真模型）。
 - `brief_stories`（按 id 序）：cluster_id、title、importance、article_count、article_ids、selected_for_intel
 - brief-v3 块记录：每块的标题、档位、正文、逐句出处、窗口/重试计数
 
-不比：id、时间戳、workflow_id、`triggeredBy`、`reports.total_sources`（取的是当下 sources 表总数）、
+不比：id、时间戳、workflow_id、`triggeredBy`、
 `story_cluster_id` / `centroid` / `lead_article_id`（跨期归并，依赖分支建立时刻的其它期数据）。
 
 ## 守卫

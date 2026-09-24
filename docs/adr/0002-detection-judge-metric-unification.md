@@ -1,5 +1,7 @@
 # 检测型判官的指标统一(先统一测量,不改门)
 
+> **状态（2026-09-25）**：四个判官 harness 已随所判的层一起删除（`0fcbd9a`），共享模块 `eval/_shared/metrics.ts` 失去所有使用者，也已删除。本 ADR 保留作历史记录；以后新建检测型判官时，本文的指标口径（双腿门、per-class 召回 + 误拦）仍适用，代码从 git 历史取回。
+
 ## Context
 
 我们有一族 eval harness("检测型判官"/桶①)让 LLM 判官吐分类标签、对人工金标算一致性:`intel-grounding`、`faithfulness`、`article-quality`、`coverage-judge`。四者的指标代码**各自实现、已经漂移**(3 份内联在各自 `meta-eval.ts`、article-quality 抽了本地 `metrics.ts`),导致"同样是判官,验收方式不一致"。同时排查发现现有的门只卡召回、不卡误拦(单腿门),存在"见啥拦啥即可刷高召回"的漏洞。

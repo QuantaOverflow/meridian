@@ -1,5 +1,9 @@
 # scorer-recall —— 量**判官看不看得见错误**
 
+> **状态**：在 git 里的只有脚本与金标（`../_data/scorer-recall-v1/`，manifest 标 `notUsableFor: 跑`）。
+> 跑它需要本地原型产物 `apps/backend/prototypes/brief-v3-prod/out/raw/`（不入 git），没有那份产物的机器上跑不起来。
+> 保留是为了金标与方法可复核，不是可随时执行的判据。
+
 `cluster-to-brief` 量的是「哪个 solver 写得好」。这个 harness 量的是上一句里那把尺本身:
 
 > 给定一句成稿 + 检索来的证据,判官能认出其中多少条真的事实错?误拦多少?
@@ -18,7 +22,7 @@
 
 ## 材料:自然金标,不是注入题
 
-`gold/natural-errors.jsonl` —— 15 条,来自 2026-09-18 的逐句手工标注
+`../_data/scorer-recall-v1/labels.jsonl` —— 15 条,来自 2026-09-18 的逐句手工标注
 (`cluster-to-brief/out/natural-error-rate/NATURAL-ERROR-RATE-RESULT.md`,本地):
 82 句自然生成的候选句里 15 句含事实错(18.3%)。
 
@@ -58,7 +62,7 @@
 原文取自 `apps/backend/prototypes/brief-v3-prod/out/raw/<c>/{A,B,C}/batch*.json`
 (`map` 给 `(articleId, 句号)` 坐标,`flat` 给正文),`corpus.mjs` 负责重建。
 
-**这是本地原型目录,不在 git 里。** 机器上没有它,这个 harness 跑不了 —— 只有 `gold/` 和脚本入库。
+**这是本地原型目录,不在 git 里。** 机器上没有它,这个 harness 跑不了 —— 只有金标（`../_data/scorer-recall-v1/`）和脚本入库。
 
 ## 金标按文本定位,不按句号
 
@@ -90,7 +94,7 @@ node score-recall.mjs --verdicts=out/base/judgeA
 
 - **精确率是下界,不是误拦率。** 原始标注里另有 10 句「措辞有损但读者不会形成假信念」的临界句,
   当时没落成机器可读的清单。判官报出的非金标句里可能混着临界句。要把精确率当真,
-  得先把那 10 句补标进 `gold/`。
+  得先把那 10 句补标进 `../_data/scorer-recall-v1/labels.jsonl`。
 - **样本量 82 句 / 4 个簇。** 召回的置信区间很宽,只够分辨大的差别,分辨不了几个百分点。
 - **这里的成稿来自 `brief-v3-prod` 的 M2 run**,不是 `cluster-to-brief` 的任何一个臂。
   测的是判官,不是某个 solver。

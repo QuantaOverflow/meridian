@@ -18,7 +18,7 @@
 
 ## 架构 / 耦合
 
-### D1. AutoBrief 工作流单文件 2271 行
+### D1. AutoBrief 工作流单文件 2053 行（2026-09-25）
 - 位置：`apps/backend/src/workflows/auto-brief-generation.ts`，17 个 `step.do`，触及 pg / R2 / ml / ai-worker 四类资源。
 - 背景：CF Workflow 的 step 必须在同一个 `run()` 里编排，集中本身是平台形态；问题在于领域逻辑（数据集准备、聚类后处理、journey 统计）也内联在里面。
 - 代价：改一处要读全文；难以单测单步逻辑。
@@ -38,14 +38,14 @@
 - 待裁决：是否迁；迁后是否仍保留 token 校验。
 
 ### D4. ai-worker 用 `(env as any)` 访问 binding
-- 位置：`services/meridian-ai-worker/src/services/llm-call-logger.ts:92`、`sensor-log.ts:34`、`span-log.ts:68,99`（`ARTICLES_BUCKET` ×3、`CF_VERSION_METADATA` ×1）。
-- 根因：`CloudflareEnv extends Record<string, string | undefined>`（`src/types.ts:491`），索引签名只允许 string，非字符串 binding 无法声明，只能 cast。`ai-gateway.ts:88,685` 的 `env.AI` 也是同一原因。
+- 位置（2026-09-25）：`services/meridian-ai-worker/src/services/llm-call-logger.ts:82`、`sensor-log.ts:28`（`ARTICLES_BUCKET` ×2）；`span-log.ts` 与 `CF_VERSION_METADATA` 已删。
+- 根因：`CloudflareEnv extends Record<string, string | undefined>`（`src/types.ts`），索引签名只允许 string，非字符串 binding 无法声明，只能 cast。`ai-gateway.ts:33,86` 的 `env.AI` 也是同一原因。
 - 代价：binding 改名或删除后 typecheck 全绿，日志静默写不进去。
 - 选项：去掉索引签名、显式声明 binding（需排查所有 `env[动态 key]` 用法）；或改用 `wrangler types` 生成的 `Env`。
 - 待裁决：是否修、修到哪一层。
 
-### D5. 单模型、单网关依赖
-- 位置：`services/meridian-ai-worker/src/services/call-llm.ts` `PHASE_DEFAULTS`，9 个 phase 都用 `@cf/zai-org/glm-4.7-flash`，无跨厂商兜底。
+### D5. 单厂商依赖（只有 Workers AI）
+- 位置：`services/meridian-ai-worker/src/services/call-llm.ts` `PHASE_DEFAULTS`，简报链路全部 phase 用 `@cf/zai-org/glm-4.7-flash`（文章分析 qwen3 → glm 两档，仍同一厂商），无跨厂商兜底；2026-09-24 起 AI Gateway 通道与 DashScope 已删，要接非 CF 厂商经 CF AI Gateway 重接。
 - 背景：2026-08-12 从 DashScope 迁来就是为了摆脱凭证依赖（见文件内注释），属有意取舍。
 - 代价：Workers AI 或该模型不可用时整份简报出不来。
 - 待裁决：接受，还是给简报关键 phase 加兜底。
@@ -55,7 +55,7 @@
 ## 命名 / 死代码
 
 ### D6. `AIWorkerService.generateEmbedding` 实际不调 ai-worker
-- 位置：`apps/backend/src/lib/services/ai-services.ts:118`，实际请求 ML `/embeddings`。
+- 位置：`apps/backend/src/lib/services/ai-services.ts:112`，实际请求 ML `/embeddings`。
 - 选项：把方法移到 ML 客户端（`clustering.ts` 的 `ClusteringService` 旁）或改名。
 - 待裁决：是否改。
 
@@ -109,7 +109,7 @@
 - `services/meridian-ai-worker/README.md` 仍列出已不存在的 `/meridian/story/validate`、`/analyze-stories`、`/generate-final-brief` 及 `StoryValidationService`；`docs/quota-limit-handling.md` 通篇以已删的 `IntelligenceService` 为例；`docs/ARCHITECTURE.md` 的服务列表同样过时。本次只删了直接指向已删代码的行。
 - 进展：`services/meridian-ai-worker/docs/` 11 份文档经逐份核对全部过时，已整目录删除。
 - 待裁决：README 正文（架构图、端点表、环境变量、npm 命令）按现状重写，还是删减到只剩指路。
-- **已结（2026-09-24）**：README 已按现行代码重写（9 条路由、`callLLM(phase)`、实际读取的 env、pnpm / wrangler@4.120.0 命令）。
+- **已结（2026-09-24）**：README 已按现行代码重写（当时 9 条路由、2026-09-24 删 tldr 端点后 8 条，`callLLM(phase)`、实际读取的 env、pnpm / wrangler@4.120.0 命令）。
 
 ---
 
@@ -119,6 +119,10 @@
 - 现象：`apps/frontend/nuxt.config.ts(98,21): error TS2322: Type 'Plugin<any>[]' is not assignable to type 'PluginOption'`，在干净的 `536faa8` 上即失败，所以 `pnpm typecheck` 整体退出码为 1。
 - 代价：门常红，就会被习惯性忽略。
 - 待裁决：修掉（大概率是 vite 插件类型版本不一致）。
+- 进展（2026-09-25）：根因确认是 node_modules 里有多组 vite 6.2.6 的 peer 变体（jiti / yaml 版本不同），nuxt 与
+  `@tailwindcss/vite` 各链到一组。lock 经 `pnpm dedupe` 后 `pnpm install --frozen-lockfile` 重装，nuxt typecheck 为 0；
+  但**增量** `pnpm add / remove` 后 node_modules 可能再链错、又红——遇到就 `pnpm install --frozen-lockfile` 重装。
+  根治（让依赖图里只有一组 vite 变体，或在 nuxt.config 处理插件类型）未做。
 
 ### G2. `apps/backend/worker-configuration.d.ts` 与当前 wrangler 严重漂移
 - 现象：跑 `wrangler types` 会改动约 1.3 万行（runtime 类型版本变化），本次只手删了 `AI: Ai;` 一行。

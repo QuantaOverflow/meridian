@@ -13,7 +13,7 @@ paths:
 
 ```
 <prototype>/
-  *.ts *.py          实验源码，选择性入库
+  *.ts *.py          实验源码
   fixtures/          输入 fixture（可复现依赖）
   out/               全部运行产物：labels、dump、summary、日志
   scratch/           一次性探测脚本
@@ -39,7 +39,7 @@ scratch/
 ## 大 fixture
 
 含 embedding 的 fixture 会很大（聚类 fixture 两个窗口 11MB，现放 `prototypes/_data/`），
-这种在 README 里写重建方式、`.gitignore` 里单独挡掉；小的输入 fixture 照常入库。
+这种在 README 里写重建方式。（原型目录整体不入 git，fixture 也一样。）
 
 ## workspace 成员
 
@@ -58,5 +58,5 @@ scratch/
 
 ## 「毕业」约定
 
-验证完 → 核心源码精简入库（样板 `prototypes/article-prompt-slim/`：README + 核心 `.ts` + fixtures），
-结果产物与一次性 TUI 清掉，别把整轮实验的滚动残渣长期堆着。
+验证完 → 有用的逻辑移植进生产代码（`<package>/src/`）或 eval harness（`eval/<domain>/`）才入库，
+原型目录本身留本地；结果产物与一次性 TUI 清掉，别把整轮实验的滚动残渣长期堆着。

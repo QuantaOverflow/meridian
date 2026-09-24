@@ -1,24 +1,10 @@
 import { Hono } from 'hono';
-import { Env } from '../index';
 import { $articles, $sources, eq, sql, and } from '@meridian/database';
 import { getDb } from '../lib/database';
 import type { HonoEnv } from '../app';
 import { Logger } from '../lib/core/logger';
 
-const app = new Hono<{ Bindings: Env }>();
 const logger = new Logger({ component: 'events-api', level: 'debug' });
-
-// 添加认证中间件
-app.use('*', async (c, next) => {
-  const authHeader = c.req.header('Authorization');
-  const expectedToken = `Bearer ${c.env.API_TOKEN}`;
-  
-  if (authHeader !== expectedToken) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  
-  return next();
-});
 
 // 主要事件获取端点 - 这里修改路径
 const route = new Hono<HonoEnv>()

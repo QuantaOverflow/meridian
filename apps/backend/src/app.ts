@@ -14,7 +14,22 @@ const app = new Hono<HonoEnv>()
   .use(trimTrailingSlash())
   .get('/favicon.ico', async c => c.notFound()) // disable favicon
   .route('/openGraph', openGraph)
+  // /do/* 与 /events 同样挡在挂载处（理由见下方 /admin 注释）。此前 /do/source/:id/* 的代理
+  // 完全不校验（公网可触发 force-scrape），/events 的中间件挂在 router 文件里一个没导出的 Hono
+  // 实例上、从未生效。/do/admin/* 各 handler 里原有的逐个校验随之删除。
+  .use('/do/*', async (c, next) => {
+    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
   .route('/do', durableObjectsRouter)
+  .use('/events', async (c, next) => {
+    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
+  .use('/events/*', async (c, next) => {
+    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
   .route('/events', eventsRouter) // 添加新的路由
   // /admin/* 是破坏性面：触发简报生成(烧 LLM 额度)、增删改 RSS 源、重跑文章管线。
   // worker 挂在公网 *.workers.dev 上，此前这 12 条路由一条鉴权都没有。挡在挂载处而不是

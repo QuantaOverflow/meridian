@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
+# 不开 *.workers.dev 公网地址：唯一的生产调用方 backend 走 service binding（AI_WORKER），
+# 公网口此前全无鉴权（/meridian/chat 可直接烧 LLM 额度）。eval 脚本默认打本地 wrangler dev。
+workers_dev = false
+
 [env.production]
 vars = { ENVIRONMENT = "production" }
 

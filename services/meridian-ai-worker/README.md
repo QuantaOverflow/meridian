@@ -34,8 +34,9 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
 | `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`）、手动脚本 `tests/test-llama-3.3.js` |
 
-所有路由都**没有鉴权**：`services/auth.ts` 的 `AuthenticationService` 只在
-`AIGatewayService.processRequestWithAuth` 里用到，而这个方法没有调用方。
+路由本身**没有鉴权**（`services/auth.ts` 的 `AuthenticationService` 只在无调用方的
+`processRequestWithAuth` 里用到）。靠 `wrangler.toml` 的 `workers_dev = false` 不开公网地址：
+生产只有 backend 经 service binding（`AI_WORKER`）能调到；eval 脚本打本地 `wrangler dev`。
 
 ## LLM 调用怎么走
 

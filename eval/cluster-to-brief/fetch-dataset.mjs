@@ -15,7 +15,7 @@
  *
  * 用法：
  *   node fetch-dataset.mjs --dataset=prod-0919
- *   BACKEND=https://... node fetch-dataset.mjs --dataset=prod-0919   # 换后端（默认生产）
+ *   BACKEND=https://... node fetch-dataset.mjs --dataset=prod-0919   # 换后端（默认生产）；打生产需 API_TOKEN=...
  *   node fetch-dataset.mjs --dataset=prod-0919 --include-dropped
  *   node fetch-dataset.mjs --dataset=prod-0919 --include-dropped --snapshot=<本地快照.json>
  *
@@ -125,7 +125,11 @@ async function getJSON(url, tries = 4) {
   for (let k = 0; k < tries; k++) {
     if (k) await new Promise(r => setTimeout(r, [3000, 8000, 15000][k - 1] ?? 15000));
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(120_000) });
+      const r = await fetch(url, {
+        signal: AbortSignal.timeout(120_000),
+        // /events 已在挂载处加鉴权（与 eval/_shared/backend.ts 同一约定：API_TOKEN 未设则不带头，打生产会 401）
+        headers: process.env.API_TOKEN ? { Authorization: `Bearer ${process.env.API_TOKEN}` } : {},
+      });
       if (!r.ok) { last = `HTTP ${r.status}`; continue; }
       return await r.json();
     } catch (e) {

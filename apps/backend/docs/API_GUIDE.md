@@ -14,7 +14,7 @@
 | `GET /ping` | 无 | `{ pong: true }` |
 | `GET /openGraph/default` | 无 | 默认 OG 图（PNG） |
 | `GET /openGraph/brief?title&date&articles&sources` | 无 | 简报 OG 图；`date` 是毫秒时间戳 |
-| `GET /events?date&pagination&page&limit` | 无（见下方说明） | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
+| `GET /events?date&pagination&page&limit` | 需要 | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
 | `POST /admin/sources` | token | 新建 RSS 源：`{name, url, category, scrape_frequency?}`；URL 重复回 409。**不会**初始化该源的 DO |
 | `PUT /admin/sources/:id` | token | 部分更新同上字段 |
 | `POST /admin/briefs/generate` | token | 启动 `AutoBriefGenerationWorkflow`，回 202 + `workflowId`；空体也要传 `{}`。可选字段见下 |
@@ -23,7 +23,7 @@
 | `POST /do/admin/source/:sourceId/init` | token | 按数据库里的源（数字 id）初始化它的 `SourceScraperDO` |
 | `POST /do/admin/initialize-dos?batchSize=100` | token | 为所有源批量初始化 DO，回 `{initialized, total}` |
 | `DELETE /do/admin/source/:sourceId` | token | 销毁该源的 DO，**并删除该源的文章和 sources 行** |
-| `GET\|POST /do/source/:sourceKey/*` | 无 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
+| `GET\|POST /do/source/:sourceKey/*` | 需要 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
 | `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + rejections + 关联 report |
 | `GET /observability/runs/:workflowId/clustering` | token | R2 `observability/clustering/<wf>.json` 聚类快照 |
 | `GET /observability/runs/:workflowId/llm-calls` | token | 列出 R2 `llm-calls/<wf>/` 下的 LLM 调用记录 |
@@ -31,10 +31,8 @@
 | `GET /observability/trends?days=14` | token | 按天的运行 / 故事趋势，`days` 1–90 |
 | `GET /observability/health/summary` | token | 当日运行状态、文章数、最后一次成功简报 |
 
-`/admin/*` 与 `/observability/*` 的鉴权挂在 `app.ts` 的挂载处；`/do/admin/*` 在各 handler 内检查。
-
-**`/events` 目前实际无鉴权**：`events.router.ts` 把鉴权中间件挂在一个没有导出的 `app` 实例上，
-导出并挂载的 `route` 不经过它。`/do/source/*` 同样无鉴权。
+`/admin/*`、`/observability/*`、`/do/*`、`/events` 的鉴权都挂在 `app.ts` 的挂载处（2026-09-24 起；此前
+`/do/source/*` 无鉴权、`/events` 的中间件挂错了对象从未生效）。只有 `/openGraph/*`、`/ping` 公开。
 
 ## `POST /admin/briefs/generate` 的可选字段
 

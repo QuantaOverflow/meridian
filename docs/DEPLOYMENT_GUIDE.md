@@ -30,7 +30,6 @@ pnpm -F @meridian/database migrate
 cd services/meridian-ai-worker
 wrangler secret put AI_GATEWAY_TOKEN      # AI Gateway 启用鉴权时
 wrangler secret put DASHSCOPE_API_KEY     # `other` phase 用
-wrangler secret put GATEWAY_API_KEYS      # 调用方鉴权，逗号分隔
 wrangler deploy
 ```
 

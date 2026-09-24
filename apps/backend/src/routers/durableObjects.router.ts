@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { HonoEnv } from '../app';
 import { $articles, $sources, eq, isNull } from '@meridian/database';
-import { hasValidAuthToken } from '../lib/core/utils';
 import { getDb } from '../lib/database';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
@@ -68,10 +67,6 @@ const route = new Hono<HonoEnv>()
       })
     ),
     async c => {
-      // auth check
-      if (!hasValidAuthToken(c)) {
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
 
       const initLogger = logger.child({ operation: 'init-source' });
       const { sourceId } = c.req.valid('param');
@@ -115,10 +110,6 @@ const route = new Hono<HonoEnv>()
     }
   )
   .post('/admin/initialize-dos', async c => {
-    // auth check
-    if (!hasValidAuthToken(c)) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
 
     const initLogger = logger.child({ operation: 'initialize-dos' });
     initLogger.info('Initializing SourceScraperDOs from database');
@@ -204,10 +195,6 @@ const route = new Hono<HonoEnv>()
       })
     ),
     async c => {
-      // auth check
-      if (!hasValidAuthToken(c)) {
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
 
       const deleteLogger = logger.child({ operation: 'delete-source' });
       const { sourceId } = c.req.valid('param');

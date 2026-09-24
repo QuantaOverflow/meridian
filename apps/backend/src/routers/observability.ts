@@ -47,15 +47,11 @@ app.get('/runs/:workflowId', async (c) => {
       // 静默：观测性数据缺失不影响其他链路
     }
 
-    // 列出该 workflow 全部 intel report R2 key
-    const intelList = await c.env.ARTICLES_BUCKET.list({ prefix: `intel-reports/${workflowId}/` });
-
     return c.json({
       success: true,
       run,
       stories,
       rejections,
-      intelReportKeys: intelList.objects.map((o) => o.key),
       observability: observabilitySnapshot,
     });
   } catch (error) {
@@ -87,31 +83,6 @@ app.get('/runs/:workflowId/clustering', async (c) => {
     });
   } catch (error) {
     console.error('/observability/runs/:workflowId/clustering 失败:', error);
-    return c.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      500
-    );
-  }
-});
-
-/**
- * 取某次 run 的覆盖对账清单（简报步落的 R2 快照，洞3 方案B）。
- * 记录每条候选 story 在成品简报里的去向 headline/noteworthy/dropped + 推断理由，
- * error-analysis 用它把合成层漏报对上 selected_for_intel（选了却没进简报=合成漏报）。
- */
-app.get('/runs/:workflowId/coverage', async (c) => {
-  try {
-    const workflowId = c.req.param('workflowId');
-    const obj = await c.env.ARTICLES_BUCKET.get(`observability/coverage/${workflowId}.json`);
-    if (!obj) {
-      return c.json({ success: false, error: 'coverage snapshot not found' }, 404);
-    }
-    return new Response(obj.body, {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('/observability/runs/:workflowId/coverage 失败:', error);
     return c.json(
       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       500
@@ -349,4 +320,4 @@ app.get('/llm-calls/*', async (c) => {
   }
 });
 
-export default app; 
+export default app;

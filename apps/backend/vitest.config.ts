@@ -18,8 +18,6 @@ export default defineWorkersConfig({
           // 基本环境变量和绑定
           bindings: {
             API_TOKEN: "test-api-token-12345",
-            GEMINI_API_KEY: "test-gemini-key-12345",
-            DATABASE_URL: "postgresql://test:test@localhost:5432/test_db",
             HYPERDRIVE: {
               connectionString: "postgresql://test:test@localhost:5432/test_db"
             }

@@ -30,6 +30,6 @@ htmlcov/
 docs/
 README.md
 # Tests
-tests/
+test/
 # Dev tooling
 .github/

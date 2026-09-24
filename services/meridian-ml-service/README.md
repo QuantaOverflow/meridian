@@ -42,7 +42,7 @@ backend 在每次聚类时断言它（`clustering.ts` 的 `assertBuildIdentity`�
 
 ```bash
 cd services/meridian-ml-service
-uv venv && uv pip install -e ".[dev]"
+uv sync --extra dev   # 含 dependency-groups 里的 httpx（TestClient 需要）
 API_TOKEN=dev-token-123 EMBEDDING_MODEL_NAME=$PWD/model-cache \
   .venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8081
 curl http://127.0.0.1:8081/health

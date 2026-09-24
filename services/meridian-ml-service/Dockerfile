@@ -32,8 +32,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
 # Create a non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser
 USER appuser
@@ -48,7 +46,6 @@ COPY --chown=appuser:appuser ./model-cache /home/appuser/model
 
 # Copy your application code
 COPY --chown=appuser:appuser ./src ./src
-COPY --chown=appuser:appuser pyproject.toml ./
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \

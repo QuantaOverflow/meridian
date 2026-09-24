@@ -1,7 +1,7 @@
 [project]
 name = "meridian_ml_service"
 version = "0.3.0"
-description = "Python service for ML tasks (embeddings, clustering with parameter optimization) for Meridian."
+description = "Embedding and clustering service for Meridian."
 authors = [{ name = "Iliane Amadou", email = "mail@iliane.xyz" }]
 requires-python = ">=3.11" # Stable, well-supported, performant
 dependencies = [
@@ -19,9 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff>=0.4.4",   # Fast linter/formatter
-    "mypy>=1.10.0",  # Static type checker
     "pytest>=8.0.0", # 测试框架
-    "pytest-asyncio>=0.23.0", # 异步测试支持
 ]
 
 # Configuration for Ruff (Linter/Formatter)
@@ -36,14 +34,6 @@ ignore = ["E501"] # Ignore line length rule (handled by formatter)
 
 [tool.ruff.format]
 quote-style = "double"
-
-# Configuration for Mypy (Type Checker)
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true # Be pragmatic initially
-# Add stricter checks as needed
 
 # Build system config (standard for setuptools/uv)
 [build-system]

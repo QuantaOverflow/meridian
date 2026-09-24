@@ -32,7 +32,7 @@ const app = new Hono<HonoEnv>()
   })
   .route('/events', eventsRouter) // 添加新的路由
   // /admin/* 是破坏性面：触发简报生成(烧 LLM 额度)、增删改 RSS 源、重跑文章管线。
-  // worker 挂在公网 *.workers.dev 上，此前这 12 条路由一条鉴权都没有。挡在挂载处而不是
+  // worker 挂在公网 *.workers.dev 上，加鉴权前 admin 路由（当时 12 条，现 5 条）一条鉴权都没有。挡在挂载处而不是
   // 逐 handler 加(do 是逐 handler 的写法)，是为了让以后新增的 admin 路由
   // 默认就在门后面——漏加一个 handler 的代价是重开一个洞。令牌与其余路由共用 API_TOKEN。
   .use('/admin/*', async (c, next) => {

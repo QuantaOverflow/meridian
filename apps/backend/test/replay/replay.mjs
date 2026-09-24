@@ -138,6 +138,9 @@ class ReplayStore {
 function startReplayServer(store, port) {
   const server = http.createServer((req, res) => {
     let body = '';
+    // 必须按流解码：逐块 `body += buffer` 会把跨块的多字节字符（如 ”）解成 ��，
+    // 造成偶发 replay miss（2026-09-24 实测 5 次里 2 次，都落在同一篇文章的同一个字符上）
+    req.setEncoding('utf8');
     req.on('data', (c) => (body += c));
     req.on('end', () => {
       try {

@@ -35,42 +35,16 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 不带 `UPDATE_GOLDEN=1` 脚本拒绝执行（退出码 2）。重写后看 `git diff test/golden/__golden__`，把变化的理由写进 commit。
 新增 case：在 `cases.ts` 加函数 → 跑上面的脚本 → 在 `golden.spec.ts` 的 `GOLDEN` 表里 import 新文件。
 
-### 测试覆盖范围
+### 单测（`lib/`）
 
-1. **基本单元测试**
-   - Worker 基本路由处理 (ping, 404)
-   - CORS 预检请求处理
-
-2. **集成测试**
-   - 使用 SELF 进行端到端测试
-   - 健康检查端点测试
-
-3. **工具函数测试**
-   - `hasValidAuthToken` - API 认证逻辑
-   - `generateSearchText` - 搜索文本生成
-
-4. **RSS 解析器测试**
-   - 正常 RSS 解析（多种格式）
-   - 错误输入处理
-
-5. **错误处理测试**
-   - 恶意请求处理
-   - 大型请求体处理
-
-6. **环境测试**
-   - 环境变量访问
-   - 绑定可用性检查
-
-7. **性能测试**
-   - 响应时间基准
-   - 顺序请求处理
+- `lib/cluster-blocks.spec.ts`：`planBlocksFromJudgements` / `assembleBlocks` 的行为（判定失败不丢块、NO_EVENT 只标记、30 篇上限、跨簇同名合并等）
 
 ## 配置文件
 
 ### vitest.config.ts
-- 简化的 Vitest 配置
 - 使用 @cloudflare/vitest-pool-workers
-- 禁用文件并行执行以避免资源冲突
+- 禁用文件并行执行，并开 `singleWorker`（否则多个测试文件一起跑时 workerd 起不来，原因见配置注释）
+- `AI_WORKER` service binding 在这里用一个假实现代替
 
 ### wrangler.test.jsonc
 - 测试专用的 Wrangler 配置
@@ -79,15 +53,12 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 
 ## 运行测试
 
-### 传统方式 (可能有资源冲突)
 ```bash
-npm test
+pnpm -F @meridian/backend test                                   # 全部（vitest run）
+pnpm -F @meridian/backend test test/lib/cluster-blocks.spec.ts     # 单个文件
 ```
 
-### 运行单个测试文件
-```bash
-npm test -- test/lib/cluster-blocks.spec.ts
-```
+全链路的录像重放不在 vitest 里，见 [`replay/README.md`](replay/README.md)。
 
 ## 测试策略
 

@@ -8,19 +8,19 @@
 
 ## 0. 我们现在的位置
 
-> 全景与逐 harness 真实状态详见记忆 `eval-program-landscape`（2026-06-28 逐个核实）。下表为快照。
+> 2026-09-24 按现存 `eval/` 目录重写。2026-06-28 那张表里的 `selection`、`story-validation`、`intel-grounding`、
+> `faithfulness` 等 harness 因结构上验不了 v6 链路已删（commit `0fcbd9a` 逐个写了死因），读数只剩历史意义。
+> 各 harness 的当前读数以其 README 与 `docs/ROADMAP.md` 为准；金标在 `eval/_data/`。
 
-| 环节(管线步) | harness / 方法 | 真相源 | 状态 |
+| 环节(管线步) | harness | 真相源 | 状态 |
 |------|------|------|------|
-| 文章质量门 articleAnalysis | `article-quality`(P2) / LLM-judge κ | 人金标 | ❌ 只搭好没跑，judge 未验，gold 仅 example |
-| 聚类 | `clustering` / 机械 **B-cubed**(+DBCV 调参) | LLM产+**人工 calibration+冻结**参考划分 | ✅ 跑透(~30 报告，e5 embedding 多版消融) |
-| 聚类切分/重叠 | `story-validation` / **LLM-judge** | calibration.json(1 brief/19 标) | 🟡 harness+小 fixture，judge 未 κ 验 |
-| 选择/覆盖 | `selection` / 机械 **NDCG@10** | 人标 worklist(140，**silver**) | ✅ 跑了 NDCG 0.958；silver 标略乐观 |
-| 报告 grounding 环1 | `intel-grounding`(P2.5) / LLM-judge κ | 人金标 | ❌ harness only，judge 未验；2026-06-28 方向探 0/12(非验收，下界) |
-| 简报忠实度 环2 | `faithfulness` / LLM-judge κ | 人金标(75+9) | ✅ **κ~0.6 验过**，gate 影子，**RARR 30→4** |
-| 系统 error analysis | open/axial coding | —— | ❌ 缺 |
-
-**核心结论（2026-06-28 更新）：** 机械尺(聚类 B-cubed、选择 NDCG)已跑出数；**忠实度 judge(环2)已 κ~0.6 验过 + RARR 把简报含错率 30→4**（不再是"没验的尺"）。**真实缺口**＝① 其余三条 LLM-judge 尺(article-quality / intel-grounding / story-validation)**未 κ 验**，按铁律读数不可信；② selection silver 标→真金标、story-validation 扩样本；③ 抓取①→②**纯解析正确率**无专评；④ 系统 error analysis 仍缺。
+| 抓取/解析 | `eval/scrape-quality` | 人金标 | 机械签名检测器已上线 |
+| 文章质量门 articleAnalysis | `eval/article-quality` | 人金标 | 判官已对齐人工 |
+| 聚类 | `eval/clustering` / 产品口径打分 | 两窗人读全覆盖金标 | 已用于 2026-09 聚类重做（ADR 0003） |
+| 簇原文 → 简报块 | `eval/cluster-to-brief`（契约 `CONTRACTS.md`） | 事件清单 + `citation-support` 人工金标 | 生产 v6 写作层即由其 `arms/direct-raw` 移植 |
+| 判官检出能力 | `eval/scorer-recall` | 人金标 | 量判官能认出多少真错、误拦多少 |
+| 选择 / 排序 | —— | —— | ❌ 无：旧 `selection`（NDCG）已删，现行 LLM 三轮 Borda 排序没有尺 |
+| 系统 error analysis | open/axial coding | —— | ❌ 旧 `error-analysis` 依赖已退役字段，已删 |
 
 ---
 
@@ -41,7 +41,7 @@
 
 **节奏**：每 2–4 周对新数据做一次完整复盘；间隔周抽查 10–20 条离群。
 
-Meridian 落点：对 **story-validation** 和 **brief-synthesis** 各跑一轮独立 error analysis。忠实度 judge 应当**从合成阶段的失败分类法里长出来**，而非通用地硬接。
+Meridian 落点（2026-06 写，story-validation 与整篇合成均已退役）：对当时的 **story-validation** 和 **brief-synthesis** 各跑一轮独立 error analysis。忠实度 judge 应当**从合成阶段的失败分类法里长出来**，而非通用地硬接。
 
 ---
 
@@ -65,7 +65,7 @@ Meridian 落点：对 **story-validation** 和 **brief-synthesis** 各跑一轮�
 
 ## 3. judge 的已知偏置（有一条正中我们）
 
-- **self-preference / preference leakage**：生成和裁判同模型家族 → 分数虚高。**Meridian 的 brief 用 Qwen 生成，judge 又是 qwen-max——正中此坑。** 缓解：换**不同家族**的 judge 模型，或引入 MiniCheck（非 Qwen）当交叉尺，并检查换生成器后一致性是否掉。
+- **self-preference / preference leakage**：生成和裁判同模型家族 → 分数虚高。**Meridian 曾用 Qwen 生成 brief、judge 又是 qwen-max——正中此坑**（现生成已换 Workers AI `glm-4.7-flash`，选判官仍要避开同家族）。 缓解：换**不同家族**的 judge 模型，或引入 MiniCheck（非 Qwen）当交叉尺，并检查换生成器后一致性是否掉。
 - **leniency 偏松**：judge 倾向"看着行 → supported"，漏细节级编造。缓解：强制 CoT——"先抄出支撑该 claim 的源原文 span，抄不出则判 unsupported"。
 - **verbosity 偏长**：原子化已把 claim 长度归一，保持单事实短句。
 - **position 偏置**：单 claim 判定风险低；只在一个 prompt 批量塞多 claim 时才需随机化顺序。
@@ -116,6 +116,8 @@ Meridian 落点：对 **story-validation** 和 **brief-synthesis** 各跑一轮�
 ---
 
 ## 8. Meridian 推进顺序（落到 ROADMAP）
+
+> 这是 2026-06 的顺序。第 1、2 条所验的忠实度门、story-validation、brief-synthesis 已随 v6 退役；现行顺序见 `docs/ROADMAP.md` 与 ADR 0006。
 
 1. **验证忠实度 judge**（binary rubric、≥100 claim 金标、held-out、Cohen's κ + per-class TPR/TNR、跨家族 judge 缓解 self-preference）——**在它 gate 任何东西之前**。→ ROADMAP **P0**。
 2. 对 story-validation 和 brief-synthesis 各跑一轮 **error analysis**，从持续失败长出指标。

@@ -26,7 +26,7 @@
 - 待裁决：是否值得拆；若拆，是否只做 a。
 
 ### D2. frontend 直连数据库、原生 SQL 绕过类型
-- 位置：`apps/frontend/src/server/**`，19 处 `` sql` `` 原生 SQL，join `brief_stories` / `story_clusters` / `reports`；连接走 `NUXT_DATABASE_URL`，不经 Hyperdrive，也不经 backend 的 `/reports`。
+- 位置：`apps/frontend/src/server/**`，19 处 `` sql` `` 原生 SQL，join `brief_stories` / `story_clusters` / `reports`；连接走 `NUXT_DATABASE_URL`，不经 Hyperdrive，也不经 backend 的 `/reports`（该路由已于 2026-09-24 删除，选 b 需新建接口）。
 - 代价：表结构事实上成为对外 API；改列名时 typecheck（项目唯一验收门）抓不住原生 SQL。
 - 选项：a) 改用 drizzle 查询构造器，让改列名能被 typecheck 捕获；b) 走 backend API；c) 接受，改 schema 时人工 grep frontend。
 - 待裁决：选哪条。
@@ -38,8 +38,8 @@
 - 待裁决：是否迁；迁后是否仍保留 token 校验。
 
 ### D4. ai-worker 用 `(env as any)` 访问 binding
-- 位置：`services/meridian-ai-worker/src/services/llm-call-logger.ts:98`、`sensor-log.ts:34`、`span-log.ts:68,99`（`ARTICLES_BUCKET` ×3、`CF_VERSION_METADATA` ×1）。
-- 根因：`CloudflareEnv extends Record<string, string | undefined>`（`src/types.ts:510`），索引签名只允许 string，非字符串 binding 无法声明，只能 cast。`ai-gateway.ts:33` 的 `env.AI` 也是同一原因。
+- 位置：`services/meridian-ai-worker/src/services/llm-call-logger.ts:92`、`sensor-log.ts:34`、`span-log.ts:68,99`（`ARTICLES_BUCKET` ×3、`CF_VERSION_METADATA` ×1）。
+- 根因：`CloudflareEnv extends Record<string, string | undefined>`（`src/types.ts:491`），索引签名只允许 string，非字符串 binding 无法声明，只能 cast。`ai-gateway.ts:88,685` 的 `env.AI` 也是同一原因。
 - 代价：binding 改名或删除后 typecheck 全绿，日志静默写不进去。
 - 选项：去掉索引签名、显式声明 binding（需排查所有 `env[动态 key]` 用法）；或改用 `wrangler types` 生成的 `Env`。
 - 待裁决：是否修、修到哪一层。
@@ -55,7 +55,7 @@
 ## 命名 / 死代码
 
 ### D6. `AIWorkerService.generateEmbedding` 实际不调 ai-worker
-- 位置：`apps/backend/src/lib/services/ai-services.ts:181`，实际请求 ML `/embeddings`。
+- 位置：`apps/backend/src/lib/services/ai-services.ts:118`，实际请求 ML `/embeddings`。
 - 选项：把方法移到 ML 客户端（`clustering.ts` 的 `ClusteringService` 旁）或改名。
 - 待裁决：是否改。
 
@@ -82,6 +82,8 @@
 
 - 裁决（2026-09-23）：已解决，删除。连同删掉的还有同样无调用方的 `GET /`、`/metrics`、`/config`，整个 `test/` 目录（8 个手动脚本，未接入任何 runner，其中 3 个调用的路由早已不存在），以及 vulture 核实过的死代码与恒为 null/空的响应字段（`optimization_result`、`clustering_stats.silhouette_score`、`clusters[].keywords` / `summary`）。现存路由只剩 backend 在用的 `GET /health`、`POST /embeddings`、`POST /ai-worker/clustering`。
 
+- 进展（2026-09-24）：`test/` 已重建，现只有 `/ai-worker/clustering` 的 golden 快照测试（`bfbd43c`）。
+
 ### D11. 过时文档 `apps/backend/docs/clustering-service-usage.md`
 - 现象：通篇介绍已删的 `analyzeArticleClusters` / `MLService` 与不存在的 `MockClusteringService`。
 - 待裁决：删除，还是按现行 `ClusteringService` 重写。
@@ -96,6 +98,8 @@
 - `apps/backend/src/routers/observability.ts:786` 读取 `stepBreakdown['intelligence_analysis']`，该 step 已不再产生，取到的恒为空。
 - ai-worker `PHASE_DEFAULTS` / `LLMCallPhase` 中 `story_validation`、`story_merge` 无调用方；`SensorKind` 中 `story_validation_parse` 无调用方。
 - 待裁决：字段改名或弃用、删读取点、删死 phase。
+
+- 进展（2026-09-24）：第二条的读取点随 `a311349` 删无调用方的 observability 路由一并消失。`intelligence_analyses` 现写的是出了块的故事数（`writtenBlocks.length`），不再恒为 25，但字段名仍误导；死 phase 与 `story_validation_parse` 仍在。
 
 ### D14. ai-worker 文档大面积过时
 - `services/meridian-ai-worker/README.md` 仍列出已不存在的 `/meridian/story/validate`、`/analyze-stories`、`/generate-final-brief` 及 `StoryValidationService`；`docs/quota-limit-handling.md` 通篇以已删的 `IntelligenceService` 为例；`docs/ARCHITECTURE.md` 的服务列表同样过时。本次只删了直接指向已删代码的行。

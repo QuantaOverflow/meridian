@@ -1,7 +1,20 @@
 # Meridian Roadmap
 
 按 ROI 排序（业务价值 ÷ 改动成本）。**最后重排 2026-09-06；2026-09-12 追加下方「写作层 v3」一节；
-2026-09-18 更新部署状态与实测错误率；2026-09-19 追加 scorer 重建一节；2026-09-20 追加真实分布读数与 eval 重构一节。**
+2026-09-18 更新部署状态与实测错误率；2026-09-19 追加 scorer 重建一节；2026-09-20 追加真实分布读数与 eval 重构一节；
+2026-09-24 追加下方「现状」一节。**
+
+## 2026-09-24 · 现状（代码层面）
+
+- **简报链路已切到 v6**（`961aeca`，2026-09-21）：簇判定 → LLM 重要性排序（三轮洗牌 + Borda，`86633c5` / `0ae2592`）
+  → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见 `docs/meridian-workflow-architecture.md`
+- **已删代码**：情报报告层、b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账、story-validation、候选分组、debug 路由与一批无调用方的 admin/observability 路由
+- **eval 只剩 5 个 harness**（`article-quality`、`cluster-to-brief`、`clustering`、`scorer-recall`、`scrape-quality`）；
+  `selection`、`faithfulness`、`intel-grounding`、`coverage-judge`、`offline-review` 等 9 个因结构上验不了 v6 删除（`0fcbd9a`）
+- **测试**：golden 快照（backend / ai-worker / ml-service）与整期录像回放 `pnpm -F @meridian/backend replay <workflowId>` 已建
+- 上线状态以 CF Current Version 与 DB 产出为准，本节不断言
+
+下面各节是写下当时的记录。其中 P0 表、P2 离线预筛、「已完成」里标了（已退役）的条目，所依托的代码或 harness 已删。
 
 > **2026-09-18 状态纠正**：简报 v3 已于 2026-09-15T12:37Z 部署，reports 94/95/96 三期都是 v3 产出
 > （依据：CF deployments API 与 Neon reports 表实查）。此前 ROADMAP 与知识库节点写的「未上生产」
@@ -184,7 +197,7 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 
 **现状：纯传感器已上线**（2026-07-12，ai-worker `9d7eafde` / backend `5acefe08`）。运行时只标记不改简报（此前影子门一直在真改，路径 B 删句已关）。
 
-**离线预筛脚本已建并冒烟过**（`eval/offline-review/prefilter.ts`，worklist = flagged 全集 + 审计抽样；冒烟抓出 000 报警号、日期区间、FNV 抽样偏差三个 bug 并已修）。
+**离线预筛脚本已建并冒烟过**（`eval/offline-review/prefilter.ts`，2026-09-22 随 offline-review 删除；worklist = flagged 全集 + 审计抽样；冒烟抓出 000 报警号、日期区间、FNV 抽样偏差三个 bug 并已修）。
 
 **要做：**
 1. 攒 1–2 周生产数据
@@ -210,18 +223,18 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 **算法与管线**
 - 聚类：不降维凝聚 + 最小 3 篇成簇；簇纯度 0.354/0.408 → 0.864/0.913、题材袋 0.286/0.273 → 0.072/0.000（ADR 0003）
 - 簇判定取代 storyline 两段式；调用量 430+ → 约 70 次/期
-- b′ 分段写：规划 1 次 + 逐块 N 次 + 代码拼装；落地率 12–56% → 25/25
-- 合成漏报收口：覆盖契约 + 两遍法程序化补录，dropped 13.4% → 0.0%（0/112），gold 19 条全救回
+- （已退役）b′ 分段写：规划 1 次 + 逐块 N 次 + 代码拼装；落地率 12–56% → 25/25
+- （已退役）合成漏报收口：覆盖契约 + 两遍法程序化补录，dropped 13.4% → 0.0%（0/112），gold 19 条全救回
 - 块间重复：写作 prompt 兄弟摘要改传标题，同节超阈 3.4 → 1.0（`b506f4e`，未部署）
-- 选择层 NDCG@10 = 0.958，防回归闸 `--baseline 0.958 --tolerance 0.02`
-- 情报报告 R2 卸载（突破 Workflow 1MB step 上限）
+- （已退役）选择层 NDCG@10 = 0.958，防回归闸 `--baseline 0.958 --tolerance 0.02`（selection harness 已删）
+- （已退役）情报报告 R2 卸载（突破 Workflow 1MB step 上限）
 - 每故事一个 step（治平台 canceled，基线约 2%）
 
 **质量门与 eval**
 - 文章质量门 eval 已建并验：判官 κ 尺过线；随机 80 篇生产实测 LOW 一次没打、误杀 0/80。收紧 LOW 属可选打磨非急病
 - 抓取/解析正确率 eval：机械签名检测器 precision 1.0 / recall 0.87，已部署（EXTRACTION_JUNK 生产实证）
-- 环 1 grounding 判官已验（离线 Claude κ 0.779，三闸全过）
-- 覆盖对账判官已验（κ 0.965、dropped precision 1.0）
+- （已退役）环 1 grounding 判官已验（离线 Claude κ 0.779，三闸全过）
+- （已退役）覆盖对账判官已验（κ 0.965、dropped precision 1.0）
 - 检测型判官指标统一到 `eval/_shared/metrics.ts`（ADR 0002）
 - 聚类 eval 重建：两窗人读全覆盖金标 + 产品口径打分器（`eval/clustering/`）
 
@@ -253,4 +266,4 @@ heldout 两簇已消耗。n=5 的配对符号检验只有 5:0 全胜才到 p<0.0
 
 - **`docs/eval-playbook.md`** — 如何为 LLM 管线做好 eval（error-analysis 优先、验 LLM-judge、CI 闸、反模式）
 - **`docs/engineering-notes/eval-design-principles.md`** — 五条原则，第五条（参考划分必须全覆盖）来自 2026-09-05 的实测教训
-- **`docs/adr/`** — 决策记录。0001 Claimify、0002 判官指标统一、0003 一簇即一条
+- **`docs/adr/`** — 决策记录。0001 Claimify、0002 判官指标统一、0003 一簇即一条、0004 写作层 v3、0005 backend 协调约定、0006 eval 自举与尺子重校

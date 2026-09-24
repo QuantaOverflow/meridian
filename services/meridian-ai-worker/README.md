@@ -7,8 +7,8 @@ Meridian 管线里所有 LLM 调用的出口。Cloudflare Worker（Hono），bac
 
 ```
 抓取 (SourceScraperDO) → queue → ProcessArticles ──► /meridian/article/analyze
-                                                    └► ml-service /embeddings
-AutoBriefGeneration ─► ml-service /ai-worker/clustering
+AutoBriefGeneration ─► ml-service /embeddings          （聚类前批量补算缺失 embedding）
+                    ─► ml-service /ai-worker/clustering
                     ─► /meridian/cluster/judge        （一簇一次）
                     ─► blockImportance（backend 代码）+ /meridian/stories/rank
                     ─► /meridian/brief-block-v6       （一块一次）

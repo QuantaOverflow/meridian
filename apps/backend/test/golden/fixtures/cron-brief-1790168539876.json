@@ -1,0 +1,3095 @@
+{
+  "provenance": {
+    "source": "production Neon, read-only SELECT on brief_runs / brief_stories / articles / sources",
+    "workflowId": "cron-brief-1790168539876",
+    "runStatus": "COMPLETED",
+    "runStartedAt": "2026-09-23T13:02:25.940028",
+    "reportId": 104,
+    "totalArticlesInRun": 630,
+    "stripped": "no article body text or event_summary_points; only ids, titles, urls, publish dates, source ids/names, and (for 3 clusters) the LLM-extracted metadata tags that generateSearchText consumes",
+    "notes": "clusters = brief_stories rows of the run (post-merge, post-cap article sets). judge.title = the stored story title; titles that are a bare dominant entity (Rwanda, Trump) are modelled as NO_EVENT with empty title. judge.event is not persisted in production, left empty. prodImportance = the importance stored in production for that block."
+  },
+  "clusters": [
+    {
+      "clusterId": 12,
+      "articleIds": [
+        1099652,
+        1102027,
+        1104015,
+        1105550,
+        1107180,
+        1107866,
+        1108194,
+        1108495,
+        1110636,
+        1111080,
+        1111154
+      ],
+      "prodTitle": "US-Iran talks at UN",
+      "prodImportance": 9,
+      "prodArticleOrder": [
+        1099652,
+        1102027,
+        1104015,
+        1105550,
+        1107180,
+        1107866,
+        1108194,
+        1108495,
+        1110636,
+        1111154,
+        1111080
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 61,
+      "articleIds": [
+        1099375,
+        1100207,
+        1100538,
+        1100933,
+        1101184,
+        1101479,
+        1101908,
+        1102381,
+        1103485,
+        1107727,
+        1111385
+      ],
+      "prodTitle": "US, Denmark, Greenland sign Arctic security deal",
+      "prodImportance": 9,
+      "prodArticleOrder": [
+        1099375,
+        1100207,
+        1100538,
+        1101184,
+        1100933,
+        1101479,
+        1107727,
+        1101908,
+        1102381,
+        1103485,
+        1111385
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 5,
+      "articleIds": [
+        1101602,
+        1102480,
+        1102482,
+        1111167,
+        1111191,
+        1111507,
+        1111509,
+        1111740
+      ],
+      "prodTitle": "Trump-Xi Summit and US AI Policy",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1102482,
+        1102480,
+        1101602,
+        1111191,
+        1111167,
+        1111509,
+        1111507,
+        1111740
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 10,
+      "articleIds": [
+        1100533,
+        1101210,
+        1101254,
+        1101604,
+        1101684,
+        1102336,
+        1103565,
+        1107720
+      ],
+      "prodTitle": "Trump's UN Speech on Iran",
+      "prodImportance": 8,
+      "prodArticleOrder": [
+        1100533,
+        1101254,
+        1101210,
+        1101604,
+        1101684,
+        1102336,
+        1103565,
+        1107720
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 34,
+      "articleIds": [
+        1103685,
+        1103970,
+        1104315,
+        1105664,
+        1107640,
+        1109487,
+        1110093
+      ],
+      "prodTitle": "Zelensky's talks with Trump and push for energy truce",
+      "prodImportance": 8,
+      "prodArticleOrder": [
+        1103685,
+        1103970,
+        1104315,
+        1105664,
+        1107640,
+        1109487,
+        1110093
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 41,
+      "articleIds": [
+        1108286,
+        1108617,
+        1109050,
+        1109235,
+        1109517,
+        1109799,
+        1110405
+      ],
+      "prodTitle": "Durban Mass Shooting Leaves 11 Dead",
+      "prodImportance": 8,
+      "prodArticleOrder": [
+        1108286,
+        1108617,
+        1109050,
+        1109235,
+        1109517,
+        1109799,
+        1110405
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 14,
+      "articleIds": [
+        1099424,
+        1100732,
+        1101060,
+        1108276,
+        1109049,
+        1111508
+      ],
+      "prodTitle": "Marco Rubio defends Trump's media ban",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1099424,
+        1100732,
+        1101060,
+        1108276,
+        1109049,
+        1111508
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 16,
+      "articleIds": [
+        1101812,
+        1102101,
+        1102577,
+        1102914,
+        1103585,
+        1108399
+      ],
+      "prodTitle": "Trump and Burnham's First Meeting in New York",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1101812,
+        1102101,
+        1103585,
+        1102914,
+        1102577,
+        1108399
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 65,
+      "articleIds": [
+        1099124,
+        1099853,
+        1100068,
+        1101282,
+        1105645,
+        1107315
+      ],
+      "prodTitle": "Sri Lanka Easter Bombings Verdict",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1099124,
+        1099853,
+        1100068,
+        1101282,
+        1105645,
+        1107315
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 4,
+      "articleIds": [
+        1100613,
+        1100734,
+        1104139,
+        1104591,
+        1105047
+      ],
+      "prodTitle": "Trump's UNGA Speech and Iran Talks",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1100613,
+        1100734,
+        1104139,
+        1104591,
+        1105047
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 15,
+      "articleIds": [
+        1108271,
+        1109924,
+        1109926,
+        1111032,
+        1111038
+      ],
+      "prodTitle": "India's EC voter roll revision row",
+      "prodImportance": 4,
+      "prodArticleOrder": [
+        1108271,
+        1109926,
+        1109924,
+        1111038,
+        1111032
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 28,
+      "articleIds": [
+        1099978,
+        1100407,
+        1101183,
+        1101251,
+        1105048
+      ],
+      "prodTitle": "US F-16 crash near Spangdahlem Air Base",
+      "prodImportance": 7,
+      "prodArticleOrder": [
+        1099978,
+        1100407,
+        1101183,
+        1101251,
+        1105048
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 50,
+      "articleIds": [
+        1102380,
+        1102382,
+        1102935,
+        1103486,
+        1105143
+      ],
+      "prodTitle": "Qatar's diplomatic stance on Gulf tensions and Iran",
+      "prodImportance": 4,
+      "prodArticleOrder": [
+        1102382,
+        1102380,
+        1102935,
+        1103486,
+        1105143
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 1,
+      "articleIds": [
+        1100539,
+        1103573,
+        1110399,
+        1111510
+      ],
+      "prodTitle": "ICE shooting of DoorDash driver",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1100539,
+        1103573,
+        1110399,
+        1111510
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 40,
+      "articleIds": [
+        1099425,
+        1100193,
+        1104593,
+        1108833
+      ],
+      "prodTitle": "Trump Jr. Wedding Paid by Russian Oligarch",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1099425,
+        1100193,
+        1104593,
+        1108833
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 43,
+      "articleIds": [
+        1109782,
+        1110635,
+        1110851,
+        1111260
+      ],
+      "prodTitle": "Ethiopia's Tigray conflict reignites",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1109782,
+        1110635,
+        1110851,
+        1111260
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 51,
+      "articleIds": [
+        1099982,
+        1101140,
+        1101266,
+        1109846
+      ],
+      "prodTitle": "Trump vs. CNN at the UN",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1099982,
+        1101140,
+        1101266,
+        1109846
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 54,
+      "articleIds": [
+        1100060,
+        1106936,
+        1108283,
+        1110297
+      ],
+      "prodTitle": "Trump's 'Super Intelligence' Rename at UN",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1100060,
+        1108283,
+        1106936,
+        1110297
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 62,
+      "articleIds": [
+        1102335,
+        1103258,
+        1108741,
+        1110153
+      ],
+      "prodTitle": "Hurricane Polo intensifies to Cat 5 off Mexico",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1102335,
+        1103258,
+        1110153,
+        1108741
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 204,
+      "articleIds": [
+        1099736,
+        1100196,
+        1101007,
+        1102244
+      ],
+      "prodTitle": "Hayden Panettiere's Cause of Death Confirmed",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1100196,
+        1099736,
+        1102244,
+        1101007
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 97,
+      "articleIds": [
+        1099854,
+        1099986,
+        1100107,
+        1100177
+      ],
+      "prodTitle": "German amateur archaeologist finds massive Roman silver hoard",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1099854,
+        1099986,
+        1100177,
+        1100107
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 109,
+      "articleIds": [
+        1101135,
+        1105665,
+        1109847,
+        1109927
+      ],
+      "prodTitle": "Trump, Pezeshkian, and Iran at UNGA",
+      "prodImportance": 6,
+      "prodArticleOrder": [
+        1101135,
+        1105665,
+        1109927,
+        1109847
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 0,
+      "articleIds": [
+        1100209,
+        1100408,
+        1102936
+      ],
+      "prodTitle": "Rwanda",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1100209,
+        1100408,
+        1102936
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 9,
+      "articleIds": [
+        1106767,
+        1107590,
+        1108189
+      ],
+      "prodTitle": "Wall Street, Oil, and Asian Markets React to Trump-Iran Meeting",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1106767,
+        1107590,
+        1108189
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 13,
+      "articleIds": [
+        1101249,
+        1102461,
+        1109453
+      ],
+      "prodTitle": "EU sanctions list changes amid Russia deadline",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1101249,
+        1102461,
+        1109453
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 19,
+      "articleIds": [
+        1102919,
+        1103811,
+        1107179
+      ],
+      "prodTitle": "Trump's July SpaceX Stock Trades",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1102919,
+        1103811,
+        1107179
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 24,
+      "articleIds": [
+        1100532,
+        1110611,
+        1111178
+      ],
+      "prodTitle": "Trump",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1100532,
+        1110611,
+        1111178
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 26,
+      "articleIds": [
+        1099428,
+        1100730,
+        1103259
+      ],
+      "prodTitle": "Trump TV: rocky launch and media criticism",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1099428,
+        1100730,
+        1103259
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 29,
+      "articleIds": [
+        1105666,
+        1107847,
+        1109500
+      ],
+      "prodTitle": "UK PM Burnham's anti-disinformation unit",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1105666,
+        1107847,
+        1109500
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 32,
+      "articleIds": [
+        1101685,
+        1107729,
+        1109939
+      ],
+      "prodTitle": "Kalkaji Gangrape and Safety Audit",
+      "prodImportance": 4,
+      "prodArticleOrder": [
+        1101685,
+        1107729,
+        1109939
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 48,
+      "articleIds": [
+        1099627,
+        1100205,
+        1110632
+      ],
+      "prodTitle": "Houthis battle for Red Sea coastal heights",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1099627,
+        1100205,
+        1110632
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 52,
+      "articleIds": [
+        1103568,
+        1108666,
+        1108897
+      ],
+      "prodTitle": "Morocco parliamentary election amid Ceuta migrant surge",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1103568,
+        1108666,
+        1108897
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 55,
+      "articleIds": [
+        1100614,
+        1106625,
+        1109377
+      ],
+      "prodTitle": "IIT Bombay Student Suicide Case",
+      "prodImportance": 4,
+      "prodArticleOrder": [
+        1100614,
+        1106625,
+        1109377
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 60,
+      "articleIds": [
+        1099639,
+        1099984,
+        1103761
+      ],
+      "prodTitle": "Looksmaxxing influencer Clavicular charged with rape",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1099639,
+        1099984,
+        1103761
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 67,
+      "articleIds": [
+        1100536,
+        1102366,
+        1102931
+      ],
+      "prodTitle": "DoorDash $131M Settlement for NYC Workers",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1100536,
+        1102366,
+        1102931
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 69,
+      "articleIds": [
+        1108825,
+        1110070,
+        1110485
+      ],
+      "prodTitle": "Mirabai Chanu wins Asian Games silver",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1108825,
+        1110485,
+        1110070
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 100,
+      "articleIds": [
+        1109845,
+        1110605,
+        1111407
+      ],
+      "prodTitle": "UK Chagos Archipelago Deal Controversy",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1109845,
+        1110605,
+        1111407
+      ],
+      "prodSelected": true
+    },
+    {
+      "clusterId": 102,
+      "articleIds": [
+        1099508,
+        1100061,
+        1111035
+      ],
+      "prodTitle": "India's Badminton Journey at Asian Games 2026",
+      "prodImportance": 4,
+      "prodArticleOrder": [
+        1099508,
+        1100061,
+        1111035
+      ],
+      "prodSelected": false
+    },
+    {
+      "clusterId": 123,
+      "articleIds": [
+        1101790,
+        1107865,
+        1110850
+      ],
+      "prodTitle": "Six-year-old girl sets Rubik's Cube world record",
+      "prodImportance": 5,
+      "prodArticleOrder": [
+        1101790,
+        1107865,
+        1110850
+      ],
+      "prodSelected": false
+    }
+  ],
+  "articles": [
+    {
+      "id": 1099124,
+      "title": "Sri Lanka court convicts 15 over deadly 2019 Easter bombings",
+      "url": "https://www.npr.org/2026/09/22/g-s1-144514/sri-lanka-court-convicts-15-over-deadly-2019-easter-bombings",
+      "publishedAt": "2026-09-22T13:30:01Z",
+      "sourceId": 10,
+      "sourceName": "NPR World"
+    },
+    {
+      "id": 1099375,
+      "title": "Ending the Arctic stand-off? US, Greenland, Denmark to sign deal in New York",
+      "url": "https://www.scmp.com/news/world/united-states-canada/article/3368427/us-greenland-denmark-sign-deal-new-york-bid-end-arctic-stand",
+      "publishedAt": "2026-09-22T13:56:04Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Military expansion",
+          "Strategic location",
+          "Resource-rich territory",
+          "International diplomacy",
+          "Arctic geopolitics"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Diplomacy",
+          "Environment"
+        ],
+        "key_entities": [
+          "United States",
+          "Greenland",
+          "Denmark",
+          "Pituffik Space Base",
+          "Narsarsuaq",
+          "Mestersvig"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Diplomacy"
+        ]
+      }
+    },
+    {
+      "id": 1099424,
+      "title": "Rubio spotted with journalists from outlets Trump had banned just days earlier",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/rubio-trump-journalists-ban-white-house-b3054219.html",
+      "publishedAt": "2026-09-22T13:55:54Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099425,
+      "title": "Republican senator says Donald Trump Jr should be subpoenaed over wedding party funded by Putin-linked oligarch",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/donald-trump-jr-wedding-fund-republican-b3054307.html",
+      "publishedAt": "2026-09-22T13:55:37Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099428,
+      "title": "Trump TV gets off to a rocky start with tiny viewership and vicious mockery",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-tv-ratings-viewership-numbers-b3054287.html",
+      "publishedAt": "2026-09-22T13:37:58Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099508,
+      "title": "Asian Games 2026 Day 3: India win first gold, assure medals in badminton and wushu on action-packed Tuesday",
+      "url": "https://timesofindia.indiatimes.com/sports/asian-games-2026/asian-games-2026-day-3-india-win-first-gold-assure-medals-in-badminton-and-wushu-on-action-packed-tuesday/articleshow/134413297.cms",
+      "publishedAt": "2026-09-22T13:17:41Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1099627,
+      "title": "Up to 169 killed in Yemen as Houthis battle for Red Sea coastal heights",
+      "url": "https://www.theguardian.com/world/2026/sep/22/yemen-houthis-battle-strategic-red-sea-heights",
+      "publishedAt": "2026-09-22T13:57:36Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1099639,
+      "title": "‘Looksmaxxing’ influencer Clavicular charged with rape and drug offenses",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/clavicular-charged-rape-drugging",
+      "publishedAt": "2026-09-22T14:15:53Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1099652,
+      "title": "Iran delegation to present narrative of resilience, diplomacy at UNGA",
+      "url": "https://www.aljazeera.com/news/2026/9/22/iran-delegation-to-present-narrative-of-resilience-diplomacy-at-unga?traffic_source=rss",
+      "publishedAt": "2026-09-22T13:29:53Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "Iran",
+        "thematic_keywords": [
+          "Iran-US conflict",
+          "UN diplomacy",
+          "Strait of Hormuz",
+          "Regional tensions",
+          "Nuclear non-proliferation",
+          "Diplomatic negotiations",
+          "Military escalation",
+          "Economic sanctions",
+          "International security"
+        ],
+        "topic_tags": [
+          "Politics",
+          "World Affairs",
+          "Security",
+          "Diplomacy"
+        ],
+        "key_entities": [
+          "Masoud Pezeshkian",
+          "Abbas Araghchi",
+          "United Nations General Assembly",
+          "Strait of Hormuz",
+          "Minab school bombing",
+          "Ayatollah Ali Khamenei",
+          "Donald Trump",
+          "Houthis",
+          "Nuclear Non-Proliferation Treaty"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1099736,
+      "title": "Autopsy shows Hayden Panettiere died from overdose of fentanyl and other drugs",
+      "url": "https://www.bbc.co.uk/news/articles/crn45d8dd2wdo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T14:57:37Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1099853,
+      "title": "Sri Lankan court finds 15 guilty for their roles in the 2019 deadly Easter bombings",
+      "url": "https://abcnews.com/International/wireStory/sri-lankan-court-finds-15-men-guilty-roles-136647369",
+      "publishedAt": "2026-09-22T13:34:48Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1099854,
+      "title": "Amateur archaeologist finds Germany’s biggest hoard of ancient Roman silver coins",
+      "url": "https://abcnews.com/International/wireStory/amateur-archaeologist-finds-germanys-biggest-hoard-ancient-roman-136647641",
+      "publishedAt": "2026-09-22T13:30:18Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1099978,
+      "title": "US F-16 jet crashes near Spangdahlem Air Base in Germany: report",
+      "url": "https://www.independent.co.uk/news/world/europe/us-f16-jet-crash-germany-spangdahlem-b3054361.html",
+      "publishedAt": "2026-09-22T15:03:16Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099982,
+      "title": "Trump takes a shot at CNN’s Kaitlan Collins for being at the UN for his speech: ‘You shouldn’t be here’",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-cnn-kaitlan-collins-un-speech-b3054378.html",
+      "publishedAt": "2026-09-22T14:59:17Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099984,
+      "title": "Looksmaxxing influencer Clavicular faces rape and drugging charges",
+      "url": "https://www.independent.co.uk/news/world/americas/crime/clavicular-looksmaxxing-rape-drugging-charges-massachusetts-b3054352.html",
+      "publishedAt": "2026-09-22T14:45:53Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1099986,
+      "title": "Amateur archaeologist unearths huge Roman silver coin treasure trove in Germany",
+      "url": "https://www.independent.co.uk/news/world/europe/germany-roman-silver-coins-hadrian-b3054341.html",
+      "publishedAt": "2026-09-22T14:24:21Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1100060,
+      "title": "'AI is amazing, want to name it 'super intelligence': Trump at UNGA - top quotes",
+      "url": "https://timesofindia.indiatimes.com/world/us/i-have-made-peace-trump-calls-on-all-nations-to-impose-complete-blockade-on-iran-at-unga/articleshow/134412968.cms",
+      "publishedAt": "2026-09-22T14:47:55Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1100061,
+      "title": "Asian Games 2026 Medal Tally: Where does India rank after women's cricket retains gold?",
+      "url": "https://timesofindia.indiatimes.com/sports/asian-games-2026/asian-games-2026-medal-tally-where-does-india-rank-after-womens-cricket-retains-gold/articleshow/134413865.cms",
+      "publishedAt": "2026-09-22T13:49:27Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1100068,
+      "title": "Sri Lanka court convicts 15 men over 2019 Easter Sunday bombings",
+      "url": "https://timesofindia.indiatimes.com/world/south-asia/sri-lanka-court-convicts-15-men-over-2019-easter-sunday-bombings/articleshow/134414563.cms",
+      "publishedAt": "2026-09-22T14:28:05Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1100107,
+      "title": "Man's metal detector wouldn't stop beeping, leading to record-breaking trove of ancient Roman coins",
+      "url": "https://www.cbsnews.com/news/ancient-roman-silver-coins-found-metal-detectorist-germany/",
+      "publishedAt": "2026-09-22T15:04:39Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World"
+    },
+    {
+      "id": 1100177,
+      "title": "Amateur archaeologist finds 934 Roman silver denarii in German field",
+      "url": "https://www.theguardian.com/world/2026/sep/22/roman-coins-germany-amateur-archaeologist-silver-denarii",
+      "publishedAt": "2026-09-22T14:54:51Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1100193,
+      "title": "Republican calls for Senate investigation of Trump Jr wedding paid for by Russian oligarch",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/republican-senate-investigation-trump-jr-wedding",
+      "publishedAt": "2026-09-22T15:15:23Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1100196,
+      "title": "Hayden Panettiere’s cause of death confirmed as fentanyl overdose",
+      "url": "https://www.theguardian.com/society/2026/sep/22/hayden-panettiere-cause-death",
+      "publishedAt": "2026-09-22T14:43:17Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1100205,
+      "title": "Why are the Houthis fighting for Yemen’s Kahboub Mountains?",
+      "url": "https://www.aljazeera.com/news/2026/9/22/why-are-the-houthis-fighting-for-yemens-kahboub-mountains?traffic_source=rss",
+      "publishedAt": "2026-09-22T14:47:25Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1100207,
+      "title": "Where is the US opening new military bases in Greenland?",
+      "url": "https://www.aljazeera.com/news/2026/9/22/where-is-the-us-opening-new-military-bases-in?traffic_source=rss",
+      "publishedAt": "2026-09-22T14:31:50Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "Greenland",
+        "thematic_keywords": [
+          "Military base expansion",
+          "Arctic security",
+          "US-Denmark relations",
+          "Sovereignty concerns",
+          "Geopolitical tensions",
+          "Strategic resource control",
+          "NATO cooperation"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics",
+          "Environment"
+        ],
+        "key_entities": [
+          "United States",
+          "Denmark",
+          "Greenland",
+          "Donald Trump",
+          "NATO",
+          "UNGA",
+          "Narsarsuaq",
+          "Mestersvig",
+          "Jens-Frederik Nielsen",
+          "Lars Lokke Rasmussen"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1100209,
+      "title": "Ex-Rwandan official appears at UK trial over 1994 genocide",
+      "url": "https://www.aljazeera.com/news/2026/9/22/2425?traffic_source=rss",
+      "publishedAt": "2026-09-22T14:28:54Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1100407,
+      "title": "A US military plane crashes near a US air base in Germany, injuring the pilot",
+      "url": "https://abcnews.com/International/wireStory/us-military-plane-crashes-us-air-base-germany-136650995",
+      "publishedAt": "2026-09-22T15:31:44Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1100408,
+      "title": "Rwandan doctor accused in London court of overseeing 6 killings in 1994 genocide",
+      "url": "https://abcnews.com/International/wireStory/rwandan-doctor-accused-london-court-overseeing-6-killings-136648961",
+      "publishedAt": "2026-09-22T15:29:09Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1100532,
+      "title": "Devastating news for Trump as poll shows how Americans really feel about Iran war",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-iran-poll-midterms-voters-b3054430.html",
+      "publishedAt": "2026-09-22T15:58:44Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1100533,
+      "title": "Trump at UN pitches himself as the world’s leader but stone-faced General Assembly isn’t buying it",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-un-general-assembly-speech-b3054435.html",
+      "publishedAt": "2026-09-22T15:55:53Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1100536,
+      "title": "DoorDash to pay drivers $131 million in landmark settlement: ‘We screwed up’",
+      "url": "https://www.independent.co.uk/news/world/americas/doordash-nyc-settlement-drivers-mamdani-b3054433.html",
+      "publishedAt": "2026-09-22T15:47:05Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1100538,
+      "title": "Greenlanders ‘cautiously optimistic’ as Trump prepares to sign Arctic security deal during UN General Assembly",
+      "url": "https://www.independent.co.uk/news/world/europe/greenland-trump-us-deal-arctic-b3054241.html",
+      "publishedAt": "2026-09-22T15:41:09Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World",
+      "analysis": {
+        "primary_location": "Greenland",
+        "thematic_keywords": [
+          "Arctic security",
+          "US-Denmark-Greenland relations",
+          "Military presence",
+          "Self-determination",
+          "Diplomatic agreements",
+          "Geopolitical tensions",
+          "Cultural influence"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Diplomacy",
+          "Environment"
+        ],
+        "key_entities": [
+          "Greenland",
+          "United States",
+          "Denmark",
+          "Jens-Frederik Nielsen",
+          "Mette Frederiksen",
+          "Donald Trump",
+          "Tillie Martinussen",
+          "Nuuk",
+          "UN General Assembly"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Diplomacy"
+        ]
+      }
+    },
+    {
+      "id": 1100539,
+      "title": "Immigrant shot by ICE says he was hauled off to detention center with a bullet still in his back",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/wilber-garces-perez-ice-shooting-austin-texas-b3054387.html",
+      "publishedAt": "2026-09-22T15:16:12Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1100613,
+      "title": "Deal or annihilation? Trump speaks about his 'big' Iran dilemma at UNGA",
+      "url": "https://timesofindia.indiatimes.com/world/us/deal-or-annihilation-trump-speaks-about-his-big-iran-dilemma-at-unga/articleshow/134415378.cms",
+      "publishedAt": "2026-09-22T15:13:08Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1100614,
+      "title": "'Made a mistake by telling him to tolerate it': Grieving parents demand arrests in IIT Bombay student suicide case",
+      "url": "https://timesofindia.indiatimes.com/city/mumbai/made-a-mistake-by-telling-him-to-tolerate-it-grieving-parents-demand-arrests-in-iit-bombay-student-suicide-case/articleshow/134414786.cms",
+      "publishedAt": "2026-09-22T15:02:49Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1100730,
+      "title": "Trump TV: Can the US president bypass mainstream media?",
+      "url": "https://www.aljazeera.com/news/2026/9/22/trump-tv-can-the-us-president-bypass-mainstream-media?traffic_source=rss",
+      "publishedAt": "2026-09-22T15:33:22Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1100732,
+      "title": "Rubio defends Trump’s White House ban on CNN, MS NOW and Politico",
+      "url": "https://www.aljazeera.com/news/2026/9/22/rubio-defends-trumps-white-house-ban-on-cnn-ms-now-and-politico?traffic_source=rss",
+      "publishedAt": "2026-09-22T15:27:49Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1100734,
+      "title": "Trump to UN: do I ‘annihilate’ Iran or ‘make a deal?’",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/trump-to-un-do-i-annihilate-iran-or-make-a?traffic_source=rss",
+      "publishedAt": "2026-09-22T15:19:19Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1100933,
+      "title": "Trump signs Greenland security deal allowing US to expand military presence",
+      "url": "https://www.euronews.com/2026/09/22/trump-signs-greenland-security-deal-allowing-us-to-expand-military-presence",
+      "publishedAt": "2026-09-22T16:32:59Z",
+      "sourceId": 13,
+      "sourceName": "Euronews",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Military expansion",
+          "International security cooperation",
+          "Territorial sovereignty",
+          "Cold War legacy",
+          "Strategic defense infrastructure",
+          "US-Denmark relations"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Mette Frederiksen",
+          "Jens-Frederik Nielsen",
+          "Greenland",
+          "Denmark",
+          "Pituffik Space Base",
+          "Narsarsuaq",
+          "Mestersvig"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1101007,
+      "title": "Hayden Panettiere died from accidental overdose involving fentanyl: coroner",
+      "url": "https://www.scmp.com/news/world/united-states-canada/article/3368436/hayden-panettiere-died-accidental-overdose-involving-fentanyl-coroner-says",
+      "publishedAt": "2026-09-22T17:10:06Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World"
+    },
+    {
+      "id": 1101060,
+      "title": "JD Vance humiliated himself — and revealed too much — while defending Trump’s media ban",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/jd-vance-trump-media-ban-b3054329.html",
+      "publishedAt": "2026-09-22T16:45:36Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1101135,
+      "title": "Trump-Pezeshkian meeting on UNGA sidelines? US president 'open' to talks with Iran",
+      "url": "https://timesofindia.indiatimes.com/world/us/trump-pezeshkian-meeting-on-unga-sidelines-us-president-open-to-talks-with-iran/articleshow/134416649.cms",
+      "publishedAt": "2026-09-22T16:44:53Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1101140,
+      "title": "‘You shouldn’t be here covering me’: Trump confronts CNN’s Kaitlan Collins at UN amid White House ban",
+      "url": "https://timesofindia.indiatimes.com/world/us/you-shouldnt-be-here-covering-me-trump-confronts-cnns-kaitlan-collins-at-un-amid-white-house-ban/articleshow/134416955.cms",
+      "publishedAt": "2026-09-22T17:07:47Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1101183,
+      "title": "U.S. fighter jet crashes at American air base in Germany, injuring the pilot",
+      "url": "https://www.cbsnews.com/news/us-military-plane-crashes-american-air-base-germany/",
+      "publishedAt": "2026-09-22T16:32:49Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World"
+    },
+    {
+      "id": 1101184,
+      "title": "Trump signs Greenland deal giving U.S. broad military authority on the island",
+      "url": "https://www.cbsnews.com/news/trump-greenland-deal-denmark-united-nations/",
+      "publishedAt": "2026-09-22T16:27:12Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Arctic security",
+          "Military base expansion",
+          "Foreign investment restrictions",
+          "U.S.-Denmark-Greenland relations",
+          "Strategic defense cooperation"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Diplomacy",
+          "Military"
+        ],
+        "key_entities": [
+          "United States",
+          "Denmark",
+          "Greenland",
+          "Donald Trump",
+          "Jens-Frederik Nielsen",
+          "Mette Frederiksen",
+          "Pituffik Space Base",
+          "Narsarsuaq",
+          "Mestersvig"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Diplomacy"
+        ]
+      }
+    },
+    {
+      "id": 1101210,
+      "title": "Iran, AI and the ICC: Trump makes threats, touts policies at UN General Assembly",
+      "url": "https://www.france24.com/en/americas/20260922-iran-ai-and-the-icc-trump-makes-threats-touts-policies-un-general-assembly",
+      "publishedAt": "2026-09-22T17:09:26Z",
+      "sourceId": 11,
+      "sourceName": "France24 English"
+    },
+    {
+      "id": 1101249,
+      "title": "EU removes oligarchs from Russia sanctions list as deadline looms",
+      "url": "https://www.theguardian.com/world/2026/sep/22/eu-removes-oligarchs-from-russia-sanctions-list-as-deadline-looms",
+      "publishedAt": "2026-09-22T17:00:24Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101251,
+      "title": "US fighter jet crashes at air base in western Germany",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/fighter-jet-crashes-germany",
+      "publishedAt": "2026-09-22T16:49:18Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101254,
+      "title": "Trump calls on allies to enforce ‘complete economic isolation of Iran’ in UN speech",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/trump-calls-on-allies-enforce-complete-economic-isolation-iran-un-speech",
+      "publishedAt": "2026-09-22T17:05:22Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101266,
+      "title": "Donald Trump scolds CNN anchor for covering him at the United Nations",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/trump-scolds-cnn-anchor-kaitlan-collins-un",
+      "publishedAt": "2026-09-22T17:09:52Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101282,
+      "title": "Fifteen guilty in 2019 Sri Lanka Easter bombings: What the verdict says",
+      "url": "https://www.aljazeera.com/features/2026/9/22/fifteen-guilty-in-2019-sri-lanka-easter-bombings-what-the-verdict-says?traffic_source=rss",
+      "publishedAt": "2026-09-22T16:31:58Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1101479,
+      "title": "Trump signs Greenland security deal allowing US to expand military presence",
+      "url": "https://www.euronews.com/my-europe/2026/09/22/trump-signs-greenland-security-deal-allowing-us-to-expand-military-presence",
+      "publishedAt": "2026-09-22T16:32:59Z",
+      "sourceId": 13,
+      "sourceName": "Euronews",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Military expansion",
+          "Arctic security",
+          "US-Denmark relations",
+          "Territorial sovereignty",
+          "Strategic defense",
+          "Cold War legacy"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Mette Frederiksen",
+          "Jens-Frederik Nielsen",
+          "Greenland",
+          "Denmark",
+          "Pituffik Space Base",
+          "Narsarsuaq",
+          "Mestersvig"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1101602,
+      "title": "OpenAI’s leaders among the few who got an invite to Trump-China state dinner: report",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-china-ai-state-dinner-b3054477.html",
+      "publishedAt": "2026-09-22T18:05:26Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1101604,
+      "title": "Trump’s UN speech went from campaigning to denial — and then it took a dark turn",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-un-speech-iran-ai-b3054454.html",
+      "publishedAt": "2026-09-22T17:42:46Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1101684,
+      "title": "Trump threatens to 'annihilate' Iran: Make a deal or get destroyed",
+      "url": "https://timesofindia.indiatimes.com/world/us/trump-threatens-to-annihilate-iran-make-a-deal-or-get-destroyed/articleshow/134417865.cms",
+      "publishedAt": "2026-09-22T17:43:56Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1101685,
+      "title": "‘Safety, security paramount’: Lady Shri Ram College cancels classes, goes online after Kalkaji Mandir gang rape case",
+      "url": "https://timesofindia.indiatimes.com/city/delhi/safety-security-paramount-lady-shri-ram-college-cancels-classes-goes-online-after-kalkaji-mandir-gang-rape-case/articleshow/134417900.cms",
+      "publishedAt": "2026-09-22T17:48:10Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1101790,
+      "title": "Six-year-old Chinese girl ‘sets new women’s Rubik’s Cube world record’",
+      "url": "https://www.theguardian.com/games/2026/sep/22/six-year-old-chinese-girl-rubiks-cube-world-record-lian-yunzhi",
+      "publishedAt": "2026-09-22T18:10:53Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101812,
+      "title": "Donald Trump praises ‘natural businessperson’ Andy Burnham after first meeting",
+      "url": "https://www.theguardian.com/politics/2026/sep/22/donald-trump-praises-natual-businessman-andy-burnham-after-first-meeting",
+      "publishedAt": "2026-09-22T18:09:08Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1101908,
+      "title": "US to build two military bases in Greenland under new deal with Denmark",
+      "url": "https://www.bbc.co.uk/news/articles/c9dr74g32g8go?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T18:43:29Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News",
+      "analysis": {
+        "primary_location": "Greenland",
+        "thematic_keywords": [
+          "Arctic security",
+          "NATO alliance",
+          "Military base expansion",
+          "Transatlantic relations",
+          "Strategic defense location",
+          "Territorial sovereignty",
+          "Mineral wealth"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics",
+          "Military"
+        ],
+        "key_entities": [
+          "United States",
+          "Denmark",
+          "Greenland",
+          "Donald Trump",
+          "Mette Frederiksen",
+          "Jens-Frederik Nielsen",
+          "NATO",
+          "Pituffik Space Base"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1102027,
+      "title": "Trump threatens to 'annihilate' Iran at UN, then confirms direct talks",
+      "url": "https://www.euronews.com/2026/09/22/trump-threatens-to-annihilate-iran-at-un-then-confirms-direct-talks",
+      "publishedAt": "2026-09-22T18:50:18Z",
+      "sourceId": 13,
+      "sourceName": "Euronews",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran tensions",
+          "UN General Assembly",
+          "Military escalation",
+          "Diplomatic engagement",
+          "Strait of Hormuz",
+          "Geopolitical conflict",
+          "Energy market impact"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Politics",
+          "Security",
+          "Economy"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Iran",
+          "United Nations",
+          "Greenland",
+          "US Secretary of State Marco Rubio",
+          "Strait of Hormuz"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1102101,
+      "title": "Trump criticises UK’s Chagos deal, says new British PM Burnham will reconsider",
+      "url": "https://www.scmp.com/news/world/united-states-canada/article/3368438/trump-criticises-uks-chagos-deal-says-new-british-pm-burnham-will-reconsider",
+      "publishedAt": "2026-09-22T18:36:30Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World"
+    },
+    {
+      "id": 1102244,
+      "title": "Hayden Panettiere cause of death revealed: Heroes and Nashville star died of accidental overdose involving fentanyl and other drugs, says coroner",
+      "url": "https://timesofindia.indiatimes.com/entertainment/english/hollywood/news/hayden-panettiere-cause-of-death-revealed-heroes-and-nashville-star-died-of-accidental-overdose-involving-fentanyl-and-other-drugs-says-coroner/articleshow/134415602.cms",
+      "publishedAt": "2026-09-22T15:36:12Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1102335,
+      "title": "Hurricane Polo, rapidly intensifying from strong El Niño patterns, rages off coast of Mexico",
+      "url": "https://www.theguardian.com/world/2026/sep/22/hurricane-polo-mexico",
+      "publishedAt": "2026-09-22T19:09:29Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1102336,
+      "title": "Trump’s threat to annihilate Iran to UN general assembly is stunning, even for him",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/donald-trump-unga-speech",
+      "publishedAt": "2026-09-22T18:23:08Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1102366,
+      "title": "DoorDash to pay $131.5m after underpaying New York workers",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/doordash-new-york-settlement",
+      "publishedAt": "2026-09-22T19:18:57Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1102380,
+      "title": "Qatar’s emir urges diplomacy as Gulf at ‘one of the most dangerous phases’",
+      "url": "https://www.aljazeera.com/news/2026/9/22/qatars-emir-urges-diplomacy-as-gulf-at-one-of-the-most-dangerous?traffic_source=rss",
+      "publishedAt": "2026-09-22T18:48:37Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1102381,
+      "title": "US signs ‘tremendous’ Arctic security deal with Denmark, Greenland",
+      "url": "https://www.aljazeera.com/news/2026/9/22/us-signs-tremendous-arctic-security-deal-with-denmark-greenland?traffic_source=rss",
+      "publishedAt": "2026-09-22T18:46:32Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Arctic security",
+          "US-Denmark relations",
+          "Military base expansion",
+          "Great-power competition",
+          "NATO cooperation",
+          "Geopolitical tensions",
+          "Resource-rich territories"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics",
+          "International Relations"
+        ],
+        "key_entities": [
+          "United States",
+          "Denmark",
+          "Greenland",
+          "Donald Trump",
+          "Pituffik Space Base",
+          "NATO",
+          "European Union",
+          "Mette Frederiksen",
+          "Jens-Frederik Nielsen"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1102382,
+      "title": "Qatar urges diplomacy, rejects Strait of Hormuz ‘bargaining’",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/qatar-urges-diplomacy-rejects-strait-of-hormuz?traffic_source=rss",
+      "publishedAt": "2026-09-22T18:27:01Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1102461,
+      "title": "Ukraine anger as EU removes Russian oligarchs from sanctions list",
+      "url": "https://www.bbc.co.uk/news/articles/c6dj4k98107do?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T19:06:06Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1102480,
+      "title": "3 Ts Will Dominate the Trump-Xi Summit",
+      "url": "https://thediplomat.com/2026/09/3-ts-will-dominate-the-trump-xi-summit/",
+      "publishedAt": "2026-09-22T15:58:00Z",
+      "sourceId": 3,
+      "sourceName": "The Diplomat"
+    },
+    {
+      "id": 1102482,
+      "title": "America’s AI Safety Dilemma and the Trump-Xi Summit",
+      "url": "https://thediplomat.com/2026/09/americas-ai-safety-dilemma-and-at-the-trump-xi-summit/",
+      "publishedAt": "2026-09-22T14:35:00Z",
+      "sourceId": 3,
+      "sourceName": "The Diplomat"
+    },
+    {
+      "id": 1102577,
+      "title": "Burnham touts 'good connection' with Trump as pair meet for first time in New York",
+      "url": "https://www.euronews.com/2026/09/22/burnham-touts-good-connection-with-trump-as-pair-meet-for-first-time-in-new-york",
+      "publishedAt": "2026-09-22T19:57:38Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1102914,
+      "title": "Trump praises relations with Burnham despite tensions over AI and Iran",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/trump-says-relations-better-with-burnham-than-starmer-after-first-face-to-face-meeting",
+      "publishedAt": "2026-09-22T19:50:36Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1102919,
+      "title": "Trump made over 1,000 July stock trades worth up to $270m, filings reveal",
+      "url": "https://www.theguardian.com/us-news/2026/sep/22/trump-stock-trades-july-filing",
+      "publishedAt": "2026-09-22T20:13:35Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1102931,
+      "title": "NYC Mayor Mamdani reaches record DoorDash settlement for underpaid workers",
+      "url": "https://www.aljazeera.com/economy/2026/9/22/nyc-mayor-mamdani-reaches-record-doordash-settlement-for-underpaid-workers?traffic_source=rss",
+      "publishedAt": "2026-09-22T20:03:50Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1102935,
+      "title": "Qatar denounces Israeli aggression across the region",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/qatar-denounces-israeli-aggression-across-the-region?traffic_source=rss",
+      "publishedAt": "2026-09-22T19:29:03Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1102936,
+      "title": "What led to the 1994 Tutsi Genocide in Rwanda",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/what-led-to-the-1994-tutsi-genocide-in-rwanda?traffic_source=rss",
+      "publishedAt": "2026-09-22T19:17:44Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1103258,
+      "title": "Hurricane Polo is now a Category 5 storm in the Pacific - here are its potential impacts on the US",
+      "url": "https://www.independent.co.uk/news/world/americas/hurricane-polo-category-5-mexico-southwest-b3054528.html",
+      "publishedAt": "2026-09-22T20:11:30Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1103259,
+      "title": "Trump is off American TV — can the world learn to live without him as the star?",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-tv-media-ban-b3054529.html",
+      "publishedAt": "2026-09-22T20:10:22Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1103485,
+      "title": "US signs ‘tremendous’ security deal with Denmark and Greenland",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/us-signs-tremendous-security-deal-with-denmark-and-greenland?traffic_source=rss",
+      "publishedAt": "2026-09-22T21:11:47Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "Denmark",
+        "thematic_keywords": [
+          "International security cooperation",
+          "Military presence expansion",
+          "Territorial sovereignty",
+          "US-Denmark relations"
+        ],
+        "topic_tags": [
+          "Security",
+          "World Affairs",
+          "Politics"
+        ],
+        "key_entities": [
+          "United States",
+          "Denmark",
+          "Greenland",
+          "Donald Trump"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1103486,
+      "title": "Qatari Emir says country won’t ‘limit’ itself as Gulf ‘mediator’",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/qatari-emir-says-country-wont-limit-itself-as-gulf?traffic_source=rss",
+      "publishedAt": "2026-09-22T21:09:23Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1103565,
+      "title": "Trump tells UN he has 'big decision' on whether to 'annihilate' Iran or make peace deal",
+      "url": "https://www.bbc.co.uk/news/articles/c52e0ywl9pr7o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T21:50:31Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1103568,
+      "title": "Morocco election: How Ceuta, football and Israel have shaped the campaign",
+      "url": "https://www.bbc.co.uk/news/articles/c8r4v7n6py97o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T20:59:00Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1103573,
+      "title": "US judge blocks deportation of DoorDash driver shot by ICE",
+      "url": "https://www.bbc.co.uk/news/articles/cr6241825757o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T21:09:25Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1103585,
+      "title": "Burnham 'gets it' says Trump, as the two leaders meet reporters",
+      "url": "https://www.bbc.co.uk/news/videos/cxly57mv4767o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T19:15:57Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1103685,
+      "title": "Kyiv and Washington want war in Ukraine to end 'before winter,' Zelenskyy says",
+      "url": "https://www.euronews.com/2026/09/22/kyiv-and-washington-want-war-in-ukraine-to-end-before-winter-zelenskyy-says",
+      "publishedAt": "2026-09-22T21:13:07Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1103761,
+      "title": "‘Looksmaxxing’ influencer Clavicular charged with raping US girl, 17",
+      "url": "https://www.scmp.com/news/world/united-states-canada/article/3368441/looksmaxxing-influencer-clavicular-charged-raping-us-girl-17",
+      "publishedAt": "2026-09-22T21:50:12Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World"
+    },
+    {
+      "id": 1103811,
+      "title": "Trump bought and sold SpaceX stock in July, financial disclosure shows",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-elon-musk-spacex-stock-shares-b3054587.html",
+      "publishedAt": "2026-09-22T21:29:54Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1103970,
+      "title": "Zelensky says Ukraine is ready for an energy ceasefire with Russia",
+      "url": "https://www.france24.com/en/europe/20260922-zelensky-says-ukraine-is-ready-for-an-energy-ceasefire-with-russia",
+      "publishedAt": "2026-09-22T21:38:04Z",
+      "sourceId": 11,
+      "sourceName": "France24 English"
+    },
+    {
+      "id": 1104015,
+      "title": "Iran and US hold talks on sidelines of UN summit, says Trump",
+      "url": "https://www.theguardian.com/world/2026/sep/22/iran-us-talks-sidelines-un-summit-trump-israel-us",
+      "publishedAt": "2026-09-22T21:21:59Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran diplomacy",
+          "Strait of Hormuz",
+          "Economic pressure",
+          "UN summit",
+          "Regional tensions",
+          "Gaza conflict",
+          "Diplomatic negotiations",
+          "Sanctions and trade",
+          "Middle East politics"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Politics",
+          "Security",
+          "Diplomacy"
+        ],
+        "key_entities": [
+          "Iran",
+          "United States",
+          "Steve Witkoff",
+          "Abbas Araghchi",
+          "Donald Trump",
+          "Recep Tayyip Erdoğan",
+          "Gaza",
+          "Strait of Hormuz"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1104139,
+      "title": "Threats, deals and passionate speeches at UNGA event",
+      "url": "https://www.bbc.co.uk/news/videos/cqkgx8ynj8zko?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-22T22:33:44Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1104315,
+      "title": "Zelensky meets Trump, says Ukraine ready for energy truce with Russia",
+      "url": "https://www.scmp.com/news/world/russia-central-asia/article/3368442/zelensky-meets-trump-says-ukraine-ready-energy-truce-russia",
+      "publishedAt": "2026-09-22T22:34:24Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World"
+    },
+    {
+      "id": 1104591,
+      "title": "UNGA Day 1: US and Iran hold talks despite Trump’s threat",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/22/unga-day-1-us-and-iran-hold-talks-despite-trumps-threat?traffic_source=rss",
+      "publishedAt": "2026-09-22T22:48:56Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1104593,
+      "title": "US Republican calls for probe into Donald Trump Jr’s business dealings",
+      "url": "https://www.aljazeera.com/news/2026/9/22/us-republican-calls-for-probe-into-donald-trump-jrs-business-dealings?traffic_source=rss",
+      "publishedAt": "2026-09-22T22:07:50Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1105047,
+      "title": "Trump uses U.N. speech to openly muse about attacking Iran",
+      "url": "https://www.cbsnews.com/video/trump-uses-un-speech-openly-muse-attacking-iran/",
+      "publishedAt": "2026-09-22T23:34:46Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World"
+    },
+    {
+      "id": 1105048,
+      "title": "Second U.S. F-16 fighter jet crash in 1 week, this time in Germany",
+      "url": "https://www.cbsnews.com/video/second-us-f-16-fighter-jet-crash-1-week-germany/",
+      "publishedAt": "2026-09-22T23:28:58Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World"
+    },
+    {
+      "id": 1105143,
+      "title": "Iran war live: Trump confirms ‘very good’ meeting with Iran at UN",
+      "url": "https://www.aljazeera.com/news/liveblog/2026/9/23/iran-war-live-trump-confirms-very-good-meeting-with-iran-at-un?traffic_source=rss",
+      "publishedAt": "2026-09-23T00:00:00Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1105550,
+      "title": "Kushner, Witkoff meet Iran mediators for over 3 hours: All you need to know",
+      "url": "https://timesofindia.indiatimes.com/world/us/kushner-witkoff-meet-iran-mediators-for-over-3-hours-all-you-need-to-know/articleshow/134423442.cms",
+      "publishedAt": "2026-09-23T00:28:26Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran diplomacy",
+          "Diplomatic negotiations",
+          "Military threats",
+          "Regional security",
+          "Strait of Hormuz",
+          "Nuclear non-proliferation"
+        ],
+        "topic_tags": [
+          "Politics",
+          "World Affairs",
+          "Security",
+          "Diplomacy"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Steve Witkoff",
+          "Jared Kushner",
+          "Iran",
+          "United Nations General Assembly",
+          "Qatar",
+          "Pakistan"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1105645,
+      "title": "Sri Lanka Easter bombings: 15 sentenced to hundreds of years in prison each over deadly terror attacks",
+      "url": "https://www.theguardian.com/world/2026/sep/23/sri-lanka-easter-bombings-15-sentenced-prison-terror-attacks",
+      "publishedAt": "2026-09-23T00:43:00Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1105664,
+      "title": "Zelenskyy says Ukraine ready for energy truce with Russia after Trump talks",
+      "url": "https://www.aljazeera.com/news/2026/9/23/zelenskyy-says-ukraine-ready-for-energy-truce-with-russia-after-trump-talks?traffic_source=rss",
+      "publishedAt": "2026-09-23T01:20:39Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1105665,
+      "title": "Iranian President Masoud Pezeshkian arrives in New York for UNGA",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/23/iranian-president-masoud-pezeshkian-arrives-in-new-york-for-unga?traffic_source=rss",
+      "publishedAt": "2026-09-23T01:11:06Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1105666,
+      "title": "UK PM Burnham condemns ‘repulsive’ Russian electoral interference",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/23/uk-pm-burnham-condemns-repulsive-russian-electoral-interference?traffic_source=rss",
+      "publishedAt": "2026-09-23T01:01:17Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1106625,
+      "title": "IIT-Bombay suicide case: Sahil Wakode's father threatens hunger strike from today",
+      "url": "https://timesofindia.indiatimes.com/city/mumbai/iit-bombay-suicide-case-sahil-wakodes-father-threatens-hunger-strike-from-today/articleshow/134423950.cms",
+      "publishedAt": "2026-09-23T02:02:11Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1106767,
+      "title": "Wall Street’s Nasdaq hits all-time high as AI frenzy gathers pace",
+      "url": "https://www.aljazeera.com/economy/2026/9/23/wall-streets-nasdaq-hits-all-time-high-as-ai-frenzy-gathers-pace?traffic_source=rss",
+      "publishedAt": "2026-09-23T02:50:36Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1106936,
+      "title": "Leaders push for stronger AI safeguards at UN as Trump touts 'Super Intelligence'",
+      "url": "https://www.euronews.com/2026/09/23/leaders-push-for-stronger-ai-safeguards-at-un-as-trump-touts-super-intelligence",
+      "publishedAt": "2026-09-23T03:54:49Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1107179,
+      "title": "Trump buys up to $50,000 of Musk’s SpaceX, sells some a week later",
+      "url": "https://timesofindia.indiatimes.com/business/international-business/trump-buys-up-to-50000-of-musks-spacex-sells-some-a-week-later/articleshow/134425049.cms",
+      "publishedAt": "2026-09-23T04:03:31Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1107180,
+      "title": "US-Iran talks: What was discussed in Trump's 'good meeting' on the sidelines of UNGA",
+      "url": "https://timesofindia.indiatimes.com/world/middle-east/us-iran-talks-what-was-discussed-in-trumps-good-meeting-on-the-sidelines-of-unga/articleshow/134425060.cms",
+      "publishedAt": "2026-09-23T03:36:30Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran diplomacy",
+          "Strait of Hormuz",
+          "Military conflict",
+          "Economic sanctions",
+          "UN General Assembly",
+          "Regional tensions",
+          "Oil market volatility"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Politics",
+          "Security",
+          "Economy"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Steve Witkoff",
+          "Jared Kushner",
+          "Abbas Araghchi",
+          "Qatar",
+          "Strait of Hormuz",
+          "Islamic Revolutionary Guards Corps"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1107315,
+      "title": "Sri Lanka convicts 15 people over 2019 Easter Day bombings",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/23/sri-lanka-convicts-15-people-over-2019-easter-day-bombings?traffic_source=rss",
+      "publishedAt": "2026-09-23T04:08:17Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1107590,
+      "title": "AI trade rallies on falling oil and Meta’s Muse agent ahead of Xi-Trump meeting",
+      "url": "https://www.scmp.com/business/china-business/article/3368470/ai-trade-outlook-brightens-falling-oil-and-metas-muse-agent-ahead-xi-trump-meeting",
+      "publishedAt": "2026-09-23T05:02:40Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World"
+    },
+    {
+      "id": 1107640,
+      "title": "Russia-Ukraine war live: Zelensky says Trump gave no ‘concrete answer’ on Patriot missile system",
+      "url": "https://www.independent.co.uk/news/world/europe/ukraine-russia-war-live-trump-zelensky-meeting-putin-nato-b3054670.html",
+      "publishedAt": "2026-09-23T04:51:50Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1107720,
+      "title": "Peacemaker with a warning to annihilate: The major contradictions in Trump's UN speech",
+      "url": "https://timesofindia.indiatimes.com/world/us/peacemaker-with-a-warning-to-annihilate-the-major-contradictions-in-trumps-un-speech/articleshow/134425179.cms",
+      "publishedAt": "2026-09-23T04:30:55Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1107727,
+      "title": "Trump signs security agreement with Denmark, Greenland to increase presence with two ‘very big’ military bases",
+      "url": "https://timesofindia.indiatimes.com/world/us/trump-signs-security-agreement-with-denmark-greenland-to-increase-presence-with-two-very-big-military-bases/articleshow/134418453.cms",
+      "publishedAt": "2026-09-22T18:02:28Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World",
+      "analysis": {
+        "primary_location": "Denmark",
+        "thematic_keywords": [
+          "Arctic security",
+          "Military base expansion",
+          "US-Denmark relations",
+          "Geopolitical competition",
+          "Resource-rich territories",
+          "NATO alliance",
+          "Strategic military positioning"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics",
+          "Environment"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Denmark",
+          "Greenland",
+          "US",
+          "NATO",
+          "Pituffik Space Base"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1107729,
+      "title": "‘Firearms, knife and more’: How 3 men posing as cops turned 17-year-old’s birthday outing into a nightmare",
+      "url": "https://timesofindia.indiatimes.com/city/delhi/firearms-knife-and-more-how-3-men-posing-as-cops-turned-17-year-olds-birthday-outing-into-a-nightmare/articleshow/134423680.cms",
+      "publishedAt": "2026-09-23T01:30:42Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1107847,
+      "title": "New UK agency will tackle ‘information warfare’ from likes of Russia, Burnham says",
+      "url": "https://www.theguardian.com/technology/2026/sep/23/andy-burnham-national-centre-russian-disinformation-deepfakes",
+      "publishedAt": "2026-09-23T05:00:16Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1107865,
+      "title": "Six-year-old sets Rubik’s Cube world record twice in three days",
+      "url": "https://www.aljazeera.com/video/newsfeed/2026/9/23/six-year-old-sets-rubiks-cube-world-record-twice-in-three-days?traffic_source=rss",
+      "publishedAt": "2026-09-23T04:58:08Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1107866,
+      "title": "US, Iran hold mediated UNGA talks on ending war, opening Strait of Hormuz",
+      "url": "https://www.aljazeera.com/news/2026/9/23/us-iran-hold-mediated-unga-talks-on-ending-war-opening-strait-of-hormuz?traffic_source=rss",
+      "publishedAt": "2026-09-23T04:42:15Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran diplomacy",
+          "Strait of Hormuz",
+          "Mediated negotiations",
+          "Regional security",
+          "Naval blockade",
+          "Diplomatic de-escalation",
+          "Strategic conditions",
+          "Gulf security framework"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Diplomacy",
+          "Security",
+          "Politics"
+        ],
+        "key_entities": [
+          "United States",
+          "Iran",
+          "Steve Witkoff",
+          "Jared Kushner",
+          "Donald Trump",
+          "Qatar",
+          "Oman",
+          "Strait of Hormuz",
+          "UNGA"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Diplomacy",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1108189,
+      "title": "Asian shares are mixed and oil prices fall after Trump says US and Iran met at the UN",
+      "url": "https://www.independent.co.uk/news/world/americas/donald-trump-iran-wall-street-asian-hong-kong-b3054702.html",
+      "publishedAt": "2026-09-23T06:00:41Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1108194,
+      "title": "Iran-US war live: Tehran responds after Trump says they must choose between a peace deal and ‘annihilation’",
+      "url": "https://www.independent.co.uk/news/world/middle-east/iran-us-war-live-trump-annihilate-threats-un-hormuz-b3054680.html",
+      "publishedAt": "2026-09-23T05:03:29Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran tensions",
+          "Nuclear non-proliferation",
+          "Diplomatic negotiations",
+          "War crimes",
+          "Public opinion on war",
+          "Strait of Hormuz",
+          "International diplomacy",
+          "Political polarization"
+        ],
+        "topic_tags": [
+          "Politics",
+          "World Affairs",
+          "Security",
+          "International Relations"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Jared Kushner",
+          "Steve Witkoff",
+          "Iran",
+          "Qatar",
+          "Bernie Sanders",
+          "JD Vance",
+          "Strait of Hormuz"
+        ],
+        "content_focus": [
+          "Politics",
+          "World Affairs",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1108271,
+      "title": "'SIR decision unanimous': EC counters report of internal differences over voter roll revision",
+      "url": "https://timesofindia.indiatimes.com/india/sir-decision-unanimous-ec-plays-down-report-of-internal-disagreement-over-roll-revision/articleshow/134426813.cms",
+      "publishedAt": "2026-09-23T05:51:29Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1108276,
+      "title": "'White House access privilege, not right': DOJ cites national security behind Trump barring reporters",
+      "url": "https://timesofindia.indiatimes.com/world/us/white-house-access-privilege-not-right-doj-cites-national-security-behind-trump-barring-reporters/articleshow/134426616.cms",
+      "publishedAt": "2026-09-23T05:35:27Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1108283,
+      "title": "Donald Trump wants to rename AI; says: 'artificial' makes AI sound fake, renames it 'super intelligence'; It is exactly the opposite of...",
+      "url": "https://timesofindia.indiatimes.com/technology/tech-news/donald-trump-wants-to-rename-ai-says-artificial-makes-ai-sound-fake-renames-it-super-intelligence-it-is-exactly-the-opposite-of-/articleshow/134424332.cms",
+      "publishedAt": "2026-09-23T02:30:03Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1108286,
+      "title": "South Africa mass shooting: At least 11 killed by unidentified gunman in Durban",
+      "url": "https://timesofindia.indiatimes.com/world/rest-of-world/south-africa-mass-shooting-at-least-11-killed-by-unidentified-gunman-in-durban/articleshow/134426336.cms",
+      "publishedAt": "2026-09-23T05:28:24Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Unidentified perpetrator",
+          "Violent crime",
+          "South African security",
+          "Local violence"
+        ],
+        "topic_tags": [
+          "Crime",
+          "World Affairs",
+          "Security"
+        ],
+        "key_entities": [
+          "KwaZulu-Natal",
+          "Durban",
+          "Ziko",
+          "KwaMakhuta"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Breaking News"
+        ]
+      }
+    },
+    {
+      "id": 1108399,
+      "title": "Wednesday briefing: ​Can Burnham ​seek a ​different ​path​ to Trump’s world order?",
+      "url": "https://www.theguardian.com/world/2026/sep/23/wednesday-briefing-can-burnham-seek-a-different-path-to-trumps-world-order",
+      "publishedAt": "2026-09-23T05:45:26Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1108495,
+      "title": "US and Iran hold first talks since June after Trump's 'annihilation' threat",
+      "url": "https://www.bbc.co.uk/news/articles/ck62m1631d7po?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-23T06:12:56Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran conflict",
+          "Coercive diplomacy",
+          "Strait of Hormuz closure",
+          "Global oil market disruption",
+          "Nuclear non-proliferation",
+          "UN diplomacy",
+          "Geopolitical tensions"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Politics",
+          "Economy"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Steve Witkoff",
+          "Qatar",
+          "Iran",
+          "US",
+          "Strait of Hormuz",
+          "UN General Assembly"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Politics"
+        ]
+      }
+    },
+    {
+      "id": 1108617,
+      "title": "Eleven killed in South Africa as gunmen open fire on Durban homestead",
+      "url": "https://www.euronews.com/2026/09/23/eleven-killed-as-gunmen-open-fire-on-durban-homestead",
+      "publishedAt": "2026-09-23T06:30:34Z",
+      "sourceId": 13,
+      "sourceName": "Euronews",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Gun violence",
+          "South African crime",
+          "Violent crime trends",
+          "Gang feuds",
+          "Informal business disputes",
+          "Public safety crisis"
+        ],
+        "topic_tags": [
+          "Crime",
+          "Violence",
+          "World Affairs",
+          "Security"
+        ],
+        "key_entities": [
+          "Durban",
+          "KwaZulu-Natal",
+          "Thamsanqa Ntuli",
+          "Cyril Ramaphosa",
+          "eNCA",
+          "AFP"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Crime"
+        ]
+      }
+    },
+    {
+      "id": 1108666,
+      "title": "Morocco votes for a new parliament after Gen Z protests and migration surge to Ceuta",
+      "url": "https://abcnews.com/International/wireStory/morocco-votes-new-parliament-after-gen-protests-migration-136674843",
+      "publishedAt": "2026-09-23T06:26:18Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1108741,
+      "title": "Hurricane Polo intensifies to ‘extremely dangerous’ Category 5 off Mexico coast",
+      "url": "https://www.independent.co.uk/weather/hurricane-polo-mexico-category-5-b3054722.html",
+      "publishedAt": "2026-09-23T06:51:41Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1108825,
+      "title": "Mirabai Chanu wins maiden Asian Games medal, bags silver in 49kg category",
+      "url": "https://timesofindia.indiatimes.com/sports/asian-games-2026/mirabai-chanu-wins-maiden-asian-games-medal-bags-silver-in-49kg-category/articleshow/134427306.cms",
+      "publishedAt": "2026-09-23T06:11:54Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1108833,
+      "title": "Russian oligarch’s wedding gift to Trump Jr puts family dealings under scrutiny",
+      "url": "https://timesofindia.indiatimes.com/business/international-business/russian-oligarchs-wedding-gift-to-trump-jr-puts-family-dealings-under-scrutiny/articleshow/134427026.cms",
+      "publishedAt": "2026-09-23T06:27:17Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1108897,
+      "title": "Moroccans vote in parliamentary elections after migrant rush to Ceuta",
+      "url": "https://www.france24.com/en/africa/20260923-moroccans-vote-in-parliamentary-elections-after-migrant-rush-to-ceuta",
+      "publishedAt": "2026-09-23T07:14:59Z",
+      "sourceId": 11,
+      "sourceName": "France24 English"
+    },
+    {
+      "id": 1109049,
+      "title": "Trump administration accuses banned media outlets of 'falsehoods' ahead of court hearing",
+      "url": "https://www.bbc.co.uk/news/articles/c6790yrgzq25o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-23T06:47:49Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1109050,
+      "title": "South Africa mass shooting: Gunmen kill 11 at house in Durban",
+      "url": "https://www.bbc.co.uk/news/articles/crgjqxzl097eo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-23T07:02:52Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Criminal gang violence",
+          "South African murder rate",
+          "Turf wars",
+          "Organized crime",
+          "Community violence"
+        ],
+        "topic_tags": [
+          "Crime",
+          "Security",
+          "World Affairs"
+        ],
+        "key_entities": [
+          "Durban",
+          "KwaMakhutha",
+          "South Africa",
+          "eNCA",
+          "Cyril Ramaphosa"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Crime"
+        ]
+      }
+    },
+    {
+      "id": 1109235,
+      "title": "A mass shooting at a house in South Africa leaves 11 dead and 3 wounded, police say",
+      "url": "https://abcnews.com/International/wireStory/mass-shooting-house-south-africa-leaves-11-dead-136675033",
+      "publishedAt": "2026-09-23T07:22:27Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Criminal activity",
+          "Community violence",
+          "Unresolved motives",
+          "Rivalry",
+          "South African crime"
+        ],
+        "topic_tags": [
+          "Crime",
+          "World Affairs",
+          "Security"
+        ],
+        "key_entities": [
+          "KwaMakhutha",
+          "Durban",
+          "South Africa",
+          "Police"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Breaking News"
+        ]
+      }
+    },
+    {
+      "id": 1109377,
+      "title": "IIT-Bombay on boil: Professor sent on leave, student's parents 'driven' out of Mumbai; all you need to know",
+      "url": "https://timesofindia.indiatimes.com/city/mumbai/iit-bombay-on-boil-professor-sent-on-leave-students-parents-driven-out-of-mumbai-all-you-need-to-know/articleshow/134428426.cms",
+      "publishedAt": "2026-09-23T07:18:30Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1109453,
+      "title": "Azerbaijan pardons jailed Frenchman after EU lifts sanctions on Russian billionaire",
+      "url": "https://www.france24.com/en/europe/20260923-azerbaijan-pardons-jailed-frenchman-after-eu-lifts-sanctions-on-russian-oligarchs",
+      "publishedAt": "2026-09-23T07:53:17Z",
+      "sourceId": 11,
+      "sourceName": "France24 English"
+    },
+    {
+      "id": 1109487,
+      "title": "Zelenskyy to present Ukraine’s case to UN general assembly – live",
+      "url": "https://www.theguardian.com/world/live/2026/sep/23/united-nations-general-assembly-unga-zelenksyy-trump-xi-china-ukraine-russia-europe-latest-news-updates",
+      "publishedAt": "2026-09-23T08:05:04Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1109500,
+      "title": "PM’s new anti-disinformation unit won’t target ‘domestic political dissent’, defence secretary says – UK politics live",
+      "url": "https://www.theguardian.com/politics/live/2026/sep/23/andy-burnham-labour-anti-disinformation-uk-politics-latest-news-updates",
+      "publishedAt": "2026-09-23T08:09:23Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1109517,
+      "title": "At least 11 people killed in South Africa township shooting",
+      "url": "https://www.aljazeera.com/news/2026/9/23/at-least-11-people-killed-in-south-africa-township-shooting?traffic_source=rss",
+      "publishedAt": "2026-09-23T07:31:58Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Violent crime",
+          "Community trauma",
+          "Urban violence",
+          "South African murder rate",
+          "Rival gang conflict"
+        ],
+        "topic_tags": [
+          "Crime",
+          "Violence",
+          "World Affairs",
+          "Security"
+        ],
+        "key_entities": [
+          "Durban",
+          "KwaZulu-Natal",
+          "Thamsanqa Ntuli",
+          "eNCA",
+          "South Africa"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Crime"
+        ]
+      }
+    },
+    {
+      "id": 1109782,
+      "title": "Ethiopian Airlines cancels flights to Tigray amid concerns over renewed fighting",
+      "url": "https://abcnews.com/International/wireStory/ethiopian-airlines-cancels-flights-tigray-amid-concerns-renewed-136676469",
+      "publishedAt": "2026-09-23T08:36:53Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International"
+    },
+    {
+      "id": 1109799,
+      "title": "South Africa mass shooting leaves 11 dead, 3 wounded",
+      "url": "https://www.scmp.com/news/world/africa/article/3368504/south-africa-mass-shooting-leaves-11-dead-3-wounded",
+      "publishedAt": "2026-09-23T08:51:02Z",
+      "sourceId": 15,
+      "sourceName": "South China Morning Post World",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Violent crime",
+          "Community violence",
+          "South African security"
+        ],
+        "topic_tags": [
+          "Crime",
+          "World Affairs",
+          "Security"
+        ],
+        "key_entities": [
+          "KwaMakhutha",
+          "Durban",
+          "South Africa"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Breaking News"
+        ]
+      }
+    },
+    {
+      "id": 1109845,
+      "title": "UK pauses multimillion-pound payments to Mauritius as Trump blasts ‘terrible’ Chagos deal",
+      "url": "https://www.independent.co.uk/news/uk/politics/trump-chagos-islands-burnham-mauritius-streeting-b3054820.html",
+      "publishedAt": "2026-09-23T09:01:09Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1109846,
+      "title": "Trump shares bizarre cross-dressing clip in escalating feud with CNN",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-kaitlan-collins-cnn-united-nations-b3054757.html",
+      "publishedAt": "2026-09-23T08:56:17Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1109847,
+      "title": "Masoud Pezeshkian: Iran’s former heart surgeon president faces stark choice in UN speech after Trump threatens ‘annihilation’",
+      "url": "https://www.independent.co.uk/news/world/middle-east/iran-masoud-pezeshkian-un-speech-trump-b3054188.html",
+      "publishedAt": "2026-09-23T08:11:42Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1109924,
+      "title": "'Differing views normal part of deliberation': EC responds after report flags rift over SIR",
+      "url": "https://timesofindia.indiatimes.com/india/differing-views-normal-part-of-deliberation-ec-responds-after-report-flags-rift-over-sir/articleshow/134429923.cms",
+      "publishedAt": "2026-09-23T08:43:52Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1109926,
+      "title": "'This is treason': Rahul Gandhi revives 'vote chori' charge after report of rift within EC",
+      "url": "https://timesofindia.indiatimes.com/india/this-is-treason-rahul-gandhi-revives-vote-chori-charge-after-report-of-rift-within-ec/articleshow/134429014.cms",
+      "publishedAt": "2026-09-23T07:49:27Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1109927,
+      "title": "'Strategic desperation': Iran on Trump's 'annihilate Islamic Republic' remark",
+      "url": "https://timesofindia.indiatimes.com/world/middle-east/strategic-desperation-iran-on-trumps-annihilate-islamic-republic-remark/articleshow/134426578.cms",
+      "publishedAt": "2026-09-23T05:54:49Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1109939,
+      "title": "Kalkaji gangrape sparks Delhi-wide park safety audit including presence of Pink Police",
+      "url": "https://timesofindia.indiatimes.com/india/kalkaji-gangrape-sparks-delhi-wide-park-safety-audit-including-presence-of-pink-police/articleshow/134429763.cms",
+      "publishedAt": "2026-09-23T08:42:37Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1110070,
+      "title": "Mirabai Chanu wins Asian Games silver as Ri breaks weightlifting record",
+      "url": "https://www.aljazeera.com/sports/2026/9/23/mirabai-chanu-wins-asian-games-silver-as-ri-breaks-weightlifting-record?traffic_source=rss",
+      "publishedAt": "2026-09-23T08:58:18Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1110093,
+      "title": "Ukraine's Zelenskyy proposes energy truce with Russia during meeting with Trump",
+      "url": "https://www.npr.org/2026/09/23/nx-s1-5978127/ukraines-zelenskyy-proposes-energy-truce-with-russia-during-meeting-with-trump",
+      "publishedAt": "2026-09-23T08:45:17Z",
+      "sourceId": 10,
+      "sourceName": "NPR World"
+    },
+    {
+      "id": 1110153,
+      "title": "Hurricane Polo intensifies into rare category 5 storm off the coast of Mexico",
+      "url": "https://www.bbc.co.uk/news/articles/ckddvlrlr5qeo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-23T02:54:56Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1110297,
+      "title": "Killer robots or super intelligence? Trump and world leaders clash over AI",
+      "url": "https://www.euronews.com/2026/09/23/killer-robots-or-super-intelligence-trump-and-world-leaders-clash-over-ai",
+      "publishedAt": "2026-09-23T08:40:08Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1110399,
+      "title": "Moments after ICE shoot Venezuelan man seen in bodycam video",
+      "url": "https://www.independent.co.uk/tv/news/ice-shooting-venezuelan-man-video-b3054860.html",
+      "publishedAt": "2026-09-23T09:54:07Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1110405,
+      "title": "Eleven people killed including pregnant woman in mass shooting in South Africa",
+      "url": "https://www.independent.co.uk/news/world/africa/south-africa-shooting-pregnant-woman-dead-b3054742.html",
+      "publishedAt": "2026-09-23T09:09:29Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World",
+      "analysis": {
+        "primary_location": "South Africa",
+        "thematic_keywords": [
+          "Mass shooting",
+          "Community violence",
+          "Gun violence",
+          "South African crime",
+          "Urban violence",
+          "Homicide investigation"
+        ],
+        "topic_tags": [
+          "Crime",
+          "Security",
+          "World Affairs",
+          "Human Interest"
+        ],
+        "key_entities": [
+          "Durban",
+          "KwaMakhutha",
+          "South African Police Service",
+          "KwaZulu-Natal"
+        ],
+        "content_focus": [
+          "Security",
+          "World Affairs",
+          "Human Interest"
+        ]
+      }
+    },
+    {
+      "id": 1110485,
+      "title": "After 28 years, Mirabai Chanu finally puts India back on Asian Games weightlifting podium",
+      "url": "https://timesofindia.indiatimes.com/sports/asian-games-2026/after-28-years-mirabai-chanu-finally-puts-india-back-on-asian-games-weightlifting-podium/articleshow/134428940.cms",
+      "publishedAt": "2026-09-23T07:54:59Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1110605,
+      "title": "Chagos Islands deal ‘can’t go ahead’ without US support, Streeting says",
+      "url": "https://www.theguardian.com/world/2026/sep/23/chagos-islands-diego-garcia-streeting-us-support",
+      "publishedAt": "2026-09-23T10:11:13Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1110611,
+      "title": "Republican jitters grow as unpopular Trump fuels midterm ‘bloodbath’ fears",
+      "url": "https://www.theguardian.com/us-news/2026/sep/23/trump-republicans-midterms",
+      "publishedAt": "2026-09-23T10:00:47Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1110632,
+      "title": "Yemen government forces claim control of Mount Qarfan in Taiz",
+      "url": "https://www.aljazeera.com/news/2026/9/23/yemen-government-forces-claim-control-of-mount-qarfan-in-taiz?traffic_source=rss",
+      "publishedAt": "2026-09-23T10:15:37Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1110635,
+      "title": "Ethiopian Airlines suspends flights to three northern Tigray airports",
+      "url": "https://www.aljazeera.com/news/2026/9/23/ethiopian-airlines-suspends-flights-to-three-northern-tigray-airports?traffic_source=rss",
+      "publishedAt": "2026-09-23T09:58:51Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1110636,
+      "title": "‘Annihilate’ vs ‘crushing’ attacks: Why Iran, US up rhetoric amid talks",
+      "url": "https://www.aljazeera.com/news/2026/9/23/annihilate-vs-crushing-attacks-why-iran-us-up-rhetoric-amid-talks?traffic_source=rss",
+      "publishedAt": "2026-09-23T09:40:20Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "US-Iran tensions",
+          "Diplomatic negotiations",
+          "Military threats",
+          "Strategic rhetoric",
+          "Economic sanctions",
+          "Regional security",
+          "Nuclear program",
+          "International diplomacy"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Iran",
+          "United States",
+          "UNGA",
+          "Mojtaba Khamenei",
+          "Steve Witkoff",
+          "Jared Kushner",
+          "Abbas Araghchi",
+          "Strait of Hormuz"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1110850,
+      "title": "Video. Watch: Six-year-old girl breaks women’s Rubik’s Cube world record",
+      "url": "https://www.euronews.com/video/2026/09/23/watch-six-year-old-girl-breaks-womens-rubiks-cube-world-record",
+      "publishedAt": "2026-09-23T11:03:36Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1110851,
+      "title": "Tigray rebels seize airport and clash with federal forces as fighting in Ethiopia reignites",
+      "url": "https://www.euronews.com/2026/09/23/tigray-rebels-seize-airport-and-clash-with-federal-forces-as-fighting-in-ethiopia-reignite",
+      "publishedAt": "2026-09-23T11:03:33Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1111032,
+      "title": "'Deliberations sign of pure democracy': BJP reacts to EC 'SIR split' row, targets Congress",
+      "url": "https://timesofindia.indiatimes.com/india/deliberations-sign-of-pure-democracy-bjp-reacts-to-ec-sir-split-row-targets-congress/articleshow/134432747.cms",
+      "publishedAt": "2026-09-23T10:46:36Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1111035,
+      "title": "Asian Games 2026: Satwik-Chirag win not enough as India lose men's badminton semifinal to China; settle for bronze",
+      "url": "https://timesofindia.indiatimes.com/sports/asian-games-2026/asian-games-2026-satwik-chirag-win-not-enough-as-india-lose-mens-badminton-semifinal-to-china-settle-for-bronze/articleshow/134432274.cms",
+      "publishedAt": "2026-09-23T10:33:04Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1111038,
+      "title": "‘Governments formed amid lapses unconstitutional’: Akhilesh Yadav attacks EC over reported internal dissent on SIR",
+      "url": "https://timesofindia.indiatimes.com/india/governments-formed-amid-lapses-unconstitutional-akhilesh-yadav-attacks-ec-over-reported-internal-dissent-on-sir/articleshow/134432170.cms",
+      "publishedAt": "2026-09-23T10:45:27Z",
+      "sourceId": 14,
+      "sourceName": "Times of India World"
+    },
+    {
+      "id": 1111080,
+      "title": "Iran War Updates: U.S. and Iran hold first talks since June after Trump threatens regime with annihilation",
+      "url": "https://www.cbsnews.com/live-updates/iran-war-trump-un-speech-annihilate-threat-talks-resume/",
+      "publishedAt": "2026-09-23T11:03:54Z",
+      "sourceId": 17,
+      "sourceName": "CBS News World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "U.S.-Iran diplomacy",
+          "Nuclear non-proliferation",
+          "Middle East conflict",
+          "Diplomatic mediation",
+          "Military threat rhetoric",
+          "U.N. General Assembly",
+          "Regional security"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Diplomacy",
+          "Security",
+          "Politics"
+        ],
+        "key_entities": [
+          "United States",
+          "Iran",
+          "Donald Trump",
+          "Steve Witkoff",
+          "Masoud Pezeshkian",
+          "Qatar",
+          "U.N. General Assembly"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Security"
+        ]
+      }
+    },
+    {
+      "id": 1111154,
+      "title": "Iran denies dropping preconditions amid ‘very productive’ three-hour UN talks in New York",
+      "url": "https://www.theguardian.com/world/2026/sep/23/iran-denies-dropping-preconditions-very-productive-three-hour-un-talks-new-york",
+      "publishedAt": "2026-09-23T10:41:41Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World",
+      "analysis": {
+        "primary_location": "United States",
+        "thematic_keywords": [
+          "Iran-US diplomacy",
+          "Strait of Hormuz",
+          "Oil trade",
+          "Sanctions and economic pressure",
+          "Regional security",
+          "UN mediation",
+          "Geopolitical tensions",
+          "Oil prices",
+          "Naval blockades",
+          "Diplomatic negotiations",
+          "Gaza conflict",
+          "International law",
+          "Middle East politics"
+        ],
+        "topic_tags": [
+          "Politics",
+          "World Affairs",
+          "Economy",
+          "Security",
+          "Environment"
+        ],
+        "key_entities": [
+          "Iran",
+          "United States",
+          "Qatar",
+          "Donald Trump",
+          "Steve Witkoff",
+          "Jared Kushner",
+          "Abbas Araghchi",
+          "Esmail Baghaei",
+          "Masoud Pezeshkian",
+          "Emmanuel Macron",
+          "King Abdullah II",
+          "Brent crude",
+          "Strait of Hormuz",
+          "Bab al-Mandab strait",
+          "Houthis",
+          "Gaza"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Politics",
+          "Economy"
+        ]
+      }
+    },
+    {
+      "id": 1111167,
+      "title": "Trump to meet China’s Xi as Congress mulls bill banning artificial superintelligence – US politics live",
+      "url": "https://www.theguardian.com/us-news/live/2026/sep/23/donald-trump-xi-jinping-ai-china-us-politics-latest-news-updates",
+      "publishedAt": "2026-09-23T11:21:17Z",
+      "sourceId": 8,
+      "sourceName": "Guardian World"
+    },
+    {
+      "id": 1111178,
+      "title": "Dems have an edge over GOP, poll finds. And, ICE looks into 'mobile detention centers'",
+      "url": "https://www.npr.org/2026/09/23/g-s1-144632/up-first-newsletter-npr-polls-voter-approval-cnn-msnow-politico-trump-unga-speech-ice",
+      "publishedAt": "2026-09-23T11:13:32Z",
+      "sourceId": 10,
+      "sourceName": "NPR World"
+    },
+    {
+      "id": 1111191,
+      "title": "As AI leaders warn of catastrophe, US and China shun slowdown calls",
+      "url": "https://www.aljazeera.com/economy/2026/9/23/as-ai-leaders-warn-of-catastrophe-us-and-china-shun-slowdown-calls?traffic_source=rss",
+      "publishedAt": "2026-09-23T10:27:38Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    },
+    {
+      "id": 1111260,
+      "title": "Ethiopia's Mekelle airport in Tigray seized by local forces, residents tell the BBC.",
+      "url": "https://www.bbc.co.uk/news/articles/cry8zwwq21pxo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-09-23T11:42:52Z",
+      "sourceId": 7,
+      "sourceName": "BBC World News"
+    },
+    {
+      "id": 1111385,
+      "title": "What to know about the agreement signed by President Trump and the leaders of Denmark and Greenland",
+      "url": "https://abcnews.com/International/wireStory/agreement-signed-president-trump-leaders-denmark-greenland-136678876",
+      "publishedAt": "2026-09-23T11:26:01Z",
+      "sourceId": 12,
+      "sourceName": "AP via ABC News International",
+      "analysis": {
+        "primary_location": "Greenland",
+        "thematic_keywords": [
+          "Arctic security",
+          "U.S.-Denmark relations",
+          "Military base expansion",
+          "NATO Arctic strategy",
+          "Territorial sovereignty",
+          "Geopolitical tensions",
+          "Environmental protection",
+          "Self-determination rights"
+        ],
+        "topic_tags": [
+          "World Affairs",
+          "Security",
+          "Environment",
+          "Diplomacy"
+        ],
+        "key_entities": [
+          "Donald Trump",
+          "Denmark",
+          "Greenland",
+          "Pituffik Space Base",
+          "NATO",
+          "Golden Dome defense system"
+        ],
+        "content_focus": [
+          "World Affairs",
+          "Security",
+          "Environment"
+        ]
+      }
+    },
+    {
+      "id": 1111407,
+      "title": "UK to review Chagos deal after Trump tells Burnham it is 'terrible'",
+      "url": "https://www.euronews.com/2026/09/23/uk-to-review-chagos-deal-after-trump-tells-burnham-it-is-terrible",
+      "publishedAt": "2026-09-23T11:57:56Z",
+      "sourceId": 13,
+      "sourceName": "Euronews"
+    },
+    {
+      "id": 1111507,
+      "title": "Trump insists the US ‘win AI’ over China — or else. The reality is even more stark",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-xi-ai-china-nvidia-race-b3054536.html",
+      "publishedAt": "2026-09-23T11:59:23Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1111508,
+      "title": "Trump turns to ‘national security’ crutch to defend his media ban citing coverage on Iran War and the ballroom",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/trump-media-ban-national-security-ballroom-b3054967.html",
+      "publishedAt": "2026-09-23T11:50:57Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1111509,
+      "title": "Xi Jinping, Donald Trump and the strange politics of living forever",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/xi-jinping-trump-meeting-white-house-age-b3053650.html",
+      "publishedAt": "2026-09-23T11:47:44Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1111510,
+      "title": "ICE agent who shot Doordash driver was recruit who wasn’t using bodycam: report",
+      "url": "https://www.independent.co.uk/news/world/americas/us-politics/wilber-rafael-garces-perez-austin-texas-ice-b3054912.html",
+      "publishedAt": "2026-09-23T11:38:25Z",
+      "sourceId": 16,
+      "sourceName": "The Independent World"
+    },
+    {
+      "id": 1111740,
+      "title": "As Xi meets Trump, who’s winning their trade war?",
+      "url": "https://www.aljazeera.com/features/2026/9/23/as-xi-meets-trump-whos-winning-their-trade-war?traffic_source=rss",
+      "publishedAt": "2026-09-23T12:20:40Z",
+      "sourceId": 9,
+      "sourceName": "Al Jazeera"
+    }
+  ]
+}

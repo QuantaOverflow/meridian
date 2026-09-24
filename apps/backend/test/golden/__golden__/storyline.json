@@ -1,0 +1,425 @@
+{
+  "PER_EVENT_BLOCK_CAP": 4,
+  "perCluster": [
+    {
+      "clusterId": 12,
+      "articles": 11,
+      "distinctSources": 7,
+      "dominantEntity": "Iran",
+      "blockImportance": 9,
+      "prodImportance": 9
+    },
+    {
+      "clusterId": 61,
+      "articles": 11,
+      "distinctSources": 8,
+      "dominantEntity": "Greenland",
+      "blockImportance": 9,
+      "prodImportance": 9
+    },
+    {
+      "clusterId": 5,
+      "articles": 8,
+      "distinctSources": 4,
+      "dominantEntity": "Trump",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 10,
+      "articles": 8,
+      "distinctSources": 5,
+      "dominantEntity": "Trump",
+      "blockImportance": 8,
+      "prodImportance": 8
+    },
+    {
+      "clusterId": 34,
+      "articles": 7,
+      "distinctSources": 7,
+      "dominantEntity": "Ukraine",
+      "blockImportance": 8,
+      "prodImportance": 8
+    },
+    {
+      "clusterId": 41,
+      "articles": 7,
+      "distinctSources": 7,
+      "dominantEntity": "Africa",
+      "blockImportance": 8,
+      "prodImportance": 8
+    },
+    {
+      "clusterId": 14,
+      "articles": 6,
+      "distinctSources": 4,
+      "dominantEntity": "Trump",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 16,
+      "articles": 6,
+      "distinctSources": 4,
+      "dominantEntity": "Burnham",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 65,
+      "articles": 6,
+      "distinctSources": 5,
+      "dominantEntity": "Easter",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 4,
+      "articles": 5,
+      "distinctSources": 4,
+      "dominantEntity": "Iran",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 15,
+      "articles": 5,
+      "distinctSources": 1,
+      "dominantEntity": "SIR",
+      "blockImportance": 4,
+      "prodImportance": 4
+    },
+    {
+      "clusterId": 28,
+      "articles": 5,
+      "distinctSources": 4,
+      "dominantEntity": "Germany",
+      "blockImportance": 7,
+      "prodImportance": 7
+    },
+    {
+      "clusterId": 50,
+      "articles": 5,
+      "distinctSources": 1,
+      "dominantEntity": "Qatar",
+      "blockImportance": 4,
+      "prodImportance": 4
+    },
+    {
+      "clusterId": 1,
+      "articles": 4,
+      "distinctSources": 2,
+      "dominantEntity": "ICE",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 40,
+      "articles": 4,
+      "distinctSources": 4,
+      "dominantEntity": "Trump",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 43,
+      "articles": 4,
+      "distinctSources": 4,
+      "dominantEntity": "Ethiopia",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 51,
+      "articles": 4,
+      "distinctSources": 3,
+      "dominantEntity": "CNN",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 54,
+      "articles": 4,
+      "distinctSources": 2,
+      "dominantEntity": "Trump",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 62,
+      "articles": 4,
+      "distinctSources": 3,
+      "dominantEntity": "Hurricane",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 204,
+      "articles": 4,
+      "distinctSources": 4,
+      "dominantEntity": "Hayden",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 97,
+      "articles": 4,
+      "distinctSources": 4,
+      "dominantEntity": "Roman",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 109,
+      "articles": 4,
+      "distinctSources": 3,
+      "dominantEntity": "Iran",
+      "blockImportance": 6,
+      "prodImportance": 6
+    },
+    {
+      "clusterId": 0,
+      "articles": 3,
+      "distinctSources": 2,
+      "dominantEntity": "Rwanda",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 9,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Trump",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 13,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Russia",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 19,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Trump",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 24,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Trump",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 26,
+      "articles": 3,
+      "distinctSources": 2,
+      "dominantEntity": "Trump",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 29,
+      "articles": 3,
+      "distinctSources": 2,
+      "dominantEntity": "Burnham",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 32,
+      "articles": 3,
+      "distinctSources": 1,
+      "dominantEntity": "Kalkaji",
+      "blockImportance": 4,
+      "prodImportance": 4
+    },
+    {
+      "clusterId": 48,
+      "articles": 3,
+      "distinctSources": 2,
+      "dominantEntity": "Yemen",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 52,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Ceuta",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 55,
+      "articles": 3,
+      "distinctSources": 1,
+      "dominantEntity": "Bombay",
+      "blockImportance": 4,
+      "prodImportance": 4
+    },
+    {
+      "clusterId": 60,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Clavicular",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 67,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "DoorDash",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 69,
+      "articles": 3,
+      "distinctSources": 2,
+      "dominantEntity": "Asian",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 100,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Chagos",
+      "blockImportance": 5,
+      "prodImportance": 5
+    },
+    {
+      "clusterId": 102,
+      "articles": 3,
+      "distinctSources": 1,
+      "dominantEntity": "Asian",
+      "blockImportance": 4,
+      "prodImportance": 4
+    },
+    {
+      "clusterId": 123,
+      "articles": 3,
+      "distinctSources": 3,
+      "dominantEntity": "Cube",
+      "blockImportance": 5,
+      "prodImportance": 5
+    }
+  ],
+  "importanceTable": [
+    {
+      "sources": 0,
+      "articles": 0,
+      "importance": 1
+    },
+    {
+      "sources": -3,
+      "articles": -3,
+      "importance": 1
+    },
+    {
+      "sources": 1,
+      "articles": 1,
+      "importance": 3
+    },
+    {
+      "sources": 1,
+      "articles": 3,
+      "importance": 4
+    },
+    {
+      "sources": 2,
+      "articles": 2,
+      "importance": 4
+    },
+    {
+      "sources": 3,
+      "articles": 3,
+      "importance": 5
+    },
+    {
+      "sources": 3,
+      "articles": 30,
+      "importance": 8
+    },
+    {
+      "sources": 5,
+      "articles": 5,
+      "importance": 7
+    },
+    {
+      "sources": 8,
+      "articles": 16,
+      "importance": 9
+    },
+    {
+      "sources": 10,
+      "articles": 30,
+      "importance": 10
+    },
+    {
+      "sources": 30,
+      "articles": 30,
+      "importance": 10
+    },
+    {
+      "sources": 100,
+      "articles": 1000,
+      "importance": 10
+    }
+  ],
+  "dominantEntityEdges": [
+    {
+      "titles": [],
+      "key": ""
+    },
+    {
+      "titles": [
+        ""
+      ],
+      "key": ""
+    },
+    {
+      "titles": [
+        "the and but"
+      ],
+      "key": ""
+    },
+    {
+      "titles": [
+        "Nepal's floods",
+        "Nepal’s rescue",
+        "Nepal-Tibet road cut"
+      ],
+      "key": "Nepal"
+    },
+    {
+      "titles": [
+        "Russian drones hit Kyiv",
+        "Russia says talks stalled"
+      ],
+      "key": "Russia"
+    },
+    {
+      "titles": [
+        "Zebra wins",
+        "Apple wins"
+      ],
+      "key": "Apple"
+    },
+    {
+      "titles": [
+        "The Video Watch Live"
+      ],
+      "key": ""
+    }
+  ]
+}

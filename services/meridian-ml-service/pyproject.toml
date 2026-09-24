@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.34.2", # Includes performance extras
     "pydantic>=2.11.3",
     "numpy>=2.2.0",
-    "torch>=2.6.0",  # CPU version will be installed via extra-index-url
+    "torch==2.7.0",  # CPU 版，来源见下方 [tool.uv.sources]
     "transformers>=4.51.3",
     # 聚类算法依赖（AgglomerativeClustering）
     "scikit-learn>=1.5.0",
@@ -44,3 +44,13 @@ build-backend = "setuptools.build_meta"
 dev = [
     "httpx>=0.28.1",
 ]
+
+# torch 只从 PyTorch 的 CPU 源取：PyPI 上的 Linux 版带 CUDA（连带 30+ 个 nvidia 包、数 GB），
+# 容器里用不上。lock 与 Dockerfile 都按这里解析，镜像依赖由 uv.lock 锁定。
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }

@@ -8,6 +8,7 @@
 # （uvicorn 才能秒绑 8080，不再撞 CF Container 就绪窗口）。详见 memory: ml-service-cold-start。
 from __future__ import annotations
 
+import threading
 from functools import lru_cache
 from typing import Any, List
 import numpy as np
@@ -19,9 +20,21 @@ from .config import settings
 # 必须避免模块级引用 torch，否则照样触发 eager import）
 ModelComponents = tuple[Any, Any, Any]
 
-@lru_cache(maxsize=1)
+# 后台预热线程（main.py lifespan）与首个请求可能同时进来加载：lru_cache 不防并发首调，
+# 两个线程同时 import transformers 时后到的一方会拿到半初始化的模块，报
+# "cannot import name 'AutoModel'"、首个 /embeddings 回 500（2026-09-25 容器实测复现）。
+# 加锁让后到的一方等先到的加载完，再从缓存取。
+_load_lock = threading.Lock()
+
+
 def load_embedding_model() -> ModelComponents:
-    """加载嵌入模型组件（带缓存）"""
+    """加载嵌入模型组件（带缓存、线程安全）"""
+    with _load_lock:
+        return _load_embedding_model()
+
+
+@lru_cache(maxsize=1)
+def _load_embedding_model() -> ModelComponents:
     # 重库懒加载：仅在真正加载模型时才 import（首请求或后台预热触发），不拖慢 uvicorn 启动
     import torch
     from transformers import AutoModel, AutoTokenizer

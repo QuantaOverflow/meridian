@@ -26,7 +26,8 @@ async def get_embedding_model() -> ModelComponents:
             return _model_instance
 
         try:
-            _model_instance = load_embedding_model()
+            # 放进线程池：后台预热正在加载时，这里会在锁上等它，别把事件循环一起卡住
+            _model_instance = await asyncio.to_thread(load_embedding_model)
             return _model_instance
         except Exception as e:
             # Consider how to handle model loading failure more gracefully in API

@@ -15,10 +15,13 @@ RUN pip install uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies efficiently
-RUN uv pip install --system --no-cache --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu --requirement pyproject.toml && \
+# 严格按 uv.lock 装（--frozen：lock 与 pyproject 不一致就失败，不静默重新解析）。
+# 以前是 `--requirement pyproject.toml`，lock 根本没参与，每次构建都拿当时最新版本。
+# torch 的 CPU 版来自 PyTorch 源（pyproject 的 [tool.uv.sources]），这里仍要带上该源。
+RUN uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt && \
+    uv pip install --system --no-cache --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu --requirement /tmp/requirements.txt && \
     rm -rf /root/.cache /tmp/* /var/tmp/*
 
 # --- Runtime Stage ---

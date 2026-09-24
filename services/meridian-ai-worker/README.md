@@ -72,12 +72,12 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 ## 开发、测试、部署
 
 ```bash
-# 本地起服务。wrangler.toml 的 R2 是 remote = true（需 wrangler ≥ 4.37，本包锁的 3.x 不够），
-# 所以用 pinned 版本；本地 dev 的 R2 写入会落生产桶
-cd services/meridian-ai-worker && npx wrangler@4.120.0 dev --port 8787
+# 本地起服务。wrangler.toml 的 R2 是 remote = true（需 wrangler ≥ 4.37，本包锁 4.120.0）；
+# 本地 dev 的 R2 写入会落生产桶
+cd services/meridian-ai-worker && pnpm wrangler dev --port 8787
 
-pnpm -F meridian-ai-worker typecheck          # tsc --noEmit
-pnpm -F meridian-ai-worker exec vitest run    # test/（golden 快照与单元测试）
+pnpm -F meridian-ai-worker typecheck          # src + test 两遍 tsc
+pnpm -F meridian-ai-worker test               # vitest run：test/（golden 快照与单元测试）
 
 # 部署：只在本目录，永不从仓库根部署
 cd services/meridian-ai-worker && npx wrangler@4.120.0 deploy

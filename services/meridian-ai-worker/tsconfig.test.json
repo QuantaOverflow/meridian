@@ -15,7 +15,7 @@
     "types": ["@cloudflare/workers-types", "vitest/globals"]
   },
   "include": [
-    "tests/**/*.ts",
+    "test/**/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [

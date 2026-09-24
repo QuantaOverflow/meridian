@@ -1,115 +1,11 @@
+import type { RequestMetadata } from './types/api'
+
 // =============================================================================
 // AI Capabilities
 // =============================================================================
 
-export type AICapability = 'chat' | 'embedding' | 'image' | 'audio' | 'vision' | 'video' | 'text-to-speech' | 'speech-to-text' | 'live-audio' | 'live-video' | 'function_calling'
-
-// =============================================================================
-// Authentication Types
-// =============================================================================
-
-export interface AuthenticationConfig {
-  apiKey?: string
-  signature?: string
-  requestId?: string
-  clientId?: string
-  customHeaders?: Record<string, string>
-}
-
-// =============================================================================
-// Request Metadata Types
-// =============================================================================
-
-export interface RequestMetadata {
-  requestId: string
-  timestamp: number
-  userId?: string
-  clientId?: string
-  userAgent?: string
-  ipAddress?: string
-  region?: string
-  source?: {
-    origin?: string
-    userAgent?: string
-    ip?: string
-  }
-  cloudflare?: {
-    country?: string
-    region?: string
-    colo?: string
-    ray?: string
-    visitor?: string
-    worker?: string
-  }
-  headers?: Record<string, string>
-  performance?: {
-    tokenUsage?: {
-      promptTokens: number
-      completionTokens: number
-      totalTokens: number
-    }
-    latency?: {
-      totalLatency: number
-      providerLatency: number
-      gatewayLatency: number
-    }
-    cost?: {
-      estimatedCost: number
-      currency: string
-    }
-  }
-  processing?: {
-    provider?: string
-    model?: string
-    capability?: string
-    startTime?: number
-    duration?: number
-  }
-  customTags?: Record<string, string>
-  traceId?: string
-  spanId?: string
-  auth?: {
-    authenticated: boolean
-    userId?: string
-    apiKeyUsed?: boolean
-    apiKeyHash?: string
-    errors?: string[]
-  }
-  error?: {
-    type: string
-    message: string
-    statusCode?: number
-    retryable?: boolean
-    code?: number
-    retryAttempts?: number
-  }
-}
-
-// =============================================================================
-// Retry Configuration Types
-// =============================================================================
-
-export interface RetryConfig {
-  maxRetries: number
-  baseDelayMs: number
-  maxDelayMs: number
-  exponentialBase: number
-  retryableStatusCodes: number[]
-  retryableErrors: string[]
-  // Support alternative property names for backward compatibility
-  baseDelay?: number
-  maxDelay?: number
-  backoffFactor?: number
-  jitter?: boolean
-  maxAttempts?: number
-}
-
-export interface RetryAttempt {
-  attemptNumber: number
-  delayMs: number
-  error?: Error
-  timestamp: number
-}
+// 只剩 chat：其余 capability 从无调用方，已删。
+export type AICapability = 'chat'
 
 // =============================================================================
 // Logging Types
@@ -134,7 +30,6 @@ export interface LogEntry {
 interface BaseAIRequest {
   model?: string
   provider?: string
-  fallback?: boolean
   temperature?: number
   max_tokens?: number
   stream?: boolean
@@ -155,10 +50,7 @@ interface BaseAIRequest {
   // 离线 eval 需要独立采样：同 prompt 重问若吃缓存会拿回同一份答案，
   // 把"模型稳定"和"缓存命中"混为一谈，A/B 的真实样本量退化成 1（见 judge 模型 cache_ttl:0 同因）。
   skipCache?: boolean
-  // Authentication and metadata
-  auth?: AuthenticationConfig
   metadata?: Partial<RequestMetadata>
-  retryConfig?: Partial<RetryConfig>
 }
 
 export interface ChatRequest extends BaseAIRequest {
@@ -166,89 +58,7 @@ export interface ChatRequest extends BaseAIRequest {
   messages: ChatMessage[]
 }
 
-export interface EmbeddingRequest extends BaseAIRequest {
-  capability: 'embedding'
-  input: string | string[]
-  dimensions?: number
-  // Extended for BGE-M3 support
-  query?: string
-  contexts?: Array<{ text: string }>
-  truncate_inputs?: boolean
-}
-
-export interface ImageRequest extends BaseAIRequest {
-  capability: 'image'
-  prompt: string
-  size?: string
-  quality?: string
-  style?: string
-  n?: number
-}
-
-interface AudioRequest extends BaseAIRequest {
-  capability: 'audio'
-  input: string
-  voice?: string
-  format?: string
-  speed?: number
-}
-
-interface VisionRequest extends BaseAIRequest {
-  capability: 'vision'
-  messages: VisionMessage[]
-}
-
-export interface VideoRequest extends BaseAIRequest {
-  capability: 'video'
-  prompt: string
-  duration?: number
-  resolution?: string
-  fps?: number
-  style?: string
-  image_input?: string // 可选的输入图像
-}
-
-export interface TextToSpeechRequest extends BaseAIRequest {
-  capability: 'text-to-speech'
-  input: string
-  voice?: string
-  language?: string
-  format?: string
-  speed?: number
-  pitch?: number
-}
-
-interface SpeechToTextRequest extends BaseAIRequest {
-  capability: 'speech-to-text'
-  audio: string // base64 encoded audio
-  language?: string
-  format?: string
-}
-
-export interface LiveAudioRequest extends BaseAIRequest {
-  capability: 'live-audio'
-  audio_stream: string
-  session_id?: string
-  config?: {
-    sample_rate?: number
-    encoding?: string
-    language?: string
-  }
-}
-
-interface LiveVideoRequest extends BaseAIRequest {
-  capability: 'live-video'
-  video_stream: string
-  audio_stream?: string
-  session_id?: string
-  config?: {
-    resolution?: string
-    fps?: number
-    language?: string
-  }
-}
-
-export type AIRequest = ChatRequest | EmbeddingRequest | ImageRequest | AudioRequest | VisionRequest | VideoRequest | TextToSpeechRequest | SpeechToTextRequest | LiveAudioRequest | LiveVideoRequest
+export type AIRequest = ChatRequest
 
 // =============================================================================
 // Message Types
@@ -257,15 +67,6 @@ export type AIRequest = ChatRequest | EmbeddingRequest | ImageRequest | AudioReq
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
-}
-
-interface VisionMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string | Array<{
-    type: 'text' | 'image_url'
-    text?: string
-    image_url?: { url: string }
-  }>
 }
 
 // =============================================================================
@@ -282,9 +83,6 @@ interface BaseAIResponse {
     completion_tokens?: number
     total_tokens?: number
   }
-  // Added response metadata
-  metadata?: RequestMetadata
-  retryAttempts?: RetryAttempt[]
   processingTime?: number
 }
 
@@ -296,82 +94,7 @@ export interface ChatResponse extends BaseAIResponse {
   }>
 }
 
-export interface EmbeddingResponse extends BaseAIResponse {
-  capability: 'embedding'
-  data: Array<{
-    embedding: number[]
-    index: number
-    // Extended for BGE-M3 query/context support
-    score?: number
-    context_id?: number
-  }>
-}
-
-export interface ImageResponse extends BaseAIResponse {
-  capability: 'image'
-  data: Array<{
-    url?: string
-    b64_json?: string
-    revised_prompt?: string
-  }>
-}
-
-interface AudioResponse extends BaseAIResponse {
-  capability: 'audio'
-  data: string // base64 encoded audio
-}
-
-interface VisionResponse extends BaseAIResponse {
-  capability: 'vision'
-  choices: Array<{
-    message: ChatMessage
-    finish_reason: string
-  }>
-}
-
-export interface VideoResponse extends BaseAIResponse {
-  capability: 'video'
-  data: Array<{
-    url?: string
-    b64_video?: string
-    duration?: number
-    resolution?: string
-    fps?: number
-  }>
-}
-
-export interface TextToSpeechResponse extends BaseAIResponse {
-  capability: 'text-to-speech'
-  data: string // base64 encoded audio
-  format?: string
-  duration?: number
-}
-
-interface SpeechToTextResponse extends BaseAIResponse {
-  capability: 'speech-to-text'
-  text: string
-  confidence?: number
-  language?: string
-}
-
-export interface LiveAudioResponse extends BaseAIResponse {
-  capability: 'live-audio'
-  session_id: string
-  response_audio?: string
-  text_response?: string
-  status: 'listening' | 'processing' | 'responding' | 'completed'
-}
-
-interface LiveVideoResponse extends BaseAIResponse {
-  capability: 'live-video'
-  session_id: string
-  response_video?: string
-  response_audio?: string
-  text_response?: string
-  status: 'processing' | 'responding' | 'completed'
-}
-
-export type AIResponse = ChatResponse | EmbeddingResponse | ImageResponse | AudioResponse | VisionResponse | VideoResponse | TextToSpeechResponse | SpeechToTextResponse | LiveAudioResponse | LiveVideoResponse
+export type AIResponse = ChatResponse
 
 // =============================================================================
 // Provider Configuration
@@ -413,52 +136,7 @@ export interface AIGatewayRequest {
   provider: string
   endpoint: string
   headers: Record<string, string>
-  query: any // For AI Gateway Universal Endpoint format
-  // Added for enhanced features
-  metadata?: RequestMetadata
-  retryConfig?: RetryConfig
-  enhancedConfig?: AIGatewayEnhancedConfig
-}
-
-// =============================================================================
-// AI Gateway Enhanced Features
-// =============================================================================
-
-interface AIGatewayCostConfig {
-  per_token_in?: number
-  per_token_out?: number
-  per_request?: number
-  per_image?: number
-  per_second?: number
-}
-
-interface AIGatewayCacheConfig {
-  ttl?: number // Time to live in seconds
-  key?: string // Custom cache key
-  skipCache?: boolean
-  cacheNamespace?: string
-}
-
-interface AIGatewayAuthConfig {
-  token?: string
-  skipAuthentication?: boolean
-  customHeaders?: Record<string, string>
-}
-
-interface AIGatewayMetricsConfig {
-  collectMetrics?: boolean
-  customTags?: Record<string, string>
-  enableLogging?: boolean
-  logLevel?: 'debug' | 'info' | 'warn' | 'error'
-}
-
-export interface AIGatewayEnhancedConfig {
-  cost?: AIGatewayCostConfig
-  cache?: AIGatewayCacheConfig
-  auth?: AIGatewayAuthConfig
-  metrics?: AIGatewayMetricsConfig
-  fallback?: boolean
-  retryConfig?: Partial<RetryConfig>
+  query: any
 }
 
 // =============================================================================
@@ -491,21 +169,8 @@ export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends
 export interface CloudflareEnv extends Record<string, string | undefined> {
   CLOUDFLARE_ACCOUNT_ID: string
   CLOUDFLARE_GATEWAY_ID: string
-  CLOUDFLARE_API_TOKEN: string
-  OPENAI_API_KEY: string
-  ANTHROPIC_API_KEY?: string
-  GOOGLE_AI_API_KEY?: string
   DASHSCOPE_API_KEY?: string
-  // Authentication and security
-  API_SECRET_KEY?: string
-  ALLOWED_ORIGINS?: string
-  // AI Gateway enhanced features
   AI_GATEWAY_TOKEN?: string
-  DEFAULT_CACHE_TTL?: string
-  ENABLE_COST_TRACKING?: string
-  // Retry configuration
-  DEFAULT_MAX_RETRIES?: string
-  DEFAULT_RETRY_DELAY_MS?: string
   // Logging configuration
   LOG_LEVEL?: string
   ENABLE_DETAILED_LOGGING?: string

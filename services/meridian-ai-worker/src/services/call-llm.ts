@@ -151,7 +151,6 @@ export function callLLM(
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;
   return loggedChat(aiGateway, env, t, phase, request).then(async res => {
-    // AIResponse 是联合类型（含 EmbeddingResponse），这里恒为 chat 分支，故用 in 收窄
     if ('choices' in res) {
       const content = res.choices?.[0]?.message?.content ?? '';
       const alarm = checkOutputLanguage(phase, content);

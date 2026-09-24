@@ -32,10 +32,9 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
 | `POST /meridian/generate-brief-tldr` | `{briefTitle, briefContent}` → `tldr`（机器格式，给次日管线读，不给读者看） | AutoBriefGeneration |
 | `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
-| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`）、手动脚本 `tests/test-llama-3.3.js` |
+| `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 provider `dashscope` / `qwen-plus` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`） |
 
-路由本身**没有鉴权**（`services/auth.ts` 的 `AuthenticationService` 只在无调用方的
-`processRequestWithAuth` 里用到）。靠 `wrangler.toml` 的 `workers_dev = false` 不开公网地址：
+路由本身**没有鉴权**。靠 `wrangler.toml` 的 `workers_dev = false` 不开公网地址：
 生产只有 backend 经 service binding（`AI_WORKER`）能调到；eval 脚本打本地 `wrangler dev`。
 
 ## LLM 调用怎么走
@@ -61,14 +60,11 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
 | `ARTICLES_BUCKET`（R2 binding） | 观测落盘 + 读文章正文，与 backend 同一个桶 `meridian-articles-prod` |
 | `CF_VERSION_METADATA`（binding） | span 里的 `deployment_version` |
-| `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_GATEWAY_ID` | 拼 AI Gateway URL（非 workers-ai provider 用）；没有 account id 时会注册 mock provider |
+| `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_GATEWAY_ID` | 拼 AI Gateway URL（只有 dashscope 用） |
 | `AI_GATEWAY_TOKEN` 🔐 | Gateway 开了鉴权时发 `cf-aig-authorization` |
 | `DASHSCOPE_API_KEY` 🔐 | 注册 dashscope provider（`/meridian/chat` 默认用它）；2026-07-29 起该 key 返回 401，现行管线不依赖它 |
-| `OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`GOOGLE_AI_API_KEY`、`CLOUDFLARE_API_TOKEN` 🔐 | 有值才注册对应 provider；`CLOUDFLARE_API_TOKEN` 是 Workers AI 的 REST 通道，binding 在时用不上 |
-| `ENABLE_COST_TRACKING`、`DEFAULT_CACHE_TTL`、`ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | Gateway 请求头 / 日志开关 |
-| `DEFAULT_MAX_RETRIES`、`DEFAULT_RETRY_DELAY_MS` | `AIGatewayService` 的重试参数 |
-| `ENVIRONMENT` | `wrangler.toml` 的 `[env.*].vars` 设置；`development` 时注册 mock provider |
-| `GATEWAY_API_KEYS`、`API_SECRET_KEY`、`ALLOWED_ORIGINS` | 只被 `AuthenticationService` 读，而它不在任何路由上（见上） |
+| `ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | `services/logger.ts` 的日志开关 |
+| `ENVIRONMENT` | `wrangler.toml` 的 `[env.*].vars` 设置；只写进 span 的 `runtime_env` |
 
 ## 观测数据落在哪
 
@@ -89,7 +85,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 cd services/meridian-ai-worker && npx wrangler@4.120.0 dev --port 8787
 
 pnpm -F meridian-ai-worker typecheck          # tsc --noEmit
-pnpm -F meridian-ai-worker exec vitest run    # test/（golden 快照）+ tests/（auth / metadata / retry 单元测试）
+pnpm -F meridian-ai-worker exec vitest run    # test/（golden 快照与单元测试）
 
 # 部署：只在本目录，永不从仓库根部署
 cd services/meridian-ai-worker && npx wrangler@4.120.0 deploy

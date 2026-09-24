@@ -42,22 +42,9 @@ enabled = true
 
 
 
-# Environment variables (set these using wrangler secret put)
-# Required:
-# CLOUDFLARE_ACCOUNT_ID
-# CLOUDFLARE_GATEWAY_ID  
-# CLOUDFLARE_API_TOKEN
-# OPENAI_API_KEY
-
-# Optional Provider API Keys:
-# ANTHROPIC_API_KEY
-# GOOGLE_AI_API_KEY
-
-# AI Gateway Enhanced Features (optional):
-# AI_GATEWAY_TOKEN - AI Gateway authentication token (sent as cf-aig-authorization)
-# ENABLE_COST_TRACKING - Enable automatic cost tracking (true/false)
-# DEFAULT_CACHE_TTL - Default cache TTL in seconds (falls back to per-request default)
-# ENABLE_DETAILED_LOGGING - Enable detailed logging (true/false)
+# Secrets / vars（wrangler secret put；本地见 .dev.vars.example）:
+# CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_GATEWAY_ID, AI_GATEWAY_TOKEN, DASHSCOPE_API_KEY
+# LOG_LEVEL, ENABLE_DETAILED_LOGGING（可选）
 
 # Note: ML Service integration has been decoupled from AI Worker
 # For clustering functionality, directly call meridian-ml-service endpoints

@@ -1,4 +1,4 @@
-import { CloudflareEnv, LogEntry, LogLevel, RequestMetadata, RetryAttempt } from '../types'
+import { CloudflareEnv, LogEntry, LogLevel } from '../types'
 
 export class Logger {
   private logLevel: LogLevel
@@ -27,38 +27,6 @@ export class Logger {
     this.writeLog(entry)
   }
 
-  logRequest(requestId: string, method: string, url: string, metadata?: RequestMetadata): void {
-    this.log('info', 'Request started', {
-      requestId,
-      method,
-      url,
-      userId: metadata?.userId,
-      clientId: metadata?.clientId,
-      region: metadata?.region,
-      customTags: metadata?.customTags
-    })
-  }
-
-  logResponse(requestId: string, statusCode: number, duration: number, provider?: string): void {
-    this.log('info', 'Request completed', {
-      requestId,
-      statusCode,
-      duration,
-      provider
-    })
-  }
-
-  logRetryAttempt(requestId: string, attempt: RetryAttempt, totalRetries: number): void {
-    this.log('warn', 'Retry attempt', {
-      requestId,
-      attemptNumber: attempt.attemptNumber,
-      totalRetries,
-      delayMs: attempt.delayMs,
-      error: attempt.error?.message,
-      timestamp: attempt.timestamp
-    })
-  }
-
   logProviderError(requestId: string, provider: string, error: Error, context?: Record<string, any>): void {
     this.log('error', 'Provider request failed', {
       requestId,
@@ -67,24 +35,6 @@ export class Logger {
       errorStack: this.enableDetailedLogging ? error.stack : undefined,
       ...context
     }, error)
-  }
-
-  logAuthenticationEvent(requestId: string, event: string, success: boolean, details?: Record<string, any>): void {
-    this.log(success ? 'info' : 'warn', `Authentication ${event}`, {
-      requestId,
-      event,
-      success,
-      ...details
-    })
-  }
-
-  logPerformanceMetric(requestId: string, metric: string, value: number, unit: string): void {
-    this.log('info', 'Performance metric', {
-      requestId,
-      metric,
-      value,
-      unit
-    })
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -161,39 +111,4 @@ export class Logger {
     }
   }
 
-  // Utility method to create a child logger with additional context
-  createChild(additionalMetadata: Record<string, any>): ChildLogger {
-    return new ChildLogger(this, additionalMetadata)
-  }
-}
-
-class ChildLogger {
-  constructor(
-    private parent: Logger,
-    private additionalMetadata: Record<string, any>
-  ) {}
-
-  log(level: LogLevel, message: string, metadata?: Record<string, any>, error?: Error, duration?: number): void {
-    const combinedMetadata = {
-      ...this.additionalMetadata,
-      ...metadata
-    }
-    this.parent.log(level, message, combinedMetadata, error, duration)
-  }
-
-  info(message: string, metadata?: Record<string, any>): void {
-    this.log('info', message, metadata)
-  }
-
-  warn(message: string, metadata?: Record<string, any>): void {
-    this.log('warn', message, metadata)
-  }
-
-  error(message: string, metadata?: Record<string, any>, error?: Error): void {
-    this.log('error', message, metadata, error)
-  }
-
-  debug(message: string, metadata?: Record<string, any>): void {
-    this.log('debug', message, metadata)
-  }
 }

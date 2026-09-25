@@ -362,8 +362,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             articleLogger.info('Individual article analysis completed', { durationMs: Date.now() - individualAnalysisStartTime });
 
             articleLogger.debug('Article analysis completed', {
-              topic_tags_count: articleAnalysis?.topic_tags.length || 0,
-              entities_count: articleAnalysis?.key_entities.length || 0,
+              topic_tags_count: articleAnalysis?.topic_tags?.length || 0,
+              entities_count: articleAnalysis?.key_entities?.length || 0,
             });
 
             const date = article.publishedTime ? new Date(article.publishedTime) : new Date();

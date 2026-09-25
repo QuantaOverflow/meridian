@@ -198,7 +198,7 @@ node compare-verdicts.mjs out/arm-a/verdict-c43.judgeA.json out/arm-a/verdict-c4
 ```json
 {
   "cluster": 36,
-  "coverage": [ { "eventId": 1, "covered": true, "where": "b1s3" } ],
+  "coverage": { "examined": 12, "covered": [ { "eventId": 1, "where": "b1s3" } ] },
   "claims": [
     { "sentenceRef": "b1s3", "claim": "被核的那个断言", "verdict": "supported", "tier": "ok",
       "citedSentenceSuffices": true, "why": "一句话理由" }
@@ -208,8 +208,8 @@ node compare-verdicts.mjs out/arm-a/verdict-c43.judgeA.json out/arm-a/verdict-c4
 ```
 
 `verdict` ∈ `supported`/`contradicted`/`not_found`;`tier` ∈ `fatal`/`hard`/`distortion`/`ok`。
-`coverage` 必须盖满清单全部条目 —— 漏判会被 `score-slow.mjs` 拦住并 exit 2,因为漏判会让
-覆盖率虚高(分母被悄悄缩小)。`citedSentenceSuffices` 每条必填,缺了同样 exit 2。
+`coverage.covered` 只列命中的事件,`coverage.examined` 必须等于清单的判定条数 —— 对不上会被
+`score-slow.mjs` 拦住并 exit 2,因为漏判会让覆盖率虚高(分母被悄悄缩小)。`citedSentenceSuffices` 每条必填,缺了同样 exit 2。
 
 ### 派判官的 prompt 必须写死三条(2026-09-19 教训)
 

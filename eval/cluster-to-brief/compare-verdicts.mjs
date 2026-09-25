@@ -67,11 +67,17 @@ const inter = [...sa].filter(r => sb.has(r)).length;
 const union = new Set([...sa, ...sb]).size;
 const jac = union ? +(inter / union).toFixed(3) : null;
 
-// 覆盖
-const ca = new Map((A.coverage ?? []).map(c => [c.eventId, !!c.covered]));
-const cb = new Map((B.coverage ?? []).map(c => [c.eventId, !!c.covered]));
-const covBoth = [...ca.keys()].filter(k => cb.has(k));
-const covDiff = covBoth.filter(k => ca.get(k) !== cb.get(k));
+// 覆盖。现行格式(build-judge-pack 写的)是 {examined, covered:[{eventId, where}]},只列命中的;
+// 旧格式是逐条 [{eventId, covered}]。两种都归一成「命中集合 + 看过的条数」再比。
+function coverageOf(v) {
+  const raw = v.coverage;
+  if (Array.isArray(raw)) return { hit: new Set(raw.filter(c => c.covered).map(c => c.eventId)), examined: raw.length };
+  return { hit: new Set((raw?.covered ?? []).map(c => c.eventId)), examined: Number.isInteger(raw?.examined) ? raw.examined : null };
+}
+const ca = coverageOf(A), cb = coverageOf(B);
+if (ca.examined !== cb.examined) console.warn(`⚠ 两份判定看过的事件条数不同: A ${ca.examined} / B ${cb.examined} —— 覆盖读数不可比`);
+const covDiff = [...new Set([...ca.hit, ...cb.hit])].filter(k => ca.hit.has(k) !== cb.hit.has(k)).sort((x, y) => x - y);
+const covExamined = Math.max(ca.examined ?? 0, cb.examined ?? 0);
 
 const pct = (n, d) => (d ? `${((100 * n) / d).toFixed(1)}%` : '—');
 
@@ -84,7 +90,7 @@ console.log(`二元不一致      ${binDiff}/${both.length} = ${pct(binDiff, bot
 console.log(`四档不一致      ${tierDiff}/${both.length} = ${pct(tierDiff, both.length)}`);
 console.log(`非 ok 句数      A ${nonOkA} / B ${nonOkB}   ← 打架读数:两边都塌到 0 时,再低的不一致率也没有意义`);
 console.log(`引用不足集合    A ${sa.size} / B ${sb.size} · 交 ${inter} · 并 ${union} · Jaccard ${jac ?? '—'}`);
-console.log(`覆盖不一致      ${covDiff.length}/${covBoth.length} = ${pct(covDiff.length, covBoth.length)}${covDiff.length ? `(eventId ${covDiff.slice(0, 10).join(',')}${covDiff.length > 10 ? '…' : ''})` : ''}`);
+console.log(`覆盖不一致      ${covDiff.length}/${covExamined} = ${pct(covDiff.length, covExamined)}${covDiff.length ? `(eventId ${covDiff.slice(0, 10).join(',')}${covDiff.length > 10 ? '…' : ''})` : ''}`);
 
 if (diffs.length) {
   console.log('\n档位不同的句子:');

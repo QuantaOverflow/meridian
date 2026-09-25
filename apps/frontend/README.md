@@ -41,3 +41,24 @@ pnpm -F @meridian/frontend typecheck   # nuxt typecheck
 ```
 
 `nuxt.config.ts` 只在生产开 HTTP 缓存；本地 dev 下数据改动立即可见。
+
+## 测试
+
+端到端测试（`test/*.test.ts`）：`@nuxt/test-utils` 真实构建并启动服务（测试里改用 `node-server` preset），
+Playwright 驱动浏览器，backend 由测试自己起的 HTTP 服务假冒，数据库用**本机**测试库（测试会清空 `sources`，
+非 localhost 的地址直接拒绝）。只测逻辑与交互；Workers（workerd）才有的问题测不到。
+
+一次性准备测试库（本机 Postgres，需 pgvector；不要先手动建 `vector` 扩展，第一个 migration 会建）：
+
+```bash
+createdb meridian_frontend_test
+DATABASE_URL=postgresql://<user>:<pw>@localhost:5432/meridian_frontend_test pnpm -F @meridian/database migrate
+```
+
+运行（每个文件先构建一次，约一分钟）：
+
+```bash
+FRONTEND_TEST_DATABASE_URL=postgresql://<user>:<pw>@localhost:5432/meridian_frontend_test pnpm -F @meridian/frontend test
+```
+
+改了 schema 之后要对测试库重跑 migrate。浏览器用 `playwright-core` 1.53.2 对应的 Chromium（本机缓存 `~/Library/Caches/ms-playwright/chromium-1179`；新机器 `npx playwright-core@1.53.2 install chromium`）。

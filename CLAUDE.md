@@ -27,7 +27,8 @@
 - 分支：`meridian-dev` 是主干（没有 `main`）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
 - 完成前跑 `pnpm typecheck` + 相关测试。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
-  `pnpm -F @meridian/backend test`、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`；
+  `pnpm -F @meridian/backend test`、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
+  前端端到端 `pnpm -F @meridian/frontend test`（要本机测试库，见 `apps/frontend/README.md`「测试」）；
   整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
 - 报错先 `wrangler tail`，再加 console.log
 

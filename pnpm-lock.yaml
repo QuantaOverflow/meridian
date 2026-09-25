@@ -186,6 +186,9 @@ importers:
       '@meridian/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@nuxt/test-utils':
+        specifier: 3.17.2
+        version: 3.17.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(magicast@0.3.5)(playwright-core@1.53.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vitest@3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1))(yaml@2.9.1)
       '@nuxtjs/color-mode':
         specifier: 3.5.2
         version: 3.5.2(magicast@0.3.5)
@@ -204,9 +207,15 @@ importers:
       nuxt-auth-utils:
         specifier: 0.5.20
         version: 0.5.20(magicast@0.3.5)
+      playwright-core:
+        specifier: 1.53.2
+        version: 1.53.2
       tailwindcss:
         specifier: ^4.1.4
         version: 4.1.4
+      vitest:
+        specifier: 3.1.2
+        version: 3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1)
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.8.3)
@@ -1850,6 +1859,42 @@ packages:
     resolution: {integrity: sha512-Zh4HJLjzvm3Cq9w6sfzIFyH9ozK5ePYVfCUzzUQNiZojFsI2k1QkSBrVI9BGc6ArKXj/O6rkI6w7qQ+ouL8Cag==}
     engines: {node: '>=18.12.0'}
     hasBin: true
+
+  '@nuxt/test-utils@3.17.2':
+    resolution: {integrity: sha512-i1NiWsJx8sv8Zg8z3WD7ITehMi9s8DaR6ArgmDHaKkQ6RJSaVhrPKyGBTv3gzdoF8CHUKa3MNhdX62JWblvLMg==}
+    engines: {node: ^18.20.5 || ^20.9.0 || ^22.0.0 || >=23.0.0}
+    peerDependencies:
+      '@cucumber/cucumber': ^10.3.1 || ^11.0.0
+      '@jest/globals': ^29.5.0
+      '@playwright/test': ^1.43.1
+      '@testing-library/vue': ^7.0.0 || ^8.0.1
+      '@vitest/ui': '*'
+      '@vue/test-utils': ^2.4.2
+      happy-dom: ^9.10.9 || ^10.0.0 || ^11.0.0 || ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+      jsdom: ^22.0.0 || ^23.0.0 || ^24.0.0 || ^25.0.0 || ^26.0.0
+      playwright-core: ^1.43.1
+      vitest: ^0.34.6 || ^1.0.0 || ^2.0.0 || ^3.0.0
+    peerDependenciesMeta:
+      '@cucumber/cucumber':
+        optional: true
+      '@jest/globals':
+        optional: true
+      '@playwright/test':
+        optional: true
+      '@testing-library/vue':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      '@vue/test-utils':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+      playwright-core:
+        optional: true
+      vitest:
+        optional: true
 
   '@nuxt/vite-builder@3.16.2':
     resolution: {integrity: sha512-HjK3iZb5GAC4hADOkl2ayn2uNUG4K4qizJ7ud4crHLPw6WHPeT/RhB3j7PpsyRftBnHhlZCsL4Gj/i3rmdcVJw==}
@@ -3616,6 +3661,10 @@ packages:
   externality@1.0.2:
     resolution: {integrity: sha512-LyExtJWKxtgVzmgtEHyQtLFpw1KFhQphF9nTG8TpAIVkiI/xQ3FJh75tRFLYl4hkn7BNIIdLJInuDAavX35pMw==}
 
+  fake-indexeddb@6.2.5:
+    resolution: {integrity: sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w==}
+    engines: {node: '>=18'}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -4644,6 +4693,11 @@ packages:
 
   pkg-types@2.1.0:
     resolution: {integrity: sha512-wmJwA+8ihJixSoHKxZJRBQG1oY8Yr9pGLzRmSsNms0iNWyHHAlZCa7mmKiFR10YPZuz/2k169JiS/inOjBCZ2A==}
+
+  playwright-core@1.53.2:
+    resolution: {integrity: sha512-ox/OytMy+2w1jcYEYlOo1Hhp8hZkLCximMTUTMBXjGUA1KoFfiSZ+DU+3a739jsPY0yoKH2TFy9S2fsJas8yAw==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
@@ -5700,6 +5754,9 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  vitest-environment-nuxt@1.0.1:
+    resolution: {integrity: sha512-eBCwtIQriXW5/M49FjqNKfnlJYlG2LWMSNFsRVKomc8CaMqmhQPBS5LZ9DlgYL9T8xIVsiA6RZn2lk7vxov3Ow==}
 
   vitest@1.6.1:
     resolution: {integrity: sha512-Ljb1cnSJSivGN0LqXd/zmDbWEM0RNNg2t1QW/XUhYl/qPqyu7CsqeWtqQXHVaJsecLPuDoak2oJcZN2QoRIOag==}
@@ -7165,6 +7222,53 @@ snapshots:
       std-env: 3.9.0
     transitivePeerDependencies:
       - magicast
+
+  '@nuxt/test-utils@3.17.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(magicast@0.3.5)(playwright-core@1.53.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vitest@3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1))(yaml@2.9.1)':
+    dependencies:
+      '@nuxt/kit': 3.16.2(magicast@0.3.5)
+      '@nuxt/schema': 3.16.2
+      c12: 3.0.3(magicast@0.3.5)
+      consola: 3.4.2
+      defu: 6.1.4
+      destr: 2.0.5
+      estree-walker: 3.0.3
+      fake-indexeddb: 6.2.5
+      get-port-please: 3.1.2
+      h3: 1.15.1
+      local-pkg: 1.1.1
+      magic-string: 0.30.17
+      node-fetch-native: 1.6.6
+      node-mock-http: 1.0.0
+      ofetch: 1.4.1
+      pathe: 2.0.3
+      perfect-debounce: 1.0.0
+      radix3: 1.1.2
+      scule: 1.3.0
+      std-env: 3.9.0
+      tinyexec: 0.3.2
+      ufo: 1.6.1
+      unplugin: 2.3.2
+      vite: 6.2.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1)
+      vitest-environment-nuxt: 1.0.1(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(magicast@0.3.5)(playwright-core@1.53.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vitest@3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1))(yaml@2.9.1)
+      vue: 3.5.13(typescript@5.8.3)
+    optionalDependencies:
+      jsdom: 26.0.0
+      playwright-core: 1.53.2
+      vitest: 3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1)
+    transitivePeerDependencies:
+      - '@types/node'
+      - jiti
+      - less
+      - lightningcss
+      - magicast
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - typescript
+      - yaml
 
   '@nuxt/vite-builder@3.16.2(@biomejs/biome@1.7.2)(@types/node@22.20.1)(eslint@8.57.1)(lightningcss@1.29.2)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.40.0)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vue-tsc@2.2.10(typescript@5.8.3))(vue@3.5.13(typescript@5.8.3))(yaml@2.9.1)':
     dependencies:
@@ -8930,6 +9034,8 @@ snapshots:
       pathe: 1.1.2
       ufo: 1.6.1
 
+  fake-indexeddb@6.2.5: {}
+
   fast-deep-equal@3.1.3:
     optional: true
 
@@ -10251,6 +10357,8 @@ snapshots:
       exsolve: 1.0.4
       pathe: 2.0.3
 
+  playwright-core@1.53.2: {}
+
   pluralize@8.0.0: {}
 
   postcss-calc@10.1.1(postcss@8.5.3):
@@ -11323,6 +11431,34 @@ snapshots:
       terser: 5.39.0
       tsx: 4.19.3
       yaml: 2.9.1
+
+  vitest-environment-nuxt@1.0.1(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(magicast@0.3.5)(playwright-core@1.53.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vitest@3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1))(yaml@2.9.1):
+    dependencies:
+      '@nuxt/test-utils': 3.17.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(magicast@0.3.5)(playwright-core@1.53.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(typescript@5.8.3)(vitest@3.1.2(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0)(tsx@4.19.3)(yaml@2.9.1))(yaml@2.9.1)
+    transitivePeerDependencies:
+      - '@cucumber/cucumber'
+      - '@jest/globals'
+      - '@playwright/test'
+      - '@testing-library/vue'
+      - '@types/node'
+      - '@vitest/ui'
+      - '@vue/test-utils'
+      - happy-dom
+      - jiti
+      - jsdom
+      - less
+      - lightningcss
+      - magicast
+      - playwright-core
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - typescript
+      - vitest
+      - yaml
 
   vitest@1.6.1(@types/node@22.20.1)(@vitest/ui@1.6.1)(jsdom@26.0.0)(lightningcss@1.29.2)(sass@1.85.1)(terser@5.39.0):
     dependencies:

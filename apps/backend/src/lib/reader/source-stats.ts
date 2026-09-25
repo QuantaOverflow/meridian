@@ -17,7 +17,7 @@ import type { Db } from './db';
  * 源的写操作在 ../sources.ts。
  */
 
-export function formatScrapeFrequency(scrapeFrequency: number): string {
+function formatScrapeFrequency(scrapeFrequency: number): string {
   switch (scrapeFrequency) {
     case 1:
       return 'Hourly';

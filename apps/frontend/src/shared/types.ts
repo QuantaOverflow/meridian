@@ -63,7 +63,7 @@ export interface StoryThreadSummary {
   updateLabel: string;
 }
 
-export interface StoryThreadEntry {
+interface StoryThreadEntry {
   id: number;
   dateShortCN: string;
   title: string;

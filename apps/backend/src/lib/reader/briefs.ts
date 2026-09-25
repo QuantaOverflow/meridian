@@ -19,7 +19,7 @@ function buildSearchFilter(q: string | undefined) {
   return sql`(${$reports.title} ILIKE ${like} OR ${$reports.content} ILIKE ${like} OR coalesce(${$reports.tldr_prose}, '') ILIKE ${like})`;
 }
 
-export interface BriefListItem {
+interface BriefListItem {
   id: number;
   createdAt: Date;
   title: string;
@@ -94,17 +94,17 @@ export async function listBriefs(db: Db, params: { q?: string; limit: number; of
  * 与 reports.used_articles 同源。
  */
 
-export interface BriefSourceArticle {
+interface BriefSourceArticle {
   title: string;
   url: string;
 }
 
-export interface BriefSource {
+interface BriefSource {
   name: string;
   articles: BriefSourceArticle[];
 }
 
-export interface BriefSourceList {
+interface BriefSourceList {
   sources: BriefSource[];
   articleCount: number;
 }

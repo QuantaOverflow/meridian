@@ -7,7 +7,7 @@ import { pgTimestamp, type Db } from './db';
  * 放在这里而不是写死在 SQL 里，是因为这几个数字要对读者可见（索引页筛选栏下方那行
  * 规则说明直接引用 ACTIVE_WINDOW_DAYS，经 /reader/stories 的 activeWindowDays 带给前端），改一处必须两边一起变。
  */
-export const STORY_THREAD_CONFIG = {
+const STORY_THREAD_CONFIG = {
   /** 最近这些天内有新条目并入 = 进行中；否则「暂无更新」 */
   ACTIVE_WINDOW_DAYS: 7,
   /** 连续这么多天每天都有新条目，判为升级中 */
@@ -26,9 +26,9 @@ export const STORY_THREAD_CONFIG = {
 } as const;
 
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */
-export type StoryThreadStatus = 'active' | 'dormant';
+type StoryThreadStatus = 'active' | 'dormant';
 
-export interface StoryThreadSummaryData {
+interface StoryThreadSummaryData {
   id: number;
   title: string;
   status: StoryThreadStatus;
@@ -52,7 +52,7 @@ export interface StoryThreadListData {
   minBriefs: number;
 }
 
-export interface StoryThreadEntryData {
+interface StoryThreadEntryData {
   id: number;
   /** 所在那期简报的时间 */
   createdAt: Date;

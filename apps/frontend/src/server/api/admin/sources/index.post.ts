@@ -17,7 +17,7 @@ export default defineEventHandler(async event => {
   try {
     await getDB(event).insert($sources).values({
       url: bodyResult.data.url,
-      category: 'unknown',
+      category: 'news',
       name: 'Unknown',
       scrape_frequency: 1,
     });

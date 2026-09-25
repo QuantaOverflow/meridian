@@ -2,7 +2,7 @@
 import type { BriefDetail } from '~/shared/types';
 
 const route = useRoute();
-const slug = computed(() => String(route.params.slug ?? '').replaceAll('_', '/'));
+const slug = computed(() => String(route.params.slug ?? ''));
 
 // lazy 见 pages/index.vue 的说明
 const { data: brief, error, status } = await useFetch<BriefDetail>(() => `/api/briefs/${slug.value}`, {

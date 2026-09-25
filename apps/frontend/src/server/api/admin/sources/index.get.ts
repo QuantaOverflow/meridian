@@ -80,8 +80,6 @@ export default defineEventHandler(async event => {
       where: and(gte($articles.createdAt, startOfToday)),
       columns: {
         status: true,
-        createdAt: true,
-        processedAt: true,
       },
     }),
     // get stale sources count

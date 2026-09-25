@@ -9,7 +9,7 @@
  * divide-gray-200、text-amber-600、divide-y、disabled:opacity-50 全部生成。
  * 反向对照 col-span-7、text-lime-700、divide-fuchsia-300（源码里不存在）确实查不到。
  *
- * 所以 components/ 那条约定现在是风格选择，不是限制——新页面（含 /ops）不必为它拆组件。
+ * 所以 components/ 那条约定现在是风格选择，不是限制——新页面不必为它拆组件。
  *
  * 核对办法：CSS 嵌在 dist/_worker.js/chunks/build/entry-styles.*.mjs 的 JS 字符串里，
  * 转义被双写——disabled:opacity-50 编译成 disabled\\:opacity-50:disabled，方括号类的
@@ -30,7 +30,7 @@
   --text3: #8a8a8a; /* 元信息、占位 */
   --rule: #e2e2e2; /* 可见分隔线、边框 */
   --rule-soft: #f0f0f0; /* 极淡分隔线 */
-  --accent: #9c3a2c; /* 深朱红：强调色、进度条、订阅按钮 */
+  --accent: #9c3a2c; /* 深朱红：强调色、进度条 */
   --quote-bg: #faf9f7; /* 引文/时间线底色 */
 
   /* 拉丁字母与数字命中 Newsreader / Archivo，汉字回落到 Noto Serif SC / Noto Sans SC */

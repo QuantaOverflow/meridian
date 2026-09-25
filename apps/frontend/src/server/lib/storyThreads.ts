@@ -1,6 +1,6 @@
 import { sql } from '@meridian/database';
 import type { H3Event } from 'h3';
-import type { StoryThreadDetail, StoryThreadEntry, StoryThreadSummary } from '~/shared/types';
+import type { StoryThreadDetail, StoryThreadEntry, StoryThreadStatus, StoryThreadSummary } from '~/shared/types';
 import { ensureDate, formatReportDateCN, formatReportDateShortCN, getDB } from './utils';
 
 /**
@@ -27,14 +27,6 @@ export const STORY_THREAD_CONFIG = {
   MIN_BRIEFS: 2,
 } as const;
 
-/**
- * ⚠️ 状态叫「暂无更新」而不是「已平息」。
- *
- * 系统只知道「最近没有新报道并入这条线索」，不知道现实中的冲突是否平息。用后者是在对
- * 世界下判断，会误导读者。设计交付文档专门点名要求改这个词，别改回去。
- */
-export type StoryThreadStatus = 'active' | 'dormant';
-
 interface ThreadRow {
   id: number;
   title: string;
@@ -59,6 +51,12 @@ function pointsToSummary(points: string[] | null): string {
     .join(' · ');
 }
 
+/**
+ * ⚠️ dormant 对读者显示为「暂无更新」而不是「已平息」。
+ *
+ * 系统只知道「最近没有新报道并入这条线索」，不知道现实中的冲突是否平息。用后者是在对
+ * 世界下判断，会误导读者。设计交付文档专门点名要求改这个词，别改回去。
+ */
 function toStatus(daysSinceUpdate: number): StoryThreadStatus {
   return daysSinceUpdate <= STORY_THREAD_CONFIG.ACTIVE_WINDOW_DAYS ? 'active' : 'dormant';
 }
@@ -104,7 +102,7 @@ const threadStatsQuery = sql`
   ),
   briefed AS (SELECT * FROM members WHERE selected_for_intel),
   latest AS (
-    SELECT DISTINCT ON (cluster_id) cluster_id, story_id, title, importance, lead_article_id
+    SELECT DISTINCT ON (cluster_id) cluster_id, title, importance, lead_article_id
     FROM briefed ORDER BY cluster_id, created_at DESC, importance DESC NULLS LAST
   ),
   agg AS (

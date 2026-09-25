@@ -6,7 +6,7 @@ import MarkdownIt from 'markdown-it';
  * 后端 briefGeneration prompt 产出的 markdown 只用两种结构记号：
  *   `## heading`          —— 模型按当天内容自行命名的板块
  *   `<u>**title**</u>`    —— 板块内的一个事件条目，其后若干段落属于它
- * 末尾固定有一个 `## noteworthy & under-reported` 板块，内容是无序列表、没有事件条目。
+ * 部分历史期末尾还有一个 `## noteworthy & under-reported` 板块（无序列表、没有事件条目），现行 v3 不再产出。
  *
  * 旧前端把整块 markdown 丢给 v-html，读者因此看不到板块/条目的层级，也没法做目录、
  * 速读折叠、逐条锚点。这里把它还原成树，渲染交给页面组件。

@@ -1,4 +1,4 @@
-import { $reports, and, desc, eq, gte, lte, sql } from '@meridian/database';
+import { $reports, desc, eq, sql } from '@meridian/database';
 import type { H3Event } from 'h3';
 import type { BriefDetail } from '~/shared/types';
 import { getBriefSources } from './briefSources';
@@ -21,7 +21,7 @@ const BRIEF_COLUMNS = {
  */
 export async function loadBriefDetail(
   event: H3Event,
-  target: { kind: 'id'; id: number } | { kind: 'date'; date: Date } | { kind: 'latest' }
+  target: { kind: 'id'; id: number } | { kind: 'latest' }
 ): Promise<BriefDetail | null> {
   let where;
   // 同一个定位条件写两遍：一遍给 drizzle 查询构造器取报告本体，一遍作为 SQL 子查询喂给
@@ -31,16 +31,6 @@ export async function loadBriefDetail(
   if (target.kind === 'id') {
     where = eq($reports.id, target.id);
     reportIdExpr = sql`${target.id}`;
-  } else if (target.kind === 'date') {
-    const { date } = target;
-    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-    where = and(gte($reports.createdAt, startOfDay), lte($reports.createdAt, endOfDay));
-    // 传 ISO 字符串而不是 Date 对象：裸 sql 模板没有列信息，参数原样交给 postgres.js，
-    // 在 Workers 的 nodejs_compat 下 Date 会炸成
-    // 「The "string" argument must be ... Received an instance of Date」（生产 500，本地 Node 不复现）。
-    // 上面 where 里的同一个 Date 没事，是因为 drizzle 知道 $reports.createdAt 的列类型、会替我们序列化。
-    reportIdExpr = sql`(SELECT id FROM reports WHERE created_at >= ${startOfDay.toISOString()} AND created_at <= ${endOfDay.toISOString()} ORDER BY created_at DESC LIMIT 1)`;
   } else {
     reportIdExpr = sql`(SELECT id FROM reports ORDER BY created_at DESC LIMIT 1)`;
   }
@@ -48,7 +38,7 @@ export async function loadBriefDetail(
   const [report, sourceList] = await Promise.all([
     getDB(event).query.$reports.findFirst({
       where,
-      // 日期形态可能命中同一天的多期，取最新的一期，至少让结果确定
+      // latest 不带 where，靠排序取最新一期
       orderBy: desc($reports.createdAt),
       columns: BRIEF_COLUMNS,
     }),

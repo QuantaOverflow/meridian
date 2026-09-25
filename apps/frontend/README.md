@@ -8,7 +8,7 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 | 路径 | 内容 |
 |---|---|
 | `/` | 最新一期简报 |
-| `/briefs`、`/briefs/[slug]`、`/briefs/latest` | 简报归档与单期 |
+| `/briefs`、`/briefs/[slug]` | 简报归档与单期 |
 | `/stories`、`/stories/[id]` | 跨期故事线索 |
 | `/admin/login`、`/admin`、`/admin/feed/[id]` | 源管理后台（`nuxt-auth-utils` 会话登录） |
 
@@ -17,7 +17,7 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 - 读者端 API（`server/api/briefs/*`、`server/api/stories/*`）经 `@meridian/database` **直连 Postgres** 读取，不经过 backend。
 - 后台 API（`server/api/admin/*`）需要登录会话；增、查源直接写库，初始化 / 删除源的 DO 转发到 backend 的
   `/do/admin/source/:id/init`、`DELETE /do/admin/source/:id`（带 `NUXT_WORKER_API_TOKEN`）。
-  新增源时**不会**自动初始化 DO（`server/api/admin/sources/index.post.ts` 里这段调用被注释掉了）。
+  新增源时**不会**自动初始化 DO，要在源详情页手动初始化。
 
 ## 环境变量
 

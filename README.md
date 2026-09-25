@@ -154,7 +154,7 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    wrangler deploy
    ```
    Bindings — see "Configuration" below. After adding a new RSS source, initialize its DO: `POST /do/admin/initialize-dos` (Bearer token).
-5. **Frontend** (Cloudflare Pages) — Pages config is in the repo-root `wrangler.toml` (`pages_build_output_dir = "apps/frontend/dist"`, production vars under `[env.production.vars]`). Secrets via `wrangler pages secret put`: `DATABASE_URL`, `SESSION_PASSWORD`, `WORKER_API_TOKEN`, `ADMIN_PASSWORD`. Build: `pnpm -F @meridian/frontend build`.
+5. **Frontend** (Cloudflare Pages) — Pages config is in the repo-root `wrangler.toml` (`pages_build_output_dir = "apps/frontend/dist"`, production vars under `[env.production.vars]`). Pages project `meridian-reader`. Secrets via `wrangler pages secret put` — runtime only reads `NUXT_`-prefixed names: `NUXT_DATABASE_URL`, `NUXT_SESSION_PASSWORD`, `NUXT_WORKER_API_TOKEN`, `NUXT_ADMIN_USERNAME`, `NUXT_ADMIN_PASSWORD`. Build: `pnpm -F @meridian/frontend build`.
 
 **Judging whether a deploy worked**
 - `wrangler deploy` uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.

@@ -195,9 +195,6 @@ importers:
       '@types/markdown-it':
         specifier: ^14.1.2
         version: 14.1.2
-      '@unhead/vue':
-        specifier: ^2.0.8
-        version: 2.0.8(vue@3.5.13(typescript@5.8.3))
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.0
@@ -213,9 +210,6 @@ importers:
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.8.3)
-      vue-router:
-        specifier: ^4.5.0
-        version: 4.5.0(vue@3.5.13(typescript@5.8.3))
       vue-tsc:
         specifier: ^2.2.10
         version: 2.2.10(typescript@5.8.3)

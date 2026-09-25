@@ -24,6 +24,10 @@ import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 import {
+  articleJourneyKey,
+  briefV3RecordKey,
+  clusteringSnapshotKey,
+  datasetEmbeddingsKey,
   EMBEDDING_DIM,
   type BriefBlockV6Sentence,
   type BriefV3FailedBlock,
@@ -622,7 +626,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 500 篇 × 384 维 ≈ 2.5MB 会触发 WorkflowInternalError/SQLITE_TOOBIG。
           // 只让轻量 articles 走 step 输出，embeddings 走 R2，step 后再读回。
           // 只在本次运行里读回一次；R2 桶上的生命周期规则 `expire-datasets` 让 datasets/ 7 天后自动删除
-          const embeddingsR2Key = `datasets/${workflowId}/embeddings.json`;
+          const embeddingsR2Key = datasetEmbeddingsKey(workflowId);
           await this.env.ARTICLES_BUCKET.put(embeddingsR2Key, JSON.stringify(embeddings));
 
           console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章 (embeddings 卸载至 ${embeddingsR2Key})`);
@@ -715,7 +719,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // （原因见 clustering.ts 的 statistics 注释）。
       try {
         await this.env.ARTICLES_BUCKET.put(
-          `observability/clustering/${workflowId}.json`,
+          clusteringSnapshotKey(workflowId),
           JSON.stringify({
             workflowId,
             createdAt: new Date().toISOString(),
@@ -749,7 +753,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         );
         try {
           await this.env.ARTICLES_BUCKET.put(
-            `observability/article-journey/${workflowId}.json`,
+            articleJourneyKey(workflowId),
             JSON.stringify({
               workflowId,
               createdAt: new Date().toISOString(),
@@ -1441,7 +1445,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 故单列在成功块之后（它其实有 tier/score，只是没写出东西来）。
       try {
         await this.env.ARTICLES_BUCKET.put(
-          `observability/brief-v3/${workflowId}.json`,
+          briefV3RecordKey(workflowId),
           JSON.stringify(
             {
               workflowId,

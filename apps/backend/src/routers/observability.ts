@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import { getDb } from '../lib/database';
 import { $reports, $brief_runs, $brief_stories, $articles, eq, desc, gte, sql } from '@meridian/database';
+import { clusteringSnapshotKey, LLM_CALLS_ROOT, llmCallsPrefix, workflowObservabilityKey } from '@meridian/contracts';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -35,7 +36,7 @@ app.get('/runs/:workflowId', async (c) => {
     // R2 可观测性快照（Phase 1 起以稳定 key 存储）
     let observabilitySnapshot: any = null;
     try {
-      const obj = await c.env.ARTICLES_BUCKET.get(`observability/${workflowId}.json`);
+      const obj = await c.env.ARTICLES_BUCKET.get(workflowObservabilityKey(workflowId));
       if (obj) observabilitySnapshot = JSON.parse(await obj.text());
     } catch (e) {
       // 静默：观测性数据缺失不影响其他链路
@@ -66,7 +67,7 @@ app.get('/runs/:workflowId', async (c) => {
 app.get('/runs/:workflowId/clustering', async (c) => {
   try {
     const workflowId = c.req.param('workflowId');
-    const obj = await c.env.ARTICLES_BUCKET.get(`observability/clustering/${workflowId}.json`);
+    const obj = await c.env.ARTICLES_BUCKET.get(clusteringSnapshotKey(workflowId));
     if (!obj) {
       return c.json({ success: false, error: 'clustering snapshot not found' }, 404);
     }
@@ -242,7 +243,7 @@ app.get('/health/summary', async (c) => {
 app.get('/runs/:workflowId/llm-calls', async (c) => {
   try {
     const workflowId = c.req.param('workflowId');
-    const list = await c.env.ARTICLES_BUCKET.list({ prefix: `llm-calls/${workflowId}/` });
+    const list = await c.env.ARTICLES_BUCKET.list({ prefix: llmCallsPrefix(workflowId) });
 
     // 拉每个对象的简要 metadata（解析 R2 头）。如果想看全文走 /llm-calls/:key
     const calls = await Promise.all(
@@ -290,7 +291,7 @@ app.get('/llm-calls/*', async (c) => {
     const fullPath = c.req.path; // 形如 /observability/llm-calls/llm-calls/xxx/yyy.json
     const idx = fullPath.indexOf('/llm-calls/') + '/llm-calls/'.length;
     const key = decodeURIComponent(fullPath.slice(idx));
-    if (!key.startsWith('llm-calls/')) {
+    if (!key.startsWith(LLM_CALLS_ROOT)) {
       return c.json({ success: false, error: 'invalid key' }, 400);
     }
     const obj = await c.env.ARTICLES_BUCKET.get(key);

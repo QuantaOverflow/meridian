@@ -9,7 +9,7 @@ import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
 import { handleServiceResponse } from '../lib/services/clustering';
 import { createWorkflowObservability } from '../lib/observability';
-import type { ArticleAnalysis } from '@meridian/contracts';
+import { articleContentKey, type ArticleAnalysis } from '@meridian/contracts';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {
@@ -358,7 +358,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             });
 
             const date = article.publishedTime ? new Date(article.publishedTime) : new Date();
-            const fileKey = `${date.getUTCFullYear()}/${date.getUTCMonth() + 1}/${date.getUTCDate()}/${article.id}.txt`;
+            const fileKey = articleContentKey(date, article.id);
 
             articleLogger.info('Updating article info in DB');
 

@@ -1,6 +1,7 @@
 import { chat } from './workers-ai'
 import type { ChatRequest, AIResponse, CloudflareEnv } from '../types'
 import { recordLLMCall } from './observe'
+import { llmCallKey } from '@meridian/contracts'
 
 /**
  * LLM 调用阶段，用于 R2 key 分类
@@ -80,7 +81,7 @@ export async function loggedChat(
     const bucket = (env as any).ARTICLES_BUCKET as R2Bucket | undefined
     if (trace.traceId && bucket) {
       const idx = trace.callIndex ?? 0
-      const key = `llm-calls/${trace.traceId}/${phase}-${String(idx).padStart(3, '0')}.json`
+      const key = llmCallKey(trace.traceId, phase, idx)
       const responseContent = response?.choices?.[0]?.message?.content
 
       const record = {

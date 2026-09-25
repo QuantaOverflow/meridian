@@ -11,6 +11,7 @@
  */
 import type { CloudflareEnv } from '../types';
 import type { TraceContext } from './llm-call-logger';
+import { sensorKey } from '@meridian/contracts';
 
 export type SensorKind = 'output_language';
 
@@ -27,7 +28,7 @@ export async function recordSensor(
 ): Promise<void> {
   const bucket = (env as any).ARTICLES_BUCKET as R2Bucket | undefined;
   if (!trace?.traceId || !bucket) return;
-  const key = `observability/sensors/${trace.traceId}/${kind}-${String(idx).padStart(3, '0')}.json`;
+  const key = sensorKey(trace.traceId, kind, idx);
   try {
     await bucket.put(
       key,

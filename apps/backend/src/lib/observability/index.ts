@@ -1,4 +1,5 @@
 import type { Env } from '../../index';
+import { workflowObservabilityKey } from '@meridian/contracts';
 
 // 可观测性指标类型定义
 export interface WorkflowMetrics {
@@ -92,7 +93,7 @@ export class WorkflowObservability {
   private async persistMetrics() {
     try {
       const summary = this.generateSummaryReport();
-      const key = `observability/${this.workflowId}.json`;
+      const key = workflowObservabilityKey(this.workflowId);
 
       await this.env.ARTICLES_BUCKET.put(key, JSON.stringify({
         summary,

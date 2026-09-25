@@ -373,7 +373,6 @@ grading-instructions.mjs  评分守则那一段。单独成模块,因为它是 s
 scorer-id.mjs        判定包与尺的指纹 —— 「判据变了旧读数作废」的机械形态
 compare-verdicts.mjs 两份独立判定的一致性 —— 改 scorer 时唯一的验收仪器
 judge-alignment.mjs  判官 vs 人工金标的真阳率 / 真阴率 / 逐条分歧
-frontier.mjs         盲判结果回填、按事先声明的轴排 Pareto frontier(依赖本地 out/_blind/,换机器需先重建)
 analyze.mjs          多 epoch 汇总,零 LLM、只读
 *.test.mjs           自测(见上一节)
 fixtures/            clusters.json · meta.json · content/(gitignored,可由 fetch 重建)

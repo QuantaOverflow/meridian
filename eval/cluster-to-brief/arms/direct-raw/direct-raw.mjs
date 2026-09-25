@@ -7,14 +7,9 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { sentenceOf, numbersIn, quotesIn, normQuote, OUT_ROOT } from '../../lib.mjs';
 import { runArm } from '../../runner.mjs';
-import { filterGrounded } from './local-grounding.mjs';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const ROOT = new URL('../../', import.meta.url).pathname;
-// 单变量开关：DIRECT_RAW_LOCAL_GROUNDING=1 时，候选进选择池前先做逐句接地（见 local-grounding.mjs）。
-// 窗口缓存**两个臂共用**（都在 out/direct-raw/c<id>-windows/），所以两臂的候选池逐条相同，
-// 唯一的差别就是过滤。只有成稿与记账分开落盘。
-const GROUNDED = process.env.DIRECT_RAW_LOCAL_GROUNDING === '1';
 // DIRECT_RAW_SINGLE_BLOCK=1：一簇只出一块（ADR 0003 簇即简报块），子话题留在块内；选择时去重同一事实。
 // 只改选择这一步，窗口候选沿用不带此开关的同名臂的缓存（配 --resume），差别只在选择。
 const SINGLE_BLOCK = process.env.DIRECT_RAW_SINGLE_BLOCK === '1';
@@ -72,7 +67,7 @@ const WRITE_LEN = WRITE_TIER === 'exec'
  * 那个后缀却来自 argv，于是臂里躺着一行数据来源的解析。
  */
 function pathsOf(base) {
-  const candidateOut = `${base}${GROUNDED ? '-grounded' : ''}`;
+  const candidateOut = base;
   const writeOut = `${candidateOut}-write`;
   const anchorCache = `${writeOut}${ANCHOR_SOURCES === 4 ? '' : `-a${ANCHOR_SOURCES}`}${RUN}`;
   const out = WRITE_AT_END ? `${writeOut}${WRITE_TIER === 'more' ? '' : `-${WRITE_TIER}`}${WRITE_SUPPORT ? '-support' : ''}${REPAIR_FULL ? '-repair' : WRITE_REPAIR ? '-mech' : ''}${!REPAIR_FULL && MUST_SLACK ? `-slack${MUST_SLACK}` : ''}${RUN}` : `${candidateOut}${SINGLE_BLOCK ? '-single' : ''}`;
@@ -614,13 +609,7 @@ export async function runSample(sample, options = {}) {
     console.log(`c${clusterId}: ${output.verdict}, ${output.blocks.length} blocks, ${elapsed}s`);
     return;
   }
-  let candidates = generated, groundingDropped = [];
-  if (GROUNDED) {
-    const r = filterGrounded(generated, (a, n) => sentenceOf(cluster, a, n));
-    candidates = r.kept; groundingDropped = r.dropped;
-    atomicWriteJson(`${OUT}/c${clusterId}-grounding-dropped.json`, { cluster: clusterId, generated: generated.length, kept: candidates.length, dropped: groundingDropped });
-    console.log(`  [c${clusterId}] 逐句接地：${generated.length} → ${candidates.length}（丢 ${groundingDropped.length}）`);
-  }
+  const candidates = generated;
   atomicWriteJson(cachePath, { version: 1, cluster: clusterId, windows: windows.map(({ text, ...w }) => w), candidates });
   if (!candidates.length) throw new Error(`c${clusterId}: model returned no direct-written candidates`);
   const ids = candidates.map(c => c.id);
@@ -630,7 +619,7 @@ export async function runSample(sample, options = {}) {
   const output = assemble(clusterId, selection, candidates);
   writeFileSync(`${OUT}/c${clusterId}.json`, JSON.stringify(output, null, 2));
   const elapsed = +((Date.now() - t0) / 1000).toFixed(2);
-  writeFileSync(`${OUT}/c${clusterId}-run.json`, JSON.stringify({ cluster: clusterId, articles: cluster.articles.length, windows: windows.length, candidates: candidates.length, generated: generated.length, localGrounding: GROUNDED, groundingDropped: groundingDropped.length, elapsed_s: elapsed, model: MODEL, window_chars: WINDOW_CHARS }, null, 2));
+  writeFileSync(`${OUT}/c${clusterId}-run.json`, JSON.stringify({ cluster: clusterId, articles: cluster.articles.length, windows: windows.length, candidates: candidates.length, generated: generated.length, elapsed_s: elapsed, model: MODEL, window_chars: WINDOW_CHARS }, null, 2));
   console.log(`c${clusterId}: ${output.verdict}, ${output.blocks.length} blocks, ${elapsed}s`);
 }
 
@@ -639,7 +628,6 @@ export const meta = {
   /** consumed 的 by：臂名 + 影响读数的开关。光看这一行就知道这份数据是被哪一版臂用掉的。 */
   consumerId() {
     const flags = [
-      GROUNDED && 'grounded',
       SINGLE_BLOCK && 'single', WRITE_AT_END && 'write', WRITE_TIER !== 'more' && WRITE_TIER,
       WRITE_SUPPORT && 'support', REPAIR_FULL ? 'repair' : WRITE_REPAIR && 'mech',
       !REPAIR_FULL && MUST_SLACK && `slack${MUST_SLACK}`, RUN && RUN.slice(1),

@@ -103,13 +103,13 @@ per-event 完整率 / 纯度   纯度分母是整个簇        → 衡量「簇�
 ### 两层（2026-09-05 新增主题层）
 
 ```
-事件层   同一件事的报道有没有聚在一起      tsx gold-score.ts <labels...>
-主题层   同一主题的事件有没有聚在一起      tsx gold-score.ts --topic <labels...>
+事件层   同一件事的报道有没有聚在一起      tsx product-score.ts --window=F1 <labels...>
+主题层   同一主题的事件有没有聚在一起      tsx product-score.ts --window=F1 --topic <labels...>
 ```
 
 同一份聚类结果打两次分。**必须两层一起看**：以巴那 8 件事被聚进一个 24 篇的簇，事件层判纯度
 0.08，主题层接近满分——那是粒度分歧；而体育那个 58 篇的杂堆两层都低——那是真杂讯。一层的读数
-分不开这两种失败。主题分组取 `events.jsonl` 每个事件自带的 `topic` 字段（`product-score.ts --topic`）；`gold-score.ts --topic` 要的独立 `topics-F1.jsonl` 从未入库。判据见 `rubric.md` 三·五节。
+分不开这两种失败。主题分组取 `events.jsonl` 每个事件自带的 `topic` 字段。判据见 `rubric.md` 三·五节。
 
 ### 两个口径
 

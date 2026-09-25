@@ -132,11 +132,11 @@ npx wrangler@4.120 r2 object get "meridian-articles-prod/<key>" --remote --pipe
 
 ## 三·五、主题层（2026-09-05 新增）
 
-事件层之上再标一层**主题**，文件 `gold/topics-F1.jsonl`。两层用同一份聚类结果各打一次分：
+事件层之上再标一层**主题**，记在 `events.jsonl` 每个事件的 `topic` 字段。两层用同一份聚类结果各打一次分：
 
 ```
-事件层   同一件事的报道有没有聚在一起          gold-score.ts
-主题层   同一主题的事件有没有聚在一起          gold-score.ts --topic
+事件层   同一件事的报道有没有聚在一起          product-score.ts
+主题层   同一主题的事件有没有聚在一起          product-score.ts --topic
 ```
 
 ### 为什么要这一层

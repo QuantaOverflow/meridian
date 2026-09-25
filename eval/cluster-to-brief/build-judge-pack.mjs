@@ -36,7 +36,7 @@ const ARM = String(args.arm).replace(/\/$/, '');
 /**
  * 这一轮判定包由哪个模型来判。**判官是 scorer 的一部分**,换模型就是换了一把尺 ——
  * opus 判的格子与 sonnet 判的格子放进同一张 frontier 表比较,会静默污染读数。
- * 落进 meta,由 `frontier.mjs` 断言同一轮全部格子一致。默认 `opus`(本仓迄今全部读数的模型)。
+ * 落进 meta,比较读数前先核同一轮全部格子一致。默认 `opus`(本仓迄今全部读数的模型)。
  */
 const JUDGE_MODEL = String(process.env.JUDGE_MODEL ?? 'opus');
 const SPLIT = String(args.split ?? 'dev');

@@ -76,7 +76,7 @@
 ### 判官对齐读数
 
 判官 = `judges/citation-support.md`（`promptId` `f657f9cd6f4eaa26`）+ sonnet subagent。
-判定归档在 `citation-support.judge-sonnet.json`。
+判定归档在 `verdicts.judge-sonnet.json`。
 
 ```
 TP 27   FP 0   TN 29   FN 4

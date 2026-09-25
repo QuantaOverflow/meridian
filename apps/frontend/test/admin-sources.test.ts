@@ -15,19 +15,37 @@ if (!DB) throw new Error('缺 FRONTEND_TEST_DATABASE_URL（本机测试库，见
 // 测试会 TRUNCATE sources：只许连本机库，防止误指到生产
 if (!/@(localhost|127\.0\.0\.1)[:/]/.test(DB)) throw new Error(`FRONTEND_TEST_DATABASE_URL 必须是本机库，拒绝: ${DB.replace(/:[^:@]*@/, ':***@')}`);
 
+const db = getDb(DB, { max: 1 });
+
 // ── 假 backend：状态码由测试控制，记录收到的请求 ──────────────────────────
+// 建源成功时替 backend 把行写进测试库（真 backend 就是这么做的），页面列表才读得到
 let backendStatus = 200;
 const backendHits: string[] = [];
-const backend = http.createServer((req, res) => {
+const backendBodies: unknown[] = [];
+const backend = http.createServer(async (req, res) => {
   backendHits.push(`${req.method} ${req.url}`);
-  res.statusCode = backendStatus;
+  let raw = '';
+  for await (const chunk of req) raw += chunk;
+  const body = raw ? JSON.parse(raw) : undefined;
+  backendBodies.push(body);
   res.setHeader('content-type', 'application/json');
-  res.end(JSON.stringify(backendStatus < 400 ? { success: true } : { error: 'backend exploded' }));
+  if (backendStatus >= 400) {
+    res.statusCode = backendStatus;
+    res.end(JSON.stringify({ success: false, error: `backend says ${backendStatus}` }));
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/admin/sources') {
+    const [row] = await db.insert($sources).values({ url: body.url, name: 'Unknown', category: 'news' }).returning();
+    res.statusCode = 201;
+    res.end(JSON.stringify({ success: true, data: row }));
+    return;
+  }
+  res.statusCode = backendStatus;
+  res.end(JSON.stringify({ success: true }));
 });
 await new Promise<void>(r => backend.listen(0, '127.0.0.1', () => r()));
 const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).port}`;
 
-const db = getDb(DB, { max: 1 });
 const EXISTING_URL = 'https://example.com/feed.xml';
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
@@ -57,7 +75,9 @@ beforeEach(async () => {
     .values({ url: EXISTING_URL, name: 'Example', category: 'news', scrape_frequency: 2 })
     .returning({ id: $sources.id });
   sourceId = row.id;
+  backendStatus = 200;
   backendHits.length = 0;
+  backendBodies.length = 0;
 });
 
 async function loginCookie(): Promise<string> {
@@ -110,6 +130,7 @@ describe('后台页面「Add Source」', () => {
   }
 
   it('添加已存在的 URL：用户能看到失败提示', async () => {
+    backendStatus = 409;
     const { page, dialogs } = await adminPageAnswering(EXISTING_URL);
     await page.click('text=Add Source');
     await expect.poll(() => dialogs.filter(d => d.startsWith('alert')), { timeout: 10_000 })
@@ -127,9 +148,10 @@ describe('后台页面「Add Source」', () => {
   });
 });
 
+// 源的写操作（建源的默认值、拉起 DO、删源的外键检查）归 backend，前端只转发（backend 侧见 apps/backend/test/lib/sources.spec.ts）
 describe('POST /api/admin/sources', () => {
-  it('新增的源 category 应为 news（简报只收 news 分类的源，见 CLAUDE.md）', async () => {
-    const NEW_URL = 'https://example.net/category-check-feed.xml';
+  it('转给 backend 的 POST /admin/sources，只带 url', async () => {
+    const NEW_URL = 'https://example.net/forwarded-feed.xml';
     const cookie = await loginCookie();
     const body = await $fetch('/api/admin/sources', {
       method: 'POST',
@@ -137,8 +159,49 @@ describe('POST /api/admin/sources', () => {
       body: { url: NEW_URL },
     });
     expect(body).toEqual({ success: true });
-    const [row] = await db.select({ category: $sources.category }).from($sources).where(eq($sources.url, NEW_URL));
-    expect(row?.category).toBe('news');
+    expect(backendHits).toEqual(['POST /admin/sources']);
+    expect(backendBodies).toEqual([{ url: NEW_URL }]);
+  });
+
+  it('backend 回 409（URL 已存在）：前端也回 409，带上 backend 的错误文本', async () => {
+    backendStatus = 409;
+    const cookie = await loginCookie();
+    const res = await fetch('/api/admin/sources', {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ url: EXISTING_URL }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain('backend says 409');
+  });
+
+  it('backend 5xx：前端回 502', async () => {
+    backendStatus = 500;
+    const cookie = await loginCookie();
+    const res = await fetch('/api/admin/sources', {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ url: 'https://example.net/x.xml' }),
+    });
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('DELETE /api/admin/sources/:id', () => {
+  it('转给 backend；backend 回 409（有文章被简报引用）时前端也回 409', async () => {
+    backendStatus = 409;
+    const cookie = await loginCookie();
+    const res = await fetch(`/api/admin/sources/${sourceId}`, { method: 'DELETE', headers: { cookie } });
+    expect(backendHits).toEqual([`DELETE /do/admin/source/${sourceId}`]);
+    expect(res.status).toBe(409);
+  });
+
+  it('不预读库：源是否存在由 backend 判定（404 原样透传）', async () => {
+    backendStatus = 404;
+    const cookie = await loginCookie();
+    const res = await fetch('/api/admin/sources/999999', { method: 'DELETE', headers: { cookie } });
+    expect(backendHits).toEqual(['DELETE /do/admin/source/999999']);
+    expect(res.status).toBe(404);
   });
 });
 
@@ -150,6 +213,14 @@ describe('暂停 / 恢复自动抓取：接口', () => {
       const res = await fetch(`/api/admin/sources/${sourceId}/${action}`, { method: 'POST', headers: { cookie } });
       expect(backendHits).toContain(`POST /do/admin/source/${sourceId}/${action}`);
       expect(res.status).toBeGreaterThanOrEqual(500);
+    });
+
+    it(`${action}：不预读库，源不存在由 backend 回 404 并原样透传`, async () => {
+      backendStatus = 404;
+      const cookie = await loginCookie();
+      const res = await fetch(`/api/admin/sources/999999/${action}`, { method: 'POST', headers: { cookie } });
+      expect(backendHits).toEqual([`POST /do/admin/source/999999/${action}`]);
+      expect(res.status).toBe(404);
     });
 
     it(`${action}：反向对照，backend 成功时返回 success`, async () => {

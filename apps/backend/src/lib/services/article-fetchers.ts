@@ -172,7 +172,7 @@ export async function getArticleWithBrowser(env: Env, url: string) {
  * @param url URL of the article to fetch
  * @returns The parsed article content or throws an error
  */
-export async function getArticleWithFetch(url: string) {
+async function getArticleWithFetch(url: string) {
   let response: Response;
   
   try {

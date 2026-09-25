@@ -2,14 +2,17 @@
  * 轻量级AI服务协调器
  * 专注于服务调用和结果转发，不处理具体实现细节
  *
- * 跨 service 调用的接缝：brief workflow 相关方法（generateEmbedding / rankStories / judgeCluster /
+ * 跨 service 调用的接缝：全部方法（analyzeArticle / rankStories / judgeCluster /
  * briefBlockV6 / briefTitle / generateBriefSummary）返回
  * ServiceResult<T> —— 把「status 检查 / .json() / .success 检查 / dispose RPC stub」这套仪式
  * 收进模块内，调用方只拿判别式结果并施加自己的错误策略（throw / 跳过 / fail-open）。
- * 注：analyzeArticle 属文章管线，返回 Response 不变（不在此接缝内）。
+ * 请求/响应数据类型在 @meridian/contracts（与 ai-worker 共用一份）。
+ * ML 服务（embedding / 聚类）不经 ai-worker，客户端在 ./ml-service.ts。
  */
 
 import type {
+  ArticleAnalysis,
+  ArticleAnalyzeRequest,
   BriefBlockV6Request,
   BriefBlockV6Result,
   BriefSummaryRequest,
@@ -28,20 +31,14 @@ import type {
 // 跨 service 调用的判别式结果：成功给 value，失败给 status+error。
 // 各调用方据此施加自己的策略（validateStory throw / intelligence 跳过 / faithfulness fail-open），
 // 故此处只报告结果、不代替调用方决定 throw 与否。
-type ServiceResult<T> =
+export type ServiceResult<T> =
   | { ok: true; value: T }
   | { ok: false; status: number; error: string };
 
-interface EmbeddingData {
-  embeddings: Array<{ embedding: number[] }>;
-}
-
-export interface AIWorkerEnv {
+interface AIWorkerEnv {
   AI_WORKER: {
     fetch(request: Request): Promise<Response>;
   };
-  MERIDIAN_ML_SERVICE_URL: string;
-  MERIDIAN_ML_SERVICE_API_KEY: string;
 }
 
 // AI Worker服务协调器
@@ -80,47 +77,19 @@ class AIWorkerService {
   }
 
   /**
-   * 生成嵌入向量。
-   * 直接调用本地/远端 ML Service (multilingual-e5-small, 384维)，跳过 ai-worker 这层中间转发。
-   * 与数据库 schema (vector(384)) 和历史 embedding 的向量空间保持一致。
+   * 分析文章内容（文章管线用）
    */
-  async generateEmbedding(text: string | string[]): Promise<ServiceResult<EmbeddingData>> {
-    const texts = Array.isArray(text) ? text : [text];
-    const mlResp = await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}/embeddings`, {
-      method: 'POST',
-      headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
-      body: JSON.stringify({ texts }),
-    });
-
-    if (!mlResp.ok) {
-      const errorText = await mlResp.text().catch(() => '<unreadable>');
-      return { ok: false, status: mlResp.status, error: `ML embedding failed: ${mlResp.status} - ${errorText}` };
-    }
-
-    const ml = (await mlResp.json()) as { embeddings: number[][] };
-
-    return {
-      ok: true,
-      value: {
-        embeddings: ml.embeddings.map((emb) => ({ embedding: emb })),
-      },
-    };
-  }
-
-  /**
-   * 分析文章内容（文章管线用，非 brief 接缝——返回 Response 不变）
-   */
-  async analyzeArticle(title: string, content: string, callIndex?: number): Promise<Response> {
+  async analyzeArticle(title: string, content: string, callIndex?: number): Promise<ServiceResult<ArticleAnalysis>> {
     // 观测性：同一 workflow 会并行分析多篇文章，用 call index 避免 R2 LLM 日志 key 互相覆盖。
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/article/analyze`, {
       method: 'POST',
       headers: this.buildHeaders(extra),
-      body: JSON.stringify({ title, content })
+      body: JSON.stringify({ title, content } satisfies ArticleAnalyzeRequest)
     });
 
-    return await this.env.AI_WORKER.fetch(request);
+    return await this.callJson<ArticleAnalysis>(request);
   }
 
   /**

@@ -1,9 +1,22 @@
 /**
- * 聚类服务模块：封装与 Meridian ML Service 的聚类分析交互。
- * 只给 ml 侧发 {id, embedding}；正文由下游工作流按需从 R2 取。
+ * ML 服务（services/meridian-ml-service：e5-small embedding + 余弦凝聚聚类）的唯一客户端。
+ * backend 直连 ml-service（不经 ai-worker）；URL、X-API-Token、x-trace-id 只在 post() 里拼。
+ * 两个方法都返回 ServiceResult<T>（与 ai-services 同形），调用方施加自己的错误策略。
+ *
+ * 聚类只给 ml 侧发 {id, embedding}；正文由下游工作流按需从 R2 取。
  */
 
-import type { AIWorkerEnv } from './ai-services';
+import { BRIEF_CLUSTERING_OPTIONS } from '../core/constants';
+import type { ServiceResult } from './ai-services';
+
+export interface MLServiceEnv {
+  MERIDIAN_ML_SERVICE_URL: string;
+  MERIDIAN_ML_SERVICE_API_KEY: string;
+}
+
+interface EmbeddingData {
+  embeddings: Array<{ embedding: number[] }>;
+}
 
 /**
  * 噪声标签（不足最小篇数的簇里的文章）。ml 侧把这一组也当普通簇返回，故它会出现在 clusters 里；
@@ -123,29 +136,54 @@ export interface ClusteringResult {
   buildIdentityCheck: BuildIdentityAssertion;
 }
 
-export interface ClusteringServiceResponse {
-  success: boolean;
-  data?: ClusteringResult;
-  error?: string;
-}
+/** ML 服务客户端 */
+class MLService {
+  constructor(private env: MLServiceEnv, private traceId?: string) {}
 
-/** 聚类服务类 */
-export class ClusteringService {
-  constructor(private env: AIWorkerEnv, private traceId?: string) {}
+  // 传输只写这一处：POST JSON，带 X-API-Token，自动注入 x-trace-id 以贯通跨 service 日志
+  private async post(path: string, body: unknown): Promise<Response> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY,
+    };
+    if (this.traceId) headers['x-trace-id'] = this.traceId;
+    return await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+  }
 
-  // 统一构建 outbound headers，自动注入 x-trace-id 以贯通跨 service 日志
-  private buildHeaders(extra?: Record<string, string>): Record<string, string> {
-    const h: Record<string, string> = { 'Content-Type': 'application/json', ...(extra || {}) };
-    if (this.traceId) h['x-trace-id'] = this.traceId;
-    return h;
+  /**
+   * 生成嵌入向量。
+   * 直接调用本地/远端 ML Service (multilingual-e5-small, 384维)，跳过 ai-worker 这层中间转发。
+   * 与数据库 schema (vector(384)) 和历史 embedding 的向量空间保持一致。
+   */
+  async generateEmbedding(text: string | string[]): Promise<ServiceResult<EmbeddingData>> {
+    const texts = Array.isArray(text) ? text : [text];
+    const mlResp = await this.post('/embeddings', { texts });
+
+    if (!mlResp.ok) {
+      const errorText = await mlResp.text().catch(() => '<unreadable>');
+      return { ok: false, status: mlResp.status, error: `ML embedding failed: ${mlResp.status} - ${errorText}` };
+    }
+
+    const ml = (await mlResp.json()) as { embeddings: number[][] };
+
+    return {
+      ok: true,
+      value: {
+        embeddings: ml.embeddings.map((emb) => ({ embedding: emb })),
+      },
+    };
   }
 
   /**
    * 执行聚类分析
    * 
    * @param dataset 文章数据集，包含文章信息和嵌入向量
-   * @param options 可选的聚类配置参数
-   * @returns 聚类分析结果
+   * @param options 可选的聚类配置参数；缺的字段取 BRIEF_CLUSTERING_OPTIONS
+   * @returns 聚类分析结果。失败的 status：HTTP 失败 = ml 侧状态码，本地校验失败 / 调用抛异常 = 0
    */
   async analyzeClusters(
     dataset: ArticleDataset,
@@ -156,12 +194,13 @@ export class ClusteringService {
       /** 成簇最小篇数,低于此数整簇记为噪声(不进简报) */
       agglomerativeMinClusterSize?: number;
     }
-  ): Promise<ClusteringServiceResponse> {
+  ): Promise<ServiceResult<ClusteringResult>> {
     try {
       // 验证输入数据
       if (!dataset.articles.length || !dataset.embeddings.length) {
         return {
-          success: false,
+          ok: false,
+          status: 0,
           error: "Dataset is empty"
         };
       }
@@ -172,7 +211,8 @@ export class ClusteringService {
       
       if (articleIds.size !== embeddingIds.size) {
         return {
-          success: false,
+          ok: false,
+          status: 0,
           error: "Mismatch between articles and embeddings count"
         };
       }
@@ -180,7 +220,8 @@ export class ClusteringService {
       for (const articleId of articleIds) {
         if (!embeddingIds.has(articleId)) {
           return {
-            success: false,
+            ok: false,
+            status: 0,
             error: `Missing embedding for article ${articleId}`
           };
         }
@@ -193,14 +234,16 @@ export class ClusteringService {
         embedding: dataset.embeddings.find(e => e.articleId === article.id)!.embedding,
       }));
 
-              // 调用ML服务的AI Worker聚类端点
-      const mlResponse = await this.aiWorkerClustering(items, {
+      // 调用ML服务的AI Worker聚类端点
+      const mlResponse = await this.post('/ai-worker/clustering', {
+        items,
         config: {
           // ?? 而不是 ||:阈值 0 虽不合法,但 || 会把它悄悄换成默认值,
           // 与本仓库「失败不静默降级」的口径冲突,让 ml-service 的 pydantic 去拒绝更好。
-          agglomerative_threshold: options?.agglomerativeThreshold ?? 0.1,
-          agglomerative_linkage: options?.agglomerativeLinkage ?? 'average',
-          agglomerative_min_cluster_size: options?.agglomerativeMinClusterSize ?? 3
+          // 兜底取 BRIEF_CLUSTERING_OPTIONS（backend 唯一一份默认值），三个参数总是显式发给 ml 侧。
+          agglomerative_threshold: options?.agglomerativeThreshold ?? BRIEF_CLUSTERING_OPTIONS.agglomerativeThreshold,
+          agglomerative_linkage: options?.agglomerativeLinkage ?? BRIEF_CLUSTERING_OPTIONS.agglomerativeLinkage,
+          agglomerative_min_cluster_size: options?.agglomerativeMinClusterSize ?? BRIEF_CLUSTERING_OPTIONS.agglomerativeMinClusterSize
           // 质心剪枝已移除(原 postprocess_prune_threshold: 0.92)。
           //
           // 它做的是"甄别故事",而甄别是 story-validation 的职责:剪枝按"成员到簇质心余弦"
@@ -225,7 +268,8 @@ export class ClusteringService {
       if (!mlResponse.ok) {
         const errorText = await mlResponse.text();
         return {
-          success: false,
+          ok: false,
+          status: mlResponse.status,
           error: `ML service failed: ${mlResponse.status} - ${errorText}`
         };
       }
@@ -267,9 +311,10 @@ export class ClusteringService {
         }));
 
         // ml 侧把"不属于任何簇"的点标成 cluster_id = -1，并把它当一个簇返回。
-        // 这一组**继续下传**给故事验证：它不是垃圾堆——2026-08-15 run 里 54 篇噪声中被验证
-        // 层认出一条真故事（韩朝会谈），并进了第 59 期简报。删掉它会直接丢新闻。
-        // 但它不能算进"簇数"，也必须作为噪声量被看见。
+        // 这一组留在 clusters 里原样交给 workflow，但**不进簇判定、不进简报**：簇判定显式跳过
+        // clusterId < 0（auto-brief-generation.ts），文章去向表把这些文章记为 noise。
+        // （旧注释说它「继续下传给故事验证」——那是故事验证层时代的行为，该层已退役。）
+        // 它不能算进"簇数"，也必须作为噪声量被看见。
         const noiseCluster = clusters.find(c => c.clusterId === NOISE_CLUSTER_ID);
 
         const clusteringResult: ClusteringResult = {
@@ -303,78 +348,32 @@ export class ClusteringService {
         }
 
         return {
-          success: true,
-          data: clusteringResult
+          ok: true,
+          value: clusteringResult
         };
 
       } catch (error) {
         return {
-          success: false,
+          ok: false,
+          status: mlResponse.status,
           error: `Failed to parse ML service response: ${error instanceof Error ? error.message : String(error)}`
         };
       }
 
     } catch (error) {
       return {
-        success: false,
+        ok: false,
+        status: 0,
         error: `Clustering service error: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }
-
-  /**
-   * AI Worker格式聚类分析
-   */
-  private async aiWorkerClustering(items: any[], options?: {
-    config?: any;
-  }): Promise<Response> {
-    const url = new URL(`${this.env.MERIDIAN_ML_SERVICE_URL}/ai-worker/clustering`);
-
-    const request = new Request(url.toString(), {
-      method: 'POST',
-      headers: this.buildHeaders({ 'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY }),
-      body: JSON.stringify({
-        items,
-        config: options?.config
-      })
-    });
-
-    return await fetch(request);
-  }
 }
 
 /**
- * 便捷函数：创建聚类服务实例
+ * 创建 ML 服务客户端
+ * @param traceId 可选；传入后请求自动带 x-trace-id header，用于跨 service 日志关联
  */
-export function createClusteringService(env: AIWorkerEnv, traceId?: string): ClusteringService {
-  return new ClusteringService(env, traceId);
+export function createMLService(env: MLServiceEnv, traceId?: string): MLService {
+  return new MLService(env, traceId);
 }
-
-/**
- * 响应处理工具函数 - 用于处理Response对象
- */
-export async function handleServiceResponse<T>(
-  response: Response,
-  context?: string
-): Promise<{ success: boolean; data?: T; error?: string }> {
-  try {
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: `${context || 'Service'} failed: ${response.status} - ${errorText}`
-      };
-    }
-
-    const data = await response.json() as T;
-    return {
-      success: true,
-      data
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `${context || 'Service'} response parsing failed: ${error instanceof Error ? error.message : String(error)}`
-    };
-  }
-} 

@@ -11,7 +11,11 @@ from pydantic import BaseModel, Field
 # ============================================================================
 
 class BaseClusteringConfig(BaseModel):
-    """核心聚类配置。算法与各参数的实测依据见 clustering.py 的 ClusteringConfig 注释。"""
+    """核心聚类配置。算法与各参数的实测依据见 clustering.py 的 ClusteringConfig 注释。
+
+    backend 总是显式传全三个参数（apps/backend/src/lib/services/ml-service.ts 缺字段时取
+    BRIEF_CLUSTERING_OPTIONS 补齐），这里的默认值只在直接调用本服务时生效。
+    """
     agglomerative_threshold: float = Field(default=0.10, gt=0.0, le=1.0, description="凝聚聚类合并阈值(余弦距离 1-cos)")
     agglomerative_linkage: Literal['average', 'complete'] = Field(default='average', description="凝聚聚类链接方式")
     agglomerative_min_cluster_size: int = Field(default=3, ge=2, description="成簇最小篇数，低于此数整簇记为噪声(不进简报)")
@@ -21,7 +25,7 @@ class BaseClusteringConfig(BaseModel):
 # ============================================================================
 
 class AIWorkerEmbeddingItem(BaseModel):
-    """backend 发来的聚类输入项（apps/backend/src/lib/services/clustering.ts）"""
+    """backend 发来的聚类输入项（apps/backend/src/lib/services/ml-service.ts）"""
     id: int = Field(..., description="文章ID")
     embedding: List[float] = Field(..., description="384维嵌入向量")
     

@@ -7,16 +7,8 @@ import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
-import { handleServiceResponse } from '../lib/services/clustering';
 import { createWorkflowObservability } from '../lib/observability';
 import { articleContentKey, type ArticleAnalysis } from '@meridian/contracts';
-
-// 添加AI Worker响应类型定义
-interface AIWorkerAnalysisResponse {
-  success: boolean;
-  data?: ArticleAnalysis;
-  error?: string;
-}
 
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
@@ -324,29 +316,20 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             const articleAnalysis = await step.do(
               `analyze article ${article.id}`,
               { retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }, timeout: '1 minute' },
-              async (): Promise<AIWorkerAnalysisResponse['data']> => {
-                // 使用轻量级AI服务进行文章分析
-                const response = await aiServices.aiWorker.analyzeArticle(
+              async (): Promise<ArticleAnalysis> => {
+                // 使用轻量级AI服务进行文章分析（status 检查 / 拆壳 / dispose RPC stub 都在 callJson 里）
+                const result = await aiServices.aiWorker.analyzeArticle(
                   article.title,
                   article.text,
                   // 观测性：传每篇文章在本批次中的序号，和 trace_id 一起组成稳定 R2 key。
                   analysisIndex
                 );
 
-                try {
-                  const result = await handleServiceResponse<AIWorkerAnalysisResponse>(response, 'AI article analysis');
-                  
-                  if (!result.success || !result.data?.success) {
-                    throw new Error(`AI analysis failed: ${result.error || result.data?.error || 'Unknown error'}`);
-                  }
-                  
-                  return result.data.data!;
-                } finally {
-                  // 确保释放 RPC stub
-                  if (response && typeof (response as any).dispose === 'function') {
-                    (response as any).dispose();
-                  }
+                if (!result.ok) {
+                  throw new Error(`AI analysis failed: ${result.error}`);
                 }
+
+                return result.value;
               }
             );
 

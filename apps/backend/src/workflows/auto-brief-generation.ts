@@ -16,7 +16,7 @@ import {
 } from '../lib/core/storyline';
 import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability } from '../lib/observability';
-import { createClusteringService, type ClusteringResult } from '../lib/services/clustering';
+import { createMLService, type ClusteringResult } from '../lib/services/ml-service';
 import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loadRunEmbeddings, runWindowWhere, type BodyStatus, type RunWindow } from '../lib/core/run-corpus';
@@ -391,8 +391,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 content_focus: a.content_focus,
               } as Parameters<typeof generateSearchText>[0])
             );
-            const aiServices = createAIServices(this.env, workflowId);
-            const embResult = await aiServices.aiWorker.generateEmbedding(texts);
+            const embResult = await createMLService(this.env, workflowId).generateEmbedding(texts);
             if (!embResult.ok) {
               throw new Error(`批量 embedding 返回异常: ${embResult.error}`);
             }
@@ -674,8 +673,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const clusteringResult = await step.do('执行聚类分析', defaultStepConfig, async (): Promise<ClusteringResult> => {
         console.log(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
         
-        // 创建聚类服务实例
-        const clusteringService = createClusteringService(this.env, workflowId);
+        // 创建 ML 服务客户端
+        const mlService = createMLService(this.env, workflowId);
         
         // 聚类只依赖 embedding，给 ml 侧只发 {id, embedding}
         const clusteringDataset = {
@@ -686,18 +685,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // effectiveClusteringOptions 在 step 外取值（原因见那里的注释）
         console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'BRIEF_CLUSTERING_OPTIONS'}):`, JSON.stringify(effectiveClusteringOptions));
 
-        const response = await clusteringService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
+        const response = await mlService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
         
-        if (!response.success) {
+        if (!response.ok) {
           throw new Error(`聚类分析失败: ${response.error || '未知错误'}`);
         }
 
-        const st = response.data!.statistics;
+        const st = response.value.statistics;
         console.log(
           `[AutoBrief] 聚类分析完成: ${st.totalClusters} 个真簇 + 1 个噪声组(${st.noisePoints} 篇, ` +
-          `占 ${((st.noisePoints / Math.max(st.totalArticles, 1)) * 100).toFixed(0)}%)，噪声组同样作为候选下传`
+          `占 ${((st.noisePoints / Math.max(st.totalArticles, 1)) * 100).toFixed(0)}%)，噪声组不进簇判定`
         );
-        return response.data!;
+        return response.value;
       });
 
       // clustersFound 用 statistics.totalClusters（已排除噪声组）。此前用 clusters.length，
@@ -716,7 +715,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // configSent / configUsed **必须并排记**：2026-09 生产 ml-service 镜像停在 6-25，
       // 聚类算法换了却没生效，三个半月无人发现——病正是这两者不一致，而落盘里一个都没有。
       // 只记其中一个看不出错位。mlStats 只是诊断旁证：statistics 仍从 clusters 自推
-      // （原因见 clustering.ts 的 statistics 注释）。
+      // （原因见 ml-service.ts 的 statistics 注释）。
       try {
         await this.env.ARTICLES_BUCKET.put(
           clusteringSnapshotKey(workflowId),

@@ -21,7 +21,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
    这一步不算 embedding。
 3. **AutoBriefGenerationWorkflow**（`src/workflows/auto-brief-generation.ts`）：
    批量补算缺失 embedding（ml-service `/embeddings`）→ 聚类（ml-service `/ai-worker/clustering`，
-   客户端 `src/lib/services/clustering.ts`）→ 每簇 ai-worker `/meridian/cluster/judge` →
+   客户端 `src/lib/services/ml-service.ts`）→ 每簇 ai-worker `/meridian/cluster/judge` →
    `blockImportance` + `/meridian/stories/rank` 排序 → 每块 `/meridian/brief-block-v6` →
    `/meridian/brief-title`、`/meridian/generate-brief-summary` → 写 `reports`。
 

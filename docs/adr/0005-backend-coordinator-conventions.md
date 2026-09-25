@@ -10,7 +10,7 @@
    backend 用原生异常 + try/catch，**不用 Result 包装（neverthrow 那一套）**——当时实测错误处理代码减少一大半，调用链更直。
    现状：代码里已无 `neverthrow` 引用，`apps/backend/package.json` 里的这个死依赖已于 2026-09-23 移除
 2. **聚类请求只带 embedding 与元数据，不带正文**：ml-service 的聚类只用向量；正文由下游步骤按需从 R2 取。
-   现状：`apps/backend/src/lib/services/clustering.ts` 文件头仍写着这条
+   现状：`apps/backend/src/lib/services/ml-service.ts` 文件头仍写着这条
 3. **测试跑在 Workers 的 vitest pool 里**（`@cloudflare/vitest-pool-workers`）：测试里不能用 Node 的 `fs` 读文件，测试数据要内联或走 Workers 可用的方式
    - 现状：`package.json` 的 `test:safe`（指向已不存在的 `scripts/run-tests.sh`，当时为多文件并发撞同一张表写的逐个运行脚本）已于 2026-09-23 移除
 

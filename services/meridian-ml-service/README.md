@@ -3,8 +3,8 @@
 Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloudflare Containers**
 （`cf-worker/` 里的 Worker 把请求转发给容器）。唯一调用方是 `apps/backend`：
 
-- `AutoBriefGenerationWorkflow` 聚类前批量补算缺失 embedding → `POST /embeddings`（客户端 `apps/backend/src/lib/services/ai-services.ts` 的 `generateEmbedding`）
-- 随后聚类 → `POST /ai-worker/clustering`（客户端 `apps/backend/src/lib/services/clustering.ts`）
+- `AutoBriefGenerationWorkflow` 聚类前批量补算缺失 embedding → `POST /embeddings`（客户端 `apps/backend/src/lib/services/ml-service.ts` 的 `generateEmbedding`）
+- 随后聚类 → `POST /ai-worker/clustering`（客户端 `apps/backend/src/lib/services/ml-service.ts`）
 
 模型是 `intfloat/multilingual-e5-small`（384 维）。聚类算法是不降维的余弦距离凝聚聚类
 （average linkage）；旧的 UMAP + HDBSCAN 已于 2026-09-24 删除。
@@ -22,7 +22,7 @@ Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloud
 | `POST /ai-worker/clustering` | `{items: [{id, embedding}], config?}`（多余字段忽略）；`config` 字段见 `src/schemas.py` 的 `BaseClusteringConfig` | `clusters[{cluster_id, size, items[{id}]}]`（`cluster_id` = -1 为噪声）、`clustering_stats`、`config_used`、`build_identity` |
 
 `build_identity`（`build_time` / `injected`）用来确认生产跑的不是旧镜像：
-backend 在每次聚类时断言它（`clustering.ts` 的 `assertBuildIdentity`），缺字段即判定为旧镜像。
+backend 在每次聚类时断言它（`ml-service.ts` 的 `assertBuildIdentity`），缺字段即判定为旧镜像。
 来历：2026-09-15 至 09-19 容器镜像没推上去，生产连续五天跑旧算法而 `brief_runs.status` 一直是 `COMPLETED`。
 
 ## 环境变量（`src/config.py`、`src/main.py`）

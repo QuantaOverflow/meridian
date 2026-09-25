@@ -1,7 +1,7 @@
 """
 Golden-master（characterization）测试：POST /ai-worker/clustering。
 
-这是 apps/backend/src/lib/services/clustering.ts 调用的唯一聚类路由，实测
+这是 apps/backend/src/lib/services/ml-service.ts 调用的唯一聚类路由，实测
 byte-deterministic（现生产算法 agglomerative_cosine：不降维、无随机种子依赖，
 见 src/clustering.py 的 perform_agglomerative_clustering）。本测试不判"对不对"，
 只判"相同输入是否还产出相同输出"——回归探测器，不是正确性证明。
@@ -65,8 +65,8 @@ def request_body() -> dict:
 
 
 def _call_clustering(client: TestClient, request_body: dict) -> dict:
-    """完全复现 apps/backend/src/lib/services/clustering.ts 的
-    aiWorkerClustering()：同一路径、同一 header 名。"""
+    """完全复现 apps/backend/src/lib/services/ml-service.ts 的
+    analyzeClusters()（经 post('/ai-worker/clustering')）：同一路径、同一 header 名。"""
     response = client.post(
         "/ai-worker/clustering",
         json=request_body,

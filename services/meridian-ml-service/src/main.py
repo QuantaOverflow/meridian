@@ -161,7 +161,7 @@ async def ai_worker_clustering(
     config: BaseClusteringConfig = None,
     _: None = Depends(verify_token),
 ):
-    """backend（apps/backend/src/lib/services/clustering.ts）专用聚类端点。
+    """backend（apps/backend/src/lib/services/ml-service.ts）专用聚类端点。
     输入：[{"id": 1, "embedding": [...]}, ...]
     """
     print(f"[AIWorkerClustering] 收到请求：{len(items)} 个AI Worker数据项")

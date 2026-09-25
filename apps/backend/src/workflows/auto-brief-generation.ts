@@ -1859,26 +1859,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const reportId = await step.do('保存简报', dbStepConfig, async (): Promise<number> => {
         try {
           const db = getDb(this.env.HYPERDRIVE);
-          
-          // 计算使用的source数量（基于参与简报的文章）
-          const usedArticleIds = dataset.articles
-            .filter((article: any) => 
-              validatedStories && 
-              validatedStories.stories && 
-              Array.isArray(validatedStories.stories) && 
-              validatedStories.stories.some((story: any) => 
-                story.articleIds && Array.isArray(story.articleIds) && 
-                story.articleIds.includes(article.id)
-              )
-            )
-            .map(article => article.id);
-          
+
+          // usedSources 必须和 used_articles 同一个文章集合口径：出了块的 story 的 articleIds
+          // 并集（失败的 story 不算），复用外层已算好的 usedArticleIds，不再对全部候选 story 重算。
           let usedSources = 0;
-          if (usedArticleIds.length > 0) {
+          if (usedArticleIds.size > 0) {
             const usedSourcesResult = await db
               .selectDistinct({ count: sql<number>`count(distinct ${$articles.sourceId})` })
               .from($articles)
-              .where(inArray($articles.id, usedArticleIds));
+              .where(inArray($articles.id, Array.from(usedArticleIds)));
             usedSources = usedSourcesResult[0]?.count || 0;
           }
           

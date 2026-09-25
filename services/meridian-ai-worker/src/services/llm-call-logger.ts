@@ -29,8 +29,8 @@ export interface TraceContext {
 export function readTraceContext(req: Request | { headers: Headers }): TraceContext {
   const headers = (req as Request).headers
   if (!headers) return {}
-  const traceId = headers.get('x-trace-id') || headers.get('X-Trace-ID') || undefined
-  const idxRaw = headers.get('x-call-index') || headers.get('X-Call-Index')
+  const traceId = headers.get('x-trace-id') || undefined
+  const idxRaw = headers.get('x-call-index')
   const callIndex = idxRaw ? parseInt(idxRaw, 10) : undefined
   return { traceId, callIndex: Number.isFinite(callIndex as number) ? callIndex : undefined }
 }
@@ -68,7 +68,6 @@ export async function loggedChat(
       params: {
         temperature: request.temperature,
         max_tokens: request.max_tokens,
-        frequency_penalty: (request as any).frequency_penalty,
         response_format: (request as any).response_format,
       },
       messages: request.messages,
@@ -102,9 +101,6 @@ export async function loggedChat(
           // 解码参数必须记：不记的话落盘日志里「没下发」和「下发了但模型没认」长得一模一样。
           // 2026-09-08 就因为 response_format 不在这份记录里，差点把「生效」误判成「没透传」。
           response_format: (request as any).response_format,
-          frequency_penalty: (request as any).frequency_penalty,
-          presence_penalty: (request as any).presence_penalty,
-          seed: (request as any).seed,
         },
         response: response
           ? {

@@ -56,7 +56,8 @@ paths:
 - **glm-4.7-flash 防复读**：生产写作调用（`brief_block_v6` phase）**特意不设 `frequency_penalty`**——
   实测加到 0.4 会导致窗口引用越界被拒、丢材料（`services/meridian-ai-worker/src/services/call-llm.ts` 的 `PHASE_DEFAULTS` 注释）。真正挡复读的是
   代码侧 `detectRepetition`（`services/meridian-ai-worker/src/services/brief-block-v6.ts`），新 phase 复读风险高时先接这个，
-  不要默认加 `frequency_penalty`。
+  不要默认加 `frequency_penalty`（2026-09-25 起 ai-worker 已不透传它，真要加得先在 `/meridian/chat` 与
+  `ai-gateway.ts` 两处白名单接上）。
 - **换模型必实测关闭 thinking 后正文落哪个字段**：`glm-*` 落 `content`，`qwen3-*` 落 `reasoning_content`
   且 `content` 恒为 null，两者不通用。单一真源 `services/meridian-ai-worker/src/config/thinking.ts`；
   接新 reasoning 模型先照这个方法实测再接白名单。

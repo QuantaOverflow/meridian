@@ -16,10 +16,8 @@ binding = "AI"
 binding = "ARTICLES_BUCKET"
 bucket_name = "meridian-articles-prod"
 # 本地 wrangler dev 直连线上桶（remote binding，需 wrangler >= 4.37；本包锁 4.120.0）。
-# 不加 remote 时 dev 走 miniflare 模拟桶，而 `wrangler r2 object put` 写的是另一套
-# 扁平 blobs 目录，两边互不可见——文章正文永远加载不进来，证据链只能空跑。
-# preview_bucket_name 一并删掉：它优先于 bucket_name 生效，会把 dev 指向空的
-# meridian-articles-dev；正文只在 prod 桶里。代价是本地 dev 的写入也落生产桶。
+# ai-worker 只往桶里写 LLM 调用日志（llm-calls/、sensor 日志），不读。
+# 代价是本地 dev 的写入也落生产桶。
 remote = true
 
 # wrangler.toml (wrangler v3.88.0^)
@@ -29,8 +27,5 @@ enabled = true
 
 
 
-# 不需要 secret。可选 vars：LOG_LEVEL, ENABLE_DETAILED_LOGGING（本地见 .dev.vars.example）
-
-# Note: ML Service integration has been decoupled from AI Worker
-# For clustering functionality, directly call meridian-ml-service endpoints
+# 不需要 secret。可选 vars：LOG_LEVEL（本地见 .dev.vars.example）
 

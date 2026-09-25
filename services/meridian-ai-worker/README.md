@@ -18,17 +18,16 @@ AutoBriefGeneration ─► ml-service /embeddings          （聚类前批量补
 embedding 和聚类不在本服务，在 `services/meridian-ml-service`。
 backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，那里的客户端方法就是契约。
 
-## 路由（`src/index.ts`，共 8 条）
+## 路由（`src/index.ts`，共 7 条）
 
-请求/响应形状以 handler 为准；除 `/health` 外都返回 `{ success, data?, error?, metadata? }`。
+请求/响应形状以 handler 为准；都返回 `{ success, data?, error?, metadata? }`。
 
 | 路由 | 用途 | 调用方 |
 |---|---|---|
-| `GET /health` | 存活检查 | — |
 | `POST /meridian/article/analyze` | `{title, content}` → 单篇结构化分析（语言、地点、摘要点、关键词、实体…），字段契约见 `prompts/articleAnalysis.ts` 的 `articleAnalysisSchema` | ProcessArticles |
 | `POST /meridian/cluster/judge` | `{articles:[{id,title,…}]}`（≥2 篇）→ `verdict` EVENT / NO_EVENT / UNSURE + 标题；解析失败回 500，不伪装成 NO_EVENT | AutoBriefGeneration |
 | `POST /meridian/stories/rank` | `{candidates:[{id,title,articles}]}` → 三轮洗牌 + Borda 聚合取前 12（`services/story-rank.ts`）；三轮全败回 500 | AutoBriefGeneration |
-| `POST /meridian/brief-block-v6` | `{title, articles:[{id,title,content}], tier?}` → 一簇写成一块简报（`services/brief-block-v6.ts`）；`tier` = `lead` / `more` / `brief` | AutoBriefGeneration |
+| `POST /meridian/brief-block-v6` | `{articles:[{id,title,publishDate,content}], tier?}` → 一簇写成一块简报（`services/brief-block-v6.ts`）；`tier` = `lead` / `more` / `brief` | AutoBriefGeneration |
 | `POST /meridian/brief-title` | `{content}` → 整期标题 | AutoBriefGeneration |
 | `POST /meridian/generate-brief-summary` | `{briefTitle, briefContent}` → `tldrProse`（读者端 2-3 句摘要） | AutoBriefGeneration |
 | `POST /meridian/chat` | 透传口：`{messages, options?}`，`options` 的白名单字段见 handler；默认 `workers-ai` / `@cf/zai-org/glm-4.7-flash` | `eval/cluster-to-brief`（`slow-lib.mjs`、`arms/direct-raw`） |
@@ -56,8 +55,8 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 | 名称 | 作用 |
 |---|---|
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
-| `ARTICLES_BUCKET`（R2 binding） | 观测落盘 + 读文章正文，与 backend 同一个桶 `meridian-articles-prod` |
-| `ENABLE_DETAILED_LOGGING`、`LOG_LEVEL` | `services/logger.ts` 的日志开关 |
+| `ARTICLES_BUCKET`（R2 binding） | 观测落盘（只写不读），与 backend 同一个桶 `meridian-articles-prod` |
+| `LOG_LEVEL` | `services/logger.ts` 的日志开关 |
 
 ## 观测数据落在哪
 

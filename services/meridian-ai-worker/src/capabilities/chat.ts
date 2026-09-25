@@ -13,7 +13,7 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
     let usage: any
     let id: string
 
-    if (model.name.startsWith('@cf')) {
+    {
       // Workers AI format：新模型（qwen3 / glm 等）返回 OpenAI 兼容格式（choices + usage，
       // 且 response 字段为 null），老模型（llama-2-7b 等）返回 { response: "..." }。
       const cfBody = response
@@ -53,8 +53,6 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       }]
       usage = cfBody.usage
       id = cfBody.id || `chatcmpl-${Date.now()}`
-    } else {
-      throw new Error(`只支持 Workers AI 模型，收到: ${model.name}`)
     }
 
     return {
@@ -64,7 +62,6 @@ export class ChatCapabilityHandler implements CapabilityHandler<ChatRequest, Cha
       model: model.name,
       choices,
       usage,
-      cached: response.cached
     }
   }
 }

@@ -172,7 +172,6 @@ export class BriefBlockV6Service {
           callIndex,
           responseFormat: { type: 'json_schema' as const, json_schema: schema },
         });
-        if (res.capability !== 'chat') throw new Error(`unexpected response capability ${res.capability}`);
         // usage.neurons 是 Workers AI 的计费单位，类型里没有（各 provider 的 usage 字段不同），运行时有
         this.neurons += Number((res.usage as { neurons?: number } | undefined)?.neurons ?? 0);
         const choice = (res as ChatResponse).choices?.[0];

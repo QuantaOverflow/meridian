@@ -101,7 +101,7 @@ export function runDir(wf) {
 // 录像里的 prompt 没有逐次变化的字段（查过：没有注入日期 / workflowId / 随机数；
 // story_rank 的洗牌是按轮次定种子的），所以这里**不做任何文本归一化**：
 // 发给模型的字节变了就该 miss。
-const KEY_FIELDS = ['temperature', 'max_tokens', 'frequency_penalty', 'presence_penalty', 'seed', 'response_format'];
+const KEY_FIELDS = ['temperature', 'max_tokens', 'response_format'];
 
 export function requestKey(model, req) {
   const o = { model, messages: req.messages };

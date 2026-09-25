@@ -83,38 +83,19 @@ export class AIGatewayService {
    * 不经 AI Gateway（不传 gateway 参数，原因见方法内 `const options` 处）。
    */
   private async executeWorkersAIViaBinding(request: AIRequest): Promise<AIResponse> {
-    const ai = (this.env as unknown as { AI?: WorkersAIBinding }).AI
-    if (!ai || typeof ai.run !== 'function') {
-      throw new Error('Workers AI binding (env.AI) 未配置')
-    }
-
-    const provider = this.providers.get('workers-ai')
-    if (!provider) {
-      throw new Error('Provider workers-ai not registered')
-    }
-
-    if (request.capability !== 'chat') {
-      throw new Error(`Workers AI binding 目前只接 chat capability，收到: ${request.capability}`)
-    }
-
-    const modelName = request.model || provider.getDefaultModel(request.capability)
-    if (!modelName) {
-      throw new Error(`No workers-ai model available for capability: ${request.capability}`)
-    }
+    // processRequest 已确认 provider 注册过——构造函数只在 env.AI.run 存在时注册
+    const ai = (this.env as unknown as { AI: WorkersAIBinding }).AI
+    const provider = this.providers.get('workers-ai')!
+    const modelName = request.model
 
     const chatRequest = request as ChatRequest
     const inputs: Record<string, unknown> = { messages: chatRequest.messages }
     if (chatRequest.max_tokens != null) inputs.max_tokens = chatRequest.max_tokens
     if (chatRequest.temperature != null) inputs.temperature = chatRequest.temperature
-    // 第二道白名单。Cloudflare 的 glm-4.7-flash 模型页列出支持 frequency_penalty /
-    // presence_penalty / seed；不下发时行为与此前逐字相同。
-    if (chatRequest.frequency_penalty != null) inputs.frequency_penalty = chatRequest.frequency_penalty
-    if (chatRequest.presence_penalty != null) inputs.presence_penalty = chatRequest.presence_penalty
-    if (chatRequest.seed != null) inputs.seed = chatRequest.seed
     // 结构化输出。Workers AI 的 JSON mode 收 `response_format`（OpenAI 兼容）。
     // 逐模型的支持情况官方文档没给列表，**不支持的模型是静默忽略还是报错未知**——
     // 所以调用方必须自己核验产出是否真被约束住了，不能因为返回 200 就当它生效
-    // （这正是 frequency_penalty 那次的教训：不在白名单里传了照样 200）。
+    // （参数不在白名单里时传了照样 200，曾因此误判生效）。
     if (chatRequest.response_format != null) inputs.response_format = chatRequest.response_format
 
     // GLM / Qwen3 都是 reasoning 模型，chat template 默认开思维链，且 thinking token **计入 max_tokens

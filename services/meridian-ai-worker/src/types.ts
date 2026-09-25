@@ -27,17 +27,10 @@ export interface LogEntry {
 // =============================================================================
 
 interface BaseAIRequest {
-  model?: string
+  model: string
   provider?: string
   temperature?: number
   max_tokens?: number
-  // 解码参数。加它们是因为 glm-4.7-flash 有已知的复读退化（同一条 JSON 逐字重复到 max_tokens
-  // 被硬截断，实测同批输入 15 次里发作 4 次），而 frequency_penalty 正是对症的那个旋钮。
-  // 此前这三个参数在 /meridian/chat 与 workers-ai binding 两处白名单里都不在，
-  // 传了会被静默吞掉且照样返回 200——探针实测 fp=0 与 fp=2 的输出分布逐项重合。
-  frequency_penalty?: number
-  presence_penalty?: number
-  seed?: number
   // 结构化输出（Workers AI JSON mode，2025-02-25 起支持，OpenAI 兼容的 response_format）。
   // 加它是因为实测的头号报废形态是**模型压根没开始写 JSON**：28 份抽取响应里 17 份（60%）
   // 把 8192 token 全烧在标签外的散文草稿上，`<final_json>` 一次都没出现。约束式解码下
@@ -71,7 +64,6 @@ interface BaseAIResponse {
   id: string
   provider: string
   model: string
-  cached?: boolean
   usage?: {
     prompt_tokens?: number
     completion_tokens?: number
@@ -101,7 +93,6 @@ export interface ModelConfig {
 
 export interface ProviderConfig {
   models: ModelConfig[]
-  default_model?: string
 }
 
 // =============================================================================
@@ -112,8 +103,6 @@ export interface BaseProvider {
   config: ProviderConfig
   
   getSupportedCapabilities(): AICapability[]
-  getModelsForCapability(capability: AICapability): ModelConfig[]
-  getDefaultModel(capability: AICapability): string | undefined
   
   mapResponse(response: any, originalRequest: AIRequest): AIResponse
 }
@@ -130,5 +119,4 @@ export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends
 export interface CloudflareEnv extends Record<string, string | undefined> {
   // Logging configuration
   LOG_LEVEL?: string
-  ENABLE_DETAILED_LOGGING?: string
 }

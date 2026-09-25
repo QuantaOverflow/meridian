@@ -2,11 +2,9 @@ import { CloudflareEnv, LogEntry, LogLevel } from '../types'
 
 export class Logger {
   private logLevel: LogLevel
-  private enableDetailedLogging: boolean
 
   constructor(env: CloudflareEnv) {
     this.logLevel = (env.LOG_LEVEL as LogLevel) || 'info'
-    this.enableDetailedLogging = env.ENABLE_DETAILED_LOGGING === 'true'
   }
 
   log(level: LogLevel, message: string, metadata?: Record<string, any>, error?: Error): void {
@@ -19,7 +17,7 @@ export class Logger {
       timestamp: Date.now(),
       requestId: metadata?.requestId || 'unknown',
       message,
-      metadata: this.enableDetailedLogging ? metadata : this.sanitizeMetadata(metadata),
+      metadata: this.sanitizeMetadata(metadata),
       error
     }
 
@@ -31,7 +29,6 @@ export class Logger {
       requestId,
       provider,
       errorMessage: error.message,
-      errorStack: this.enableDetailedLogging ? error.stack : undefined,
       ...context
     }, error)
   }
@@ -87,7 +84,6 @@ export class Logger {
       ...(entry.error && { 
         error: {
           message: entry.error.message,
-          stack: this.enableDetailedLogging ? entry.error.stack : undefined
         }
       })
     }

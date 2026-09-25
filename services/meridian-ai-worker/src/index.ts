@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { AIGatewayService } from './services/ai-gateway'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
@@ -23,15 +22,9 @@ type HonoEnv = {
 
 const app = new Hono<HonoEnv>()
 
-app.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Trace-ID', 'x-trace-id', 'x-observe'],
-}))
-
 // 跨服务追踪：把上游传过来的 x-trace-id 在请求入口打一行结构化日志，便于 wrangler tail 关联
 app.use('*', async (c, next) => {
-  const traceId = c.req.header('x-trace-id') || c.req.header('X-Trace-ID')
+  const traceId = c.req.header('x-trace-id')
   if (traceId) {
     console.log(`[trace] svc=meridian-ai-worker trace_id=${traceId} path=${c.req.path} method=${c.req.method}`)
   }
@@ -40,18 +33,6 @@ app.use('*', async (c, next) => {
 
 // 观测上下文：请求内经 loggedChat 的 LLM 调用自动挂到本请求的 span 下（services/observe.ts）
 app.use('*', observeMiddleware)
-
-// ============================================================================
-// Health Check
-// ============================================================================
-
-app.get('/health', (c) => {
-  return c.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    service: 'meridian-ai-worker'
-  })
-})
 
 // ============================================================================
 // Article Analysis
@@ -120,11 +101,7 @@ app.post('/meridian/article/analyze', async (c) => {
           metadata: requestMetadata
         })
 
-        if (aiResult.capability !== 'chat') {
-          throw new Error('Unexpected response type from chat service')
-        }
-
-        const aiResponse = (aiResult as ChatResponse).choices?.[0]?.message?.content
+        const aiResponse = aiResult.choices?.[0]?.message?.content
         if (!aiResponse) {
           throw new Error('AI 服务返回空响应')
         }
@@ -461,37 +438,20 @@ app.post('/meridian/chat', async (c) => {
       // ?? 而非 ||：调用方显式传 temperature: 0（judge 场景）时必须生效，|| 会吞成 0.7
       temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
-      // 解码参数透传。不传就是原行为（provider 侧不下发），向后兼容。
       // 这里是显式白名单：不在名单上的 options 会被静默丢弃且照样 200，加参数必须同时改这里
       // 和 ai-gateway.ts 的 executeWorkersAIViaBinding。
-      frequency_penalty: body.options?.frequency_penalty,
-      presence_penalty: body.options?.presence_penalty,
-      seed: body.options?.seed,
       response_format: body.options?.response_format,
       metadata: createRequestMetadata(c)
     }
 
-    const result = await aiGatewayService.chat(chatRequest)
-    
-    if (result.capability !== 'chat') {
-      throw new Error('Unexpected response type from chat service')
-    }
-    
-    const chatResult = result as ChatResponse
+    const chatResult = await aiGatewayService.chat(chatRequest)
     
     return c.json<APIResponse<any>>({
       success: true,
       data: {
-        id: chatResult.id,
         choices: chatResult.choices,
         usage: chatResult.usage,
-        model: chatResult.model
       },
-      metadata: {
-        provider: chatResult.provider,
-        processingTime: chatResult.processingTime,
-        cached: chatResult.cached
-      }
     })
   } catch (error: any) {
     console.error('Chat error:', error)

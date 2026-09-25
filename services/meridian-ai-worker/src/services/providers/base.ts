@@ -2,7 +2,6 @@
 import { 
   BaseProvider, 
   ProviderConfig, 
-  ModelConfig, 
   AICapability,
   AIRequest,
   AIResponse
@@ -20,34 +19,8 @@ export abstract class AbstractProvider implements BaseProvider {
     return Array.from(capabilities)
   }
 
-  getModelsForCapability(capability: AICapability): ModelConfig[] {
-    return this.config.models.filter(model => 
-      model.capabilities.includes(capability)
-    )
-  }
-
-  getDefaultModel(capability: AICapability): string | undefined {
-    // First try provider's default model if it supports the capability
-    const defaultModel = this.config.models.find(m => 
-      m.name === this.config.default_model && 
-      m.capabilities.includes(capability)
-    )
-    
-    if (defaultModel) {
-      return defaultModel.name
-    }
-
-    // Otherwise return first model that supports the capability
-    const firstModel = this.getModelsForCapability(capability)[0]
-    return firstModel?.name
-  }
-
   mapResponse(response: any, originalRequest: AIRequest): AIResponse {
-    const modelName = originalRequest.model || this.getDefaultModel(originalRequest.capability)
-    if (!modelName) {
-      throw new Error(`No model available for capability: ${originalRequest.capability}`)
-    }
-
+    const modelName = originalRequest.model
     const model = this.config.models.find(m => m.name === modelName)
     if (!model) {
       throw new Error(`Model not found: ${modelName}`)

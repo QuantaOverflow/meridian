@@ -9,6 +9,7 @@
 - `services/meridian-ai-worker` — CF Worker，LLM 只走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
+- `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现
 
 ## Commands（根目录）
 - `pnpm typecheck` / `pnpm format`
@@ -40,7 +41,7 @@
 ## 何时读哪份 docs
 - 链路总览、部署、观测/排错 → 根 `README.md` 的 How It Works / Deployment / Monitoring 三节
 - 改 backend / ai-worker 代码 → `.claude/rules/workers.md` 自动载入（本地验证、workflow、观测、LLM 调用的硬规矩）；编排以 `apps/backend/src/workflows/` 代码为准
-- 跨 service 调用 → `apps/backend/src/lib/services/ai-services.ts`（客户端方法即契约，比文档准）
+- 跨 service 调用 → 数据类型、R2 key、embedding 维度在 `packages/contracts/src/`（`@meridian/contracts`，两侧共用一份）；客户端在 `apps/backend/src/lib/services/ai-services.ts`（ai-worker）与 `ml-service.ts`（ML）
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）

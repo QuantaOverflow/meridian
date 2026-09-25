@@ -34,7 +34,7 @@
   CTE / LATERAL 仍是原生 SQL，但表名列名走 drizzle 的表 / 列对象，改列名 typecheck 能拦住；前端去掉 `@meridian/database` 依赖与 `NUXT_DATABASE_URL`。
 
 ### D3. backend → ML 服务走公网 URL
-- 位置：`MERIDIAN_ML_SERVICE_URL = https://meridian-ml-service.swj299792458.workers.dev`（`apps/backend/wrangler.jsonc`），调用见 `lib/services/ai-services.ts`、`lib/services/clustering.ts`。
+- 位置：`MERIDIAN_ML_SERVICE_URL = https://meridian-ml-service.swj299792458.workers.dev`（`apps/backend/wrangler.jsonc`），调用见 `lib/services/ml-service.ts`（2026-09-26 起 ML 调用只在这一个客户端里）。
 - 代价：多一跳公网；需自管 token（见 S1）；`*.workers.dev` 在国内会被 RST（影响本地开发）。
 - 选项：改为 service binding（ml cf-worker 已是 Worker，可直接绑）。
 - 待裁决：是否迁；迁后是否仍保留 token 校验。
@@ -45,6 +45,7 @@
 - 代价：binding 改名或删除后 typecheck 全绿，日志静默写不进去。
 - 选项：去掉索引签名、显式声明 binding（需排查所有 `env[动态 key]` 用法）；或改用 `wrangler types` 生成的 `Env`。
 - 待裁决：是否修、修到哪一层。
+- 裁决（2026-09-26）：修，手写显式类型（不上 `wrangler types`）。`CloudflareEnv` 改为 `{ AI: Ai; ARTICLES_BUCKET?: R2Bucket }`（`src/types.ts`），全仓 `env.` 用法只有这两个 binding、没有字符串 vars、没有 `env[动态 key]`；两处 `(env as any)` 已删，读不存在的 binding 现在 typecheck 报错。
 
 ### D5. 单厂商依赖（只有 Workers AI）
 - 位置：`services/meridian-ai-worker/src/services/call-llm.ts` `PHASE_DEFAULTS`，简报链路全部 phase 用 `@cf/zai-org/glm-4.7-flash`（文章分析 qwen3 → glm 两档，仍同一厂商），无跨厂商兜底；2026-09-24 起 AI Gateway 通道与 DashScope 已删，要接非 CF 厂商经 CF AI Gateway 重接。
@@ -60,6 +61,7 @@
 - 位置：`apps/backend/src/lib/services/ai-services.ts:112`，实际请求 ML `/embeddings`。
 - 选项：把方法移到 ML 客户端（`clustering.ts` 的 `ClusteringService` 旁）或改名。
 - 待裁决：是否改。
+- 裁决（2026-09-26）：移。`generateEmbedding` 与聚类合成唯一的 ML 客户端 `apps/backend/src/lib/services/ml-service.ts`（`createMLService`），传输只写一处，两个方法都返回 `ServiceResult<T>`；`clustering.ts` 已并入该文件。
 
 ### D7. binding 名 `MY_WORKFLOW`
 - 位置：`apps/backend/wrangler.jsonc`，对应 `auto_brief_generation`。
@@ -70,6 +72,7 @@
 - 位置：`apps/backend/src/prompts/articleAnalysis.prompt.ts` 与 `services/meridian-ai-worker/src/prompts/articleAnalysis.ts`；backend 那份只给 `lib/core/utils.ts` 的 `generateSearchText` 当类型用。当前字段一致。
 - 选项：抽到共享包；或 backend 只保留类型。
 - 待裁决：是否合并。
+- 裁决（2026-09-26）：合并到共享包 `@meridian/contracts`（`packages/contracts`）。实际有 3 份（另一份手抄在 `processArticles.workflow.ts`），现只剩一份：ai-worker 用它 safeParse，backend 只取类型；backend 的 `prompts/articleAnalysis.prompt.ts` 已删。
 
 ### D9. `/meridian/intelligence/analyze-single-story` 无调用方
 - 位置：`services/meridian-ai-worker/src/index.ts:261`。
@@ -89,7 +92,7 @@
 ### D11. 过时文档 `apps/backend/docs/clustering-service-usage.md`
 - 现象：通篇介绍已删的 `analyzeArticleClusters` / `MLService` 与不存在的 `MockClusteringService`。
 - 待裁决：删除，还是按现行 `ClusteringService` 重写。
-- **已结（2026-09-24）**：删除。聚类契约以 `apps/backend/src/lib/services/clustering.ts` 为准。
+- **已结（2026-09-24）**：删除。聚类契约以 `apps/backend/src/lib/services/clustering.ts` 为准（2026-09-26 起该文件并入 `ml-service.ts`）。
 
 ### D12. knip 的盲区
 - 现象：knip 看不到 wrangler binding 与 HTTP 路由，所以 D9、D10 以及已删的 `AI` binding 都没被上一轮死代码清理发现。

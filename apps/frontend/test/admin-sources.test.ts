@@ -127,6 +127,21 @@ describe('后台页面「Add Source」', () => {
   });
 });
 
+describe('POST /api/admin/sources', () => {
+  it('新增的源 category 应为 news（简报只收 news 分类的源，见 CLAUDE.md）', async () => {
+    const NEW_URL = 'https://example.net/category-check-feed.xml';
+    const cookie = await loginCookie();
+    const body = await $fetch('/api/admin/sources', {
+      method: 'POST',
+      headers: { cookie },
+      body: { url: NEW_URL },
+    });
+    expect(body).toEqual({ success: true });
+    const [row] = await db.select({ category: $sources.category }).from($sources).where(eq($sources.url, NEW_URL));
+    expect(row?.category).toBe('news');
+  });
+});
+
 describe('暂停 / 恢复自动抓取：接口', () => {
   for (const action of ['pause', 'resume'] as const) {
     it(`${action}：转给 backend；backend 失败时如实报错`, async () => {

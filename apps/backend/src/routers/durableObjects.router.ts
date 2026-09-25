@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { HonoEnv } from '../app';
-import { $articles, $sources, eq, isNull } from '@meridian/database';
+import { $articles, $sources, and, eq, isNull } from '@meridian/database';
 import { getDb } from '../lib/database';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
@@ -88,6 +88,9 @@ const route = new Hono<HonoEnv>()
       if (!source) {
         return c.json({ error: 'Source not found' }, 404);
       }
+      if (source.paused_at) {
+        return c.json({ error: 'Source is paused; resume it instead' }, 409);
+      }
 
       // Initialize the DO
       const doId = c.env.SOURCE_SCRAPER.idFromName(source.url);
@@ -129,7 +132,8 @@ const route = new Hono<HonoEnv>()
           scrape_frequency: $sources.scrape_frequency,
         })
         .from($sources)
-        .where(isNull($sources.do_initialized_at));
+        // 已暂停的源 do_initialized_at 也是空的，不跳过就会被这里重新拉起
+        .where(and(isNull($sources.do_initialized_at), isNull($sources.paused_at)));
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       initLogger.error('Failed to fetch sources from database', undefined, err);
@@ -186,6 +190,115 @@ const route = new Hono<HonoEnv>()
     initLogger.info('Initialization process complete', { total: allSources.length, successful: successCount });
     return c.json({ initialized: successCount, total: allSources.length });
   })
+  .post(
+    '/admin/source/:sourceId/pause',
+    zValidator(
+      'param',
+      z.object({
+        sourceId: z.string().min(1, 'Source ID is required'),
+      })
+    ),
+    async c => {
+      const pauseLogger = logger.child({ operation: 'pause-source' });
+      const { sourceId } = c.req.valid('param');
+
+      const db = getDb(c.env.HYPERDRIVE);
+
+      let source;
+      try {
+        source = await db.query.$sources.findFirst({
+          where: eq($sources.id, Number(sourceId)),
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        pauseLogger.error('Failed to fetch source', { sourceId }, err);
+        return c.json({ error: 'Failed to fetch source' }, 500);
+      }
+
+      if (!source) {
+        return c.json({ error: 'Source not found' }, 404);
+      }
+
+      // 先落标记再停 DO：停 DO 失败时，DO 下一次 alarm 看到标记也会自己停
+      try {
+        await db
+          .update($sources)
+          .set({ paused_at: source.paused_at ?? new Date(), do_initialized_at: null })
+          .where(eq($sources.id, source.id));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        pauseLogger.error('Failed to mark source as paused', { sourceId }, err);
+        return c.json({ error: 'Failed to mark source as paused' }, 500);
+      }
+
+      const stub = c.env.SOURCE_SCRAPER.get(c.env.SOURCE_SCRAPER.idFromName(source.url));
+      try {
+        await stub.destroy();
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        pauseLogger.error('Failed to stop source DO', { sourceId }, err);
+        return c.json({ error: 'Failed to stop source DO' }, 500);
+      }
+
+      pauseLogger.info('Paused source', { sourceId, url: source.url });
+      return c.json({ success: true });
+    }
+  )
+  .post(
+    '/admin/source/:sourceId/resume',
+    zValidator(
+      'param',
+      z.object({
+        sourceId: z.string().min(1, 'Source ID is required'),
+      })
+    ),
+    async c => {
+      const resumeLogger = logger.child({ operation: 'resume-source' });
+      const { sourceId } = c.req.valid('param');
+
+      const db = getDb(c.env.HYPERDRIVE);
+
+      let source;
+      try {
+        source = await db.query.$sources.findFirst({
+          where: eq($sources.id, Number(sourceId)),
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        resumeLogger.error('Failed to fetch source', { sourceId }, err);
+        return c.json({ error: 'Failed to fetch source' }, 500);
+      }
+
+      if (!source) {
+        return c.json({ error: 'Source not found' }, 404);
+      }
+
+      // 先清标记再 init：反过来的话，DO 的第一次 alarm 可能还看到标记而自停
+      try {
+        await db.update($sources).set({ paused_at: null }).where(eq($sources.id, source.id));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        resumeLogger.error('Failed to clear paused mark', { sourceId }, err);
+        return c.json({ error: 'Failed to clear paused mark' }, 500);
+      }
+
+      const stub = c.env.SOURCE_SCRAPER.get(c.env.SOURCE_SCRAPER.idFromName(source.url));
+      try {
+        await stub.initialize({
+          id: source.id,
+          url: source.url,
+          scrape_frequency: source.scrape_frequency,
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        resumeLogger.error('Failed to initialize source DO', { sourceId, url: source.url }, err);
+        return c.json({ error: 'Failed to initialize source DO' }, 500);
+      }
+
+      resumeLogger.info('Resumed source', { sourceId, url: source.url });
+      return c.json({ success: true });
+    }
+  )
   .delete(
     '/admin/source/:sourceId',
     zValidator(

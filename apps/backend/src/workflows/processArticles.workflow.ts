@@ -185,7 +185,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               .where(eq($articles.id, article.id));
           });
 
-          return { id: article.id, success: false, error: 'pdf' };
+          // alreadyMarked：状态已写成 SKIPPED_PDF，下面的失败分支不要再覆写成 FETCH_FAILED
+          return { id: article.id, success: false, error: 'pdf', alreadyMarked: true };
         }
 
         scrapeLogger.info('Attempting to scrape article');
@@ -298,6 +299,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
         } else {
           failCount++;
+          if ('alreadyMarked' in result && result.alreadyMarked) continue;
           // update failed articles in DB with the fail reason
           const dbUpdateStartTime = Date.now();
           await step.do(`update db for failed article ${result.id}`, dbStepConfig, async () => {

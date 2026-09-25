@@ -278,6 +278,13 @@ export async function seedReaderFixture(db: Db, anchor: Date) {
   await db.insert($brief_runs).values(f.briefRuns);
   await db.insert($story_clusters).values(f.clusters);
   await db.insert($brief_stories).values(f.briefStories);
+  // 上面按固定 id 插入不会推进自增序列；不同步的话，之后别的测试（同一个库、同一个 worker）
+  // 不带 id 插入会从 1 开始撞主键。
+  for (const table of ['sources', 'articles', 'reports', 'story_clusters', 'brief_stories', 'brief_runs']) {
+    await db.execute(
+      sql`select setval(pg_get_serial_sequence(${table}, 'id'), coalesce((select max(id) from ${sql.identifier(table)}), 0) + 1, false)`
+    );
+  }
 }
 
 /** 数据库的「今天」，作为 fixture 与快照日期记号的锚点 */

@@ -67,6 +67,14 @@ export default defineNuxtConfig({
           staleMaxAge: 60 * 60 * 24 * 7, // 1 week stale-while-revalidate on CDN
         },
       },
+      // 最新一期会变（每天 21:00 出新一期），不能吃上面那条一小时 + 一周的缓存，
+      // 否则首页最长一小时后才换上新的一期。更具体的规则覆盖通配那条。
+      '/api/briefs/latest': {
+        cache: {
+          maxAge: 60,
+          staleMaxAge: 60,
+        },
+      },
     },
   },
 

@@ -2,7 +2,7 @@ import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
 import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';
 import { getDb } from '../lib/database';
-import { getArticleFetchFirst } from '../lib/services/article-fetchers';
+import { browserTriedFromError, getArticleFetchFirst } from '../lib/services/article-fetchers';
 import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
@@ -206,10 +206,13 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             error instanceof Error ? error : new Error(String(error))
           );
           // After all retries failed, return a structured error
+          const message = error instanceof Error ? error.message : String(error) || 'exhausted all retries';
           result = {
             id: article.id,
             success: false,
-            error: error instanceof Error ? error.message : String(error) || 'exhausted all retries',
+            error: message,
+            // 看不出试过浏览器（如 step 超时、平台内部错误）就留 NULL，不写 false
+            used_browser: browserTriedFromError(message) ? true : null,
           };
           scrapeLogger.info('Individual article scrape failed', { durationMs: Date.now() - individualScrapeStartTime });
 
@@ -295,6 +298,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 processedAt: new Date(),
                 failReason: failReason,
                 status: status,
+                used_browser: 'used_browser' in result ? result.used_browser : null,
               })
               .where(eq($articles.id, result.id));
           });

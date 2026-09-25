@@ -209,10 +209,28 @@ export async function getArticleWithFetch(url: string) {
  * @returns 正文，以及正文是不是浏览器抓回来的
  */
 export async function getArticleFetchFirst(env: Env, url: string, beforeBrowser: () => Promise<void>) {
+  let fetchError: unknown;
   try {
     return { html: await getArticleWithFetch(url), used_browser: false };
-  } catch {
-    await beforeBrowser();
-    return { html: await getArticleWithBrowser(env, url), used_browser: true };
+  } catch (error) {
+    fetchError = error;
   }
+  await beforeBrowser();
+  try {
+    return { html: await getArticleWithBrowser(env, url), used_browser: true };
+  } catch (browserError) {
+    // 调用方（workflow 的 step.do）重试耗尽后只剩报错消息，两边的原因和「试过浏览器」都得写进消息里
+    throw new Error(`${BOTH_FAILED} — fetch: ${errorMessage(fetchError)}; browser: ${errorMessage(browserError)}`);
+  }
+}
+
+const BOTH_FAILED = 'Fetch and browser both failed';
+
+/** getArticleFetchFirst 的报错消息是否说明试过浏览器 */
+export function browserTriedFromError(message: string) {
+  return message.startsWith(BOTH_FAILED);
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }

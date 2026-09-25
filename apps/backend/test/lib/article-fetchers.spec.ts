@@ -1,6 +1,6 @@
 import { fetchMock } from 'cloudflare:test';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { getArticleFetchFirst, getArticleWithBrowser } from '../../src/lib/services/article-fetchers';
+import { browserTriedFromError, getArticleFetchFirst, getArticleWithBrowser } from '../../src/lib/services/article-fetchers';
 
 const ACCOUNT = 'c8317cfcb330d45b37b00ccd7e8a9936';
 
@@ -73,5 +73,11 @@ describe('getArticleFetchFirst', () => {
     expect(err.message).toMatch(/401.*Authentication error/);
     expect(err.message).toMatch(/fetch/i);
     expect(err.message).toMatch(/connection reset by peer/);
+    expect(browserTriedFromError(err.message)).toBe(true);
+  });
+
+  it('反向对照：不是两条路都失败的报错，不判为试过浏览器', () => {
+    expect(browserTriedFromError('Browser Rendering API 401: 10000 Authentication error')).toBe(false);
+    expect(browserTriedFromError('WorkflowInternalError: Attempt failed due to internal workflows error')).toBe(false);
   });
 });

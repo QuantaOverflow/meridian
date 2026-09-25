@@ -224,7 +224,7 @@ Runbook for figuring out what went wrong with a given brief run. Recording code:
 | R2 `observability/article-journey/<workflowId>.json` | per-article trace: which gate it hit, which block it landed in | end of the brief workflow |
 | R2 `observability/brief-v3/<workflowId>.json` | each block's tier, text, sources and cost; failed blocks kept with `ok:false` | the title step |
 | R2 `llm-calls/<workflowId>/<phase>-<NNN>.json` | raw input/output of every LLM call | ai-worker's `llm-call-logger` |
-| R2 `observability/sensors/<trace>/` | ai-worker-side sensors (`output_language`, `brief_hygiene`, …) | ai-worker's `sensor-log` |
+| R2 `observability/sensors/<trace>/` | ai-worker-side sensors (currently only `output_language`) | ai-worker's `sensor-log` |
 
 `ProcessArticles` writes the same `observability/<workflowId>.json` shape.
 

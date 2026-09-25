@@ -73,8 +73,8 @@ class AIWorkerService {
     return h;
   }
 
-  // 跨 service 调用的仪式单一真源：发请求 → status 检查 → 解析 {success,data,metadata,error}
-  // → dispose RPC stub。成功回 {ok,value:data,metadata}，失败回 {ok:false,status,error}。
+  // 跨 service 调用的仪式单一真源：发请求 → status 检查 → 解析 {success,data,error}
+  // → dispose RPC stub。成功回 {ok,value:data}，失败回 {ok:false,status,error}。
   // 失败 error 保留与旧调用点一致的措辞：非 200 = "HTTP <s>: <body>"，success:false = "success:false: <e>"。
   private async callJson<T>(request: Request): Promise<ServiceResult<T>> {
     const response = await this.env.AI_WORKER.fetch(request);

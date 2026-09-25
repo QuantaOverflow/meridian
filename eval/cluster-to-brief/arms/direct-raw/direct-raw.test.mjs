@@ -52,7 +52,6 @@ assert.equal(stripMarkers('Figure 3:2 stays [x].'), 'Figure 3:2 stays [x].');
   const A = [{ id: 'a', sources: src(1, 2, 3) }, { id: 'b', sources: src(4, 5, 6) }, { id: 'c', sources: src(7, 7) }, { id: 'd', sources: src(8) }];
   assert.deepEqual([...mustCover(A)], ['a', 'b']);                      // 最高档 3 篇
   assert.deepEqual([...mustCover([{ id: 'x', sources: src(1) }])], []); // 单篇报道不强制
-  assert.deepEqual([...mustCover(A, 1)], ['a', 'b']);                   // 放宽到 top-1=2 篇;c 同篇两句只算 1 篇
 }
 {
   const arts = [{ id: 1, sentences: ['Oil hit $107 a barrel.', 'Analyst Jo Smith spoke.', 'He added "prices may rise further".'] },

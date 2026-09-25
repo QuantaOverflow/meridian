@@ -212,7 +212,7 @@ chained together」），同型，所以 `system_message()` / `generate()` / `se
 环节能互相接龙、跨 task 复用。
 
 **这个限制现在已经在收代价**：direct-raw 的 v6 是六个环境开关堆出来的
-（`SINGLE_BLOCK` / `WRITE_AT_END` / `WRITE_TIER` / `WRITE_SUPPORT` / `WRITE_REPAIR` / `ROUTE_GATE`），
+（当时是 `SINGLE_BLOCK` / `WRITE_AT_END` / `WRITE_TIER` / `WRITE_SUPPORT` / `WRITE_REPAIR` / `ROUTE_GATE`；证伪的已于 2026-09-25 删除，现存 `WRITE_AT_END` / `WRITE_TIER` / `WRITE_SUPPORT` / `WRITE_REPAIR`），
 它们本质上是**可选的处理环节**，用开关表达的后果是：组合数随开关指数增长、环节不能跨臂复用
 （structure-router 的路由门只能靠读对方产物文件来"复用"，见上面的锋利边）、加一步要改主流程。
 

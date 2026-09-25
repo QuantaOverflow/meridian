@@ -10,43 +10,27 @@ import { runArm } from '../../runner.mjs';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const ROOT = new URL('../../', import.meta.url).pathname;
-// DIRECT_RAW_SINGLE_BLOCK=1：一簇只出一块（ADR 0003 簇即简报块），子话题留在块内；选择时去重同一事实。
-// 只改选择这一步，窗口候选沿用不带此开关的同名臂的缓存（配 --resume），差别只在选择。
-const SINGLE_BLOCK = process.env.DIRECT_RAW_SINGLE_BLOCK === '1';
+// 已证伪、2026-09-25 删掉的开关（SINGLE_BLOCK / WRITE_TIER=lead / WRITE_REPAIR=1 / MUST_SLACK / MODEL）
+// 及其结论见 README「删掉的开关」。
 // DIRECT_RAW_WRITE_AT_END=1：改写只发生一次、且发生在看得见全局的最后一步。窗口步不再写句子，
 // 只标重点（话题 + 原文句编号）；最后一步读这些重点对应的**原句**，写一段连贯的正文（一簇一块），
 // 逐句标出处。动机：原型成稿是十个窗口各写各的句子拼起来的，没有主次、没有过渡（2026-09-19 人读）。
 // 与 claim-anchor-not-rewrite 同一思路。窗口产物格式不同，用自己的窗口缓存。
 const WRITE_AT_END = process.env.DIRECT_RAW_WRITE_AT_END === '1';
-// DIRECT_RAW_WRITE_TIER=lead：写作步篇幅从生产 `more` 档（4–7 句）放到 `lead` 档（8–14 句），
-// 试能否把被篇幅挤掉的核心事实写回来。只改写作步，窗口重点复用 -write 的缓存。
 // DIRECT_RAW_WRITE_TIER=exec：高管简报。3–5 句，每句往上综合一组事实（不是挑几件事写），结论先行；
 // 意义与影响只在原文有人明说时写（用户 2026-09-19 选 B：不许模型自己分析）。一句综合多条，出处上限放到 8。
-const WRITE_TIER = ['lead', 'exec'].includes(process.env.DIRECT_RAW_WRITE_TIER) ? process.env.DIRECT_RAW_WRITE_TIER : 'more';
+const WRITE_TIER = process.env.DIRECT_RAW_WRITE_TIER === 'exec' ? 'exec' : 'more';
 // DIRECT_RAW_WRITE_SUPPORT=1：告诉写作步每条重点有几篇文章报道，并把报道最多的一档列为必写。
-// 动机：lead 档 c28 把核心层的飞行员营救整条判成「别的故事」丢掉（每条 4–5 篇报道）——
+// 动机：lead 档（8–14 句，已删）c28 把核心层的飞行员营救整条判成「别的故事」丢掉（每条 4–5 篇报道）——
 // 卡召回的不是篇幅，是模型自己判断什么算这个故事。改由报道量决定。
 const WRITE_SUPPORT = process.env.DIRECT_RAW_WRITE_SUPPORT === '1';
-// DIRECT_RAW_WRITE_REPAIR=1：v6 人读 + 慢档后的一组小修（2026-09-19）：
-//  · 窗口步每条重点出处上限 4 → 8：篇数到 4 就封顶，4 篇与 20 篇的事看着一样重，挑不出主事件
-//  · 代词开头的原句（"he added"）在材料里带上前一句：c1 把分析师的话安到 Andersson 名下（v6 唯一硬错）
-//  · 写完由代码补出处：句中数字/引语不在所引原句里，就去材料里找字面包含它的原句补上
-//  · prompt：必写重点保留专名（c36 把 Perim 岛概括没了）；一句一条线
-// 试过又撤掉的：「杂烩只写报道最多的那件事」。报道篇数被各事件报道里反复交代的背景事实抬高
-// （c43 的加沙死亡总数比任何真实事件都「多」，成稿混了三组），且把 c28 的营救线当成别的事件删掉。
-// DIRECT_RAW_WRITE_REPAIR=mech：只取其中两个确定性修复（代词句带前一句、代码补出处），其余不动。
-// 单次运行的读数被随机波动淹没（2026-09-20：同设置重跑，漏线/重复/句数不足轮流出现），
-// 所以先把不引入随机性的修复单独成一版，再做多次运行比频率。
-const WRITE_REPAIR = ['1', 'mech'].includes(process.env.DIRECT_RAW_WRITE_REPAIR);
-const REPAIR_FULL = process.env.DIRECT_RAW_WRITE_REPAIR === '1';
-const ANCHOR_SOURCES = REPAIR_FULL ? 8 : 4;
+// DIRECT_RAW_WRITE_REPAIR=mech：两个确定性修复——代词开头的原句（"he added"）在材料里带上前一句
+// （c1 把分析师的话安到 Andersson 名下，v6 唯一硬错）；写完由代码补出处（句中数字/引语不在所引原句里，
+// 就去材料里找字面包含它的原句补上）。全套修复（=1）已删，见 README。
+const WRITE_REPAIR = process.env.DIRECT_RAW_WRITE_REPAIR === 'mech';
+const ANCHOR_SOURCES = 4;
 // DIRECT_RAW_RUN=n：第 n 次独立重复（窗口步、写作步都重跑），产物与窗口缓存各自分目录，量运行间波动。
 const RUN = process.env.DIRECT_RAW_RUN ? `-run${process.env.DIRECT_RAW_RUN}` : '';
-// DIRECT_RAW_MUST_SLACK=1：必写档放宽到最高档与次一档。mech 三次运行里 c28 营救线 3/3 丢失——
-// 营救各条重点常比报告各条少一两篇，只取最高档就整条掉出必写。只改写作步，窗口重点复用同 RUN 的缓存。
-// 结果（3 次）：营救 0/3 → 1/3，且写营救时挤掉了弹药部分——必写 12–14 条，5 句装不下。
-// 撤回、默认 0：用户定 c28 是两件事（9 月的监察长报告 / 4 月营救的采访与争议），只写报告是对的。
-const MUST_SLACK = REPAIR_FULL ? 1 : Number(process.env.DIRECT_RAW_MUST_SLACK ?? 0);
 const WRITE_LEN = WRITE_TIER === 'exec'
   ? { max: 5, sources: 8, text: `An executive brief: 3–5 sentences in a single paragraph, at most about 800 characters.
   The first sentence is the bottom line — the single most important development, stated so a busy
@@ -55,10 +39,6 @@ const WRITE_LEN = WRITE_TIER === 'exec'
   official reactions), keeping only the one or two figures that matter most; never enumerate items.
   Say why it matters only when a source states it, and attribute it ("the report warned...").
   Write no analysis, motivation or prediction of your own.` }
-  : WRITE_TIER === 'lead'
-  ? { max: 14, sources: 4, text: `About 8–14 sentences across two to four paragraphs, roughly 1,200–2,000 characters.
-  Open with the most important development, then cover the key points, then what the people
-  involved said.` }
   : { max: 8, sources: 4, text: `About 4–7 sentences in a single paragraph, roughly 600–1,000 characters. Open with the most
   important development, then the key details, then what the people involved said.` };
 /**
@@ -69,8 +49,8 @@ const WRITE_LEN = WRITE_TIER === 'exec'
 function pathsOf(base) {
   const candidateOut = base;
   const writeOut = `${candidateOut}-write`;
-  const anchorCache = `${writeOut}${ANCHOR_SOURCES === 4 ? '' : `-a${ANCHOR_SOURCES}`}${RUN}`;
-  const out = WRITE_AT_END ? `${writeOut}${WRITE_TIER === 'more' ? '' : `-${WRITE_TIER}`}${WRITE_SUPPORT ? '-support' : ''}${REPAIR_FULL ? '-repair' : WRITE_REPAIR ? '-mech' : ''}${!REPAIR_FULL && MUST_SLACK ? `-slack${MUST_SLACK}` : ''}${RUN}` : `${candidateOut}${SINGLE_BLOCK ? '-single' : ''}`;
+  const anchorCache = `${writeOut}${RUN}`;
+  const out = WRITE_AT_END ? `${writeOut}${WRITE_TIER === 'more' ? '' : `-${WRITE_TIER}`}${WRITE_SUPPORT ? '-support' : ''}${WRITE_REPAIR ? '-mech' : ''}${RUN}` : candidateOut;
   // shared：不筛文章时的窗口缓存位置，就是根目录本身（不带任何开关后缀，所以两个臂共用）
   return { shared: base, candidateOut, writeOut, anchorCache, out };
 }
@@ -80,7 +60,7 @@ const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
 // 确定性剥掉整组标签，剥不干净的残留再由 MARKER 拒收重试。
 export const stripMarkers = t => t.replace(/\s*\[\s*\d{3,}\s*:\s*\d+(?:\s*[,;]\s*\d{3,}\s*:\s*\d+)*\s*\]/g, '');
 const ENDPOINT = process.env.AI_WORKER_URL ?? 'http://localhost:8787/meridian/chat';
-const MODEL = process.env.DIRECT_RAW_MODEL ?? '@cf/zai-org/glm-4.7-flash';
+const MODEL = '@cf/zai-org/glm-4.7-flash';
 const WINDOW_CHARS = Number(process.env.DIRECT_RAW_WINDOW_CHARS ?? 30_000);
 const OVERLAP_ARTICLES = Number(process.env.DIRECT_RAW_OVERLAP_ARTICLES ?? 1);
 const CONCURRENCY = Number(process.env.DIRECT_RAW_CONCURRENCY ?? 2);
@@ -263,7 +243,7 @@ function selectionSchema(candidateIds) {
       verdict: { type: 'string', enum: ['written', 'not_a_single_event'] },
       reason: { type: 'string', maxLength: 500 },
       blocks: {
-        type: 'array', maxItems: SINGLE_BLOCK ? 1 : 5,
+        type: 'array', maxItems: 5,
         items: {
           type: 'object', additionalProperties: false, required: ['title', 'candidateIds'],
           properties: {
@@ -294,24 +274,13 @@ const SHAPE_RULES = `Decide the cluster shape from the evidence:
 Choose 3-8 non-redundant sentences per block where available. A block is an event, not a broad
 entity or region. Never place unrelated events in one block.`;
 
-const SINGLE_BLOCK_RULES = `Write exactly ONE block: one brief item about the story that dominates the evidence.
-Different aspects of that story (costs, damage, reactions, follow-ups) belong in the same block;
-do not split them into separate blocks. Exclude topical hitchhikers, geographic neighbors,
-commentary, and isolated unrelated stories.
-- If the input is a miscellaneous topic bag with no dominant story, use not_a_single_event,
-  explain why, and return no blocks.
-Choose 4-10 sentences, ordered so the block reads as one item: the core development first, then
-supporting detail. Never select two candidates that state the same fact, even if worded
-differently or citing different articles; keep the one with the stronger evidence.
-Title the block with a short headline for the story.`;
-
 function selectionPrompt(candidates, cluster, schema) {
   const material = candidates.map(c => `### ${c.id} | ${c.topic}\nPROSE: ${c.text}\nEVIDENCE:\n${evidenceForCandidate(c, cluster)}`).join('\n\n');
   return `Select a coherent news brief from direct-written candidate sentences and their verbatim
 evidence. You may ONLY return candidate ids; a deterministic assembler will copy their prose
 unchanged. Do not reward smooth wording over evidentiary support.
 
-${SINGLE_BLOCK ? SINGLE_BLOCK_RULES : SHAPE_RULES}
+${SHAPE_RULES}
 
 CANDIDATES AND RAW EVIDENCE\n${material}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`;
 }
@@ -346,12 +315,11 @@ export const supportOf = a => new Set(a.sources.map(s => s.articleId)).size;
 
 /**
  * 必写档：报道篇数达到本簇最高档的重点（下限 2 篇，单篇报道的不强制）。
- * WRITE_REPAIR 下放宽到最高档与次一档（top-1）：窗口步重跑一次，c28 营救线各条重点从 4 篇变 3 篇，
- * 只取最高档时整条线掉出必写、从成稿里消失——一篇之差不该决定一整条线写不写。
+ * 放宽到次一档的 slack 已证伪删除，见 README「删掉的开关」。
  */
-export function mustCover(anchors, slack = 0) {
+export function mustCover(anchors) {
   const top = Math.max(0, ...anchors.map(supportOf));
-  const floor = Math.max(2, top - slack);
+  const floor = Math.max(2, top);
   return top >= 2 ? new Set(anchors.filter(a => supportOf(a) >= floor).map(a => a.id)) : new Set();
 }
 
@@ -366,7 +334,7 @@ export function contextOf(cluster, s) {
 }
 
 export function writeMaterial(anchors, cluster, withSupport = false, withContext = false) {
-  const must = withSupport ? mustCover(anchors, MUST_SLACK) : new Set();
+  const must = withSupport ? mustCover(anchors) : new Set();
   const list = withSupport ? [...anchors].sort((a, b) => supportOf(b) - supportOf(a)) : anchors;
   const line = s => `[${s.articleId}:${s.sentence}] ${sentenceOf(cluster, s.articleId, s.sentence)}`;
   return list.map(a => {
@@ -433,13 +401,7 @@ How to write it:
   Present one event as the cause of or response to another only when a source sentence says so.
   Do not present different people's statements as agreeing with, echoing or answering each other
   unless a source sentence says so; report each person's statement on its own.
-- Copy a quote word for word inside quotation marks and name its speaker.${REPAIR_FULL ? `
-- Keep the specific names of people, places and organisations from the key points you use; do not
-  generalise a name away (write "the island of Perim", not "islands").
-- Each sentence covers one thread. Do not join unrelated developments in one sentence with "while"
-  or "meanwhile".
-- When a source sentence says "he said" or "she added", check the preceding sentence to see who is
-  speaking before you name anyone.` : ''}
+- Copy a quote word for word inside quotation marks and name its speaker.
 - For each sentence, cite in sources the exact source sentences that support every part of it
   (up to ${WRITE_LEN.sources}). Never write the [articleId:sentence] labels inside text.
 - Plain prose, normal sentence case. title: a short headline for the story, under 10 words.
@@ -628,9 +590,8 @@ export const meta = {
   /** consumed 的 by：臂名 + 影响读数的开关。光看这一行就知道这份数据是被哪一版臂用掉的。 */
   consumerId() {
     const flags = [
-      SINGLE_BLOCK && 'single', WRITE_AT_END && 'write', WRITE_TIER !== 'more' && WRITE_TIER,
-      WRITE_SUPPORT && 'support', REPAIR_FULL ? 'repair' : WRITE_REPAIR && 'mech',
-      !REPAIR_FULL && MUST_SLACK && `slack${MUST_SLACK}`, RUN && RUN.slice(1),
+      WRITE_AT_END && 'write', WRITE_TIER !== 'more' && WRITE_TIER,
+      WRITE_SUPPORT && 'support', WRITE_REPAIR && 'mech', RUN && RUN.slice(1),
     ].filter(Boolean);
     return [meta.name, ...flags].join('-');
   },

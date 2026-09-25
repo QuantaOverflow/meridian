@@ -8,7 +8,7 @@
 // 凭出现就判失败会误杀长真文章(实测 FP 源)。
 const EXTRACTION_FAILURE_SIGNATURES: Array<{ re: RegExp; reason: string; gated: boolean }> = [
   { re: /to display this content from youtube|enable advertisement tracking and audience measurement/i, reason: 'video_stub', gated: true },
-  { re: /please enable js and disable any ad blocker|your ip (?:.*)?has been blocked|you don'?t have permission to access|access denied|errors\.edgesuite|are you a robot|page not found|does not exist or is not available|not available anymore/i, reason: 'block_page', gated: false },
+  { re: /please enable js and disable any ad blocker|your ip (?:.*)?has been blocked|you don'?t have permission to access|access denied|errors\.edgesuite|are you a robot|page not found|does not exist or is not available|not available anymore|performing security verification|verifies you are not a bot/i, reason: 'block_page', gated: false },
   { re: /please log in to see this page|not logged in|log in or sign up to view/i, reason: 'login_wall', gated: false },
   { re: /abuse detection mechanism|\brate limit\b|too many requests/i, reason: 'rate_limit', gated: false },
   { re: /all trademarks are property of their respective owners|this stream is best experienced/i, reason: 'non_article', gated: true },

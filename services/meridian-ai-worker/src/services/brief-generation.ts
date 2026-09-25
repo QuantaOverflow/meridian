@@ -7,7 +7,7 @@ import { AIGatewayService } from './ai-gateway';
 import { TraceContext, LLMCallPhase } from './llm-call-logger';
 import { callLLM } from './call-llm';
 import { getTldrProsePrompt } from '../prompts/tldrGeneration';
-import { CloudflareEnv, ChatResponse } from '../types';
+import { CloudflareEnv } from '../types';
 import { QuotaHandler } from '../utils/quota-handler';
 
 // ============================================================================
@@ -76,52 +76,37 @@ export class BriefGenerationService {
   // 私有辅助方法
   // ============================================================================
 
+  // 错误原样抛出，不再包一层前缀：QuotaHandler 按错误原文判断要不要重试
   private async callAI(prompt: string, phase: LLMCallPhase): Promise<string> {
-    try {
-      // 配置走 call-llm 单一入口按 phase 定默认；temperature 显式 0（摘要要可复现）。
-      const result = await callLLM(
-        this.aiGatewayService,
-        this.env,
-        this.traceContext,
-        phase,
-        [{ role: 'user' as const, content: prompt }],
-        {
-          temperature: 0,
-          callIndex: 0,
-          metadata: {
-            requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-            timestamp: Date.now(),
-          },
-        }
-      );
-      
-      // 检查结果是否存在
-      if (!result) {
-        throw new Error('AI Gateway request failed: No response received');
+    // 配置走 call-llm 单一入口按 phase 定默认；temperature 显式 0（摘要要可复现）。
+    const result = await callLLM(
+      this.aiGatewayService,
+      this.env,
+      this.traceContext,
+      phase,
+      [{ role: 'user' as const, content: prompt }],
+      {
+        temperature: 0,
+        callIndex: 0,
+        metadata: {
+          requestId: `brief_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+          timestamp: Date.now(),
+        },
       }
-      
-      // 检查响应类型
-      if (result.capability !== 'chat') {
-        throw new Error(`Unexpected response type from chat service: ${result.capability || 'undefined'}`);
-      }
+    );
 
-      const choice = (result as ChatResponse).choices?.[0];
-      const content = choice?.message?.content;
-      if (!content) {
-        throw new Error('AI Gateway returned empty content');
-      }
-
-      // 截断绝不能静默：打满 max_tokens 时留痕，免得下游把残缺输出当正常摘要。
-      if (choice?.finish_reason === 'length') {
-        console.warn(`[Brief Generation] 输出被 max_tokens 截断（phase=${phase} chars=${content.length}）`);
-      }
-
-      return content;
-    } catch (error) {
-      // 改善错误消息，提供更多上下文
-      const errorMessage = error instanceof Error ? error.message : 'Unknown AI Gateway error';
-      throw new Error(`AI Gateway request failed: ${errorMessage}`);
+    const choice = result.choices?.[0];
+    const content = choice?.message?.content;
+    if (!content) {
+      throw new Error('模型返回空正文');
     }
+
+    // 截断绝不能静默：打满 max_tokens 时留痕，免得下游把残缺输出当正常摘要。
+    if (choice?.finish_reason === 'length') {
+      console.warn(`[Brief Generation] 输出被 max_tokens 截断（phase=${phase} chars=${content.length}）`);
+    }
+
+    return content;
   }
 
 } 

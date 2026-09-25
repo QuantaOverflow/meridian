@@ -6,13 +6,14 @@ export class QuotaHandler {
   /**
    * 这次失败值不值得重试。
    *
-   * ⚠️ 名字窄于实际语义：除配额/限流，还覆盖两类会自愈的传输层失败（见下）。
+   * ⚠️ 名字窄于实际语义：除配额/限流，还覆盖 Workers AI 两类会自愈的失败：
+   * `3040: Capacity temporarily exceeded`、`3046: Request timeout`。
    *
-   * 2026-09-22 补进后两条。来历：`brief-generation.ts` 原有一个私有的 `BriefErrorHandler`，
-   * 与本类逐字节几乎相同（只改日志前缀），合并时才发现它**多认三个模式**：
-   * `no response received` / `ai gateway` / `invalid api key`。前两类是上游抖动、重试就好；
-   * 第三类永不自愈，重试只是把失败拖长——这个仓库为它付过代价（一次 key 失效让整条管线
-   * 静默停摆 12 天）。所以只补前两条，`invalid api key` 有意不加：让它立刻失败、立刻可见。
+   * 2026-09-25 去掉了原来的 `ai gateway` / `no response received` 两条：Gateway 已不在调用链上，
+   * 而 brief-generation 把**所有**错误都包成 "AI Gateway request failed: …"，于是任何失败
+   * （含空正文这类重试也不会变的）都被当成配额错误退避重试 4 次。
+   * `invalid api key` 这类永不自愈的错误有意不认：让它立刻失败、立刻可见
+   * （这个仓库为它付过代价：一次 key 失效让整条管线静默停摆 12 天）。
    */
   static isQuotaLimitError(error: any): boolean {
     const errorMessage = error?.message?.toLowerCase() || '';
@@ -23,8 +24,8 @@ export class QuotaHandler {
       errorMessage.includes('rate limit') ||
       errorMessage.includes('resource exhausted') ||
       errorMessage.includes('too many requests') ||
-      errorMessage.includes('no response received') ||
-      errorMessage.includes('ai gateway') ||
+      errorMessage.includes('capacity temporarily exceeded') ||
+      errorMessage.includes('request timeout') ||
       errorString.includes('quota') ||
       errorString.includes('rate_limit') ||
       errorString.includes('429')

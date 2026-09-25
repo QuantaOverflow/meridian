@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { getWritePrompt, getWriteSchema } from '../src/prompts/briefBlockV6';
+import { getWritePrompt, getWriteSchema, noSentencesHint } from '../src/prompts/briefBlockV6';
 import {
   retryInstruction,
   writeOk,
@@ -183,5 +183,32 @@ describe('brief-block-v6 篇幅档（tier）', () => {
     // 反向对照：改动前 lead 与 more 逐字相同，改动后必须分开——否则上面四条等于没查
     expect(promptOf('lead')).not.toBe(FIX_PROMPT);
     expect(JSON.stringify(getWriteSchema('lead'), null, 2) + '\n').not.toBe(FIX_SCHEMA);
+  });
+});
+
+/**
+ * Bug B5：`no_sentences` 的重试提示曾对每个 tier 都写死「3-5 sentences」（REASON_HINTS 里的
+ * 默认文案），但句数是 tier 相关的——`brief` 档 schema 的 `sentences.maxItems` 只有 1，
+ * 被写死告知「写 3-5 句」会与 schema 直接矛盾。
+ *
+ * 契约：`no_sentences` 的提示必须报「这次调用实际用的 tier」对应的句数，且句数只能来自
+ * `writeLenOf`/`WRITE_LEN`（`noSentencesHint` 读的就是它），不能在别处再抄一份数字。
+ */
+describe('brief-block-v6 no_sentences 重试提示（B5）', () => {
+  it('brief 档报 1 句，不报 3-5', () => {
+    const hint = noSentencesHint('brief');
+    expect(hint).toContain('1 sentence');
+    expect(hint).not.toContain('3-5');
+
+    const instruction = retryInstruction(['no_sentences'], { no_sentences: hint });
+    expect(instruction).toContain('1 sentence');
+    expect(instruction).not.toContain('3-5');
+  });
+
+  it('lead 档报 5-7 句，不是 3-5；more 档（含不传）报 3-5 句', () => {
+    expect(noSentencesHint('lead')).toContain('5-7 sentences');
+    expect(noSentencesHint('lead')).not.toContain('3-5');
+    expect(noSentencesHint('more')).toContain('3-5 sentences');
+    expect(noSentencesHint(undefined)).toContain('3-5 sentences');
   });
 });

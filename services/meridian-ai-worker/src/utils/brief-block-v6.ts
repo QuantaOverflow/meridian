@@ -217,7 +217,9 @@ const REASON_HINTS: Record<string, string> = {
   unexpected_sentences: 'verdict not_a_single_event must come with an empty sentences array.',
   missing_title: 'title was missing or empty; give the story a short headline.',
   marker_leak_title: 'the title contained an [articleId:sentence] label; labels are for the sources field only.',
-  no_sentences: 'verdict written must come with 3-5 sentences.',
+  // 具体句数是 tier 相关的（brief 档 schema 只准 1 句），这里不给一个写死的数字——
+  // 调用方（写作步）必须按当次 tier 传 hints 覆盖，见 retryInstruction 的 hints 参数。
+  no_sentences: 'verdict written must come with at least one sentence.',
   empty_text: 'the text field was missing or empty.',
   marker_leak: 'the text contained an [articleId:sentence] label; never write labels inside text.',
   multi_sentence: 'the text field contained more than one sentence; each text must be exactly one sentence.',
@@ -232,14 +234,18 @@ const REASON_HINTS: Record<string, string> = {
  * **只回传诊断，不回传模型上一次的输出**：让 glm-4.7-flash 接着自己的退化文本往下写有
  * 加剧风险（本仓复读事故已四次，memory `repetition-guard-always-on`）。入参是原因码，
  * 所以这个函数在结构上就拿不到坏文本。
+ *
+ * `hints`：按原因码覆盖 `REASON_HINTS` 里的默认文案，用于 tier 相关的提示（如
+ * `no_sentences`——句数因 tier 而异，写作步据当次 tier 传 `prompts/briefBlockV6.ts`
+ * 的 `noSentencesHint` 覆盖，见 bug B5）。不传就用 `REASON_HINTS` 的默认文案。
  */
-export function retryInstruction(reasons: string[]): string {
+export function retryInstruction(reasons: string[], hints: Partial<Record<string, string>> = {}): string {
   if (!reasons.length) return '';
   const lines = [...new Set(reasons)].map(r => {
     const m = /^(sentence \d+): (.+)$/.exec(r);
     const where = m ? `${m[1]}: ` : '';
     const code = m ? m[2] : r;
-    return `- ${where}${REASON_HINTS[code] ?? `it failed the ${code} check.`}`;
+    return `- ${where}${hints[code] ?? REASON_HINTS[code] ?? `it failed the ${code} check.`}`;
   });
   return [
     'Your previous answer was rejected by a mechanical check. Fix these and answer again in full:',

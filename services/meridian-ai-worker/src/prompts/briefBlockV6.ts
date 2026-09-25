@@ -74,6 +74,7 @@ RAW ARTICLES\n${window.text}\n\nReturn only JSON matching this schema:\n${JSON.s
  * 字数只是 prompt 里的一句话所以三档全超标。**不要加字数校验或截断。**
  */
 export interface WriteLen {
+  min: number;
   max: number;
   sources: number;
   text: string;
@@ -81,6 +82,7 @@ export interface WriteLen {
 
 const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
   lead: {
+    min: 5,
     max: 7,
     sources: WRITE_MAX_SOURCES,
     text: `An executive brief: 5–7 sentences in a single paragraph, roughly 1,000–1,400 characters.
@@ -92,6 +94,7 @@ const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
   Write no analysis, motivation or prediction of your own.`,
   },
   more: {
+    min: 3,
     max: WRITE_MAX_SENTENCES,
     sources: WRITE_MAX_SOURCES,
     text: `An executive brief: 3–5 sentences in a single paragraph, at most about 800 characters.
@@ -103,6 +106,7 @@ const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
   Write no analysis, motivation or prediction of your own.`,
   },
   brief: {
+    min: 1,
     max: 1,
     sources: WRITE_MAX_SOURCES,
     text: `A single-sentence brief item, at most about 250 characters. State only the single
@@ -122,6 +126,17 @@ const WRITE_LEN: { lead: WriteLen; more: WriteLen; brief: WriteLen } = {
  */
 const writeLenOf = (tier?: V6Tier | string): WriteLen =>
   WRITE_LEN[V6_TIERS.includes(tier as V6Tier) ? (tier as V6Tier) : 'more'];
+
+/**
+ * `no_sentences` 重试提示里的句数说明（bug B5）：句数是 tier 相关的（brief 档 schema
+ * 的 sentences.maxItems 只有 1），写死一份「3-5 sentences」会在 brief 档上与 schema
+ * 矛盾。句数只从 `WRITE_LEN`（经 `writeLenOf`）读，不在这里另抄一份数字。
+ */
+export function noSentencesHint(tier?: V6Tier | string): string {
+  const { min, max } = writeLenOf(tier);
+  const count = min === max ? `${max} sentence${max === 1 ? '' : 's'}` : `${min}-${max} sentences`;
+  return `verdict written must come with ${count}.`;
+}
 
 const writeSchemaOf = (len: WriteLen) => ({
   type: 'object', additionalProperties: false, required: ['verdict', 'reason', 'title', 'sentences'],

@@ -25,7 +25,7 @@ import type { TraceContext } from './llm-call-logger';
 import type { ChatResponse, CloudflareEnv } from '../types';
 import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
-import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt } from '../prompts/briefBlockV6';
+import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt, noSentencesHint } from '../prompts/briefBlockV6';
 import {
   anchorOk,
   cleanWrite,
@@ -146,14 +146,15 @@ export class BriefBlockV6Service {
     schema: Record<string, unknown>,
     ok: (x: any) => string[],
     repetitionTextOf: (x: any) => string,
-    rejects?: string[]
+    rejects?: string[],
+    hints: Partial<Record<string, string>> = {}
   ): Promise<any> {
     let lastReasons: string[] = [];
     for (let attempt = 0; attempt < TEMPERATURES.length; attempt++) {
       // 块间唯一：见 CALL_INDEX_PER_STORY。traceContext.callIndex 是 backend 传的 story 序号。
       const storyIdx = this.traceContext.callIndex ?? 0;
       const callIndex = CALL_INDEX_BASE + storyIdx * CALL_INDEX_PER_STORY + this.llmCalls;
-      const attemptPrompt = lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons)}` : prompt;
+      const attemptPrompt = lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons, hints)}` : prompt;
       this.llmCalls++;
       let content = '';
       let truncated = false;
@@ -259,7 +260,10 @@ export class BriefBlockV6Service {
         getWriteSchema(tier) as unknown as Record<string, unknown>,
         x => writeOk(x, cited),
         x => (Array.isArray(x.sentences) ? (x.sentences as Array<{ text: string }>).map(s => String(s?.text ?? '')).join(' ') : ''),
-        this.writeRejects
+        this.writeRejects,
+        // no_sentences 的重试提示要报这次调用实际用的 tier 的句数（bug B5），
+        // 不能用 REASON_HINTS 里 tier 无关的默认文案。
+        { no_sentences: noSentencesHint(tier) }
       )
     );
 

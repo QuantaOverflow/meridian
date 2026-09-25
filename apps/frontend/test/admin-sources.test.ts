@@ -6,7 +6,7 @@
  */
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { $sources, getDb, sql } from '@meridian/database';
+import { $sources, eq, getDb, sql } from '@meridian/database';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { $fetch, createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
 
@@ -123,6 +123,73 @@ describe('后台页面「Add Source」', () => {
     await page.click('text=Add Source');
     await expect.poll(() => dialogs.some(d => d.startsWith('alert') && /success/i.test(d)), { timeout: 10_000 }).toBe(true);
     await expect.poll(() => page.locator(`a[href="${NEW_URL}"]`).count(), { timeout: 10_000 }).toBe(1);
+    await page.close();
+  });
+});
+
+describe('暂停 / 恢复自动抓取：接口', () => {
+  for (const action of ['pause', 'resume'] as const) {
+    it(`${action}：转给 backend；backend 失败时如实报错`, async () => {
+      backendStatus = 500;
+      const cookie = await loginCookie();
+      const res = await fetch(`/api/admin/sources/${sourceId}/${action}`, { method: 'POST', headers: { cookie } });
+      expect(backendHits).toContain(`POST /do/admin/source/${sourceId}/${action}`);
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    });
+
+    it(`${action}：反向对照，backend 成功时返回 success`, async () => {
+      backendStatus = 200;
+      const cookie = await loginCookie();
+      const body = await $fetch(`/api/admin/sources/${sourceId}/${action}`, { method: 'POST', headers: { cookie } });
+      expect(body).toEqual({ success: true });
+    });
+  }
+});
+
+describe('源详情页：暂停状态与按钮', () => {
+  async function feedPage() {
+    const page = await createPage();
+    await page.route('**/*', route => {
+      const host = new URL(route.request().url()).hostname;
+      return host === '127.0.0.1' || host === 'localhost' ? route.continue() : route.abort();
+    });
+    const dialogs: string[] = [];
+    page.on('dialog', async d => {
+      dialogs.push(`${d.type()}: ${d.message()}`);
+      await d.accept();
+    });
+    await page.goto(url('/admin/login'));
+    await page.fill('input[name=username]', ADMIN.username);
+    await page.fill('input[name=password]', ADMIN.password);
+    await Promise.all([page.waitForURL('**/admin'), page.click('button[type=submit]')]);
+    await page.goto(url(`/admin/feed/${sourceId}`));
+    await page.waitForSelector('text=Source URL');
+    return { page, dialogs };
+  }
+
+  it('已暂停的源：显示已暂停，只给「恢复」，不给「Init DOs」；点恢复会调 backend', async () => {
+    backendStatus = 200;
+    await db.update($sources).set({ paused_at: new Date('2026-09-26T00:00:00Z') }).where(eq($sources.id, sourceId));
+    const { page, dialogs } = await feedPage();
+
+    expect(await page.locator('text=Paused since').count()).toBe(1);
+    expect(await page.locator('button:has-text("Init DOs")').count()).toBe(0);
+    expect(await page.locator('button:has-text("Pause Fetching")').count()).toBe(0);
+    await page.click('button:has-text("Resume Fetching")');
+    await expect.poll(() => backendHits, { timeout: 10_000 }).toContain(`POST /do/admin/source/${sourceId}/resume`);
+    expect(dialogs.filter(d => d.startsWith('alert'))).toEqual([]);
+    await page.close();
+  });
+
+  it('未暂停的源：给「暂停」；backend 失败时用户能看到失败提示', async () => {
+    backendStatus = 500;
+    const { page, dialogs } = await feedPage();
+
+    expect(await page.locator('text=Paused since').count()).toBe(0);
+    await page.click('button:has-text("Pause Fetching")');
+    await expect.poll(() => backendHits, { timeout: 10_000 }).toContain(`POST /do/admin/source/${sourceId}/pause`);
+    await expect.poll(() => dialogs.filter(d => d.startsWith('alert')), { timeout: 10_000 })
+      .toEqual([expect.stringMatching(/fail/i)]);
     await page.close();
   });
 });

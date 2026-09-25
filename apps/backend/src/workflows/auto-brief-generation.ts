@@ -797,6 +797,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 卸载 embeddings 到 R2：CF Workflow 把 step 输出存进 SQLite，单 step ~1MB 上限；
           // 500 篇 × 384 维 ≈ 2.5MB 会触发 WorkflowInternalError/SQLITE_TOOBIG。
           // 只让轻量 articles 走 step 输出，embeddings 走 R2，step 后再读回。
+          // 只在本次运行里读回一次；R2 桶上的生命周期规则 `expire-datasets` 让 datasets/ 7 天后自动删除
           const embeddingsR2Key = `datasets/${workflowId}/embeddings.json`;
           await this.env.ARTICLES_BUCKET.put(embeddingsR2Key, JSON.stringify(embeddings));
 

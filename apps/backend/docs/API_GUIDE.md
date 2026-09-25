@@ -28,7 +28,7 @@
 | `POST /do/admin/source/:sourceId/pause` | token | 暂停自动抓取：记 `paused_at`、停掉 DO；源与已有文章保留 |
 | `POST /do/admin/source/:sourceId/resume` | token | 恢复自动抓取：清 `paused_at`、重新启动 DO |
 | `POST /do/admin/initialize-dos?batchSize=100` | token | 为**尚未初始化**（`do_initialized_at IS NULL`）且未暂停的源批量初始化 DO，回 `{initialized, total}` |
-| `DELETE /do/admin/source/:sourceId` | token | 在一个事务里删除该源的文章和 sources 行，再销毁 DO；有文章被简报故事当代表文章引用时回 409（表与 DO 都不动，改用暂停） |
+| `DELETE /do/admin/source/:sourceId` | token | 在一个事务里删除该源的文章和 sources 行，再销毁 DO、删掉这些文章在 R2 里的正文；有文章被简报故事当代表文章引用时回 409（表与 DO 都不动，改用暂停） |
 | `GET\|POST /do/source/:sourceKey/*` | 需要 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
 | `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + R2 观测快照 |
 | `GET /observability/runs/:workflowId/clustering` | token | R2 `observability/clustering/<wf>.json` 聚类快照 |

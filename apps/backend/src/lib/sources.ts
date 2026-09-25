@@ -148,12 +148,17 @@ export async function deleteSource(env: Env, id: number): Promise<SourceResult<v
   const db = getDb(env.HYPERDRIVE);
 
   let source: Source | undefined;
+  let bodyKeys: string[] = [];
   try {
     source = await findSource(env, id);
     if (!source) return fail(404, NOT_FOUND);
-    await db.transaction(async tx => {
-      await tx.delete($articles).where(eq($articles.sourceId, id));
+    bodyKeys = await db.transaction(async tx => {
+      const deleted = await tx
+        .delete($articles)
+        .where(eq($articles.sourceId, id))
+        .returning({ key: $articles.contentFileKey });
       await tx.delete($sources).where(eq($sources.id, id));
+      return deleted.map(r => r.key).filter((k): k is string => !!k);
     });
   } catch (error) {
     // 有文章被简报（brief_stories.lead_article_id）引用：删了就断了历史简报，事务已回滚
@@ -172,7 +177,17 @@ export async function deleteSource(env: Env, id: number): Promise<SourceResult<v
     return fail(500, 'Source deleted but failed to stop its DO; it will stop on its next alarm');
   }
 
-  log.info('Deleted source, its articles and its DO', { url: source.url });
+  // 文章行已删，它们在 R2 里的正文再没有人会读。best-effort：删不掉只是留下孤儿对象，
+  // 不影响源已删这个结果，记日志不报错。R2 批量 delete 一次最多 1000 个 key。
+  for (let i = 0; i < bodyKeys.length; i += 1000) {
+    try {
+      await env.ARTICLES_BUCKET.delete(bodyKeys.slice(i, i + 1000));
+    } catch (error) {
+      log.error('Failed to delete article bodies from R2', { keys: bodyKeys.length }, toError(error));
+    }
+  }
+
+  log.info('Deleted source, its articles, their R2 bodies and its DO', { url: source.url, bodies: bodyKeys.length });
   return { ok: true, value: undefined };
 }
 

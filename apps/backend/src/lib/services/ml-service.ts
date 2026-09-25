@@ -100,7 +100,7 @@ function assertBuildIdentity(raw: unknown): BuildIdentityAssertion {
   };
 }
 
-export interface ArticleDataset {
+interface ArticleDataset {
   articles: Array<{ id: number }>;
   embeddings: Array<{
     articleId: number;

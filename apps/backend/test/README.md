@@ -39,6 +39,18 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 
 - `lib/cluster-blocks.spec.ts`：`planBlocksFromJudgements` / `assembleBlocks` 的行为（判定失败不丢块、NO_EVENT 只标记、30 篇上限、跨簇同名合并等）
 
+### 数据库（`lib/source-pause.spec.ts`）
+
+源暂停/恢复的测试走真实路由 + 真实 DO + **本机** Postgres 测试库（测试会清空 `sources`，非 localhost 的地址直接拒绝）。
+没设 `BACKEND_TEST_DATABASE_URL` 时该文件直接报错，不静默跳过。一次性准备：
+
+```bash
+createdb meridian_backend_test
+DATABASE_URL=postgresql://<user>@localhost:5432/meridian_backend_test pnpm -F @meridian/database migrate
+```
+
+连接串必须带密码（miniflare 的 Hyperdrive 校验要求）；本机 trust 认证时随便填一个即可。改 schema 后对它重跑 migrate。
+
 ## 配置文件
 
 ### vitest.config.ts
@@ -53,6 +65,7 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 ## 运行测试
 
 ```bash
+BACKEND_TEST_DATABASE_URL=postgresql://<user>:<pw>@localhost:5432/meridian_backend_test \
 pnpm -F @meridian/backend test                                   # 全部（vitest run）
 pnpm -F @meridian/backend test test/lib/cluster-blocks.spec.ts     # 单个文件
 ```

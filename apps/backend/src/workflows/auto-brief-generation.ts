@@ -1,7 +1,8 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, $brief_runs, $brief_stories, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { $articles, $sources, $brief_runs, $brief_stories, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
+import { saveBriefReport } from '../lib/save-brief-report';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
   assembleBlocks,
@@ -1546,21 +1547,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             usedSources = usedSourcesResult[0]?.count || 0;
           }
           
-          const insertResult = await db
-            .insert($reports)
-            .values({
-              title: briefResult.title,
-              content: briefResult.content,
-              usedArticles: briefResult.stats.used_articles,
-              usedSources: usedSources,
-              tldr_prose: briefResult.tldrProse,
-            })
-            .returning({ id: $reports.id });
-
-          const reportId = insertResult[0]?.id;
-          if (!reportId) {
-            throw new Error('简报保存失败：未返回ID');
-          }
+          // 插入 reports 与关联 brief_runs.report_id 在同一事务里（原因见 save-brief-report.ts）
+          const reportId = await saveBriefReport(db, workflowId, {
+            title: briefResult.title,
+            content: briefResult.content,
+            usedArticles: briefResult.stats.used_articles,
+            usedSources: usedSources,
+            tldr_prose: briefResult.tldrProse,
+          });
 
           console.log(`[AutoBrief] 简报已保存到数据库，ID: ${reportId}`);
           return reportId;

@@ -24,13 +24,13 @@ const SECTION_RE = /^#{2,4}\s+(.+?)\s*$/;
 const STORY_RE = /^\s*<u>(.+?)<\/u>\s*$/;
 
 /**
- * 排在最前的若干条按「头条」规格渲染（30px），其余按常规（25px）。
+ * 哪些条目按「头条」规格渲染（30px），其余按常规（25px）。
  *
- * 设计稿的两级规格来自故事重要度，但重要度只存在 brief_stories 表里，而那张表的
- * 标题（`US — Trump administration proposes $103,265 H-1B visa fee`）和正文里模型
- * 自己写的标题（`h-1b price hike`）词面对不上，只能模糊匹配——宁可不猜。
- * prompt 已经要求「most consequential first」，直接吃这个既有顺序。
+ * brief-v3 起 backend 自己分层（`apps/backend/src/lib/core/brief-v3.ts`：top stories 4 / more news 10 /
+ * in brief 其余），正文里有 `## top stories` 一节时，这一节的条目就是头条——跟 backend 走，不在前端另定条数。
+ * 分层之前的历史期没有这一节，仍按排在最前的 HEADLINE_STORY_COUNT 条（当时 prompt 要求 most consequential first）。
  */
+const TOP_STORIES_HEADING = 'top stories';
 const HEADLINE_STORY_COUNT = 2;
 
 const WORDS_PER_MINUTE = 300;
@@ -121,6 +121,11 @@ export function parseBriefContent(content: string): ParsedBrief {
   let story: BriefStory | null = null;
   let buffer: string[] = [];
   let storyCount = 0;
+  const lines = stripPromptArtifacts(content ?? '').split('\n');
+  const isTopStoriesHeading = (line: string) =>
+    line.match(SECTION_RE)?.[1].trim().toLowerCase() === TOP_STORIES_HEADING;
+  const hasTopStories = lines.some(isTopStoriesHeading);
+  let inTopStories = false;
 
   const openSection = (heading: string) => {
     story = null;
@@ -147,10 +152,11 @@ export function parseBriefContent(content: string): ParsedBrief {
     target.leadHtml = target.leadHtml === '' ? html : `${target.leadHtml}\n${html}`;
   };
 
-  for (const line of stripPromptArtifacts(content ?? '').split('\n')) {
+  for (const line of lines) {
     const sectionMatch = line.match(SECTION_RE);
     if (sectionMatch !== null) {
       flush();
+      inTopStories = isTopStoriesHeading(line);
       openSection(md.renderInline(sectionMatch[1]));
       continue;
     }
@@ -166,7 +172,7 @@ export function parseBriefContent(content: string): ParsedBrief {
         title: md.renderInline(storyMatch[1].trim().replace(/^\*\*/, '').replace(/\*\*$/, '').trim()),
         leadHtml: '',
         restHtml: '',
-        headline: storyCount <= HEADLINE_STORY_COUNT,
+        headline: hasTopStories ? inTopStories : storyCount <= HEADLINE_STORY_COUNT,
       };
       current.stories.push(story);
       continue;

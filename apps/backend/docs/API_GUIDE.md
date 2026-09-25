@@ -19,7 +19,6 @@
 | `PUT /admin/sources/:id` | token | 部分更新同上字段 |
 | `POST /admin/briefs/generate` | token | 启动 `AutoBriefGenerationWorkflow`，回 202 + `workflowId`；空体也要传 `{}`。可选字段见下 |
 | `POST /admin/articles/process` | token | `{article_ids: number[]}`（≥1）→ 启动 `ProcessArticles` workflow，回 202 |
-| `POST /admin/articles/by-ids` | token | `{ids: number[]}` → 文章 id/标题/url/源/摘要点（eval 用） |
 | `POST /do/admin/source/:sourceId/init` | token | 按数据库里的源（数字 id）初始化它的 `SourceScraperDO` |
 | `POST /do/admin/initialize-dos?batchSize=100` | token | 为**尚未初始化**（`do_initialized_at IS NULL`）的源批量初始化 DO，回 `{initialized, total}` |
 | `DELETE /do/admin/source/:sourceId` | token | 销毁该源的 DO，**并删除该源的文章和 sources 行** |

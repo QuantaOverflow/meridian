@@ -57,7 +57,7 @@ binding，已指向替身，不可能绕过替身打真模型）。
 `observability/brief-v3/<wf>.json`：
 
 - `brief_runs`：status、篇数、簇数、故事数、块数、正文长度
-- `reports`：title、content、tldr_prose、篇数/源数、`clustering_params.stats`
+- `reports`：title、content、tldr_prose、used_articles/used_sources
 - `brief_stories`（按 id 序）：cluster_id、title、importance、article_count、article_ids、selected_for_intel
 - brief-v3 块记录：每块的标题、档位、正文、逐句出处、窗口/重试计数
 

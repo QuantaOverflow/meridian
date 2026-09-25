@@ -76,8 +76,6 @@ export const $reports = pgTable('reports', {
   title: text('title').notNull(),
   content: text('content').notNull(),
 
-  totalArticles: integer('total_articles').notNull(),
-
   // 进入简报的去重文章数。
   // ⚠️ 语义在 2026-08-17 修正过：第 51-59 期存的是**故事数**（旧代码错写成
   // intelligenceReports.length，与 brief_runs.intelligence_analyses 同值），第 60 期起
@@ -90,19 +88,9 @@ export const $reports = pgTable('reports', {
   // 面向读者的散文摘要（2-3 句），读者端简报页头部展示。
   tldr_prose: text('tldr_prose'),
 
-  clustering_params: jsonb('clustering_params'),
-
-  model_author: text('model_author'),
-
   createdAt: timestamp('created_at', { mode: 'date' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-});
-
-export const $newsletter = pgTable('newsletter', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  createdAt: timestamp('created_at', { mode: 'date' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
 // 观测性：brief 生成工作流的运行级记录
@@ -158,9 +146,6 @@ export const $story_clusters = pgTable('story_clusters', {
   centroid: vector('centroid', { dimensions: 384 }),
   first_seen_at: timestamp('first_seen_at', { mode: 'date' }).notNull(),
   last_seen_at: timestamp('last_seen_at', { mode: 'date' }).notNull(),
-  created_at: timestamp('created_at', { mode: 'date' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
 });
 
 // 观测性：每次 workflow 验证通过的 story 元数据

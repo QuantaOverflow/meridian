@@ -44,7 +44,6 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 ### vitest.config.ts
 - 使用 @cloudflare/vitest-pool-workers
 - 禁用文件并行执行，并开 `singleWorker`（否则多个测试文件一起跑时 workerd 起不来，原因见配置注释）
-- `AI_WORKER` service binding 在这里用一个假实现代替
 
 ### wrangler.test.jsonc
 - 测试专用的 Wrangler 配置
@@ -66,7 +65,6 @@ pnpm -F @meridian/backend test test/lib/cluster-blocks.spec.ts     # 单个文�
 
 1. **顺序执行**: 禁用并行执行，确保测试稳定性
 2. **简化配置**: 最小化绑定配置，减少启动错误
-3. **模拟优先**: 对复杂依赖使用模拟而非真实绑定
 
 ## 故障排除
 

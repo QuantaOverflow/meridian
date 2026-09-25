@@ -173,7 +173,6 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 POST /admin/sources                 # create source
 PUT  /admin/sources/:id             # update source
 POST /admin/briefs/generate         # trigger a brief workflow
-POST /admin/articles/by-ids         # fetch articles by id
 POST /admin/articles/process        # re-run article processing
 POST /do/admin/initialize-dos       # initialize scraper DOs for sources not yet initialized
 GET  /observability/runs/:workflowId   # one run: status, stories, step metrics

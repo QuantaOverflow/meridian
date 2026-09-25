@@ -25,21 +25,6 @@ export default defineWorkersConfig({
     // 测试超时
     testTimeout: 30000,
     
-    // 覆盖率配置
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        'test/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '.wrangler/',
-        'docs/',
-      ],
-    },
-    
     // 测试文件匹配
     include: [
       'test/**/*.{test,spec}.{js,ts}',

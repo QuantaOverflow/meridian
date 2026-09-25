@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { getDb } from '../lib/database';
-import { $sources, $articles, eq, inArray } from '@meridian/database';
+import { $sources, eq } from '@meridian/database';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
   createSuccessResponse, 
@@ -39,7 +39,6 @@ const briefGenerateSchema = z.object({
   clusteringOptions: z.any().optional(),
   triggeredBy: z.string().optional(),
 });
-const byIdsSchema = z.object({ ids: z.array(z.number().int()).optional() });
 const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
 
 // ========== RSS源管理 ==========
@@ -202,7 +201,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
           expectedStories: `最多${maxStoriesToGenerate}个故事`
         }
       },
-      '简报生成工作流已启动，预计需要1-2分钟完成。如果未发现有效故事，工作流将提前终止并提供分析报告。'
+      '简报生成工作流已启动，预计需要10-15分钟完成。如果未发现有效故事，工作流将提前终止并提供分析报告。'
     ), 202 as any);
   } catch (error) {
     const { error: errorMsg, statusCode } = handleDatabaseError(
@@ -211,30 +210,6 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       logger.child({ operation: 'generate-brief' })
     );
     return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
-});
-
-// ========== 文章按 ID 批量查询（用于 eval 等下游工具） ==========
-app.post('/articles/by-ids', zValidator('json', byIdsSchema), async (c) => {
-  try {
-    const ids = c.req.valid('json').ids ?? [];
-    if (ids.length === 0) {
-      return c.json({ success: true, articles: [] });
-    }
-    const db = getDb(c.env.HYPERDRIVE);
-    const rows = await db
-      .select({
-        id: $articles.id,
-        title: $articles.title,
-        url: $articles.url,
-        sourceId: $articles.sourceId,
-        event_summary_points: $articles.event_summary_points,
-      })
-      .from($articles)
-      .where(inArray($articles.id, ids));
-    return c.json({ success: true, articles: rows });
-  } catch (e: any) {
-    return c.json({ success: false, error: e?.message || 'unknown' }, 500);
   }
 });
 

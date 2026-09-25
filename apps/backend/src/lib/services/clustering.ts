@@ -15,7 +15,7 @@ const NOISE_CLUSTER_ID = -1;
  * ml 侧响应顶层的镜像身份字段名（ml-service `src/main.py` 的 `BUILD_IDENTITY_FIELD` 同名）。
  *
  * 为什么必须有它：`configUsed` 只是 ml 侧把请求方传进去的 config 原样回显
- * （clustering.py:738-751），旧镜像只要还认识字段名就回显一样的值，所以
+ * （`clustering.py` 的 `config_used`），旧镜像只要还认识字段名就回显一样的值，所以
  * configSent/configUsed 比对永远相等，一次都拦不住"镜像没推成功"。
  * 2026-09-15 至 09-19 连续五天生产跑的是旧聚类算法（NO_EVENT 从 2% 涨到 52-54%，
  * 平均篇数 5.5→9.8），全程 brief_runs.status = COMPLETED。
@@ -178,11 +178,6 @@ export interface ClusteringResult {
   configUsed?: Record<string, any>;
   /** ml 侧 clustering_stats 原样保留。**只作诊断旁证**，不得替换 statistics（原因见下方注释）。 */
   clusteringStats?: Record<string, any>;
-  /**
-   * ml 侧 build_identity 原样保留（可能为 undefined —— 缺失本身就是信号，见 buildIdentityCheck）。
-   * 与 configUsed 分开：这是镜像身份，不是配置。
-   */
-  buildIdentity?: Record<string, any>;
   /**
    * 镜像身份断言结果。**恒有值**（缺字段时 status='missing'），调用方不必判 undefined。
    * 这里只暴露信号，是否把 run 判成 DEGRADED 由 workflow 决定。
@@ -360,7 +355,6 @@ export class ClusteringService {
           clusteringStats: mlResult.clustering_stats,
           // 镜像身份：与 configUsed 分开。configUsed 是请求回显（旧镜像也能回显得一模一样），
           // 这个字段的值来自 ml 镜像构建时注入的环境变量，源码里没有字面量。
-          buildIdentity: mlResult.build_identity,
           buildIdentityCheck: assertBuildIdentity(
             mlResult.build_identity,
             readExpectedBuildSha(this.env)

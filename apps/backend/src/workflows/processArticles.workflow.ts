@@ -302,7 +302,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           const dbUpdateStartTime = Date.now();
           await step.do(`update db for failed article ${result.id}`, dbStepConfig, async () => {
             const failReason = result.error ? String(result.error) : 'Unknown error';
-            const status = result.error?.includes('render') ? 'RENDER_FAILED' : 'FETCH_FAILED';
+            const status = 'FETCH_FAILED';
 
             articleLogger.warn('Marking article as failed during content fetch', {
               fail_reason: failReason,

@@ -9,17 +9,15 @@
  * 注：analyzeArticle 属文章管线，返回 Response 不变（不在此接缝内）。
  */
 
-// 跨 service 调用的判别式结果：成功给 value(+可选 metadata)，失败给 status+error。
+// 跨 service 调用的判别式结果：成功给 value，失败给 status+error。
 // 各调用方据此施加自己的策略（validateStory throw / intelligence 跳过 / faithfulness fail-open），
 // 故此处只报告结果、不代替调用方决定 throw 与否。
 type ServiceResult<T> =
-  | { ok: true; value: T; metadata?: any }
+  | { ok: true; value: T }
   | { ok: false; status: number; error: string };
 
 interface EmbeddingData {
   embeddings: Array<{ embedding: number[] }>;
-  model?: string;
-  dimensions?: number;
 }
 interface BriefSummaryData {
   tldrProse: string;
@@ -37,28 +35,21 @@ interface BriefBlockV6Data {
   reason?: string;
   block: null | { title: string; sentences: BriefBlockV6Sentence[] };
   trace: {
-    articles: number;
     windows: number;
     anchors: number;
     citationsRepaired: number;
     /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
     windowFailures: number;
-    repetitionRetries: number;
     /** 写作步每次被确定性校验拒收的原因。空数组 = 一次过。 */
     writeRejects: string[];
     llmCalls: number;
     neurons: number;
-    model: string;
-    windowChars: number;
-    /** 这一块实际用的篇幅档（lead/more = exec 档，brief = 1–2 句短档） */
-    tier: string;
     [k: string]: any;
   };
 }
 
 interface BriefTitleData {
   title: string;
-  neurons: number;
 }
 
 export interface AIWorkerEnv {
@@ -92,11 +83,11 @@ class AIWorkerService {
         const body = await response.text().catch(() => '<unreadable>');
         return { ok: false, status: response.status, error: `HTTP ${response.status}: ${body.slice(0, 300)}` };
       }
-      const data = (await response.json()) as { success?: boolean; data?: T; metadata?: any; error?: string };
+      const data = (await response.json()) as { success?: boolean; data?: T; error?: string };
       if (!data.success) {
         return { ok: false, status: response.status, error: `success:false: ${data.error}` };
       }
-      return { ok: true, value: data.data as T, metadata: data.metadata };
+      return { ok: true, value: data.data as T };
     } finally {
       if (response && typeof (response as any).dispose === 'function') {
         (response as any).dispose();
@@ -122,18 +113,12 @@ class AIWorkerService {
       return { ok: false, status: mlResp.status, error: `ML embedding failed: ${mlResp.status} - ${errorText}` };
     }
 
-    const ml = (await mlResp.json()) as {
-      embeddings: number[][];
-      model_name: string;
-      dimensions: number;
-    };
+    const ml = (await mlResp.json()) as { embeddings: number[][] };
 
     return {
       ok: true,
       value: {
         embeddings: ml.embeddings.map((emb) => ({ embedding: emb })),
-        model: ml.model_name,
-        dimensions: ml.dimensions,
       },
     };
   }
@@ -171,8 +156,6 @@ class AIWorkerService {
   ): Promise<
     ServiceResult<{
       picks: Array<{ id: number; eventKey: string; category: string; why: string; borda: number; timesSelected: number }>;
-      nearMisses: Array<{ id: number; why: string; times: number }>;
-      rounds: Array<{ round: number; ok: boolean; error?: string; selectedIds: number[]; duplicates: number; outOfRange: number; eventKeyDupes: number; retried: boolean }>;
       roundsOk: number;
       intersectionSize: number;
     }>

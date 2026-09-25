@@ -267,7 +267,7 @@ async function startWrangler(configs, port, databaseUrl) {
 
 // ── 比对 ──────────────────────────────────────────────────────────────────
 const STORY_FIELDS = ['cluster_id', 'title', 'importance', 'article_count', 'article_ids', 'selected_for_intel'];
-const REPORT_FIELDS = ['title', 'content', 'tldr_prose', 'total_articles', 'used_articles', 'used_sources', 'model_author'];
+const REPORT_FIELDS = ['title', 'content', 'tldr_prose', 'used_articles', 'used_sources'];
 const RUN_FIELDS = ['status', 'total_articles', 'clusters_found', 'stories_identified', 'intelligence_analyses', 'brief_content_length'];
 const BLOCK_FIELDS = ['clusterId', 'storyIdx', 'title', 'v6Title', 'tier', 'articles', 'tierArticles', 'sources', 'score', 'ok', 'text', 'sentences', 'anchors', 'windows', 'windowFailures', 'citationsRepaired', 'writeRejects', 'llmCalls', 'error'];
 
@@ -284,7 +284,6 @@ function compare(expected, actual) {
   };
   for (const f of RUN_FIELDS) field(`brief_runs.${f}`, expected.run[f], actual.run?.[f]);
   for (const f of REPORT_FIELDS) field(`reports.${f}`, expected.report?.[f], actual.report?.[f]);
-  field('reports.clustering_params.stats', expected.report?.clustering_params?.stats, actual.report?.clustering_params?.stats);
   field('brief_stories.count', expected.stories.length, actual.stories.length);
   const n = Math.max(expected.stories.length, actual.stories.length);
   for (let i = 0; i < n; i++) {

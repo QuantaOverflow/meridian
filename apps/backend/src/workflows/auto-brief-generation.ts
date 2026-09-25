@@ -13,7 +13,7 @@ import {
   PER_EVENT_BLOCK_CAP,
 } from '../lib/core/storyline';
 import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
-import { createWorkflowObservability, DataQualityAssessor } from '../lib/observability';
+import { createWorkflowObservability } from '../lib/observability';
 import { createClusteringService, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
@@ -40,11 +40,6 @@ interface LightweightArticleDataset {
     title: string;
     contentFileKey: string;  // R2存储引用
     publishDate: string;
-    url: string;
-    summary: string;
-    // 可选的内容摘要信息，用于质量评估
-    contentLength?: number;
-    hasValidContent?: boolean;
   }>;
   embeddings: Array<{
     articleId: number;
@@ -82,7 +77,6 @@ interface BriefGenerationResultData {
   content: string;
   /** 面向读者的散文摘要；生成失败时为 null（不阻断简报落库） */
   tldrProse: string | null;
-  model_author: string;
   stats: {
     total_articles: number;
     used_articles: number;
@@ -225,8 +219,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     title: string;
     content: string;
     publishDate: string;
-    url: string;
-    summary: string;
     /**
      * 正文取用结果。OK 之外都是失败。
      * 以前这里把「取不到」「取到空」「抛异常」一律糊成空字符串返回，调用方无法分辨，
@@ -250,8 +242,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       id: lightweightArticle.id,
       title: lightweightArticle.title,
       publishDate: lightweightArticle.publishDate,
-      url: lightweightArticle.url,
-      summary: lightweightArticle.summary,
     };
     if (!lightweightArticle.contentFileKey) {
       console.warn(`[AutoBrief] 取正文失败 MISSING_CONTENT_KEY (ID: ${lightweightArticle.id})`);
@@ -486,22 +476,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
              .select({
                id: $articles.id,
                title: $articles.title,
-               url: $articles.url,
                // 同源模板页去重要按「同一家媒体」分组，见 bodyFingerprint
                sourceId: $articles.sourceId,
                contentFileKey: $articles.contentFileKey,
                publish_date: $articles.publishDate,
                embedding: $articles.embedding,
-               // 获取已分析的数据字段
-               language: $articles.language,
-               primary_location: $articles.primary_location,
                completeness: $articles.completeness,
                content_quality: $articles.content_quality,
-               event_summary_points: $articles.event_summary_points,
-               thematic_keywords: $articles.thematic_keywords,
-               topic_tags: $articles.topic_tags,
-               key_entities: $articles.key_entities,
-               content_focus: $articles.content_focus,
              })
              .from($articles)
              .innerJoin($sources, eq($articles.sourceId, $sources.id))
@@ -695,10 +676,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                 title: article.title,
                 contentFileKey: article.contentFileKey!, // 确保非空
                 publishDate: article.publish_date?.toISOString() || new Date().toISOString(),
-                url: article.url,
-                summary: (article.event_summary_points as string[])?.[0] || article.title,
-                contentLength: content.length, // 记录内容长度用于质量评估
-                hasValidContent: true // 标记为有效内容
               },
               embedding: {
                 articleId: article.id,
@@ -832,18 +809,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      // 从 R2 读回 embeddings（它们未走 step 输出以避开 1MB 限制），供质量评估与聚类使用
+      // 从 R2 读回 embeddings（它们未走 step 输出以避开 1MB 限制），供聚类使用
       if (dataset.embeddingsR2Key && dataset.embeddings.length === 0) {
         const embObj = await this.env.ARTICLES_BUCKET.get(dataset.embeddingsR2Key);
         dataset.embeddings = embObj ? JSON.parse(await embObj.text()) : [];
         console.log(`[AutoBrief] 从 R2 读回 ${dataset.embeddings.length} 个 embedding`);
       }
 
-      const articleQuality = DataQualityAssessor.assessArticleQuality(dataset);
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
-        articleIds: dataset.articles.map(a => a.id),  // 供 eval fixture 提取使用
-        qualityAssessment: articleQuality,
         r2ContentMetrics: {
           fetchAttempts: r2ContentMetrics.r2FetchAttempts,
           fetchSuccesses: r2ContentMetrics.r2FetchSuccesses,
@@ -1309,8 +1283,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
 
       // story 去重层（story-dedup）与「去重后再分主线」的两段式都已退役：文章级划分下
-      // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。相关代码留在
-      // lib/core/story-dedup.ts 里未删（跨期线索合并仍可能用到），但不在简报主链路上。
+      // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。
       //
       // 这里只补 __briefStoryRowIds：下游 mark_selected_for_intel
       // 落库靠它精确定位主键，不能靠 stories.indexOf。
@@ -1863,7 +1836,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         title: assembled.title,
         content: assembled.content,
         tldrProse: summaries.tldrProse,
-        model_author: 'meridian-ai-worker',
         stats: {
           total_articles: dataset.articles.length,
           used_articles: usedArticleIds.size,
@@ -1914,20 +1886,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             .values({
               title: briefResult.title,
               content: briefResult.content,
-              totalArticles: briefResult.stats.total_articles,
               usedArticles: briefResult.stats.used_articles,
               usedSources: usedSources,
               tldr_prose: briefResult.tldrProse,
-              clustering_params: {
-                workflowId,
-                triggeredBy,
-                stats: briefResult.stats,
-                generatedAt: new Date().toISOString(),
-                endToEndWorkflow: true,
-                // ml 侧回显的实际生效配置（原先记的是从未生效的 umap/hdbscan 参数）
-                clusteringParams: clusteringResult.configUsed ?? null
-              },
-              model_author: briefResult.model_author
             })
             .returning({ id: $reports.id });
 

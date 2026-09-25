@@ -142,6 +142,14 @@ export async function getArticleWithBrowser(env: Env, url: string) {
     throw new Error(`Failed to parse browser response: ${error instanceof Error ? error.message : String(error)}`);
   }
 
+  // 先看 API 自己说成功没有：不看的话 401 之类的错误会被下面的 schema 校验包成
+  // 「result 是 null」，真正原因（比如 token 没配）就看不见了（2026-09 生产 40 天全挂在这）
+  if (!response.ok || (pageContent as { success?: unknown })?.success === false) {
+    const errors = (pageContent as { errors?: Array<{ code?: number; message?: string }> })?.errors ?? [];
+    const detail = errors.map(e => `${e.code ?? ''} ${e.message ?? ''}`.trim()).join('; ') || 'no error detail';
+    throw new Error(`Browser Rendering API ${response.status}: ${detail}`);
+  }
+
   const parsedPageContent = articleSchema.safeParse(pageContent);
   if (parsedPageContent.success === false) {
     throw new Error(`Browser response validation failed: ${parsedPageContent.error.message}`);

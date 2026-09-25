@@ -35,6 +35,8 @@ export const $sources = pgTable('sources', {
   category: text('category').notNull(),
   lastChecked: timestamp('last_checked', { mode: 'date' }),
   do_initialized_at: timestamp('do_initialized_at', { mode: 'date' }),
+  // 暂停自动抓取的时间；非空时 DO 不抓、批量初始化跳过，恢复时清空（源与已有文章都保留）
+  paused_at: timestamp('paused_at', { mode: 'date' }),
 });
 
 export const $articles = pgTable(

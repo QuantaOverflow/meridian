@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/stories/0",
+  "statusCode": 400,
+  "statusMessage": "Invalid story id",
+  "message": "Invalid story id"
+}

@@ -1,0 +1,8 @@
+{"status":404,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/stories/5",
+  "statusCode": 404,
+  "statusMessage": "Story thread not found",
+  "message": "Story thread not found"
+}

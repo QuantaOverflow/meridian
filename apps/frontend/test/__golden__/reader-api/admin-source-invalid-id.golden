@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/admin/sources/abc/details",
+  "statusCode": 400,
+  "statusMessage": "Invalid source ID",
+  "message": "Invalid source ID"
+}

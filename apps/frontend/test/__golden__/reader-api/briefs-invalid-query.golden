@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/briefs?limit=0",
+  "statusCode": 400,
+  "statusMessage": "Invalid query parameters",
+  "message": "Invalid query parameters"
+}

@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/briefs/abc",
+  "statusCode": 400,
+  "statusMessage": "Invalid slug",
+  "message": "Invalid slug"
+}

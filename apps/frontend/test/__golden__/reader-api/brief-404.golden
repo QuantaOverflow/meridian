@@ -1,0 +1,8 @@
+{"status":404,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/briefs/999",
+  "statusCode": 404,
+  "statusMessage": "Report not found",
+  "message": "Report not found"
+}

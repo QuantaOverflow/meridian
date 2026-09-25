@@ -1,0 +1,8 @@
+{"status":404,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/admin/sources/999/details",
+  "statusCode": 404,
+  "statusMessage": "Source not found",
+  "message": "Source not found"
+}

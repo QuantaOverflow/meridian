@@ -27,19 +27,6 @@ interface AIWorkerAnalysisResponse {
   error?: string;
 }
 
-const TRICKY_DOMAINS = [
-  'reuters.com',
-  'nytimes.com',
-  'politico.com',
-  'science.org',
-  'alarabiya.net',
-  'reason.com',
-  'telegraph.co.uk',
-  'lawfaremedia',
-  'liberation.fr',
-  'france24.com',
-];
-
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
   timeout: '5 seconds',
@@ -200,24 +187,18 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             { retries: { limit: 3, delay: '2 second', backoff: 'exponential' }, timeout: '2 minutes' },
             async () => {
               // During retries, let errors bubble up naturally
-              if (TRICKY_DOMAINS.includes(domain)) {
-                scrapeLogger.info('Using browser to fetch article (tricky domain)');
+              scrapeLogger.info('Attempting fetch-first approach');
+              try {
+                const fetchResult = await getArticleWithFetch(article.url);
+                return { id: article.id, url: article.url, success: true, html: fetchResult, used_browser: false };
+              } catch (fetchError) {
+                // Fetch failed, try browser with jitter
+                scrapeLogger.info('Fetch failed, falling back to browser');
+                const jitterTime = Math.random() * 2500 + 500;
+                await step.sleep(`jitter`, jitterTime);
+
                 const browserResult = await getArticleWithBrowser(env, article.url);
                 return { id: article.id, url: article.url, success: true, html: browserResult, used_browser: true };
-              } else {
-                scrapeLogger.info('Attempting fetch-first approach');
-                try {
-                  const fetchResult = await getArticleWithFetch(article.url);
-                  return { id: article.id, url: article.url, success: true, html: fetchResult, used_browser: false };
-                } catch (fetchError) {
-                  // Fetch failed, try browser with jitter
-                  scrapeLogger.info('Fetch failed, falling back to browser');
-                  const jitterTime = Math.random() * 2500 + 500;
-                  await step.sleep(`jitter`, jitterTime);
-
-                  const browserResult = await getArticleWithBrowser(env, article.url);
-                  return { id: article.id, url: article.url, success: true, html: browserResult, used_browser: true };
-                }
               }
             }
           );

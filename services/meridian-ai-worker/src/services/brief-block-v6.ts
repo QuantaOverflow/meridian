@@ -4,8 +4,8 @@
  *   1 切句     每篇正文切句，1 起编号（utils/report-v3.ts 的 splitSentences）        代码
  *   2 切窗     30,000 字符预算、相邻窗口重叠 1 篇，覆盖不变量断言                    代码
  *   3 标重点   每个窗口一次调用，只标 topic + 原文句编号，不写散文（约束式解码）     LLM × 窗口数
- *   4 写作     全部重点 + 它们指向的原句 → 一块简报（tier=lead/more 走 3–5 句的 exec   LLM × 1
- *              档，tier=brief 走 1–2 句的短档）
+ *   4 写作     全部重点 + 它们指向的原句 → 一块简报（句数随 tier：lead 5–7 / more 3–5 /  LLM × 1
+ *              brief 1，以 prompts/briefBlockV6.ts 的 WRITE_LEN 为准）
  *   5 补出处   句中数字/引语不在所引原句里 → 在材料池里找字面包含它的原句补上        代码
  *
  * 移植自原型 `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
@@ -48,7 +48,7 @@ const CONCURRENCY = 2;
 /** 原型 chatJson 的重试策略：三次、温度依次这三个值、退避 3s → 8s。 */
 const TEMPERATURES = [0.1, 0.3, 0.3];
 const BACKOFF_MS = [3000, 8000];
-/** callIndex 起点：与整篇标题（690）错开，免得同一 trace 下 R2 key 互相覆盖。 */
+/** callIndex 起点。日志 key 带 phase 段，与标题（brief_generation-690）本就不会撞，取值只是沿用。 */
 const CALL_INDEX_BASE = 600;
 /**
  * 每块（story）占的 callIndex 槽位数。

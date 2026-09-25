@@ -50,7 +50,7 @@ const WINDOW_CHARS = 30_000;
 const OVERLAP_ARTICLES = 1;
 /** 窗口步每条重点的出处上限。REPAIR_FULL=false 这条路径下推导值是 4。 */
 export const ANCHOR_SOURCES = 4;
-/** 写作步：exec 档 3–5 句、每句出处上限 8。 */
+/** 写作步：句数随 tier（见 prompts/briefBlockV6.ts 的 WRITE_LEN）、每句出处上限 8。 */
 export const WRITE_MAX_SENTENCES = 5;
 export const WRITE_MAX_SOURCES = 8;
 

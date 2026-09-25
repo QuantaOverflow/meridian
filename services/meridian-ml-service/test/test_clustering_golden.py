@@ -15,8 +15,7 @@ fixture：
                                 embedding 是 40-80 条合成标题过真实模型算出的
                                 384 维向量，未做任何四舍五入，见
                                 test/golden/generate_request.py。
-  test/golden/response.json —— 对应的 golden 响应，已剔除 processing_time
-                                等每次请求都会变的字段。
+  test/golden/response.json —— 对应的 golden 响应。
 
 重新生成 golden 响应（不需要模型，纯调用现有 endpoint）：
     cd services/meridian-ml-service
@@ -25,7 +24,6 @@ fixture：
     .venv/bin/python test/golden/generate_request.py
 """
 
-import copy
 import json
 import os
 from pathlib import Path
@@ -51,20 +49,10 @@ RESPONSE_PATH = GOLDEN_DIR / "response.json"
 
 API_TOKEN = os.environ["API_TOKEN"]
 
-# 每次请求都会变化、不属于"聚类结果"本身的顶层字段，比对前剔除。
-VOLATILE_TOP_LEVEL_FIELDS = ("processing_time",)
-
 
 def _load_json(path: Path) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
-
-def _strip_volatile(payload: dict) -> dict:
-    payload = copy.deepcopy(payload)
-    for field in VOLATILE_TOP_LEVEL_FIELDS:
-        payload.pop(field, None)
-    return payload
 
 
 @pytest.fixture(scope="module")
@@ -90,7 +78,7 @@ def _call_clustering(client: TestClient, request_body: dict) -> dict:
 
 
 def test_clustering_matches_golden_snapshot(client, request_body):
-    actual = _strip_volatile(_call_clustering(client, request_body))
+    actual = _call_clustering(client, request_body)
 
     if os.environ.get("UPDATE_GOLDEN") == "1":
         with open(RESPONSE_PATH, "w", encoding="utf-8") as f:
@@ -98,7 +86,7 @@ def test_clustering_matches_golden_snapshot(client, request_body):
             f.write("\n")
         pytest.skip("UPDATE_GOLDEN=1：已重写 golden 响应，本次运行不做比对")
 
-    expected = _strip_volatile(_load_json(RESPONSE_PATH))
+    expected = _load_json(RESPONSE_PATH)
     assert actual == expected, (
         "聚类响应偏离 golden 快照——对同一份输入，产出变了。"
         "确认这是预期的算法/参数变更后，用 UPDATE_GOLDEN=1 重新生成再提交。"
@@ -108,6 +96,6 @@ def test_clustering_matches_golden_snapshot(client, request_body):
 def test_clustering_is_deterministic_across_repeated_calls(client, request_body):
     """同一输入连续跑两次，输出必须逐字节相同——这是本测试要守住的不变量本体
     （byte-deterministic agglomerative clustering，见模块 docstring）。"""
-    first = _strip_volatile(_call_clustering(client, request_body))
-    second = _strip_volatile(_call_clustering(client, request_body))
+    first = _call_clustering(client, request_body)
+    second = _call_clustering(client, request_body)
     assert first == second

@@ -5,7 +5,7 @@
 
 # 惰性标注：让 torch.Tensor/torch.device 等标注变字符串、不在 import 时求值，
 # 配合下方把 torch/transformers 移进函数体，使 import 本模块从 ~25s 降到 ~0s
-# （uvicorn 才能秒绑 8080，不再撞 CF Container 就绪窗口）。详见 memory: ml-service-cold-start。
+# （uvicorn 才能秒绑 8080，不再撞 CF Container 就绪窗口）。
 from __future__ import annotations
 
 import threading
@@ -149,7 +149,7 @@ def validate_embeddings(embeddings: List[List[float]]) -> np.ndarray:
         raise ValueError(f"嵌入必须是二维数组，实际维度: {embeddings_array.ndim}")
     
     # 检查嵌入维度
-    expected_dim = getattr(settings, 'expected_embedding_dimensions', 384)
+    expected_dim = 384  # multilingual-e5-small；DB 列是 vector(384)
     if embeddings_array.shape[1] != expected_dim:
         raise ValueError(f"期望{expected_dim}维嵌入，实际得到{embeddings_array.shape[1]}维")
     

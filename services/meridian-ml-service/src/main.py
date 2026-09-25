@@ -9,10 +9,8 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import settings
 from .dependencies import ModelDep, verify_token
 from .schemas import (
     # 核心请求/响应模型
@@ -52,24 +50,16 @@ app = FastAPI(
     title="Meridian ML Service",
     description="AI驱动的智能聚类分析服务",
     version="3.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # 只有 backend 服务端调用：不开 /docs、/redoc（它们无鉴权），不挂 CORS
+    docs_url=None,
+    redoc_url=None,
     lifespan=lifespan
-)
-
-# CORS中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 # 跨服务追踪：把上游传过来的 x-trace-id 在请求入口打一行结构化日志，便于关联三个 service 的日志
 @app.middleware("http")
 async def trace_id_logger(request: Request, call_next):
-    trace_id = request.headers.get("x-trace-id") or request.headers.get("X-Trace-ID")
+    trace_id = request.headers.get("x-trace-id")
     if trace_id:
         print(f"[trace] svc=meridian-ml-service trace_id={trace_id} path={request.url.path} method={request.method}", flush=True)
     return await call_next(request)
@@ -130,28 +120,11 @@ def get_build_identity() -> Dict[str, Any]:
 
 @app.get("/health")
 async def health_check():
-    """健康检查端点"""
-    try:
-        from .clustering import CLUSTERING_AVAILABLE
-        
-        health_status = {
-            "status": "healthy",
-            "timestamp": time.time(),
-            BUILD_IDENTITY_FIELD: get_build_identity(),
-            "embedding_model": settings.embedding_model_name,
-            "clustering_available": CLUSTERING_AVAILABLE
-        }
-        
-        if not CLUSTERING_AVAILABLE:
-            health_status["warnings"] = [
-                "聚类功能不可用",
-                "安装命令: pip install scikit-learn"
-            ]
-            
-        return health_status
-        
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"服务健康检查失败: {str(e)}")
+    """健康检查端点：Docker HEALTHCHECK 只看状态码；build_identity 给人核对线上是哪个镜像"""
+    return {
+        "status": "healthy",
+        BUILD_IDENTITY_FIELD: get_build_identity(),
+    }
 
 # ============================================================================
 # 核心端点 1: 嵌入生成
@@ -177,8 +150,6 @@ async def generate_embeddings(
         
         return EmbeddingResponse(
             embeddings=embeddings_np.tolist(),
-            model_name=settings.embedding_model_name,
-            dimensions=embeddings_np.shape[1],
         )
         
     except Exception as e:
@@ -202,7 +173,7 @@ async def ai_worker_clustering(
     _: None = Depends(verify_token),
 ):
     """backend（apps/backend/src/lib/services/clustering.ts）专用聚类端点。
-    输入：[{"id": 1, "embedding": [...], "title": "...", "url": "...", ...}]
+    输入：[{"id": 1, "embedding": [...]}, ...]
     """
     print(f"[AIWorkerClustering] 收到请求：{len(items)} 个AI Worker数据项")
     

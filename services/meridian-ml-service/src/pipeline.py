@@ -1,6 +1,6 @@
 """
 聚类请求处理：校验输入 → 凝聚聚类 → 按簇组装响应。
-唯一调用方是 apps/backend/src/lib/services/clustering.ts（它只读 cluster_id、size、items[].id）。
+唯一调用方是 apps/backend/src/lib/services/clustering.ts（读 cluster_id、size、items[].id，另把 clustering_stats、config_used、build_identity 落观测）。
 """
 
 from typing import List, Dict, Any, Optional

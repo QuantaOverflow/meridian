@@ -13,10 +13,7 @@ export class MeridianMLContainer extends Container<Env> {
     super(ctx, env);
     this.envVars = {
       API_TOKEN: env.API_TOKEN,
-      // 用烤进镜像的本地模型(Dockerfile COPY ./model-cache → /home/appuser/model),
-      // 别用 HF 名:那会让每次冷启动去 HuggingFace 下载(慢+受限流,Dockerfile 注释明说"to avoid HF rate limits")。
-      // 本地路径加载已验证可用。详见 memory: ml-service-cold-start。
-      EMBEDDING_MODEL_NAME: '/home/appuser/model',
+      // 模型路径由 Dockerfile 的 ENV EMBEDDING_MODEL_NAME 指向烤进镜像的本地模型，这里不重复设
     };
   }
 }

@@ -11,7 +11,6 @@ class Settings:
     def __init__(self):
         # 模型配置
         self.embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/multilingual-e5-small")
-        self.expected_embedding_dimensions = int(os.getenv("EXPECTED_EMBEDDING_DIMENSIONS", "384"))
         
         # API配置
         self.api_token = os.getenv("API_TOKEN", "")

@@ -37,8 +37,6 @@ class EmbeddingRequest(BaseModel):
 class EmbeddingResponse(BaseModel):
     """嵌入生成响应"""
     embeddings: List[List[float]] = Field(..., description="生成的嵌入向量")
-    model_name: str = Field(..., description="使用的模型名称")
-    dimensions: int = Field(..., description="嵌入维度")
 
 # ============================================================================
 # 响应模型

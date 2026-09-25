@@ -11,13 +11,7 @@ from dataclasses import dataclass
 # 抑制sklearn弃用警告
 warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
 
-# sklearn 懒加载：启动时只用 find_spec 快速探测可用性(不执行模块/不付 import 成本)，
-# 真正 import 推迟到首次聚类（perform_agglomerative_clustering 内）。
-import importlib.util
-CLUSTERING_AVAILABLE = importlib.util.find_spec("sklearn") is not None
-if not CLUSTERING_AVAILABLE:
-    logging.warning("聚类依赖未安装: scikit-learn")
-
+# sklearn 懒加载：真正 import 推迟到首次聚类（perform_agglomerative_clustering 内）。
 
 def _load_clustering_libs() -> None:
     """后台预热：提前付 sklearn 的 import 成本，免得落到首个聚类请求上。幂等。"""
@@ -32,14 +26,10 @@ def convert_numpy_types(obj: Any) -> Any:
         return int(obj)
     elif isinstance(obj, np.floating):
         return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(convert_numpy_types(item) for item in obj)
     else:
         return obj
 
@@ -52,7 +42,7 @@ class ClusteringConfig:
     #
     # 换算法的理由（F1/F2 两窗人读金标实测，产品口径：<3 篇的簇与事件都不计）：
     # 读数不在这里存——这里曾存一份三个多月没人核对、与 ADR 实测对不上的读数表，
-    # 就是下一个陷阱。现场跑 scripts/eval/clustering/product-score.ts 拿读数，
+    # 就是下一个陷阱。现场跑 eval/clustering/product-score.ts 拿读数，
     # 权威口径见 docs/adr/0003-cluster-as-brief-block.md。
     #
     # 两处机制各治一个病：
@@ -83,7 +73,7 @@ class ClusteringConfig:
     # average linkage 的合并阈值，作用在余弦距离 (1-cos) 上。
     #
     # 0.10 是「交付优先」的操作点。往左（更严）纯度涨、漏与碎都涨；前沿曲线的具体读数不在
-    # 这里存，现场跑 scripts/eval/clustering/product-score.ts，权威口径见
+    # 这里存，现场跑 eval/clustering/product-score.ts，权威口径见
     # docs/adr/0003-cluster-as-brief-block.md。
     # 纯度与交付在这条曲线上死死绑定：试过四种绕法（源特征剥离 / 合并守卫 / 互为近邻 /
     # 核心-挂靠），全部落在前沿上或前沿下，机制见 docs/engineering-notes/。

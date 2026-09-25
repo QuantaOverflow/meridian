@@ -55,19 +55,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/home/appuser/app:${PYTHONPATH} \
     EMBEDDING_MODEL_NAME=/home/appuser/model
 
-# --- 构建身份注入（消费方：src/main.py 的 get_build_identity）---
-# 放在所有 COPY 之后：改 SHA 不会让依赖层和模型层缓存失效。
-#   docker build --build-arg MERIDIAN_ML_BUILD_SHA=$(git rev-parse --short HEAD) \
-#                --build-arg MERIDIAN_ML_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) .
-# 没带 --build-arg 时这两个是空串，服务侧返回 "not-injected"（可判别，不崩）。
-ARG MERIDIAN_ML_BUILD_SHA=""
-ARG MERIDIAN_ML_BUILD_TIME=""
-ENV MERIDIAN_ML_BUILD_SHA=${MERIDIAN_ML_BUILD_SHA} \
-    MERIDIAN_ML_BUILD_TIME=${MERIDIAN_ML_BUILD_TIME}
-
-# 兜底构建戳：CF Containers 走 cf-worker 的 `wrangler deploy` 构建镜像，那条路要传
-# build-arg 得手改 wrangler.jsonc 的 image_vars（又变成人维护的字面量），所以镜像里
-# 直接留一个真实的构建时刻。这一层在 COPY ./src 之后，源码一变必重跑；反过来，源码新
+# 构建身份（消费方：src/main.py 的 get_build_identity）。CF Containers 走 cf-worker 的
+# `wrangler deploy` 构建镜像，那条路传 build-arg 得手改 wrangler.jsonc 的 image_vars
+# （又变成人维护的字面量），所以镜像里直接留一个真实的构建时刻。这一层在 COPY ./src 之后，源码一变必重跑；反过来，源码新
 # 而镜像没重建时这个戳不会变——那正是要能被看见的信号。
 RUN date -u +"%Y-%m-%dT%H:%M:%SZ" > /home/appuser/app/.build_stamp
 ENV MERIDIAN_ML_BUILD_STAMP_FILE=/home/appuser/app/.build_stamp

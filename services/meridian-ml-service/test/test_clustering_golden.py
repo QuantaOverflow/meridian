@@ -34,10 +34,9 @@ import pytest
 # 单例，只在首次 import 时读一次 os.environ，之后再设置环境变量对它无效。
 os.environ["API_TOKEN"] = "golden-test-token"
 
-# build_identity 顶层字段（main.py 的 get_build_identity）读三个构建期环境变量；
-# 显式清空而不是假设本地/CI shell 没设置过它们，否则 golden 响应会随跑测试的机器漂移。
-for _var in ("MERIDIAN_ML_BUILD_SHA", "MERIDIAN_ML_BUILD_TIME", "MERIDIAN_ML_BUILD_STAMP_FILE"):
-    os.environ.pop(_var, None)
+# build_identity 顶层字段（main.py 的 get_build_identity）读构建戳路径的环境变量；
+# 显式清空而不是假设本地/CI shell 没设置过它，否则 golden 响应会随跑测试的机器漂移。
+os.environ.pop("MERIDIAN_ML_BUILD_STAMP_FILE", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 

@@ -1936,8 +1936,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           ? [`NO_EVENT 率 ${(noEventRate * 100).toFixed(1)}%（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls}）超阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%`]
           : []),
         // ml 镜像身份：missing = 跑的是旧镜像（2026-09-15~19 连续五天跑旧算法、status 全程 COMPLETED
-        // 的那种），mismatch = 不是本次部署的镜像。not_injected 是本地直起服务（replay 即此），不算降级。
-        ...(clusteringResult.buildIdentityCheck.status === 'missing' || clusteringResult.buildIdentityCheck.status === 'mismatch'
+        // 的那种）。not_injected 是本地直起服务（replay 即此），不算降级。
+        ...(clusteringResult.buildIdentityCheck.status === 'missing'
           ? [`ml 镜像身份 ${clusteringResult.buildIdentityCheck.status}：${clusteringResult.buildIdentityCheck.detail}`]
           : []),
       ];

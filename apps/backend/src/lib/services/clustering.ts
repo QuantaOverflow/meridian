@@ -22,44 +22,23 @@ const NOISE_CLUSTER_ID = -1;
  */
 const ML_BUILD_IDENTITY_FIELD = 'build_identity';
 
-/** ml 侧"没注入"的占位值（与 main.py 的 BUILD_NOT_INJECTED 同值）。 */
-const ML_BUILD_NOT_INJECTED = 'not-injected';
-
-/**
- * 期望的 ml 镜像 SHA 从哪读。
- *
- * 注意：`MERIDIAN_ML_EXPECTED_BUILD_SHA` 没在 `apps/backend/wrangler.jsonc` 的 vars
- * 与 `AIWorkerEnv` 里声明，所以这里走一次显式 cast 读。
- * 未配置时断言仍然有效，只是降一档：只能判"字段缺失 / 没注入"，判不了"不是本次部署的镜像"。
- */
-function readExpectedBuildSha(env: AIWorkerEnv): string | undefined {
-  const raw = (env as unknown as Record<string, unknown>).MERIDIAN_ML_EXPECTED_BUILD_SHA;
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
-}
-
 /**
  * 镜像身份断言结果。
  *
- * - `missing`     响应里根本没有 build_identity 字段 → 跑的是加这个字段之前的旧镜像，
- *                 即"镜像没推成功"本身。**这是这道闸唯一必须抓到的东西**，零配置生效。
- * - `not_injected` 有字段但 injected=false（本地 `uv run` 直起服务，镜像里连构建戳都没有），
- *                 或者配了期望 SHA 而 ml 侧只回了构建时刻、没法比对。不等于故障，
- *                 但也不构成"这是本次部署的镜像"的证据。
- * - `mismatch`    有字段、SHA 有效，但与 MERIDIAN_ML_EXPECTED_BUILD_SHA 不符 → 镜像是新的，
- *                 但不是本次部署的那个。
- * - `ok`          有字段且已注入：配了期望 SHA 时表示 SHA 相符；没配时只表示"不是旧镜像"
- *                 （build_sha 可能仍是占位符，构建时刻来自镜像层构建戳）。
+ * - `missing`      响应里根本没有 build_identity 字段 → 跑的是加这个字段之前的旧镜像，
+ *                  即"镜像没推成功"本身。**这是这道闸唯一必须抓到的东西**，零配置生效。
+ * - `not_injected` 有字段但 injected=false：本地 `uv run` 直起服务，镜像里没有构建戳。不等于故障。
+ * - `ok`           有字段且带构建戳：只表示"不是旧镜像"。"是不是本次部署的镜像"由部署时的
+ *                  `scripts/check-container-deploy.sh` 核对（运行时的期望 SHA 比对 2026-09-25 删除：
+ *                  两边都没配过，且与部署时那道检查重叠）。
  */
-type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected' | 'mismatch';
+type BuildIdentityStatus = 'ok' | 'missing' | 'not_injected';
 
 interface BuildIdentityAssertion {
   status: BuildIdentityStatus;
   /** true 仅当 status === 'ok'；调用方可以只看这一位做门禁。 */
   verified: boolean;
-  reportedSha?: string;
   reportedBuildTime?: string;
-  reportedBuildTimeSource?: string;
-  expectedSha?: string;
   /** 人读的判据说明，直接落观测文件用。 */
   detail: string;
 }
@@ -68,14 +47,13 @@ interface BuildIdentityAssertion {
  * 从 ml 响应顶层解析并断言镜像身份。
  *
  * 关键：**字段缺失必须是一个可判别的状态**，不能 `?? 'unknown'` 吞掉——那等于把这道闸拆了。
- * 这个函数只产出信号；missing / mismatch 由 workflow 并进 degradedReasons 记 DEGRADED。
+ * 这个函数只产出信号；missing 由 workflow 并进 degradedReasons 记 DEGRADED。
  */
-function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityAssertion {
+function assertBuildIdentity(raw: unknown): BuildIdentityAssertion {
   if (raw === undefined || raw === null) {
     return {
       status: 'missing',
       verified: false,
-      expectedSha,
       detail:
         `ml 响应缺少顶层 ${ML_BUILD_IDENTITY_FIELD} 字段：运行的是加该字段之前构建的旧镜像` +
         `（镜像未推成功 / 未重建），与请求参数无关——configUsed 在这种情况下仍会正常回显。`,
@@ -86,66 +64,26 @@ function assertBuildIdentity(raw: unknown, expectedSha?: string): BuildIdentityA
     return {
       status: 'missing',
       verified: false,
-      expectedSha,
       detail: `ml 响应的 ${ML_BUILD_IDENTITY_FIELD} 不是对象（实际 ${typeof raw}）：当作旧镜像/不可信身份处理。`,
     };
   }
 
   const obj = raw as Record<string, unknown>;
-  const sha = typeof obj.build_sha === 'string' ? obj.build_sha : undefined;
   const buildTime = typeof obj.build_time === 'string' ? obj.build_time : undefined;
-  const buildTimeSource = typeof obj.build_time_source === 'string' ? obj.build_time_source : undefined;
-  const injected = obj.injected === true;
-  const shaUsable = !!sha && sha !== ML_BUILD_NOT_INJECTED;
-
-  const base = {
-    reportedSha: sha,
-    reportedBuildTime: buildTime,
-    reportedBuildTimeSource: buildTimeSource,
-    expectedSha,
-  };
-
-  if (!injected) {
+  if (obj.injected !== true) {
     return {
-      ...base,
       status: 'not_injected',
       verified: false,
-      detail:
-        `ml 侧 ${ML_BUILD_IDENTITY_FIELD}.injected=false：构建标识没注入（本地直起服务，或构建时没带 ` +
-        `--build-arg MERIDIAN_ML_BUILD_SHA/TIME）。本次跑的镜像身份不可证。`,
-    };
-  }
-
-  if (expectedSha && !shaUsable) {
-    return {
-      ...base,
-      status: 'not_injected',
-      verified: false,
-      detail:
-        `已配置期望 SHA (${expectedSha})，但 ml 侧只回了构建时刻（build_sha=${sha ?? 'undefined'}）：` +
-        `无法比对镜像身份，构建时请带 --build-arg MERIDIAN_ML_BUILD_SHA。`,
-    };
-  }
-
-  if (expectedSha && shaUsable && sha !== expectedSha) {
-    return {
-      ...base,
-      status: 'mismatch',
-      verified: false,
-      detail:
-        `ml 镜像 SHA 不符：期望 ${expectedSha}，实际 ${sha}（build_time=${buildTime ?? 'unknown'}）。` +
-        `镜像是新的，但不是本次部署的那个。`,
+      reportedBuildTime: buildTime,
+      detail: `ml 侧 ${ML_BUILD_IDENTITY_FIELD}.injected=false：镜像里没有构建戳（本地直起服务）。本次跑的镜像身份不可证。`,
     };
   }
 
   return {
-    ...base,
     status: 'ok',
     verified: true,
-    detail: expectedSha
-      ? `ml 镜像身份符合期望：${sha}（build_time=${buildTime ?? 'unknown'}）。`
-      : `ml 镜像已带构建标识：sha=${sha}，build_time=${buildTime ?? 'unknown'}（来源 ${buildTimeSource ?? 'unknown'}）；` +
-        `未配置 MERIDIAN_ML_EXPECTED_BUILD_SHA，故只验到"不是旧镜像"，没验"是本次部署的镜像"。`,
+    reportedBuildTime: buildTime,
+    detail: `ml 镜像已带构建戳：build_time=${buildTime ?? 'unknown'}（只验到"不是旧镜像"）。`,
   };
 }
 
@@ -313,9 +251,7 @@ export class ClusteringService {
            * 配置漂了三个半月无人发现；这次连"字段在不在"都是判据）。
            */
           build_identity?: {
-            build_sha?: string;
             build_time?: string;
-            build_time_source?: string;
             injected?: boolean;
             [key: string]: unknown;
           };
@@ -355,10 +291,7 @@ export class ClusteringService {
           clusteringStats: mlResult.clustering_stats,
           // 镜像身份：与 configUsed 分开。configUsed 是请求回显（旧镜像也能回显得一模一样），
           // 这个字段的值来自 ml 镜像构建时注入的环境变量，源码里没有字面量。
-          buildIdentityCheck: assertBuildIdentity(
-            mlResult.build_identity,
-            readExpectedBuildSha(this.env)
-          )
+          buildIdentityCheck: assertBuildIdentity(mlResult.build_identity)
         };
 
         if (!clusteringResult.buildIdentityCheck.verified) {

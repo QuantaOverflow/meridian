@@ -75,14 +75,14 @@ async def trace_id_logger(request: Request, call_next):
 # 聚类算法（镜像没推成功，源码却是新的），全程 brief_runs.status = COMPLETED。
 #
 # 为什么不能是代码里的字面量（如 version="3.0.0"）：字面量跟着源码走，而故障的形状
-# 恰恰是"源码是对的、镜像是旧的"。所以值只从构建时注入的环境变量读
-# （Dockerfile 的 ARG → ENV），代码里只有"没注入"的占位值。
+# 恰恰是"源码是对的、镜像是旧的"。所以值只从镜像构建时写下的构建戳读
+# （Dockerfile 的 .build_stamp），代码里只有"没注入"的占位值。
 BUILD_IDENTITY_FIELD = "build_identity"
 BUILD_NOT_INJECTED = "not-injected"
 
 
 def _read_build_stamp() -> str:
-    """读镜像里 Dockerfile 那层写下的构建时刻（兜底，见 Dockerfile）。读不到返回空串。"""
+    """读镜像里 Dockerfile 那层写下的构建时刻（见 Dockerfile）。读不到返回空串。"""
     path = (os.getenv("MERIDIAN_ML_BUILD_STAMP_FILE") or "").strip()
     if not path:
         return ""
@@ -94,23 +94,12 @@ def _read_build_stamp() -> str:
 
 
 def get_build_identity() -> Dict[str, Any]:
-    """返回当前运行镜像的构建身份。缺环境变量不报错，返回可判别的占位值。"""
-    sha = (os.getenv("MERIDIAN_ML_BUILD_SHA") or "").strip()
-    built_at = (os.getenv("MERIDIAN_ML_BUILD_TIME") or "").strip()
+    """返回当前运行镜像的构建身份。读不到构建戳不报错，返回可判别的占位值。"""
     stamp = _read_build_stamp()
-    if built_at:
-        time_source = "build_arg"
-    elif stamp:
-        time_source = "image_layer"
-    else:
-        time_source = BUILD_NOT_INJECTED
     return {
-        "build_sha": sha or BUILD_NOT_INJECTED,
-        "build_time": built_at or stamp or BUILD_NOT_INJECTED,
-        "build_time_source": time_source,
-        # injected=False 只剩一种来源：本地 `uv run` 直起服务（镜像里至少有 .build_stamp）。
-        # 调用方据此区分"没注入"与"注入了但不是本次部署的那个"。
-        "injected": bool(sha or built_at or stamp),
+        "build_time": stamp or BUILD_NOT_INJECTED,
+        # injected=False 只有一种来源：本地 `uv run` 直起服务（镜像里一定有 .build_stamp）。
+        "injected": bool(stamp),
     }
 
 

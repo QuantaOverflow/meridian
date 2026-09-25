@@ -1,8 +1,6 @@
 {
   "build_identity": {
-    "build_sha": "not-injected",
     "build_time": "not-injected",
-    "build_time_source": "not-injected",
     "injected": false
   },
   "clustering_stats": {

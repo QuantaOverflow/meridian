@@ -144,7 +144,7 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    ```bash
    scripts/check-container-deploy.sh    # 0 = image not older than code; 1 = image stale; 2 = tooling error
    ```
-   Production `GET /health`'s `build_identity` (build SHA + build time) also shows which build is live.
+   Production `GET /health`'s `build_identity` (image build time) also shows which build is live.
 4. **Backend** (`apps/backend`, `wrangler.jsonc`)
    ```bash
    cd apps/backend
@@ -244,7 +244,7 @@ R2 objects with no endpoint (article-journey, brief-v3) need `wrangler r2 object
 **Common troubleshooting paths**
 
 1. **A brief didn't come out / errored**: `/health/summary` to find the run → `/runs/:wf` for `run.status` and any `detailedMetrics` step with `status === 'failed'` and its `error`; cross-check `wrangler workflows instances describe` for platform-level state
-2. **Status is `DEGRADED`**: three triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block; a cluster NO_EVENT rate above 15% (normally 2–3%); or the ML Service image identity check failing (`missing` = an old image without `build_identity`, `mismatch` = not the image of this deploy — also recorded as `buildIdentityCheck` in `observability/clustering/<wf>.json`). Check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image too
+2. **Status is `DEGRADED`**: three triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block; a cluster NO_EVENT rate above 15% (normally 2–3%); or the ML Service image identity check failing (`missing` = an old image without `build_identity` — also recorded as `buildIdentityCheck` in `observability/clustering/<wf>.json`). Check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image too
 3. **Why didn't a big story make the brief**: look up the article in article-journey to see which gate stopped it; a selected-but-missing block shows up as `ok:false` in the brief-v3 record
 4. **A block reads wrong**: find its `brief_block_v6` call under `/runs/:wf/llm-calls` and pull the raw input/output
 5. **Why this ranking**: `detailedMetrics.story_rank` (rounds succeeded, `intersectionSize`, failure reason) and `story_validation` (judge counts: `judgeFailures` / `pocketFlagged` / `unsureClusters`, normally ~0)

@@ -19,9 +19,9 @@
  *     frequency_penalty 是缓解不是解药，真正挡住要靠解析处的重复检测（memory
  *     repetition-guard-always-on）。检出 → 本次尝试算失败，进下一次。
  */
-import { callLLM } from './call-llm';
+import { callLLMUntilAccepted, LLMAttemptsExhausted } from './call-llm';
 import type { TraceContext } from './llm-call-logger';
-import type { ChatResponse, CloudflareEnv } from '../types';
+import type { CloudflareEnv } from '../types';
 import type { BriefBlockV6Request as BriefBlockV6Input, BriefBlockV6Result } from '@meridian/contracts';
 import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
@@ -104,53 +104,60 @@ export class BriefBlockV6Service {
     rejects?: string[],
     hints: Partial<Record<string, string>> = {}
   ): Promise<any> {
-    let lastReasons: string[] = [];
-    for (let attempt = 0; attempt < TEMPERATURES.length; attempt++) {
-      // 块间唯一：见 CALL_INDEX_PER_STORY。traceContext.callIndex 是 backend 传的 story 序号。
-      const storyIdx = this.traceContext.callIndex ?? 0;
-      const callIndex = CALL_INDEX_BASE + storyIdx * CALL_INDEX_PER_STORY + this.llmCalls;
-      const attemptPrompt = lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons, hints)}` : prompt;
-      this.llmCalls++;
-      let content = '';
-      let truncated = false;
-      let err: unknown = null;
-      try {
-        const res = await callLLM(this.ai, this.env, this.traceContext, 'brief_block_v6', [{ role: 'user', content: attemptPrompt }], {
-          model: MODEL,
-          temperature: TEMPERATURES[attempt],
-          callIndex,
-          responseFormat: { type: 'json_schema' as const, json_schema: schema },
-        });
-        // usage.neurons 是 Workers AI 的计费单位，类型里没有（各 provider 的 usage 字段不同），运行时有
-        this.neurons += Number((res.usage as { neurons?: number } | undefined)?.neurons ?? 0);
-        const choice = (res as ChatResponse).choices?.[0];
-        content = String(choice?.message?.content ?? '');
-        truncated = choice?.finish_reason === 'length';
-      } catch (e) {
-        err = e;
-      }
-      let parsed: any = null;
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        /* retry */
-      }
-      // reasons === null：连 ok() 都没跑到（调用抛了 / 截断 / JSON 解不出），没有可回传的诊断
-      const reasons = !err && !truncated && parsed ? ok(parsed) : null;
-      lastReasons = reasons ?? [];
-      if (reasons && reasons.length === 0) {
-        if (!detectRepetition(repetitionTextOf(parsed))) return parsed;
-        console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
-      } else {
-        if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
-        console.warn(
-          `[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
-            `${err ? `err=${err instanceof Error ? err.message : String(err)}` : truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`
-        );
-      }
-      if (attempt < BACKOFF_MS.length) await new Promise(r => setTimeout(r, BACKOFF_MS[attempt]));
+    try {
+      const r = await callLLMUntilAccepted(this.ai, this.env, this.traceContext, 'brief_block_v6', {
+        attempts: TEMPERATURES.length,
+        overrides: attempt => {
+          // 块间唯一：见 CALL_INDEX_PER_STORY。traceContext.callIndex 是 backend 传的 story 序号。
+          const storyIdx = this.traceContext.callIndex ?? 0;
+          const callIndex = CALL_INDEX_BASE + storyIdx * CALL_INDEX_PER_STORY + this.llmCalls;
+          this.llmCalls++;
+          return {
+            model: MODEL,
+            temperature: TEMPERATURES[attempt],
+            callIndex,
+            responseFormat: { type: 'json_schema' as const, json_schema: schema },
+          };
+        },
+        prompt: (_attempt, lastReasons) =>
+          lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons, hints)}` : prompt,
+        accept: (res, attempt) => {
+          const choice = res.choices?.[0];
+          const content = String(choice?.message?.content ?? '');
+          const truncated = choice?.finish_reason === 'length';
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(content);
+          } catch {
+            /* retry */
+          }
+          // reasons === null：连 ok() 都没跑到（截断 / JSON 解不出），没有可回传的诊断
+          const reasons = !truncated && parsed ? ok(parsed) : null;
+          if (reasons && reasons.length === 0) {
+            if (!detectRepetition(repetitionTextOf(parsed))) return { ok: true, value: parsed };
+            console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
+            return { ok: false, reasons: [] };
+          }
+          if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
+          console.warn(
+            `[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
+              `${truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`
+          );
+          return { ok: false, reasons: reasons ?? [] };
+        },
+        retryOnError: (err, attempt) => {
+          console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：err=${err instanceof Error ? err.message : String(err)}`);
+          return true;
+        },
+        backoffMs: attempt => BACKOFF_MS[attempt],
+      });
+      this.neurons += r.neurons;
+      return r.value;
+    } catch (e) {
+      if (!(e instanceof LLMAttemptsExhausted)) throw e;
+      this.neurons += e.neurons;
+      throw new Error(`${tag}: all model attempts failed validation`);
     }
-    throw new Error(`${tag}: all model attempts failed validation`);
   }
 
   async generate(input: BriefBlockV6Input): Promise<BriefBlockV6Result> {

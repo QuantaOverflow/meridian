@@ -1,4 +1,4 @@
-import type { AIResponse, ChatMessage, CloudflareEnv } from '../types';
+import type { AIResponse, ChatMessage, ChatResponse, CloudflareEnv } from '../types';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 import { recordSensor } from './sensor-log';
 
@@ -9,8 +9,8 @@ import { recordSensor } from './sensor-log';
 // 形状：phase 给一套默认，caller 只覆盖真不同的（确定性子调用传 temperature:0、主生成传 model）。
 // 只管配置解析；观测落盘仍是下一层 loggedChat 的职责（各司一职）。
 //
-// 未收编：article_analysis（index.ts strategy-driven，provider/model/temp 每次重试换，
-// 不适合 phase-default）、/meridian/chat（外部透传口）。
+// 未收编：/meridian/chat（外部透传口）。article_analysis 经 callLLMUntilAccepted 进来，
+// 但 provider/model/temp 每档都由 index.ts 的 analysisStrategies 给全，phase 默认值对它不生效。
 
 interface PhaseDefault {
   model: string;
@@ -45,7 +45,7 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 很清楚：实测过的配置优先于未实测的约定。复读由解析处的 detectRepetition 挡（见
   // services/brief-block-v6.ts），那才是真正拦得住的那层。
   brief_block_v6: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
-  // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
+  // 占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
 };
 
@@ -61,6 +61,9 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
 // 20% 落在两者之间，留足余量。
 const CJK_ALARM_RATIO = 0.2;
 const CJK_ALARM_MIN_CHARS = 40; // 短输出里几个汉字不足以判断，避免噪声告警
+// 文章分析不挂这个传感器：它的输入本来就可能是中文文章，且它历史上直接调 loggedChat、
+// 从没过这层——收进 callLLMUntilAccepted 时保持原样，不新增告警与 R2 写入。
+const LANG_SENSOR_SKIP: ReadonlySet<LLMCallPhase> = new Set(['article_analysis']);
 
 function checkOutputLanguage(phase: LLMCallPhase, content: string): { cjk: number; ratio: number } | null {
   if (content.length < CJK_ALARM_MIN_CHARS) return null;
@@ -116,7 +119,7 @@ export function callLLM(
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;
   return loggedChat(ai, env, t, phase, request).then(async res => {
     const content = res.choices?.[0]?.message?.content ?? '';
-    const alarm = checkOutputLanguage(phase, content);
+    const alarm = LANG_SENSOR_SKIP.has(phase) ? null : checkOutputLanguage(phase, content);
     // 只在报警时落 R2：语言正确是常态，每次调用都写一条会把 sensors/ 目录淹了，
     // 而"没有记录"在这里等价于"没报警"（与卫生检查器不同——那个零命中也有信息量）。
     if (alarm) {
@@ -126,4 +129,112 @@ export function callLLM(
     }
     return res;
   });
+}
+
+// ============================================================================
+// 多次尝试：「调 LLM 直到拿到合格结果」的单一实现
+// ============================================================================
+// 此前文章分析（2 档模型）、简报块 v6 的 chatJson（3 次温度 + 诊断回传）、散文摘要
+// （只重试可自愈错误、指数退避）各写一套循环。三者的差异全在 policy 里，循环只有这一份。
+
+/** usage.neurons 是 Workers AI 的计费单位，类型里没有（各 provider 的 usage 字段不同），运行时有。 */
+export function neuronsOf(res: ChatResponse): number {
+  return Number((res.usage as { neurons?: number } | undefined)?.neurons ?? 0);
+}
+
+/**
+ * 这次失败值不值得重试。
+ *
+ * 除配额/限流，还覆盖 Workers AI 两类会自愈的失败：
+ * `3040: Capacity temporarily exceeded`、`3046: Request timeout`。
+ *
+ * 2026-09-25 去掉了原来的 `ai gateway` / `no response received` 两条：Gateway 已不在调用链上，
+ * 而 brief-generation 把**所有**错误都包成 "AI Gateway request failed: …"，于是任何失败
+ * （含空正文这类重试也不会变的）都被当成配额错误退避重试 4 次。
+ * `invalid api key` 这类永不自愈的错误有意不认：让它立刻失败、立刻可见
+ * （这个仓库为它付过代价：一次 key 失效让整条管线静默停摆 12 天）。
+ */
+export function isTransientLLMError(error: any): boolean {
+  const errorMessage = error?.message?.toLowerCase() || '';
+  const errorString = JSON.stringify(error).toLowerCase();
+
+  return (
+    errorMessage.includes('quota') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('resource exhausted') ||
+    errorMessage.includes('too many requests') ||
+    errorMessage.includes('capacity temporarily exceeded') ||
+    errorMessage.includes('request timeout') ||
+    errorString.includes('quota') ||
+    errorString.includes('rate_limit') ||
+    errorString.includes('429')
+  );
+}
+
+export type AttemptVerdict<T> = { ok: true; value: T } | { ok: false; reasons: string[] };
+
+/**
+ * 全部尝试都没拿到合格结果。
+ * `lastError`：最后一次尝试的失败——调用抛的错原样；accept 拒绝则是 `new Error(reasons.join(' | '))`。
+ * `neurons`：失败的尝试也花了钱，调用方要记账。
+ */
+export class LLMAttemptsExhausted extends Error {
+  constructor(public lastError: unknown, public attempts: number, public neurons: number) {
+    super(`LLM attempts exhausted after ${attempts}: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+    this.name = 'LLMAttemptsExhausted';
+  }
+}
+
+export interface AttemptPolicy<T> {
+  /** 最多尝试几次。 */
+  attempts: number;
+  /**
+   * 第 attempt 次（0 起）的 callLLM 覆盖项。是函数不是数组：v6 的 callIndex 取自多个窗口共用的
+   * 计数器、摘要每次要新 requestId，都得在发出这一次调用的时刻算。
+   */
+  overrides: (attempt: number) => CallLLMOverrides;
+  /** 这一次的 prompt。lastReasons = 上一次 accept 拒绝的原因（调用抛错 / 首次为空）。 */
+  prompt: (attempt: number, lastReasons: string[]) => string;
+  /** 解析 + 校验（含截断、复读）。拒绝 → 下一次；**抛错 = 不可重试，原样抛出**。 */
+  accept: (res: ChatResponse, attempt: number) => AttemptVerdict<T>;
+  /** 调用抛错时是否进下一次。 */
+  retryOnError: (error: unknown, attempt: number) => boolean;
+  /** 第 attempt 次失败后、下一次之前等多久；最后一次失败后不问。0 = 不等。 */
+  backoffMs: (attempt: number) => number;
+}
+
+export async function callLLMUntilAccepted<T>(
+  ai: Ai,
+  env: CloudflareEnv,
+  trace: TraceContext,
+  phase: LLMCallPhase,
+  policy: AttemptPolicy<T>
+): Promise<{ value: T; attempts: number; neurons: number }> {
+  let neurons = 0;
+  let lastReasons: string[] = [];
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < policy.attempts; attempt++) {
+    const overrides = policy.overrides(attempt);
+    const prompt = policy.prompt(attempt, lastReasons);
+    let res: ChatResponse | null = null;
+    try {
+      res = await callLLM(ai, env, trace, phase, [{ role: 'user', content: prompt }], overrides);
+    } catch (e) {
+      lastError = e;
+      lastReasons = [];
+      if (!policy.retryOnError(e, attempt)) throw new LLMAttemptsExhausted(e, attempt + 1, neurons);
+    }
+    if (res) {
+      neurons += neuronsOf(res);
+      const verdict = policy.accept(res, attempt);
+      if (verdict.ok) return { value: verdict.value, attempts: attempt + 1, neurons };
+      lastReasons = verdict.reasons;
+      lastError = new Error(verdict.reasons.join(' | '));
+    }
+    if (attempt < policy.attempts - 1) {
+      const ms = policy.backoffMs(attempt);
+      if (ms > 0) await new Promise(r => setTimeout(r, ms));
+    }
+  }
+  throw new LLMAttemptsExhausted(lastError, policy.attempts, neurons);
 }

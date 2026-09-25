@@ -2,11 +2,11 @@ import { Hono } from 'hono'
 import { chat } from './services/workers-ai'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
-import { callLLM } from './services/call-llm'
+import { callLLM, callLLMUntilAccepted, LLMAttemptsExhausted, neuronsOf } from './services/call-llm'
 import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK } from './prompts/cluster-judge'
 import { RANK_TOP_N } from './prompts/story-rank'
 import { rankStories } from './services/story-rank'
-import { loggedChat, readTraceContext } from './services/llm-call-logger'
+import { readTraceContext } from './services/llm-call-logger'
 import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
@@ -46,6 +46,20 @@ app.use('*', observeMiddleware)
 // ============================================================================
 // Article Analysis
 // ============================================================================
+
+// 配额或限制相关错误：只用来改文章分析最终回给 backend 的错误文案（重试与否不看它，两档总是都试）
+function isQuotaOrLimitMessage(errorMessage: string): boolean {
+  return errorMessage.includes('quota') || errorMessage.includes('rate limit') ||
+    errorMessage.includes('resource exhausted') || errorMessage.includes('429') ||
+    errorMessage.includes('exceeded') || errorMessage.includes('context window')
+}
+
+/** 最后一档的失败 → 最终错误（配额类加前缀）。 */
+function analysisFailure(error: unknown): Error {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  if (isQuotaOrLimitMessage(errorMessage)) return new Error(`API 配额或限制错误: ${errorMessage}`)
+  return error instanceof Error ? error : new Error(errorMessage)
+}
 
 app.post('/meridian/article/analyze', async (c) => {
   const ai = c.env.AI
@@ -90,82 +104,81 @@ app.post('/meridian/article/analyze', async (c) => {
       { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 4000 }
     ]
 
-    let lastError: Error | null = null
-    
-    for (let attempt = 1; attempt <= analysisStrategies.length; attempt++) {
-      const strategy = analysisStrategies[attempt - 1]
-      
-      console.log(`[Article Analysis] 尝试分析 (${attempt}/${analysisStrategies.length}): ${title.substring(0, 50)}...`)
-      console.log(`[Article Analysis] 使用模型: ${strategy.model} (提供商: ${strategy.provider}), 温度: ${strategy.temperature}`)
-      
-      try {
-        const aiResult = await loggedChat(ai, c.env, readTraceContext(c.req.raw), 'article_analysis', {
-          messages: [
-            { role: 'user', content: analysisPrompt }
-          ],
-          provider: strategy.provider,
-          model: strategy.model,
-          temperature: strategy.temperature,
-          max_tokens: strategy.maxTokens, // 每档自带（原特判写死的 llama-3.3-70b 分支已无对应策略档）
-          metadata: requestMetadata
-        })
+    let analysisResult: any
+    try {
+      ({ value: analysisResult } = await callLLMUntilAccepted(ai, c.env, readTraceContext(c.req.raw), 'article_analysis', {
+        attempts: analysisStrategies.length,
+        // 两档之间不退避、任何错误都换下一档
+        overrides: i => {
+          const attempt = i + 1
+          const strategy = analysisStrategies[i]
+          console.log(`[Article Analysis] 尝试分析 (${attempt}/${analysisStrategies.length}): ${title.substring(0, 50)}...`)
+          console.log(`[Article Analysis] 使用模型: ${strategy.model} (提供商: ${strategy.provider}), 温度: ${strategy.temperature}`)
+          return {
+            provider: strategy.provider,
+            model: strategy.model,
+            temperature: strategy.temperature,
+            maxTokens: strategy.maxTokens, // 每档自带（原特判写死的 llama-3.3-70b 分支已无对应策略档）
+            metadata: requestMetadata,
+          }
+        },
+        prompt: () => analysisPrompt,
+        accept: (aiResult, i) => {
+          const attempt = i + 1
+          const aiResponse = aiResult.choices?.[0]?.message?.content
+          if (!aiResponse) {
+            console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: AI 服务返回空响应`)
+            return { ok: false, reasons: ['AI 服务返回空响应'] }
+          }
 
-        const aiResponse = aiResult.choices?.[0]?.message?.content
-        if (!aiResponse) {
-          throw new Error('AI 服务返回空响应')
-        }
+          console.log(`[Article Analysis] AI 响应长度: ${aiResponse.length}`)
+          console.log(`[Article Analysis] 响应开头: ${aiResponse.substring(0, 100)}`)
 
-        console.log(`[Article Analysis] AI 响应长度: ${aiResponse.length}`)
-        console.log(`[Article Analysis] 响应开头: ${aiResponse.substring(0, 100)}`)
+          // 解析AI响应为JSON
+          const parsed = parseJSONFromResponse(aiResponse)
 
-        // 解析AI响应为JSON
-        const analysisResult = parseJSONFromResponse(aiResponse)
-        
-        if (!analysisResult || typeof analysisResult !== 'object') {
-          console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: JSON 解析失败或返回非对象`)
-          console.log(`[Article Analysis] JSON 解析错误 - AI 响应格式可能不正确`)
-          lastError = new Error('JSON 解析失败或返回非对象')
-          continue
-        }
+          if (!parsed || typeof parsed !== 'object') {
+            console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: JSON 解析失败或返回非对象`)
+            console.log(`[Article Analysis] JSON 解析错误 - AI 响应格式可能不正确`)
+            return { ok: false, reasons: ['JSON 解析失败或返回非对象'] }
+          }
 
-        console.log(`[Article Analysis] 第 ${attempt} 次尝试成功解析 JSON`)
-        console.log(`[Article Analysis] 成功完成分析: ${JSON.stringify(analysisResult).substring(0, 200)}...`)
+          console.log(`[Article Analysis] 第 ${attempt} 次尝试成功解析 JSON`)
+          return { ok: true, value: parsed }
+        },
+        retryOnError: (error, i) => {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          console.log(`[Article Analysis] 第 ${i + 1} 次尝试失败: ${errorMessage}`)
+          if (isQuotaOrLimitMessage(errorMessage)) console.log(`[Article Analysis] API 配额或限制错误`)
+          return true
+        },
+        backoffMs: () => 0,
+      }))
+    } catch (e) {
+      if (!(e instanceof LLMAttemptsExhausted)) throw e
+      const lastError = analysisFailure(e.lastError)
+      console.log(`[Article Analysis] 所有重试都失败了`)
+      console.log(`[Article Analysis] 最终错误: ${lastError?.message}`)
 
-        // 字段契约校验：此前只校验"能否解析成 object"，{} 或缺字段照样当 success 返回
-        // （articleAnalysisSchema 定义了却从未用于校验端点输出）。用 safeParse 让契约违背可见。
-        // 仍放行不阻断：下游 processArticles 对缺字段有 `?? default` 兜底，且生产实测此类全默认输出
-        // 0 发作；硬拒有过严风险（如 language.length(2) 误伤 "eng"）。留痕不改行为，与其它功能层修法一致。
-        const contractCheck = articleAnalysisSchema.safeParse(analysisResult)
-        if (!contractCheck.success) {
-          console.warn(`[Article Analysis] 输出未通过 articleAnalysisSchema 字段契约（仍放行，下游有兜底）: ` +
-            contractCheck.error.issues.map(i => `${i.path.join('.') || '(root)'}=${i.code}`).join(', '))
-        }
-
-        return c.json({ success: true, data: analysisResult })
-
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.log(`[Article Analysis] 第 ${attempt} 次尝试失败: ${errorMessage}`)
-        
-        // 检查是否是配额或限制相关错误
-        if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || 
-            errorMessage.includes('resource exhausted') || errorMessage.includes('429') ||
-            errorMessage.includes('exceeded') || errorMessage.includes('context window')) {
-          console.log(`[Article Analysis] API 配额或限制错误`)
-          lastError = new Error(`API 配额或限制错误: ${errorMessage}`)
-        } else {
-          lastError = error instanceof Error ? error : new Error(errorMessage)
-        }
-      }
+      return c.json({
+        success: false,
+        error: `文章分析失败（${analysisStrategies.length} 档均失败）: ${lastError?.message || '未知错误'}`,
+      }, 500)
     }
 
-    console.log(`[Article Analysis] 所有重试都失败了`)
-    console.log(`[Article Analysis] 最终错误: ${lastError?.message}`)
-    
-    return c.json({
-      success: false,
-      error: `文章分析失败（${analysisStrategies.length} 档均失败）: ${lastError?.message || '未知错误'}`,
-    }, 500)
+    console.log(`[Article Analysis] 成功完成分析: ${JSON.stringify(analysisResult).substring(0, 200)}...`)
+
+    // 字段契约校验：此前只校验"能否解析成 object"，{} 或缺字段照样当 success 返回
+    // （articleAnalysisSchema 定义了却从未用于校验端点输出）。用 safeParse 让契约违背可见。
+    // 仍放行不阻断：下游 processArticles 对缺字段有 `?? default` 兜底，且生产实测此类全默认输出
+    // 0 发作；硬拒有过严风险（如 language.length(2) 误伤 "eng"）。留痕不改行为，与其它功能层修法一致。
+    const contractCheck = articleAnalysisSchema.safeParse(analysisResult)
+    if (!contractCheck.success) {
+      console.warn(`[Article Analysis] 输出未通过 articleAnalysisSchema 字段契约（仍放行，下游有兜底）: ` +
+        contractCheck.error.issues.map(i => `${i.path.join('.') || '(root)'}=${i.code}`).join(', '))
+    }
+
+    return c.json({ success: true, data: analysisResult })
 
   } catch (error) {
     console.error('[Article Analysis] 请求处理失败:', error)
@@ -365,10 +378,9 @@ app.post('/meridian/brief-title', async (c) => {
     const parsed = parseJSONFromResponse(raw)
     // 解析失败不静默套通用名：留痕，让「模型没给标题」与「本来就叫这个」分得开
     if (!parsed?.title) console.warn(`[BriefTitle] 标题解析失败或缺 title 字段 → 用通用标题。原始输出: ${raw.slice(0, 200)}`)
-    const usage = (res.usage as { neurons?: number } | undefined)?.neurons ?? 0
     return c.json<APIResponse<BriefTitleResult>>({
       success: true,
-      data: { title: String(parsed?.title || 'Daily Intelligence Brief'), neurons: Number(usage) },
+      data: { title: String(parsed?.title || 'Daily Intelligence Brief'), neurons: neuronsOf(res) },
     })
   } catch (error: any) {
     console.error('Brief title error:', error)

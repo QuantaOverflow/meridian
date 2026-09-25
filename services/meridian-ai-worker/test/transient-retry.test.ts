@@ -1,17 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { QuotaHandler } from '../src/utils/quota-handler'
+import { callLLMUntilAccepted, isTransientLLMError } from '../src/services/call-llm'
 
-/** 数 operation 被调了几次：1 次 = 没重试，maxRetries+1 次 = 重试到头 */
+/** 数调用了几次：1 次 = 没重试，attempts 次 = 重试到头（散文摘要的策略：只重试可自愈错误） */
 async function attempts(message: string): Promise<number> {
   let calls = 0
-  await QuotaHandler.retryWithBackoff(async () => {
-    calls++
-    throw new Error(message)
-  }, 2, 0).catch(() => {})
+  const ai = {
+    run: async () => {
+      calls++
+      throw new Error(message)
+    },
+  } as unknown as Ai
+  await callLLMUntilAccepted(ai, { AI: ai }, {}, 'tldr_prose_generation', {
+    attempts: 3,
+    overrides: () => ({}),
+    prompt: () => 'P',
+    accept: () => ({ ok: true, value: null }),
+    retryOnError: isTransientLLMError,
+    backoffMs: () => 0,
+  }).catch(() => {})
   return calls
 }
 
-describe('QuotaHandler.retryWithBackoff', () => {
+describe('isTransientLLMError 驱动的重试', () => {
   it('重试 Workers AI 会自愈的失败', async () => {
     expect(await attempts('Workers AI binding failed: 3040: Capacity temporarily exceeded, please try again.')).toBe(3)
     expect(await attempts('Workers AI binding failed: 3046: Request timeout')).toBe(3)

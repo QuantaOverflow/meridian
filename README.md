@@ -54,7 +54,7 @@ The step-by-step pipeline is below in "How It Works"; design decisions and falsi
 - New article ids are queued for processing
 
 ### 2. Article processing (`ProcessArticles` workflow, per queued batch)
-- Fetches the article body (`DomainRateLimiter`: concurrency 8, 1s global / 5s per-domain cooldown); tricky domains go through browser rendering, others fetch first and degrade; PDFs and blocked/stub pages (junk extraction, player shells) are marked and skipped, not analyzed
+- Fetches the article body (`DomainRateLimiter`: concurrency 8, 1s global / 5s per-domain cooldown); every site fetches first and falls back to browser rendering (`used_browser` records which path produced the body, or that both failed); PDFs and blocked/stub pages (junk extraction, player shells) are marked and skipped, not analyzed
 - AI Worker `POST /meridian/article/analyze` extracts language, location, quality, event summary points, keywords, entities
 - Body goes to R2, metadata and analysis to Postgres
 - Embeddings are **not** computed here (since 2026-07) — batch-computed later, right before clustering, so the ML container isn't kept warm by one-at-a-time calls
@@ -175,6 +175,8 @@ PUT  /admin/sources/:id             # update source
 POST /admin/briefs/generate         # trigger a brief workflow
 POST /admin/articles/process        # re-run article processing
 POST /do/admin/initialize-dos       # initialize scraper DOs for sources not yet initialized
+POST /do/admin/source/:id/pause     # stop auto-scraping a source (source and articles kept; skipped by initialize-dos)
+POST /do/admin/source/:id/resume    # clear the pause and re-initialize its DO
 GET  /observability/runs/:workflowId   # one run: status, stories, step metrics
 GET  /observability/health/summary     # recent runs and 24h article stats
 ```

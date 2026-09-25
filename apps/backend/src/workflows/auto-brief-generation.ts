@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers';
 import { getDb } from '../lib/database';
-import { $articles, $reports, $sources, $brief_runs, $brief_stories, gte, lte, isNotNull, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
+import { $articles, $reports, $sources, $brief_runs, $brief_stories, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
@@ -17,7 +17,7 @@ import { createWorkflowObservability } from '../lib/observability';
 import { createClusteringService, type ClusteringResult } from '../lib/services/clustering';
 import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
-import { looksLikeExtractionFailure } from '../lib/core/extraction-quality';
+import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loadRunEmbeddings, runWindowWhere, type BodyStatus, type RunWindow } from '../lib/core/run-corpus';
 import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
@@ -25,13 +25,6 @@ import type { Env } from '../index';
 // ============================================================================
 // 数据接口定义 - 轻量级版本，避免SQLITE_TOOBIG错误
 // ============================================================================
-
-// validateContentQuality 读的那几个字段（入参是库里整行，这里只声明被读到的）
-interface ArticleRecord {
-  title: string;
-  completeness?: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS' | null;
-  content_quality?: 'OK' | 'LOW_QUALITY' | 'JUNK' | null;
-}
 
 // 轻量级数据集接口 - 不包含完整内容，只保留引用
 interface LightweightArticleDataset {
@@ -47,6 +40,8 @@ interface LightweightArticleDataset {
   }>;
   // embeddings 卸载到 R2 的 key（避开 CF Workflow 单 step ~1MB 输出上限）
   embeddingsR2Key?: string;
+  // 「准备文章数据集」step 的 R2 取正文 / 质量门计数（随 step 返回值带出）
+  r2ContentMetrics?: { r2FetchAttempts: number; r2FetchSuccesses: number; r2FetchFailures: number; qualityFilteredOut: number };
 }
 
 // 工作流参数接口
@@ -219,23 +214,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     title: string;
     content: string;
     publishDate: string;
-    /**
-     * 正文取用结果。OK 之外都是失败。
-     * 以前这里把「取不到」「取到空」「抛异常」一律糊成空字符串返回，调用方无法分辨，
-     * 而同一件事在初始数据质量门那边（processArticleContent）是显式分因上报的——
-     * 按严格那版统一口径，失败不再吞。
-     */
-    contentStatus: 'OK' | 'MISSING_CONTENT_KEY' | 'R2_CONTENT_MISSING' | 'EMPTY_R2_CONTENT' | 'R2_FETCH_ERROR';
+    /** 正文取用结果，OK 之外都是失败（为什么不再吞失败见 BodyStatus） */
+    contentStatus: BodyStatus;
   }>> {
       console.log(`[AutoBrief] 开始并行获取 ${articleIds.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
-  
+
   // 过滤出有效的文章信息
   const validArticleInfos = articleIds
     .map(articleId => lightweightDataset.articles.find(a => a.id === articleId))
     .filter((article): article is NonNullable<typeof article> => !!article);
-  
+
   console.log(`[AutoBrief] 有效文章信息: ${validArticleInfos.length} 篇`);
-  
+
   // 并行处理函数
   const processArticle = async (lightweightArticle: typeof validArticleInfos[0], index: number) => {
     const base = {
@@ -243,26 +233,15 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       title: lightweightArticle.title,
       publishDate: lightweightArticle.publishDate,
     };
-    if (!lightweightArticle.contentFileKey) {
+    const { status, content, error } = await fetchBody(this.env.ARTICLES_BUCKET, lightweightArticle.contentFileKey);
+    if (status === 'MISSING_CONTENT_KEY') {
       console.warn(`[AutoBrief] 取正文失败 MISSING_CONTENT_KEY (ID: ${lightweightArticle.id})`);
-      return { ...base, content: '', contentStatus: 'MISSING_CONTENT_KEY' as const };
-    }
-    try {
-      const contentObject = await this.env.ARTICLES_BUCKET.get(lightweightArticle.contentFileKey);
-      if (!contentObject) {
-        console.warn(`[AutoBrief] 取正文失败 R2_CONTENT_MISSING (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
-        return { ...base, content: '', contentStatus: 'R2_CONTENT_MISSING' as const };
-      }
-      const content = await contentObject.text();
-      if (!content.trim()) {
-        console.warn(`[AutoBrief] 取正文失败 EMPTY_R2_CONTENT (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
-        return { ...base, content: '', contentStatus: 'EMPTY_R2_CONTENT' as const };
-      }
-      return { ...base, content, contentStatus: 'OK' as const };
-    } catch (error) {
+    } else if (status === 'R2_FETCH_ERROR') {
       console.warn(`[AutoBrief] 取正文失败 R2_FETCH_ERROR (ID: ${lightweightArticle.id}):`, error);
-      return { ...base, content: '', contentStatus: 'R2_FETCH_ERROR' as const };
+    } else if (status !== 'OK') {
+      console.warn(`[AutoBrief] 取正文失败 ${status} (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
     }
+    return { ...base, content, contentStatus: status };
   };
 
   // 使用批量并行处理，控制并发数量
@@ -271,7 +250,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     R2_BATCH_SIZE, // 使用配置的批量大小
     processArticle
   );
-  
+
   const contentFailures = articlesWithContent.filter(a => a.contentStatus !== 'OK');
   console.log(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇（取正文失败 ${contentFailures.length} 篇）`);
   if (contentFailures.length > 0) {
@@ -329,12 +308,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('prepare_dataset', 'started');
       
-      // 简化的质量控制指标 - 只记录工作流特有的R2内容获取统计
-      const r2ContentMetrics = {
-        r2FetchAttempts: 0,
-        r2FetchSuccesses: 0,
-        r2FetchFailures: 0,
-        qualityFilteredOut: 0
+      // 本期候选文章的窗口（补算清单与数据集两处查询共用）。放 step 外：纯取值，step 重放时照样可用
+      const runWindow: RunWindow = {
+        articleIds: article_ids,
+        dateFrom,
+        dateTo,
+        timeRangeDays,
+        limit: articleLimit || 100,
       };
       
       // 补算缺失 embedding（成本优化 2026-07-08）：进稿侧不再逐篇实时算——那会让 ml-service
@@ -347,30 +327,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // ——与旧 EMBEDDING_FAILED 语义等价的降级）；批内先按 isNull 复查保证重试幂等。
       const pendingIds: number[] = await step.do('补算:查缺失清单', dbStepConfig, async (): Promise<number[]> => {
         const db = getDb(this.env.HYPERDRIVE);
-        const timeConditions = [];
-        if (article_ids.length === 0) {
-          if (dateFrom) timeConditions.push(gte($articles.publishDate, new Date(dateFrom)));
-          if (dateTo) timeConditions.push(lte($articles.publishDate, new Date(dateTo)));
-          if (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0) {
-            timeConditions.push(gte($articles.publishDate, new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000)));
-          }
-        }
         const rows = await db
           .select({ id: $articles.id })
           .from($articles)
           .innerJoin($sources, eq($articles.sourceId, $sources.id))
-          .where(
-            and(
-              isNull($articles.embedding),
-              eq($articles.status, 'PROCESSED'),
-              isNotNull($articles.contentFileKey),
-              ...(article_ids.length > 0
-                ? [inArray($articles.id, article_ids)]
-                : [eq($sources.category, 'news'), ...timeConditions])
-            )
-          )
+          .where(runWindowWhere(runWindow, 'missing'))
           .orderBy(desc($articles.publishDate))
-          .limit(articleLimit || 100);
+          .limit(runWindow.limit);
         console.log(`[AutoBrief] embedding 补算：窗口内缺失 ${rows.length} 篇`);
         return rows.map(r => r.id);
       });
@@ -450,26 +413,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         try {
           const db = getDb(this.env.HYPERDRIVE);
           
-          // 构建查询条件
-          const timeConditions = [];
-          
-          // 如果提供了文章ID列表，优先使用
           if (article_ids.length > 0) {
             console.log(`[AutoBrief] 使用上游提供的 ${article_ids.length} 个文章ID`);
-          } else {
-            // 否则使用时间范围查询
-            if (dateFrom) {
-              timeConditions.push(gte($articles.publishDate, new Date(dateFrom)));
-            }
-            if (dateTo) {
-              timeConditions.push(lte($articles.publishDate, new Date(dateTo)));
-            }
-            if (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0) {
-              const daysAgo = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
-              timeConditions.push(gte($articles.publishDate, daysAgo));
-            }
           }
-          console.log(`[AutoBrief] 最终时间条件数量: ${timeConditions.length}`);
+          // 与 runWindowWhere 里的时间条件同口径，只为保留这行日志
+          const timeConditionCount = article_ids.length > 0 ? 0
+            : (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0 ? 1 : 0);
+          console.log(`[AutoBrief] 最终时间条件数量: ${timeConditionCount}`);
 
                      // 查询已处理的文章
            const queryResult = await db
@@ -486,31 +436,21 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
              })
              .from($articles)
              .innerJoin($sources, eq($articles.sourceId, $sources.id))
-             .where(
-               and(
-                 isNotNull($articles.embedding),
-                 eq($articles.status, 'PROCESSED'),
-                 isNotNull($articles.contentFileKey),
-                 // 自动选样时只取新闻源,排除技术类(如 HN)单篇噪音——与聚类 prune 互补的上游过滤。
-                 // 显式传 article_ids 时不强加(调用方/eval 自行决定样本)。
-                 ...(article_ids.length > 0
-                   ? [inArray($articles.id, article_ids)]
-                   : [eq($sources.category, 'news'), ...timeConditions])
-               )
-             )
+             // 时间窗与候选条件见 runWindowWhere
+             .where(runWindowWhere(runWindow, 'present'))
              // 按发布时间倒序：窗口内文章数常 >limit，无排序时 Postgres 按堆序(偏旧)返回，
              // 会截掉最新文章。日报必须优先最新，否则新增源/当天新闻进不了简报。
              .orderBy(desc($articles.publishDate))
-             .limit(articleLimit || 100);
+             .limit(runWindow.limit);
           console.log(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
 
           // 窗口截短的判别信号。取数是「窗口内按 publish_date 倒序取前 N 篇」，取满 N 就说明
           // 窗口里还有更旧的合格文章没被看过——**时间窗被 limit 悄悄截短了**，而这在旧代码里
           // 只能靠事后翻库反推（08-15 那次 2 天窗实际只覆盖 21.1 小时就是这么发现的）。
           // 取满不等于一定出问题（正好相等也可能），但它是唯一能在日志里直接看见的信号。
-          if (article_ids.length === 0 && queryResult.length >= (articleLimit || 100)) {
+          if (article_ids.length === 0 && queryResult.length >= (runWindow.limit)) {
             console.warn(
-              `[AutoBrief] ⚠️ 取数取满上限 ${articleLimit || 100} 篇，时间窗可能被截短：` +
+              `[AutoBrief] ⚠️ 取数取满上限 ${runWindow.limit} 篇，时间窗可能被截短：` +
                 `窗口设定 ${timeRangeDays} 天，但更旧的合格文章不会进入本期。` +
                 `若持续出现，调高 CRON_BRIEF_PARAMS.ARTICLE_LIMIT。`
             );
@@ -530,128 +470,34 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
 
           // 从 R2 获取文章内容并进行严格质量控制 (并行化版本)
-          // 显式标注：下面的同源去重会在 push 之后读这两个数组，evolving any[] 推不出类型
-          const articles: LightweightArticleDataset['articles'] = [];
-          const embeddings: LightweightArticleDataset['embeddings'] = [];
-          
-          // 内容质量验证函数
-          const validateContentQuality = (content: string, article: ArticleRecord): { isValid: boolean; reason?: string } => {
-            if (!content || content.trim().length === 0) {
-              return { isValid: false, reason: 'EMPTY_CONTENT' };
-            }
-            
-            // 检查内容长度 - 至少应该超过标题长度的2倍
-            if (content.length < (article.title.length * 2)) {
-              return { isValid: false, reason: 'INSUFFICIENT_LENGTH' };
-            }
-            
-            // 检查内容是否只是标题重复
-            if (content.trim() === article.title.trim()) {
-              return { isValid: false, reason: 'TITLE_ONLY' };
-            }
-
-            // 抓取/解析失败签名兜底:抽到的是拦截页/视频stub/登录墙/限流页(非真正文)。
-            // processArticles 已在抓取后前置拦截,这里兜历史数据 + 任何残留。
-            const extractionFail = looksLikeExtractionFailure(content);
-            if (extractionFail.fail) {
-              return { isValid: false, reason: `EXTRACTION_JUNK_${extractionFail.reason}` };
-            }
-
-            // 检查内容质量标记 - 类型安全检查
-            if (article.content_quality && (article.content_quality === 'LOW_QUALITY' || article.content_quality === 'JUNK')) {
-              return { isValid: false, reason: 'MARKED_LOW_QUALITY' };
-            }
-            
-            // 检查完整性标记  - 类型安全检查
-            if (article.completeness && article.completeness === 'PARTIAL_USELESS') {
-              return { isValid: false, reason: 'MARKED_INCOMPLETE' };
-            }
-            
-            return { isValid: true };
-          };
-
-          /**
-           * 同源模板页指纹：正文折叠空白、小写后取 sha1。**多行正文先去掉第一行**
-           * （常是 "Updated: 19/09/2026 - 7:00 GMT+2" 这类每篇都不同的时间戳）。
-           *
-           * 治的是 Euronews 日播栏目那种：Morning / Midday / Evening 三篇都是视频页，抓到的
-           * "正文" 只有 575 字符的栏目宣传语、除首行时间戳外一字不差 → 必然聚成一簇 → 下游
-           * 当真事写进简报（2026-09-19 实测）。`looksLikeExtractionFailure` 的六条签名一条都
-           * 不命中（不是 YouTube 提示词、不算极短、文案是正经英文句子），属于它已知会漏的那 7%。
-           *
-           * 分组键必须带 sourceId：通讯社转载会让**不同媒体**正文高度相似（当天 Pakistan 那条
-           * 就是 SCMP + AP 两版），那是合法的多源佐证，这条规则不该碰它。
-           *
-           * **单行正文用全文、不去首行**：整篇只有一行时「去掉第一行」会把正文删光，同一家的
-           * 所有单行文章共用一个空指纹、彼此互判重复。2026-09-19 那天 458 篇里 414 篇是单行，
-           * 无条件去首行 + 不挡空串 = 丢 407 篇。改成按行数分支后这 414 篇照常参与比对，
-           * 当天读数：命中 2 组、丢 3 篇（Euronews bulletin ×3、The Independent 同一篇被抓两次
-           * ×2），误杀方向为零。仍保留空串返回 null 的兜底——正文为空本就不该进去重。
-           */
-          const bodyFingerprint = async (content: string): Promise<string | null> => {
-            const lines = content.split('\n');
-            const body = lines.length > 1 ? lines.slice(1).join('\n') : content;
-            const normalized = body.replace(/\s+/g, ' ').trim().toLowerCase();
-            if (!normalized) return null;
-            const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(normalized));
-            return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+          // 计数只在本 step 内累加、随返回值带出（step 重放时闭包不执行，改外部变量会恒为 0）
+          const r2ContentMetrics = {
+            r2FetchAttempts: 0,
+            r2FetchSuccesses: 0,
+            r2FetchFailures: 0,
+            qualityFilteredOut: 0
           };
 
           // 并行处理文章内容获取的函数
           const processArticleContent = async (article: typeof validArticles[0], index: number) => {
-            let content = '';
-            
-            try {
-              // 严格要求必须有 contentFileKey
-              if (!article.contentFileKey) {
-                r2ContentMetrics.r2FetchFailures++;
-                return {
-                  success: false,
-                  reason: 'MISSING_CONTENT_KEY',
-                  article: null,
-                  embedding: null
-                };
-              }
-
-              // 严格从 R2 获取内容，不允许回退
-              r2ContentMetrics.r2FetchAttempts++;
-              const contentObject = await this.env.ARTICLES_BUCKET.get(article.contentFileKey);
-              if (!contentObject) {
-                r2ContentMetrics.r2FetchFailures++;
-                return {
-                  success: false,
-                  reason: 'R2_CONTENT_MISSING',
-                  article: null,
-                  embedding: null
-                };
-              }
-
-              content = await contentObject.text();
-              if (!content) {
-                r2ContentMetrics.r2FetchFailures++;
-                return {
-                  success: false,
-                  reason: 'EMPTY_R2_CONTENT',
-                  article: null,
-                  embedding: null
-                };
-              }
-              
-              r2ContentMetrics.r2FetchSuccesses++;
-              
-            } catch (error) {
+            // 严格要求必须有 contentFileKey、严格从 R2 获取内容，不允许回退
+            const body = await fetchBody(this.env.ARTICLES_BUCKET, article.contentFileKey);
+            if (body.status !== 'MISSING_CONTENT_KEY') r2ContentMetrics.r2FetchAttempts++;
+            if (body.status !== 'OK') {
               r2ContentMetrics.r2FetchFailures++;
               return {
                 success: false,
-                reason: 'R2_FETCH_ERROR',
-                error: error,
+                reason: body.status,
+                error: body.error,
                 article: null,
                 embedding: null
               };
             }
+            r2ContentMetrics.r2FetchSuccesses++;
+            const content = body.content;
 
             // 严格的内容质量验证
-            const qualityCheck = validateContentQuality(content, article as ArticleRecord);
+            const qualityCheck = checkQuality(content, article);
             if (!qualityCheck.isValid) {
               r2ContentMetrics.qualityFilteredOut++;
               return {
@@ -683,32 +529,33 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               }
             };
           };
-          
+
           console.log(`[AutoBrief] 开始并行获取 ${validArticles.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
-          
+
           // 使用批量并行处理 R2 内容获取
           const processResults = await this.batchProcessParallel(
             validArticles,
             R2_BATCH_SIZE, // 使用配置的批量大小
             processArticleContent
           );
-          
-          // 处理结果并构建最终数据集
+
+          // 处理结果并构建最终数据集：article 与 embedding 成对放在一个条目里，去重时一起留一起丢
           let successCount = 0;
           let failuresByReason: Record<string, number> = {};
-          // 与 articles 同下标的同源指纹（null = 不参与去重）
-          const dedupKeys: Array<string | null> = [];
+          const passed: Array<{
+            article: LightweightArticleDataset['articles'][number];
+            embedding: LightweightArticleDataset['embeddings'][number];
+            dedupKey: string | null;  // 同源指纹（null = 不参与去重）
+          }> = [];
 
           for (const result of processResults) {
             if (result.success && result.article && result.embedding) {
-              articles.push(result.article);
-              embeddings.push(result.embedding);
-              dedupKeys.push(result.dedupKey ?? null);
+              passed.push({ article: result.article, embedding: result.embedding, dedupKey: result.dedupKey ?? null });
               successCount++;
             } else {
               const reason = result.reason || 'UNKNOWN_ERROR';
               failuresByReason[reason] = (failuresByReason[reason] || 0) + 1;
-              
+
               if (result.reason === 'MISSING_CONTENT_KEY') {
                 console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (索引: ${processResults.indexOf(result)})`);
               } else if (result.reason === 'R2_CONTENT_MISSING') {
@@ -723,52 +570,20 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               }
             }
           }
-          
-          // 同源模板页去重：同一个 source 下、正文去掉首行后完全相同的，只留 id 最小的一篇。
-          // 2026-09-19 全天 458 篇上实测：命中 1 组 3 篇（Euronews bulletin），丢弃 2 篇，
-          // 误杀方向为零（只有这 1 组命中，所以谈不上统计意义上的精度）。
-          {
-            const keeperByKey = new Map<string, number>();
-            const dropIdx = new Set<number>();
-            for (let i = 0; i < articles.length; i++) {
-              const key = dedupKeys[i];
-              if (!key) continue;
-              const keeper = keeperByKey.get(key);
-              if (keeper === undefined) {
-                keeperByKey.set(key, i);
-                continue;
-              }
-              // 保留 id 最小的那篇：结果不依赖 R2 并行返回的先后
-              if (articles[keeper].id <= articles[i].id) {
-                dropIdx.add(i);
-              } else {
-                dropIdx.add(keeper);
-                keeperByKey.set(key, i);
-              }
-            }
-            if (dropIdx.size > 0) {
-              const dropped = Array.from(dropIdx).sort((a, b) => a - b);
-              console.warn(
-                `[AutoBrief] 同源重复正文丢弃 ${dropped.length} 篇 (DUPLICATE_BODY_SAME_SOURCE): ` +
-                dropped.map(i => `${articles[i].id} "${articles[i].title}"`).join(' | ')
-              );
-              // 倒序删，免得前面的 splice 挪动后面的下标
-              for (const i of [...dropped].reverse()) {
-                articles.splice(i, 1);
-                embeddings.splice(i, 1);
-                dedupKeys.splice(i, 1);
-              }
-              failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] =
-                (failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] || 0) + dropped.length;
-              successCount -= dropped.length;
-            }
-            // articles 与 embeddings 按下标一一对应，只删一个会让 embedding 错位**且不报错**
-            if (articles.length !== embeddings.length || articles.some((a, i) => a.id !== embeddings[i].articleId)) {
-              throw new Error(
-                `同源去重后 articles/embeddings 错位: ${articles.length} vs ${embeddings.length}`
-              );
-            }
+
+          // 同源模板页去重：同一个 source 下、正文去掉首行后完全相同的，只留 id 最小的一篇（实测读数见 dropSameSourceDuplicates）
+          const { kept, dropped } = dropSameSourceDuplicates(passed);
+          if (dropped.length > 0) {
+            console.warn(
+              `[AutoBrief] 同源重复正文丢弃 ${dropped.length} 篇 (DUPLICATE_BODY_SAME_SOURCE): ` +
+              dropped.map(d => `${d.article.id} "${d.article.title}"`).join(' | ')
+            );
+            failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] =
+              (failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] || 0) + dropped.length;
+            successCount -= dropped.length;
           }
+          const articles = kept.map(k => k.article);
+          const embeddings = kept.map(k => k.embedding);
 
           console.log(`[AutoBrief] 📊 并行内容获取统计:`);
           console.log(`  - 成功处理: ${successCount} 篇`);
@@ -802,7 +617,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           await this.env.ARTICLES_BUCKET.put(embeddingsR2Key, JSON.stringify(embeddings));
 
           console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章 (embeddings 卸载至 ${embeddingsR2Key})`);
-          return { articles, embeddings: [], embeddingsR2Key };
+          return { articles, embeddings: [], embeddingsR2Key, r2ContentMetrics };
           
         } catch (error) {
           console.error('[AutoBrief] 准备数据集失败:', error);
@@ -812,11 +627,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // 从 R2 读回 embeddings（它们未走 step 输出以避开 1MB 限制），供聚类使用
       if (dataset.embeddingsR2Key && dataset.embeddings.length === 0) {
-        const embObj = await this.env.ARTICLES_BUCKET.get(dataset.embeddingsR2Key);
-        dataset.embeddings = embObj ? JSON.parse(await embObj.text()) : [];
+        dataset.embeddings = await loadRunEmbeddings(this.env.ARTICLES_BUCKET, dataset.embeddingsR2Key);
         console.log(`[AutoBrief] 从 R2 读回 ${dataset.embeddings.length} 个 embedding`);
       }
 
+      // 计数由 step 返回值带出：step 被缓存重放时闭包不再执行，改外部变量的计数会恒为 0
+      const r2ContentMetrics = dataset.r2ContentMetrics ?? { r2FetchAttempts: 0, r2FetchSuccesses: 0, r2FetchFailures: 0, qualityFilteredOut: 0 };
       await observability.logStep('prepare_dataset', 'completed', {
         articleCount: dataset.articles.length,
         r2ContentMetrics: {
@@ -824,7 +640,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           fetchSuccesses: r2ContentMetrics.r2FetchSuccesses,
           fetchFailures: r2ContentMetrics.r2FetchFailures,
           qualityFilteredOut: r2ContentMetrics.qualityFilteredOut,
-          successRate: r2ContentMetrics.r2FetchAttempts > 0 
+          successRate: r2ContentMetrics.r2FetchAttempts > 0
             ? ((r2ContentMetrics.r2FetchSuccesses / r2ContentMetrics.r2FetchAttempts) * 100).toFixed(1) + '%'
             : '0%'
         }

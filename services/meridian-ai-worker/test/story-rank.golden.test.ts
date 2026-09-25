@@ -17,9 +17,9 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { rankStories, type StoryRankResult } from '../src/services/story-rank';
+import type { RankCandidate, StoryRankResult } from '@meridian/contracts';
+import { rankStories } from '../src/services/story-rank';
 import { parseJSONFromResponse } from '../src/utils/common';
-import type { RankCandidate } from '../src/prompts/story-rank';
 
 const PATH = new URL('./golden/story-rank/three-rounds.json', import.meta.url).pathname;
 

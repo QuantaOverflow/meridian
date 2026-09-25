@@ -3,10 +3,9 @@
  * 提供项目中通用的工具函数
  */
 
-import { z } from 'zod';
 import { Context } from 'hono';
 import { HonoEnv } from '../../app';
-import { articleAnalysisSchema } from '../../prompts/articleAnalysis.prompt';
+import type { ArticleAnalysis } from '@meridian/contracts';
 
 /**
  * 检查请求是否有有效的认证令牌
@@ -28,7 +27,7 @@ export function hasValidAuthToken(c: Context<HonoEnv>) {
  * 生成文章搜索文本
  * 从文章分析数据中提取关键信息，生成用于搜索的文本
  */
-export function generateSearchText(data: z.infer<typeof articleAnalysisSchema> & { title: string }): string {
+export function generateSearchText(data: ArticleAnalysis & { title: string }): string {
   // 辅助函数：安全地连接字符串数组，过滤空值
   const joinSafely = (arr: string[] | null | undefined): string =>
     (arr ?? [])

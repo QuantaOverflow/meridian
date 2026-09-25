@@ -61,22 +61,10 @@
  * （实测一轮把一场国葬选进前 12，聚合把它挤掉了）。
  */
 
+import type { RankCandidate } from '@meridian/contracts';
+
 /** 数据块起始标记（指令段与候选数据的分隔）。 */
 const RANK_DATA_BLOCK_MARK = '\n# Stories\n';
-
-export interface RankCandidate {
-  /** 稳定 id，回传时用它指代故事；调用方自己决定用 clusterId 还是下标 */
-  id: number;
-  title: string;
-  /**
-   * 报道篇数。**必须带上**——它是离线迭代时在场的字段，两期读数都是带它测出来的。
-   * 移植时曾按「篇数是热度信号，不该喂进重要性判据」的直觉把它去掉，同一期、同一 prompt
-   * 的排序立刻变形：两期验过的三条（一次政府禁媒体、一场州选举、一次导弹袭击机场）全部
-   * 掉出前 12，榜首也换人。是不是它单独导致的没有再拆开验，但取舍很清楚——
-   * 实测过的配置优先于未实测的直觉。
-   */
-  articles: number;
-}
 
 /** 一次要挑出多少条。12 = 分档层 lead(4) + more 前 8。 */
 export const RANK_TOP_N = 12;
@@ -86,7 +74,7 @@ const RANK_NEAR_MISS_N = 5;
 
 export function getStoryRankPrompt(candidates: RankCandidate[]): string {
   // 渲染成 JSON 数组、缩进 2——与离线迭代逐字节相同。换成 `[id] title` 纯文本试过，
-  // 同期排序立刻变形（见 RankCandidate.articles 的注释）。
+  // 同期排序立刻变形（见 @meridian/contracts 的 RankCandidate.articles 注释）。
   const list = JSON.stringify(
     candidates.map(c => ({ id: c.id, title: c.title, articles: c.articles })),
     null,

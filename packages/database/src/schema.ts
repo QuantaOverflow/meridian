@@ -1,5 +1,6 @@
 import { boolean, index, integer, jsonb, pgEnum, pgTable, real, serial, text, timestamp, vector } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { EMBEDDING_DIM } from '@meridian/contracts';
 
 /**
  * Note: We use $ to denote the table objects
@@ -62,7 +63,7 @@ export const $articles = pgTable(
     topic_tags: jsonb('topic_tags'),
     key_entities: jsonb('key_entities'),
     content_focus: jsonb('content_focus'),
-    embedding: vector('embedding', { dimensions: 384 }),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIM }),
 
     failReason: text('fail_reason'),
 
@@ -148,7 +149,7 @@ export const $story_clusters = pgTable('story_clusters', {
   // 「以色列在黎巴嫩的军事行动」经由中东主题的中间故事一路并到「G7 埃维昂峰会」
   // 和「安卡拉北约峰会对乌援助」，77 个成员跨 52 天。质心链接要求新故事像这条线索的
   // **整体**，而不是像其中任意一个成员。
-  centroid: vector('centroid', { dimensions: 384 }),
+  centroid: vector('centroid', { dimensions: EMBEDDING_DIM }),
   first_seen_at: timestamp('first_seen_at', { mode: 'date' }).notNull(),
   last_seen_at: timestamp('last_seen_at', { mode: 'date' }).notNull(),
 });
@@ -169,7 +170,7 @@ export const $brief_stories = pgTable(
     selected_for_intel: boolean('selected_for_intel').notNull().default(false),
     // 跨期线索聚合（读者端「事件追踪」）。centroid = 本故事成员文章 embedding 的均值，
     // 落库而不是每次现算：匹配要拿历史故事的向量比对，现算得 join 全部 story-article 链路。
-    centroid: vector('centroid', { dimensions: 384 }),
+    centroid: vector('centroid', { dimensions: EMBEDDING_DIM }),
     story_cluster_id: integer('story_cluster_id').references(() => $story_clusters.id),
     // 最能代表这个故事的那篇文章 = 离 centroid 最近的成员。
     // ⚠️ 不能拿 article_ids[0]：聚类会把无关文章混进故事，而数组顺序是任意的。

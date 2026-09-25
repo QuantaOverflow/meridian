@@ -3,16 +3,27 @@ import { chat } from './services/workers-ai'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
-import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK, type JudgeArticle } from './prompts/cluster-judge'
-import { RANK_TOP_N, type RankCandidate } from './prompts/story-rank'
+import { getClusterJudgePrompt, JUDGE_DATA_BLOCK_MARK, EVENT_SPECIFIC_LEAK } from './prompts/cluster-judge'
+import { RANK_TOP_N } from './prompts/story-rank'
 import { rankStories } from './services/story-rank'
 import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { observeMiddleware } from './services/observe'
-import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
+import { getArticleAnalysisPrompt } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
 import { CloudflareEnv } from './types'
 import { APIResponse } from './types/api'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
+import {
+  articleAnalysisSchema,
+  type ArticleAnalyzeRequest,
+  type BriefSummaryRequest,
+  type BriefSummaryResult,
+  type BriefTitleRequest,
+  type BriefTitleResult,
+  type ClusterJudgeRequest,
+  type ClusterJudgeResult,
+  type StoryRankRequest,
+} from '@meridian/contracts'
 
 type HonoEnv = {
   Bindings: CloudflareEnv & {
@@ -43,7 +54,7 @@ app.post('/meridian/article/analyze', async (c) => {
   const requestMetadata = createRequestMetadata(c)
   
   try {
-    const { title, content } = await c.req.json()
+    const { title, content } = await c.req.json<ArticleAnalyzeRequest>()
     
     if (!title || !content) {
       return c.json({ success: false, error: '缺少必需字段：title 和 content' }, 400)
@@ -181,8 +192,8 @@ app.post('/meridian/article/analyze', async (c) => {
  */
 app.post('/meridian/cluster/judge', async (c) => {
   try {
-    const body = await c.req.json()
-    const articles = body?.articles as JudgeArticle[] | undefined
+    const body = await c.req.json<Partial<ClusterJudgeRequest>>()
+    const articles = body?.articles
     if (!Array.isArray(articles) || articles.length < 2) {
       return c.json<APIResponse<null>>({ success: false, error: 'articles must be an array of >= 2 items' }, 400)
     }
@@ -217,7 +228,7 @@ app.post('/meridian/cluster/judge', async (c) => {
       }, 500)
     }
 
-    return c.json<APIResponse<{ verdict: string; title: string; event: string; reason: string }>>({
+    return c.json<APIResponse<ClusterJudgeResult>>({
       success: true,
       data: {
         verdict,
@@ -242,8 +253,8 @@ app.post('/meridian/cluster/judge', async (c) => {
  */
 app.post('/meridian/stories/rank', async (c) => {
   try {
-    const body = await c.req.json()
-    const candidates = body?.candidates as RankCandidate[] | undefined
+    const body = await c.req.json<Partial<StoryRankRequest>>()
+    const candidates = body?.candidates
     if (!Array.isArray(candidates) || candidates.length < RANK_TOP_N) {
       return c.json<APIResponse<null>>(
         { success: false, error: `candidates must be an array of >= ${RANK_TOP_N} items` },
@@ -251,7 +262,7 @@ app.post('/meridian/stories/rank', async (c) => {
       )
     }
     // articles 是必填而不是可选：离线读数都是带它测出来的，缺了排序会变形
-    // （见 prompts/story-rank.ts 的 RankCandidate.articles）。宁可 400 也不静默用默认值。
+    // （见 @meridian/contracts 的 RankCandidate.articles）。宁可 400 也不静默用默认值。
     if (
       candidates.some(
         x =>
@@ -344,7 +355,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
 // 只剩「给整篇起个名」这一次调用，沿用旧链路同一个 prompt，标题风格不变。
 app.post('/meridian/brief-title', async (c) => {
   try {
-    const body = await c.req.json()
+    const body = await c.req.json<Partial<BriefTitleRequest>>()
     const content = typeof body?.content === 'string' ? body.content : ''
     if (!content.trim()) {
       return c.json<APIResponse<null>>({ success: false, error: 'content is required' }, 400)
@@ -357,7 +368,7 @@ app.post('/meridian/brief-title', async (c) => {
     // 解析失败不静默套通用名：留痕，让「模型没给标题」与「本来就叫这个」分得开
     if (!parsed?.title) console.warn(`[BriefTitle] 标题解析失败或缺 title 字段 → 用通用标题。原始输出: ${raw.slice(0, 200)}`)
     const usage = (res.usage as { neurons?: number } | undefined)?.neurons ?? 0
-    return c.json<APIResponse<{ title: string; neurons: number }>>({
+    return c.json<APIResponse<BriefTitleResult>>({
       success: true,
       data: { title: String(parsed?.title || 'Daily Intelligence Brief'), neurons: Number(usage) },
     })
@@ -369,7 +380,7 @@ app.post('/meridian/brief-title', async (c) => {
 
 app.post('/meridian/generate-brief-summary', async (c) => {
   try {
-    const body = await c.req.json()
+    const body = await c.req.json<Partial<BriefSummaryRequest>>()
 
     if (!body.briefTitle || !body.briefContent) {
       return c.json<APIResponse<null>>({
@@ -392,7 +403,7 @@ app.post('/meridian/generate-brief-summary', async (c) => {
       }, 500)
     }
 
-    return c.json<APIResponse<{ tldrProse: string }>>({
+    return c.json<APIResponse<BriefSummaryResult>>({
       success: true,
       data: result.data!,
       metadata: {

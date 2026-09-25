@@ -25,38 +25,8 @@
  * 「排序生效了但结果一样」变得不可分辨。
  */
 
-import { getStoryRankPrompt, RANK_TOP_N, type RankCandidate } from '../prompts/story-rank'
-
-interface RankedPick {
-  id: number
-  eventKey: string
-  category: string
-  why: string
-  /** Borda 总分；三轮都进前 1 名是 3*RANK_TOP_N */
-  borda: number
-  /** 在几轮里被选中（1-3）。1 的条目是边缘项，调用方可据此决定要不要信 */
-  timesSelected: number
-}
-
-interface RankRoundDiag {
-  round: number
-  ok: boolean
-  error?: string
-  selectedIds: number[]
-  duplicates: number
-  outOfRange: number
-  eventKeyDupes: number
-  retried: boolean
-}
-
-export interface StoryRankResult {
-  /** Borda 降序的前 N 条 */
-  picks: RankedPick[]
-  rounds: RankRoundDiag[]
-  roundsOk: number
-  /** 三轮前 N 的交集大小。小说明排序在飘，调用方只进观测 */
-  intersectionSize: number
-}
+import type { RankCandidate, RankedPick, RankRoundDiag, StoryRankResult } from '@meridian/contracts'
+import { getStoryRankPrompt, RANK_TOP_N } from '../prompts/story-rank'
 
 const ROUNDS = 3
 

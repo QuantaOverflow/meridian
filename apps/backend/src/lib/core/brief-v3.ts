@@ -10,7 +10,10 @@
  * 目录锚点靠 `<strong>`，少了星号该条在目录里会消失。
  */
 
-export type Tier = 'lead' | 'more' | 'brief';
+import type { BriefTier } from '@meridian/contracts';
+
+/** 篇幅档 = 简报块 v6 端点的 tier（同一个联合，定义在 @meridian/contracts）。 */
+export type Tier = BriefTier;
 
 /** 头条 4 / 要闻 10 / 其余简讯。故事不足时靠后的层为空，空节不渲染。 */
 const TIER_SIZES: { lead: number; more: number } = { lead: 4, more: 10 };

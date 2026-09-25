@@ -17,12 +17,19 @@ import {
 import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
 import { createWorkflowObservability } from '../lib/observability';
 import { createClusteringService, type ClusteringResult } from '../lib/services/clustering';
-import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
+import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loadRunEmbeddings, runWindowWhere, type BodyStatus, type RunWindow } from '../lib/core/run-corpus';
 import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
+import {
+  EMBEDDING_DIM,
+  type BriefBlockV6Sentence,
+  type BriefV3FailedBlock,
+  type BriefV3Record,
+  type BriefV3WrittenBlock,
+} from '@meridian/contracts';
 
 // ============================================================================
 // 数据接口定义 - 轻量级版本，避免SQLITE_TOOBIG错误
@@ -392,8 +399,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             let ok = 0;
             for (let j = 0; j < batch.length; j++) {
               const emb = embeddings[j]?.embedding;
-              if (!Array.isArray(emb) || emb.length !== 384) {
-                console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 384，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
+              if (!Array.isArray(emb) || emb.length !== EMBEDDING_DIM) {
+                console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 ${EMBEDDING_DIM}，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
                 continue;
               }
               await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
@@ -460,7 +467,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
           // 验证嵌入向量有效性
           const validArticles = queryResult.filter(row => 
-            Array.isArray(row.embedding) && row.embedding.length === 384
+            Array.isArray(row.embedding) && row.embedding.length === EMBEDDING_DIM
           );
           
           if (queryResult.length !== validArticles.length) {
@@ -1442,7 +1449,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               title: assembled.title,
               sections: rendered.sections,
               blocks: [
-                ...tiered.map((b) => ({
+                ...tiered.map((b): BriefV3WrittenBlock => ({
                   clusterId: b.clusterId,
                   storyIdx: b.idx,
                   title: displayTitle(b.blockTitle),
@@ -1466,14 +1473,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                   llmCalls: b.llmCalls,
                   neurons: b.neurons,
                 })),
-                ...blockFailures.map((f) => ({
+                ...blockFailures.map((f): BriefV3FailedBlock => ({
                   storyIdx: f.idx,
                   title: displayTitle(String(f.title ?? '')),
                   ok: false,
                   error: f.reason,
                 })),
               ],
-            },
+            } satisfies BriefV3Record,
             null,
             1
           )

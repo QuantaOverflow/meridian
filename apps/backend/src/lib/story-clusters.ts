@@ -1,4 +1,5 @@
 import { sql } from '@meridian/database';
+import { EMBEDDING_DIM } from '@meridian/contracts';
 
 /**
  * 跨期线索归并（读者端「事件追踪」）。
@@ -54,7 +55,7 @@ interface Db {
 export async function backfillStoryCentroids(db: Db, workflowId?: string): Promise<number> {
   const rows = (await db.execute(sql`
     WITH centroids AS (
-      SELECT bs.id, avg(a.embedding)::vector(384) AS centroid
+      SELECT bs.id, avg(a.embedding)::vector(${sql.raw(String(EMBEDDING_DIM))}) AS centroid
       FROM brief_stories bs
       CROSS JOIN LATERAL jsonb_array_elements_text(bs.article_ids) aid
       JOIN articles a ON a.id = aid::int
@@ -171,7 +172,7 @@ async function assignOneBriefedStory(
           title = CASE WHEN cur.created_at >= sc.last_seen_at THEN ${story.title} ELSE sc.title END,
           -- 质心重算而不是增量加权：成员少，直接 avg 更不容易算错
           centroid = (
-            SELECT avg(m.centroid)::vector(384)
+            SELECT avg(m.centroid)::vector(${sql.raw(String(EMBEDDING_DIM))})
             FROM brief_stories m
             WHERE m.story_cluster_id = sc.id AND m.selected_for_intel = true AND m.centroid IS NOT NULL
           )

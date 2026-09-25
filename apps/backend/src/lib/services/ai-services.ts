@@ -9,6 +9,22 @@
  * 注：analyzeArticle 属文章管线，返回 Response 不变（不在此接缝内）。
  */
 
+import type {
+  BriefBlockV6Request,
+  BriefBlockV6Result,
+  BriefSummaryRequest,
+  BriefSummaryResult,
+  BriefTier,
+  BriefTitleRequest,
+  BriefTitleResult,
+  ClusterJudgeRequest,
+  ClusterJudgeResult,
+  JudgeArticle,
+  RankCandidate,
+  StoryRankRequest,
+  StoryRankResult,
+} from '@meridian/contracts';
+
 // 跨 service 调用的判别式结果：成功给 value，失败给 status+error。
 // 各调用方据此施加自己的策略（validateStory throw / intelligence 跳过 / faithfulness fail-open），
 // 故此处只报告结果、不代替调用方决定 throw 与否。
@@ -18,38 +34,6 @@ type ServiceResult<T> =
 
 interface EmbeddingData {
   embeddings: Array<{ embedding: number[] }>;
-}
-interface BriefSummaryData {
-  tldrProse: string;
-}
-/**
- * 简报块 v6 的一块。与 ai-worker `src/services/brief-block-v6.ts` 的 `BriefBlockV6Result`
- * 对齐（跨 package 不能直接 import，这里是镜像；那份 TS 类型是唯一真源）。
- */
-export interface BriefBlockV6Sentence {
-  text: string;
-  sources: Array<{ articleId: number; sentence: number }>;
-}
-interface BriefBlockV6Data {
-  verdict: 'written' | 'not_a_single_event';
-  reason?: string;
-  block: null | { title: string; sentences: BriefBlockV6Sentence[] };
-  trace: {
-    windows: number;
-    anchors: number;
-    citationsRepaired: number;
-    /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
-    windowFailures: number;
-    /** 写作步每次被确定性校验拒收的原因。空数组 = 一次过。 */
-    writeRejects: string[];
-    llmCalls: number;
-    neurons: number;
-    [k: string]: any;
-  };
-}
-
-interface BriefTitleData {
-  title: string;
 }
 
 export interface AIWorkerEnv {
@@ -146,26 +130,19 @@ class AIWorkerService {
    * 2026-09-20 那期实测，最终前 12 里有两条（美批 27 亿乌防空、沙特断供原油）落在
    * 机械 top-25 之外，接在选材后面就永远看不到它们。
    *
-   * `articles` 是必填字段，缺了端点回 400。理由见 ai-worker 侧 RankCandidate 的注释。
+   * `articles` 是必填字段，缺了端点回 400。理由见 @meridian/contracts 的 RankCandidate 注释。
    *
    * 三轮全败才回 ok:false，**不会**退化成机械序——那会让「排序没生效」和「排序生效了
    * 但结果一样」无法分辨。部分轮次失败时 roundsOk < 3，调用方据此决定信不信。
    */
-  async rankStories(
-    candidates: Array<{ id: number; title: string; articles: number }>
-  ): Promise<
-    ServiceResult<{
-      picks: Array<{ id: number; eventKey: string; category: string; why: string; borda: number; timesSelected: number }>;
-      roundsOk: number;
-      intersectionSize: number;
-    }>
-  > {
+  async rankStories(candidates: RankCandidate[]): Promise<ServiceResult<StoryRankResult>> {
+    const body: StoryRankRequest = { candidates };
     const request = new Request(`${this.baseUrl}/meridian/stories/rank`, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: JSON.stringify({ candidates }),
+      body: JSON.stringify(body),
     });
-    return await this.callJson(request);
+    return await this.callJson<StoryRankResult>(request);
   }
 
   /**
@@ -174,18 +151,15 @@ class AIWorkerService {
    * 失败（含解析失败）回 ok:false，**不会**伪装成 NO_EVENT——调用方据此走退化路径
    * （整簇保留成一块），而不是把一条真新闻毙掉。
    */
-  async judgeCluster(
-    articles: Array<{ id: number; title: string }>,
-    callIndex?: number
-  ): Promise<ServiceResult<{ verdict: 'EVENT' | 'NO_EVENT' | 'UNSURE'; title: string; event: string; reason: string }>> {
+  async judgeCluster(articles: JudgeArticle[], callIndex?: number): Promise<ServiceResult<ClusterJudgeResult>> {
     const extra: Record<string, string> = {};
     if (typeof callIndex === 'number') extra['x-call-index'] = String(callIndex);
     const request = new Request(`${this.baseUrl}/meridian/cluster/judge`, {
       method: 'POST',
       headers: this.buildHeaders(extra),
-      body: JSON.stringify({ articles }),
+      body: JSON.stringify({ articles } satisfies ClusterJudgeRequest),
     });
-    return await this.callJson<{ verdict: 'EVENT' | 'NO_EVENT' | 'UNSURE'; title: string; event: string; reason: string }>(request);
+    return await this.callJson<ClusterJudgeResult>(request);
   }
 
   /**
@@ -199,41 +173,41 @@ class AIWorkerService {
    * @param callIndex 故事序号，进 x-call-index 让同一 trace 下的 R2 观测记录不互相覆盖
    */
   async briefBlockV6(
-    articles: Array<{ id: number; title: string; publishDate?: string; content: string }>,
-    tier: 'lead' | 'more' | 'brief',
+    articles: BriefBlockV6Request['articles'],
+    tier: BriefTier,
     callIndex?: number
-  ): Promise<ServiceResult<BriefBlockV6Data>> {
+  ): Promise<ServiceResult<BriefBlockV6Result>> {
     const request = new Request(`${this.baseUrl}/meridian/brief-block-v6`, {
       method: 'POST',
       headers: this.buildHeaders(callIndex != null ? { 'x-call-index': String(callIndex) } : undefined),
-      body: JSON.stringify({ articles, tier }),
+      body: JSON.stringify({ articles, tier } satisfies BriefBlockV6Request),
     });
 
-    return await this.callJson<BriefBlockV6Data>(request);
+    return await this.callJson<BriefBlockV6Result>(request);
   }
 
   /** v3 步骤 3：给整篇简报起标题（v3 的拼装在 backend 用代码做，只剩这一次调用）。 */
-  async briefTitle(content: string): Promise<ServiceResult<BriefTitleData>> {
+  async briefTitle(content: string): Promise<ServiceResult<BriefTitleResult>> {
     const request = new Request(`${this.baseUrl}/meridian/brief-title`, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content } satisfies BriefTitleRequest),
     });
 
-    return await this.callJson<BriefTitleData>(request);
+    return await this.callJson<BriefTitleResult>(request);
   }
 
   /**
    * 生成面向读者的散文摘要（reports.tldr_prose）：读者端展示的 2-3 句导语。
    */
-  async generateBriefSummary(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefSummaryData>> {
+  async generateBriefSummary(briefTitle: string, briefContent: string): Promise<ServiceResult<BriefSummaryResult>> {
     const request = new Request(`${this.baseUrl}/meridian/generate-brief-summary`, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: JSON.stringify({ briefTitle, briefContent })
+      body: JSON.stringify({ briefTitle, briefContent } satisfies BriefSummaryRequest)
     });
 
-    return await this.callJson<BriefSummaryData>(request);
+    return await this.callJson<BriefSummaryResult>(request);
   }
 }
 

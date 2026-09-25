@@ -22,6 +22,7 @@
 import { callLLM } from './call-llm';
 import type { TraceContext } from './llm-call-logger';
 import type { ChatResponse, CloudflareEnv } from '../types';
+import type { BriefBlockV6Request as BriefBlockV6Input, BriefBlockV6Result } from '@meridian/contracts';
 import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
 import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt, noSentencesHint } from '../prompts/briefBlockV6';
@@ -39,7 +40,6 @@ import {
   type V6Article,
   type V6Sentence,
   type V6Source,
-  type V6Tier,
 } from '../utils/brief-block-v6';
 
 const MODEL = '@cf/zai-org/glm-4.7-flash';
@@ -62,47 +62,6 @@ const CALL_INDEX_BASE = 600;
  * 天然分开，所以这里只需要块间唯一，基数取多少都不会跨 phase 撞车。
  */
 const CALL_INDEX_PER_STORY = 100;
-
-interface BriefBlockV6ArticleInput {
-  id: number;
-  title: string;
-  content: string;
-  publishDate?: string;
-  sourceId?: number | null;
-}
-
-export interface BriefBlockV6Input {
-  articles: BriefBlockV6ArticleInput[];
-  /**
-   * 篇幅档。`lead` / `more` / 不传 = 现有 exec 档（3–5 句），`brief` = 1–2 句短档。
-   * 非法值按不传处理（篇幅是写作风格，不是正确性约束，不值得 400）。
-   */
-  tier?: V6Tier | string;
-}
-
-// backend 落观测只读这几项（auto-brief-generation 的 brief-v3 记录）；复读重试另有 console.warn
-interface BriefBlockV6Trace {
-  windows: number;
-  anchors: number;
-  citationsRepaired: number;
-  /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
-  windowFailures: number;
-  /**
-   * 写作步每次被确定性校验拒收的原因（`#尝试次 原因码…`）。空数组 = 一次过。
-   * 不记的话「一次过」和「第三次才过」在观测里分不开。
-   */
-  writeRejects: string[];
-  llmCalls: number;
-  /** 全部 LLM 调用的 neurons 合计（成本验收读它）。 */
-  neurons: number;
-}
-
-export interface BriefBlockV6Result {
-  verdict: 'written' | 'not_a_single_event';
-  reason?: string;
-  block: null | { title: string; sentences: V6Sentence[] };
-  trace: BriefBlockV6Trace;
-}
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promise<R>): Promise<R[]> {
   const result: R[] = new Array(items.length);

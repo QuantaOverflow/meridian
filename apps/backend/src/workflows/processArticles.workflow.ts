@@ -9,21 +9,12 @@ import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
 import { handleServiceResponse } from '../lib/services/clustering';
 import { createWorkflowObservability } from '../lib/observability';
+import type { ArticleAnalysis } from '@meridian/contracts';
 
 // 添加AI Worker响应类型定义
 interface AIWorkerAnalysisResponse {
   success: boolean;
-  data?: {
-    language: string;
-    primary_location: string;
-    completeness: 'COMPLETE' | 'PARTIAL_USEFUL' | 'PARTIAL_USELESS';
-    content_quality: 'OK' | 'LOW_QUALITY' | 'JUNK';
-    event_summary_points: string[];
-    thematic_keywords: string[];
-    topic_tags: string[];
-    key_entities: string[];
-    content_focus: string[];
-  };
+  data?: ArticleAnalysis;
   error?: string;
 }
 

@@ -11,6 +11,7 @@
  *   · 原型走不到的那一套（selection / grounding / route gate / 文件缓存）一律不移植。
  */
 
+import type { BriefBlockV6Sentence, BriefBlockV6Source, BriefTier } from '@meridian/contracts';
 import { splitSentences } from './report-v3';
 
 /** 切句表：articleId（字符串键）→ 句子数组，下标 +1 = `sources[].sentence`。 */
@@ -24,10 +25,7 @@ export interface V6Article {
   sentences: string[];
 }
 
-export interface V6Source {
-  articleId: number;
-  sentence: number;
-}
+export type V6Source = BriefBlockV6Source;
 
 export interface V6Anchor {
   id: string;
@@ -44,10 +42,7 @@ export interface V6Window {
   text: string;
 }
 
-export interface V6Sentence {
-  text: string;
-  sources: V6Source[];
-}
+export type V6Sentence = BriefBlockV6Sentence;
 
 /** 窗口字符预算（原型 DIRECT_RAW_WINDOW_CHARS 默认值）。 */
 const WINDOW_CHARS = 30_000;
@@ -59,11 +54,8 @@ export const ANCHOR_SOURCES = 4;
 export const WRITE_MAX_SENTENCES = 5;
 export const WRITE_MAX_SOURCES = 8;
 
-/**
- * 篇幅档。`lead` / `more` 走现有 exec 档（逐字不变，那是唯一有实测读数的配置），
- * `brief` 走 1–2 句的短档。不传 / 非法值的处理见 `normalizeTier`。
- */
-export type V6Tier = 'lead' | 'more' | 'brief';
+/** 篇幅档（定义与注释在 @meridian/contracts 的 BriefTier）。 */
+export type V6Tier = BriefTier;
 export const V6_TIERS: V6Tier[] = ['lead', 'more', 'brief'];
 /**
  * 不传 / 非法值 → `more`，与 `writeLenOf` 的默认档一致。

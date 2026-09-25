@@ -40,6 +40,8 @@
  * 整个抹掉过。调用失败伪装成「没有故事」也在这个仓库骗过一整轮。
  */
 
+import type { JudgeArticle } from '@meridian/contracts';
+
 /**
  * 泛化断言用的正则：指令段里不许出现具体事件的专有词。
  * 从 prompts/storyline.ts 搬过来的（那一层已随判定层上线删除），断言本身仍然有效：
@@ -47,11 +49,6 @@
  */
 export const EVENT_SPECIFIC_LEAK =
   /\b(nepal|tibet|glacier|glacial|flood|rescue|missing persons|casualt\w*|hurricane|earthquake|wildfire)\b/i;
-
-export interface JudgeArticle {
-  id: number;
-  title: string;
-}
 
 /** 数据块起始标记。断言只扫这之前的指令段。 */
 export const JUDGE_DATA_BLOCK_MARK = '\n报道：\n';

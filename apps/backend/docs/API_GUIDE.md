@@ -15,13 +15,15 @@
 | `GET /openGraph/default` | 无 | 默认 OG 图（PNG） |
 | `GET /openGraph/brief?title&date&articles&sources` | 无 | 简报 OG 图；`date` 是毫秒时间戳 |
 | `GET /events?date&pagination&page&limit` | 需要 | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
-| `POST /admin/sources` | token | 新建 RSS 源：`{name, url, category, scrape_frequency?}`；URL 重复回 409。**不会**初始化该源的 DO |
-| `PUT /admin/sources/:id` | token | 部分更新同上字段 |
+| `POST /admin/sources` | token | 新建 RSS 源：`{url, name?, category?, scrape_frequency?}`（默认 `Unknown` / `news` / 2）；URL 重复回 409。插入后立即启动该源的 DO，启动失败则撤销插入、回 500 |
+| `PUT /admin/sources/:id` | token | 部分更新同上字段；改 url 会停掉旧 url 的 DO、按新 url 启动，改档位会重新初始化 DO（暂停中的源只改表） |
 | `POST /admin/briefs/generate` | token | 启动 `AutoBriefGenerationWorkflow`，回 202 + `workflowId`；空体也要传 `{}`。可选字段见下 |
 | `POST /admin/articles/process` | token | `{article_ids: number[]}`（≥1）→ 启动 `ProcessArticles` workflow，回 202 |
 | `POST /do/admin/source/:sourceId/init` | token | 按数据库里的源（数字 id）初始化它的 `SourceScraperDO` |
-| `POST /do/admin/initialize-dos?batchSize=100` | token | 为**尚未初始化**（`do_initialized_at IS NULL`）的源批量初始化 DO，回 `{initialized, total}` |
-| `DELETE /do/admin/source/:sourceId` | token | 销毁该源的 DO，**并删除该源的文章和 sources 行** |
+| `POST /do/admin/source/:sourceId/pause` | token | 暂停自动抓取：记 `paused_at`、停掉 DO；源与已有文章保留 |
+| `POST /do/admin/source/:sourceId/resume` | token | 恢复自动抓取：清 `paused_at`、重新启动 DO |
+| `POST /do/admin/initialize-dos?batchSize=100` | token | 为**尚未初始化**（`do_initialized_at IS NULL`）且未暂停的源批量初始化 DO，回 `{initialized, total}` |
+| `DELETE /do/admin/source/:sourceId` | token | 在一个事务里删除该源的文章和 sources 行，再销毁 DO；有文章被简报故事当代表文章引用时回 409（表与 DO 都不动，改用暂停） |
 | `GET\|POST /do/source/:sourceKey/*` | 需要 | 透传到 DO 的 `fetch`：`GET …/status`、`POST …/force-scrape`。`:sourceKey` 是 **URL 编码后的源 URL**（DO 以 `idFromName(source.url)` 定位），不是数字 id |
 | `GET /observability/runs/:workflowId` | token | 一次简报运行的全貌：`brief_runs` + stories + R2 观测快照 |
 | `GET /observability/runs/:workflowId/clustering` | token | R2 `observability/clustering/<wf>.json` 聚类快照 |

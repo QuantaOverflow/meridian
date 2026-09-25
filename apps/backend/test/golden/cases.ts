@@ -18,6 +18,7 @@ import {
   type StoryBlock,
 } from '../../src/lib/core/cluster-blocks';
 import { rankStoriesForIntelligence } from '../../src/lib/core/story-ranking';
+import { StoryLedger } from '../../src/lib/core/story-ledger';
 import { assignTiers, renderBriefV3 } from '../../src/lib/core/brief-v3';
 import { generateSearchText } from '../../src/lib/core/utils';
 import { looksLikeExtractionFailure } from '../../src/lib/core/extraction-quality';
@@ -57,24 +58,15 @@ const SYNTHETIC_LLM_ORDER = [5, 0, 38, 12, 3, 7, 1, 20, 2, 9, 4, 30, 5, 999, -1]
 
 const briefRef = (s: StoryBlock) => ({ clusterId: s.clusterId, title: s.title });
 
+/** 选择层走 workflow 用的同一个故事账本；分层输入也由账本给（ledger.tierInputs）。 */
 function rank(blocks: StoryBlock[], llmOrder?: number[]) {
   const coverage: Record<number, number> = {};
   blocks.forEach((s, i) => { coverage[i] = distinctSources(s.articleIds); });
-  return rankStoriesForIntelligence(blocks, coverage, {
-    coverageWeight: 1.0,
-    maxStories: 25,
-    perEventCap: PER_EVENT_BLOCK_CAP,
-    eventKeyOf: (story) => String((story as { eventKey?: string }).eventKey ?? ''),
-    llmOrder,
-  });
+  const ledger = new StoryLedger(blocks);
+  ledger.recordSourceCoverage(coverage);
+  const res = ledger.select({ coverageWeight: 1.0, maxStories: 25, perEventCap: PER_EVENT_BLOCK_CAP, llmOrder });
+  return { ...res, ledger };
 }
-
-/** 与 workflow 分层前的映射同口径：篇数取 articleIds、源数钳到 [1, 篇数] */
-const tierInputs = (selected: StoryBlock[]) =>
-  selected.map((s, i) => {
-    const n = Math.max(1, s.articleIds.length);
-    return { idx: i, articles: n, sources: Math.max(1, Math.min(distinctSources(s.articleIds), n)) };
-  });
 
 export const GOLDEN_CASES: Record<string, () => unknown> = {
   /** storyline.ts：每个生产簇的事件键与显著性分，外加 blockImportance 的整张小表。 */
@@ -187,10 +179,12 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
   /** brief-v3.ts：选择结果 → 分层（重排 / 保序）→ 三节 markdown。块正文是合成占位句。 */
   briefV3: () => {
     const { blocks } = prodBlocks();
-    const selectedMech = rank(blocks).selected;
-    const selectedLlm = rank(blocks, SYNTHETIC_LLM_ORDER).selected;
-    const tiersMech = assignTiers(tierInputs(selectedMech));
-    const tiersLlm = assignTiers(tierInputs(selectedLlm), { preserveOrder: true });
+    const mech = rank(blocks);
+    const llm = rank(blocks, SYNTHETIC_LLM_ORDER);
+    const selectedMech = mech.selected;
+    const selectedLlm = llm.selected;
+    const tiersMech = assignTiers(mech.ledger.tierInputs());
+    const tiersLlm = assignTiers(llm.ledger.tierInputs(), { preserveOrder: true });
 
     // 渲染输入与 workflow 同口径：按分层顺序、标题小写后传入。第 3 块正文为空白，应被跳过。
     const renderInput = (sel: StoryBlock[], plan: typeof tiersMech) =>

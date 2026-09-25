@@ -81,7 +81,9 @@ export interface StoryBlock {
   articleIds: number[];
   storyType: string;
   clusterId: number;
+  /** 主线的 covers 一句话，纯观测 */
   covers: string;
+  /** 跨簇事件键（块内文章标题的主导专有名词），选择层的同事件配额用它 */
   eventKey: string;
 }
 

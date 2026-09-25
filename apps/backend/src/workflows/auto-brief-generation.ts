@@ -8,6 +8,7 @@ import {
   planBlocksFromJudgements,
   type JudgeResult,
   type PendingBlock,
+  type StoryBlock,
 } from '../lib/core/cluster-blocks';
 import {
   PER_EVENT_BLOCK_CAP,
@@ -18,7 +19,7 @@ import { createClusteringService, type ClusteringResult } from '../lib/services/
 import { createAIServices, type BriefBlockV6Sentence } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loadRunEmbeddings, runWindowWhere, type BodyStatus, type RunWindow } from '../lib/core/run-corpus';
-import { rankStoriesForIntelligence } from '../lib/core/story-ranking';
+import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 
@@ -732,16 +733,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 刻意**不新增 step**：CF Workflow 单 step 输出约 1MB 上限，上千篇文章的表容易顶上去；
       // 多一个 step 也多一份平台 canceled 的风险。改成在 run() 作用域里随各步结果累积，
       // 最后一次性落 R2。累积用的全部是 step 的**输出**（重放时由引擎回放），故可重放。
-      const ARTICLE_JOURNEY_STAGES = ['clustered', 'judged', 'selected', 'written'] as const;
-      type ArticleJourneyEntry = {
-        clusterId: number | null;
-        reachedStage: string;
-        droppedAt: string | null;
-        dropReason: string | null;
-        blockIdx: number | null;
-      };
-      const articleJourney = new Map<number, ArticleJourneyEntry>();
-      const persistArticleJourney = async () => {
+      // 各关的判定逻辑在故事账本里（lib/core/story-ledger.ts 的 articleJourney），这里只落盘。
+      const persistArticleJourney = async (ledger: StoryLedger<WrittenBlock>) => {
+        const articleJourney = ledger.articleJourney(
+          dataset.articles.map((a) => a.id),
+          clusteringResult.clusters
+        );
         try {
           await this.env.ARTICLES_BUCKET.put(
             `observability/article-journey/${workflowId}.json`,
@@ -758,32 +755,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       };
 
-      // 第 1 关 clustered：记归属簇。-1 噪声桶在簇判定里被显式跳过（`clusterId < 0 continue`），
-      // 所以它**就是**这一关的拦下原因，记 noise。
-      for (const article of dataset.articles) {
-        articleJourney.set(article.id, {
-          clusterId: null,
-          reachedStage: 'clustered',
-          droppedAt: 'clustered',
-          dropReason: 'not_in_any_cluster',
-          blockIdx: null,
-        });
-      }
-      for (const c of clusteringResult.clusters) {
-        for (const id of c.articleIds) {
-          const entry = articleJourney.get(id);
-          if (!entry) continue; // ml 侧回传了不属于本窗口的 id，忽略
-          entry.clusterId = c.clusterId;
-          if (c.clusterId < 0) {
-            entry.droppedAt = 'clustered';
-            entry.dropReason = 'noise';
-          } else {
-            entry.droppedAt = null;
-            entry.dropReason = null;
-          }
-        }
-      }
-
       // =====================================================================
       // 步骤 3: 故事验证 (AI Worker)
       // =====================================================================
@@ -795,17 +766,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 失败不连坐：判定调用失败 → 该簇退化成一块、名字用零 LLM 的主导专名（不丢文章）。
       // 这不是「静默降级成安全默认值」：judgeFailures / pocketFlagged / unsureClusters
       // 都是可判别的信号，正常值为 0，且都进了 observability。
-      type StoryBlock = {
-        title: string;
-        importance: number;
-        articleIds: number[];
-        storyType: string;
-        clusterId: number;
-        /** 主线的 covers 一句话，纯观测 */
-        covers: string;
-        /** 跨簇事件键（块内文章标题的主导专有名词），选择层的同事件配额用它 */
-        eventKey: string;
-      };
+      // StoryBlock 只在 lib/core/cluster-blocks.ts 定义一处。
       const validatedStories = await step.do('簇判定', storylineStepConfig, async (): Promise<{
         stories: StoryBlock[];
         judgeCalls: number;
@@ -987,7 +948,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         let insertedIds: number[] = [];
         if (validatedStories.stories.length > 0) {
           const inserted = await db.insert($brief_stories).values(
-            validatedStories.stories.map((s: any, i: number) => ({
+            validatedStories.stories.map((s, i) => ({
               workflow_id: workflowId,
               // 2026-08-21：Story 现在带真实来源簇。此前 Story 上根本没有 clusterId 字段，
               // 这里恒走 `i + 1` 兜底 → 落库的 cluster_id 实为**故事序号**，与聚类快照对不上
@@ -1005,26 +966,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         return insertedIds;
       });
 
-      // 第 2 关 judged：进了某一块 = 过关。
-      // ⚠️ 这一关**没有**「被判官毙掉」这条去向：不拒绝整簇，NO_EVENT / UNSURE
-      // 只标记不丢弃（见上方簇判定的注释）。所以过了聚类却不在任何块里，只可能是块物化时
-      // 被 DEFAULT_ARTICLE_CAP 截掉或跨簇同名合并时去重掉——两者都发生在「簇判定」step
-      // **内部**（assembleBlocks），步外只拿得到合计数 droppedArticles，分不出是哪一种，
-      // 故合记为 block_article_cap。
-      const judgedPassArticleIds = new Set<number>(
-        (validatedStories.stories as any[]).flatMap((s: any) =>
-          Array.isArray(s.articleIds) ? (s.articleIds as number[]) : []
-        )
-      );
-      for (const [id, entry] of articleJourney) {
-        if (entry.droppedAt) continue;
-        if (judgedPassArticleIds.has(id)) {
-          entry.reachedStage = 'judged';
-        } else {
-          entry.droppedAt = 'judged';
-          entry.dropReason = 'block_article_cap';
-        }
-      }
+      // 故事账本：storyId = validatedStories.stories 的下标，下游各阶段只用这一个 id。
+      const ledger = new StoryLedger<WrittenBlock>(validatedStories.stories);
+      ledger.recordRowIds(briefStoryRowIds);
 
       // =====================================================================
       // 检查故事质量阈值 - 如果没有有效故事则停止工作流
@@ -1069,7 +1013,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         });
 
         // 一块都没出的这一期最该有去向表：此时每篇都停在 clustered / judged 两关之一。
-        await persistArticleJourney();
+        await persistArticleJourney(ledger);
 
         return {
           success: false,
@@ -1081,13 +1025,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // 记录故事质量统计
       const storyQualityMetrics = {
-        averageImportance: validatedStories.stories.reduce((sum: number, story: any) => sum + story.importance, 0) / validatedStories.stories.length,
-        importanceDistribution: validatedStories.stories.reduce((dist: Record<string, number>, story: any) => {
+        averageImportance: validatedStories.stories.reduce((sum, story) => sum + story.importance, 0) / validatedStories.stories.length,
+        importanceDistribution: validatedStories.stories.reduce((dist: Record<string, number>, story) => {
           const range = story.importance >= 8 ? 'high' : story.importance >= 5 ? 'medium' : 'low';
           dist[range] = (dist[range] || 0) + 1;
           return dist;
         }, {}),
-        totalArticlesInStories: validatedStories.stories.reduce((sum: number, story: any) => sum + story.articleIds.length, 0)
+        totalArticlesInStories: validatedStories.stories.reduce((sum, story) => sum + story.articleIds.length, 0)
       };
 
       console.log('[AutoBrief] ✅ 故事质量检查通过');
@@ -1101,12 +1045,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
       // story 去重层（story-dedup）与「去重后再分主线」的两段式都已退役：文章级划分下
       // 每篇文章恰好属于一块，块间重复由构造消除，没有可去的重。
-      //
-      // 这里只补 __briefStoryRowIds：下游 mark_selected_for_intel
-      // 落库靠它精确定位主键，不能靠 stories.indexOf。
-      validatedStories.stories = validatedStories.stories.map((st: any, i: number) => ({
-        ...st, __briefStoryRowIds: [briefStoryRowIds[i]].filter(x => typeof x === 'number'),
-      }));
+      // brief_stories 主键由故事账本按 storyId 记（ledger.recordRowIds），不再挂在 story 对象上。
 
       // 多源覆盖度客观锚：聚类后每个 story 天然知道来自几个独立源。distinct_source_count 是最强的
       // 客观显著性信号(GDELT breaking-news 检测同源)——一个事件被多少家独立媒体报道 ≈ 它多重要，
@@ -1114,7 +1053,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const sourceCoverage = await step.do('compute:source_coverage', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
         const allIds: number[] = Array.from(new Set(
-          validatedStories.stories.flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []) as number[])
+          validatedStories.stories.flatMap((s) => (Array.isArray(s.articleIds) ? s.articleIds : []))
         ));
         const cov: Record<number, number> = {};
         if (allIds.length === 0) return cov;
@@ -1123,16 +1062,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           .from($articles)
           .where(inArray($articles.id, allIds));
         const id2src = new Map(rows.map(r => [r.id, r.sourceId]));
-        validatedStories.stories.forEach((s: any, i: number) => {
+        validatedStories.stories.forEach((s, i) => {
           const srcs = new Set(
             (Array.isArray(s.articleIds) ? s.articleIds : [])
-              .map((id: number) => id2src.get(id))
-              .filter((x: any) => x != null)
+              .map((id) => id2src.get(id))
+              .filter((x) => x != null)
           );
           cov[i] = srcs.size;
         });
         return cov;
       });
+      ledger.recordSourceCoverage(sourceCoverage);
 
       // 选择分 = LLM importance + 覆盖度加权。打分/排序/取 top-N 抽到 lib/core/story-ranking
       // （纯函数，可独立测）；COVERAGE_WEIGHT 是 NDCG eval 上线前的保守默认，做成参数便于校准。
@@ -1153,7 +1093,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         picks: Array<{ id: number; eventKey: string; category: string; why: string; borda: number; timesSelected: number }>;
         failed?: string;
       }> => {
-        const candidates = validatedStories.stories.map((s: any, i: number) => ({
+        const candidates = validatedStories.stories.map((s, i) => ({
           id: i,
           title: String(s.title ?? '').trim(),
           articles: Array.isArray(s.articleIds) ? s.articleIds.length : 0,
@@ -1188,21 +1128,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         error: llmOrder.failed,
       });
 
-      const { ranked, selected: storiesForIntelligence, capped } = rankStoriesForIntelligence(
-        validatedStories.stories,
-        sourceCoverage,
-        {
-          coverageWeight: COVERAGE_WEIGHT,
-          maxStories: maxStoriesToGenerate,
-          perEventCap: PER_EVENT_BLOCK_CAP,
-          eventKeyOf: (story) => String((story as { eventKey?: string }).eventKey ?? ''),
-          llmOrder: llmOrder.order,
-        }
-      );
+      const { ranked, selected: storiesForIntelligence, capped } = ledger.select({
+        coverageWeight: COVERAGE_WEIGHT,
+        maxStories: maxStoriesToGenerate,
+        perEventCap: PER_EVENT_BLOCK_CAP,
+        llmOrder: llmOrder.order,
+      });
       if (capped.length > 0) {
         console.log(
           `[AutoBrief] 同事件配额（每事件 ≤${PER_EVENT_BLOCK_CAP} 格）挤掉 ${capped.length} 块：` +
-            capped.map(x => `${(x.story as { eventKey?: string }).eventKey}/${x.story.title}`).join('，')
+            capped.map(x => `${x.story.eventKey}/${x.story.title}`).join('，')
         );
       }
 
@@ -1211,33 +1146,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         `  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`
       ));
 
-      // 第 3 关 selected：排名信息在 ranked 里是完整的（全量候选按分降序），
-      // 所以被截断的能记下**真实名次**，不必记 unknown；被同事件配额挤掉的在 capped 里，
-      // 两种落选原因分开记——「排不进前 N」和「同一件事已经占满格」对读者是两回事。
-      const selectedArticleIds = new Set<number>(
-        (storiesForIntelligence as any[]).flatMap((s: any) =>
-          Array.isArray(s.articleIds) ? (s.articleIds as number[]) : []
-        )
-      );
-      const cappedStories = new Set<any>(capped.map(x => x.story));
-      const rankDropReason = new Map<number, string>();
-      ranked.forEach((r, i) => {
-        const reason = cappedStories.has(r.story)
-          ? `per_event_cap_${PER_EVENT_BLOCK_CAP}`
-          : `rank_${i + 1}_beyond_top${maxStoriesToGenerate}`;
-        const ids: number[] = Array.isArray((r.story as any).articleIds) ? (r.story as any).articleIds : [];
-        for (const id of ids) if (!rankDropReason.has(id)) rankDropReason.set(id, reason);
-      });
-      for (const [id, entry] of articleJourney) {
-        if (entry.droppedAt) continue;
-        if (selectedArticleIds.has(id)) {
-          entry.reachedStage = 'selected';
-          continue;
-        }
-        entry.droppedAt = 'selected';
-        // ranked 覆盖全部候选块，所以正常一定取得到；取不到说明两处口径对不上，标 unknown 不猜。
-        entry.dropReason = rankDropReason.get(id) ?? 'unknown';
-      }
+      // 文章去向表的第 3 关 selected 由账本按 ranked / capped 推（见 story-ledger.ts）。
 
       // 观测性：标记被选中跑 intel 的 stories
       await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {
@@ -1245,13 +1154,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 按 brief_stories 的自增主键精确标记。**不能按 cluster_id**：换架构后一个簇会产出
         // 多个故事、共享同一个 cluster_id，按它更新会把整簇的故事都标成已选中，
         // 让 selected_for_intel 虚高（下游观测与 eval 都读这个字段）。
-        // 去重层引入后不能再按 stories.indexOf 取主键：合并会重排数组，下标与
-        // briefStoryRowIds 不再对应，而条数仍然对得上——下面那个告警根本不会响，
-        // 结果是**静默标错行**。故每条 story 自带 __briefStoryRowIds（合并的带全部成员）。
-        const selectedRowIds = storiesForIntelligence
-          .flatMap((s: any) => (Array.isArray(s.__briefStoryRowIds) ? s.__briefStoryRowIds : []))
-          .filter((id: any) => typeof id === 'number');
-        // 去重后每条 story 恒好一个主行 id（合并组只留主行），故这里是严格相等而非 <。
+        // 也不能按 stories.indexOf 取主键：数组一旦被重排，下标与主键不再对应，而条数仍然对得上
+        // ——下面那个告警根本不会响，结果是**静默标错行**。故由账本按 storyId 取主键。
+        const selectedRowIds = ledger.selectedRowIds();
+        // 每条选中 story 恰好一个主键，故这里是严格相等而非 <。
         if (selectedRowIds.length !== storiesForIntelligence.length) {
           // 对不上说明插入顺序与 stories 顺序错位，标记会漏/错。宁可显式告警也不静默少标。
           console.warn(
@@ -1291,12 +1197,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 不让 N 路同时打 provider，撞限流由 AIGateway 配额退避兜底。
       const BRIEF_BLOCK_CONCURRENCY = 6;
 
-      // 独立源数按 story 对象取：sourceCoverage 的键是 validatedStories.stories 的下标，
+      // 独立源数按 storyId 取（账本的 tierInputs）：sourceCoverage 的键是 validatedStories.stories 的下标，
       // 而 storiesForIntelligence 是排序 + 配额之后的子集，下标对不上。
-      const sourcesOf = new Map<any, number>(
-        validatedStories.stories.map((s: any, i: number) => [s, sourceCoverage[i] ?? 0])
-      );
-
+      //
       // 分层必须在**写作之前**：tier 决定篇幅（brief 档只写 1–2 句），端点要先知道这块是哪一档。
       // 分层规则（纯函数，见 lib/core/brief-v3.ts）：按「独立源数 × 篇数」降序，
       // 前 4 头条 / 接着 10 要闻 / 其余简讯。
@@ -1309,14 +1212,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // LLM 排序生效时 preserveOrder=true：选择层已经把 LLM 序（前 12）与机械序（其余）
       // 拼好，这里再按「源数 × 篇数」重排会把它整个盖掉。排序未生效（三轮全败）时退回
       // 旧的重排行为，保持与老链路一致。
-      const tierPlan = assignTiers(
-        (storiesForIntelligence as any[]).map((s: any, i: number) => {
-          const articles = Math.max(1, Array.isArray(s.articleIds) ? s.articleIds.length : 0);
-          return { idx: i, articles, sources: Math.max(1, Math.min(sourcesOf.get(s) ?? 1, articles)) };
-        }),
-        { preserveOrder: llmOrder.order.length > 0 }
-      );
-      const planOf = new Map<number, (typeof tierPlan)[number]>(tierPlan.map((p) => [p.idx, p]));
+      const tierPlan = assignTiers(ledger.tierInputs(), { preserveOrder: llmOrder.order.length > 0 });
+      ledger.recordTiers(tierPlan);
       console.log(
         `[AutoBrief] 分层（写作前）：头条 ${tierPlan.filter((x) => x.tier === 'lead').length} / ` +
           `要闻 ${tierPlan.filter((x) => x.tier === 'more').length} / ` +
@@ -1365,7 +1262,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         return byReason;
       };
 
-      const writeOneBlock = async (story: any, idx: number): Promise<BlockOutcome> => {
+      const writeOneBlock = async (story: StoryBlock, idx: number): Promise<BlockOutcome> => {
         try {
           const clusterArticles = await this.getArticleContents(story.articleIds, dataset);
           const withBody = clusterArticles.filter((a) => a.contentStatus === 'OK');
@@ -1381,7 +1278,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             );
           }
           const aiw = createAIServices(this.env, workflowId).aiWorker;
-          const plan = planOf.get(idx);
+          const plan = ledger.tierOfSelected(idx);
           if (!plan) {
             // 分层表按 storiesForIntelligence 的下标建，取不到说明两处口径对不上。宁可失败也不猜档位。
             return { failure: { idx, title: story.title, reason: `分层表里没有 idx=${idx}` } };
@@ -1443,7 +1340,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const blockOutcomes = await this.batchProcessParallel(
         storiesForIntelligence,
         BRIEF_BLOCK_CONCURRENCY,
-        (story: any, idx: number): Promise<BlockOutcome> =>
+        (story: StoryBlock, idx: number): Promise<BlockOutcome> =>
           step
             .do(`简报块:${idx}`, briefBlockStepConfig, () => writeOneBlock(story, idx))
             // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
@@ -1471,13 +1368,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // =====================================================================
       await observability.logStep('brief_generation', 'started');
 
-      // 分层已经在写作之前算好（tier 决定篇幅），这里只按分层顺序把**出了块的**挑出来。
-      // 不要再对写完的块跑一次 assignTiers——那会用另一套输入重新分档，与实际写作用的档位脱节。
-      // 代价：若排在前面的故事写块失败，头条那一节会少于 4 条（旧写法是从成功的块里补满）。
-      const blockByIdx = new Map<number, WrittenBlock>(writtenBlocks.map((b) => [b.idx, b]));
-      const tiered = tierPlan
-        .map((p) => blockByIdx.get(p.idx))
-        .filter((b): b is WrittenBlock => b !== undefined);
+      // 分层已经在写作之前算好（tier 决定篇幅），这里只按分层顺序把**出了块的**挑出来
+      // （账本的 tieredWritten，为什么不重跑 assignTiers 见那里的注释）。
+      ledger.recordBlocks(writtenBlocks, blockFailures);
+      const tiered = ledger.tieredWritten();
       const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
       console.log(
         `[AutoBrief] 分层（出块后实际入节）：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}`
@@ -1508,38 +1402,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         neurons: Math.round(writtenBlocks.reduce((n, b) => n + b.neurons, 0)),
       });
 
-      // 第 4 关 written：一块 = 一个被选中的 story，两者用同一个 idx（storiesForIntelligence
-      // 的下标）串起来。走到这里还没被拦下的文章，去向只有两种：块生成失败、进了某一块。
-      // （报告层退役后不再有 report_generation_failed 这条去向，统一记 block_write_failed。）
-      // blockIdx 取它在 tiered 里的位置——renderBriefV3 就是按这个顺序渲染的，
-      // 所以它就是读者看到的块序。
-      const blockIdxByStoryIdx = new Map<number, number>();
-      tiered.forEach((b, k) => blockIdxByStoryIdx.set(b.idx, k));
-      const storyIdxByArticle = new Map<number, number>();
-      (storiesForIntelligence as any[]).forEach((s: any, i: number) => {
-        const ids: number[] = Array.isArray(s.articleIds) ? s.articleIds : [];
-        for (const id of ids) if (!storyIdxByArticle.has(id)) storyIdxByArticle.set(id, i);
-      });
-      for (const [id, entry] of articleJourney) {
-        if (entry.droppedAt) continue;
-        const storyIdx = storyIdxByArticle.get(id);
-        if (storyIdx === undefined) {
-          // 上一关判它进了选择层，这一关却找不到归属块，说明两处口径对不上。宁可标 unknown 也不猜。
-          entry.droppedAt = 'written';
-          entry.dropReason = 'unknown';
-          continue;
-        }
-        const blockIdx = blockIdxByStoryIdx.get(storyIdx);
-        if (blockIdx === undefined) {
-          entry.droppedAt = 'written';
-          entry.dropReason = 'block_write_failed';
-          continue;
-        }
-        entry.reachedStage = 'written';
-        entry.blockIdx = blockIdx;
-      }
-
-      await persistArticleJourney();
+      // 文章去向表的第 4 关 written（块写失败 / 进了哪一块）由账本推（见 story-ledger.ts）。
+      await persistArticleJourney(ledger);
 
       // 拼装：三节 markdown 全由代码渲染（见 lib/core/brief-v3.ts），唯一的调用是给整篇起标题。
       const briefAssembleStepConfig: WorkflowStepConfig = {
@@ -1639,15 +1503,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       });
 
       // used_articles 是真正喂进简报的去重文章数 = 出了块的那些 story 的 articleIds 并集
-      // （失败的 story 不算，它没进简报）。failures[].idx 是 storiesForIntelligence 的
+      // （失败的 story 不算，它没进简报；账本的 usedArticleIds）。failures[].idx 是 storiesForIntelligence 的
       // 全局下标（batchProcessParallel 传的是 i + batchIndex）。
       // ⚠️ 语义变更：reports 表 51-59 期存的仍是旧值（故事数），跨期比较需注意。
-      const failedIdx = new Set(blockFailures.map(f => f.idx));
-      const usedArticleIds = new Set<number>(
-        storiesForIntelligence
-          .filter((_: any, i: number) => !failedIdx.has(i))
-          .flatMap((s: any) => (Array.isArray(s.articleIds) ? s.articleIds : []))
-      );
+      const usedArticleIds = ledger.usedArticleIds();
 
       const briefResult: BriefGenerationResultData = {
         title: assembled.title,

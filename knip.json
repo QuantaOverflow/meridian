@@ -31,6 +31,10 @@
       "project": ["src/**/*.ts"]
     },
 
+    "packages/contracts": {
+      "project": ["src/**/*.ts"]
+    },
+
     "eval/*": {
       "entry": ["**/*.{ts,mjs}"],
       "project": ["**/*.{ts,mjs}"]

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",
+    "@meridian/contracts": "workspace:*",
     "@meridian/database": "workspace:*",
     "@mozilla/readability": "^0.6.0",
     "fast-xml-parser": "^5.2.1",

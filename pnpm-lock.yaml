@@ -26,6 +26,9 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.4.3
         version: 0.4.3(hono@4.7.7)(zod@3.24.3)
+      '@meridian/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@meridian/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -254,8 +257,21 @@ importers:
         specifier: 5.8.2
         version: 5.8.2
 
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^3.24.3
+        version: 3.24.3
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.8.2
+
   packages/database:
     dependencies:
+      '@meridian/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       drizzle-orm:
         specifier: ^0.42.0
         version: 0.42.0(@cloudflare/workers-types@4.20250519.0)(@electric-sql/pglite@0.2.17)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.2.4)(gel@2.0.1)(postgres@3.4.5)
@@ -281,6 +297,9 @@ importers:
 
   services/meridian-ai-worker:
     dependencies:
+      '@meridian/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       hono:
         specifier: ^3.12.0
         version: 3.12.12

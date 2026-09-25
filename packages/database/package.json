@@ -18,6 +18,7 @@
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
+    "@meridian/contracts": "workspace:*",
     "drizzle-orm": "^0.42.0",
     "postgres": "^3.4.5",
     "tsx": "^4.19.3"

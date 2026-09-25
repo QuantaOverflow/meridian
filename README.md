@@ -114,7 +114,7 @@ pnpm -F @meridian/frontend dev       # frontend
 # ML service: see services/meridian-ml-service/README.md
 ```
 
-Initialize the scraper Durable Objects once:
+Sources created via `POST /admin/sources` start their scraper Durable Object right away. Sources inserted straight into the DB (e.g. the seed script) need a one-time backfill:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $API_TOKEN" \
@@ -153,7 +153,7 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    wrangler secret put MERIDIAN_ML_SERVICE_API_KEY   # = ml-service's API_TOKEN
    wrangler deploy
    ```
-   Bindings — see "Configuration" below. After adding a new RSS source, initialize its DO: `POST /do/admin/initialize-dos` (Bearer token).
+   Bindings — see "Configuration" below. Adding a source via `POST /admin/sources` (or the admin UI) starts its DO; `POST /do/admin/initialize-dos` is only a backfill for rows inserted straight into the DB.
 5. **Frontend** (Cloudflare Pages) — Pages config is in the repo-root `wrangler.toml` (`pages_build_output_dir = "apps/frontend/dist"`, production vars under `[env.production.vars]`). Pages project `meridian-reader`. Secrets via `wrangler pages secret put` — runtime only reads `NUXT_`-prefixed names: `NUXT_DATABASE_URL`, `NUXT_SESSION_PASSWORD`, `NUXT_WORKER_API_TOKEN`, `NUXT_ADMIN_USERNAME`, `NUXT_ADMIN_PASSWORD`. Build: `pnpm -F @meridian/frontend build`.
 
 **Judging whether a deploy worked**
@@ -170,11 +170,11 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 
 ### Backend
 ```bash
-POST /admin/sources                 # create source
-PUT  /admin/sources/:id             # update source
+POST /admin/sources                 # create source and start its DO
+PUT  /admin/sources/:id             # update source (url / tier change re-syncs its DO)
 POST /admin/briefs/generate         # trigger a brief workflow
 POST /admin/articles/process        # re-run article processing
-POST /do/admin/initialize-dos       # initialize scraper DOs for sources not yet initialized
+POST /do/admin/initialize-dos       # backfill: initialize scraper DOs for sources not yet initialized
 POST /do/admin/source/:id/pause     # stop auto-scraping a source (source and articles kept; skipped by initialize-dos)
 POST /do/admin/source/:id/resume    # clear the pause and re-initialize its DO
 GET  /observability/runs/:workflowId   # one run: status, stories, step metrics

@@ -1,11 +1,11 @@
-import { getDB } from '~/server/lib/utils';
 import { z } from 'zod';
-import { $sources } from '@meridian/database';
+import { forwardToBackend } from '~/server/lib/sourceActions';
 
 const schema = z.object({
   url: z.string().url(),
 });
 
+// 建源转给 backend：默认值（name / category / 抓取档位）与拉起 DO 都在 backend，URL 已存在回 409
 export default defineEventHandler(async event => {
   await requireUserSession(event); // require auth
 
@@ -14,19 +14,5 @@ export default defineEventHandler(async event => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid request body' });
   }
 
-  try {
-    await getDB(event).insert($sources).values({
-      url: bodyResult.data.url,
-      category: 'news',
-      name: 'Unknown',
-      scrape_frequency: 1,
-    });
-  } catch (error) {
-    console.error('Failed to add source', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to add source' });
-  }
-
-  return {
-    success: true,
-  };
+  return forwardToBackend('/admin/sources', { method: 'POST', body: { url: bodyResult.data.url } }, 'add source');
 });

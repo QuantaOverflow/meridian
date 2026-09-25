@@ -5,7 +5,7 @@ import { LockClosedIcon, LockOpenIcon } from '@heroicons/vue/20/solid';
 
 definePageMeta({ layout: 'admin' });
 
-const { data, error: sourcesError } = await useFetch('/api/admin/sources');
+const { data, error: sourcesError, refresh: refreshSources } = await useFetch('/api/admin/sources');
 if (sourcesError.value) {
   console.error(sourcesError.value);
 
@@ -150,9 +150,12 @@ async function addSource() {
       body: { url },
     });
     alert('Source added successfully');
+    await refreshSources();
   } catch (error) {
-    console.error(sourcesError.value);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch sources' });
+    // 在点击回调里 throw 只会变成没人接的 rejection，用户什么也看不到；直接告诉用户失败原因
+    console.error('Failed to add source', error);
+    const reason = (error as { statusMessage?: string })?.statusMessage ?? (error instanceof Error ? error.message : String(error));
+    alert(`Failed to add source: ${reason}`);
   }
 }
 

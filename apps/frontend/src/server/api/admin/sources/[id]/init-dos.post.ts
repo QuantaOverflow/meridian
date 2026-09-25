@@ -17,8 +17,9 @@ export default defineEventHandler(async event => {
     throw createError({ statusCode: 404, statusMessage: 'Source not found' });
   }
 
+  let response: Response;
   try {
-    await fetch(`${config.public.WORKER_API}/do/admin/source/${sourceId}/init`, {
+    response = await fetch(`${config.public.WORKER_API}/do/admin/source/${sourceId}/init`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.worker.api_token}`,
@@ -27,6 +28,11 @@ export default defineEventHandler(async event => {
   } catch (error) {
     console.error('Failed to initialize DO', error);
     throw createError({ statusCode: 500, statusMessage: 'Failed to initialize DO' });
+  }
+  // backend 回 4xx/5xx 不会抛异常，不看 status 就会对失败回 success（删源的 index.delete.ts 一直是这么检查的）
+  if (!response.ok) {
+    console.error('Backend failed to initialize DO', { sourceId, status: response.status });
+    throw createError({ statusCode: 502, statusMessage: `Failed to initialize DO: backend returned ${response.status}` });
   }
 
   return { success: true };

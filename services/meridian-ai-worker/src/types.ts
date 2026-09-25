@@ -58,7 +58,4 @@ export interface ChatResponse extends BaseAIResponse {
 export type AIResponse = ChatResponse
 
 // Cloudflare Workers environment with string index signature
-export interface CloudflareEnv extends Record<string, string | undefined> {
-  // Logging configuration
-  LOG_LEVEL?: string
-}
+export interface CloudflareEnv extends Record<string, string | undefined> {}

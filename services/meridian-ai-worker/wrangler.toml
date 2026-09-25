@@ -27,5 +27,5 @@ enabled = true
 
 
 
-# 不需要 secret。可选 vars：LOG_LEVEL（本地见 .dev.vars.example）
+# 不需要 secret，也没有 vars。
 

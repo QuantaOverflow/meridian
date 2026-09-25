@@ -1,0 +1,1 @@
+ALTER TABLE "articles" ADD COLUMN "used_browser" boolean;

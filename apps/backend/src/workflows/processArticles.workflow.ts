@@ -271,6 +271,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                   processedAt: new Date(),
                   failReason: `EXTRACTION_JUNK:${junkReason}`,
                   status: 'FETCH_FAILED',
+                  used_browser: result.used_browser,
                 })
                 .where(eq($articles.id, result.id));
             });
@@ -292,6 +293,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               .update($articles)
               .set({
                 status: 'CONTENT_FETCHED',
+                used_browser: result.used_browser,
               })
               .where(eq($articles.id, result.id));
           });

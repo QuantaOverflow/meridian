@@ -52,6 +52,9 @@ export const $articles = pgTable(
     primary_location: text('primary_location'),
     completeness: articleCompletenessEnum(),
     content_quality: articleContentQualityEnum(),
+    // 正文是不是浏览器渲染抓回来的（fetch 失败后降级）。平时没人读，排查抓取问题时要用：
+    // 2026-09-24 按「只写不读」删过一次，次日排查浏览器渲染 401 / 人机验证页时分不出走的哪条路，加回
+    used_browser: boolean('used_browser'),
     event_summary_points: jsonb('event_summary_points'),
     thematic_keywords: jsonb('thematic_keywords'),
     topic_tags: jsonb('topic_tags'),

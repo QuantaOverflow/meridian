@@ -172,6 +172,18 @@ describe('DELETE /do/admin/source/:id', () => {
     expect(d.state).toBeUndefined();
   });
 
+  it('删源连带删掉它的文章在 R2 里的正文，不留孤儿对象', async () => {
+    const source = await activeSource();
+    const key = `test/sources-delete/${source.id}-${Date.now()}.txt`;
+    await env.ARTICLES_BUCKET.put(key, 'body');
+    await db.insert($articles).values({ title: 'gone', url: `${source.url}#r2`, sourceId: source.id, contentFileKey: key });
+
+    const res = await api(`/do/admin/source/${source.id}`, 'DELETE');
+
+    expect(res.status).toBe(200);
+    expect(await env.ARTICLES_BUCKET.get(key)).toBeNull();
+  });
+
   it('有文章被简报引用（lead_article_id）：409 提示改用暂停，源、文章与 DO 都不动', async () => {
     const source = await activeSource();
     const [article] = await db

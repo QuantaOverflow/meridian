@@ -38,25 +38,24 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 ## LLM 调用怎么走
 
 - 除 article analyze 与 `/meridian/chat` 外，所有调用都经 `src/services/call-llm.ts` 的
-  `callLLM(phase)`：每个 phase 在 `PHASE_DEFAULTS` 里有一套 provider / model / temperature /
+  `callLLM(phase)`：每个 phase 在 `PHASE_DEFAULTS` 里有一套 model / temperature /
   maxTokens 默认值，caller 只覆盖真不同的。
 - 现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
-  （`AIGatewayService.executeWorkersAIViaBinding`）。思维链由 `config/thinking.ts` 关掉。
+  （`src/services/workers-ai.ts` 的 `chat()`）。思维链由 `config/thinking.ts` 关掉。
 - article analyze 在 `index.ts` 自带两档重试：`@cf/qwen/qwen3-30b-a3b-fp8` → `@cf/zai-org/glm-4.7-flash`。
-- **只有这一个 provider，且不经 AI Gateway**：`executeWorkersAIViaBinding` 刻意不传 `gateway`
+- **只有这一个 provider，且不经 AI Gateway**：`chat()` 刻意不传 `gateway`
   参数（原因见该处注释），因此也没有网关缓存。要接非 CF 厂商时经 CF AI Gateway 接入。
 - 经 `callLLM` 的调用都会做输出语言检测（`checkOutputLanguage`），CJK 占比超阈值只告警、落 sensor，不改输出。
 
 ## 环境变量与 secret
 
 本地复制 `.dev.vars.example` 为 `.dev.vars`；生产不需要任何 secret。
-代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `ai-gateway.ts`）：
+代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `services/workers-ai.ts`）：
 
 | 名称 | 作用 |
 |---|---|
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
 | `ARTICLES_BUCKET`（R2 binding） | 观测落盘（只写不读），与 backend 同一个桶 `meridian-articles-prod` |
-| `LOG_LEVEL` | `services/logger.ts` 的日志开关 |
 
 ## 观测数据落在哪
 

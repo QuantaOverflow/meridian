@@ -1,4 +1,3 @@
-import type { AIGatewayService } from './ai-gateway';
 import type { AIResponse, ChatMessage, CloudflareEnv } from '../types';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 import { recordSensor } from './sensor-log';
@@ -14,7 +13,6 @@ import { recordSensor } from './sensor-log';
 // 不适合 phase-default）、/meridian/chat（外部透传口）。
 
 interface PhaseDefault {
-  provider: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -28,16 +26,16 @@ interface PhaseDefault {
 //
 // ⚠️ glm-4.7-flash 是 reasoning 模型且**默认开思维链**，thinking token 计入 max_tokens 且先于正文生成
 // ——不关的话小预算 phase 会被思维链吃光、正文为空。关闭名单在 config/thinking.ts，
-// 下发动作在 ai-gateway.ts executeWorkersAIViaBinding，不在这层。
+// 下发动作在 services/workers-ai.ts 的 chat()，不在这层。
 const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
-  brief_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
+  brief_generation: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   // 散文摘要只有 2-3 句（实测 completion 60-120 token），800 有 6 倍以上余量；
   // temperature 0 —— 摘要要可复现，不需要创造性。
-  tldr_prose_generation: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800 },
-  cluster_judge: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200 },
+  tldr_prose_generation: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 800 },
+  cluster_judge: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 1200 },
   // 故事排序：一次看当期全部候选标题（46-51 条约 1400 词），输出前 12 + 5 条落选。
   // maxTokens 3000 沿用离线实测值（两期各 3 轮，6 次调用 completion 全部在预算内，无截断）。
-  story_rank: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000 },
+  story_rank: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000 },
   // 简报块 v6：窗口标重点 + 一次写作，两种调用共用这个 phase（callIndex 区分 R2 key）。
   // maxTokens 8000 与 temperature 0.1 沿用原型实测值（原型 chatJson 的 max_tokens=8000）。
   // **不设 frequency_penalty**：原型没有它，而 v6 与生产的那份对比读数（同 3 簇，写作层
@@ -46,9 +44,9 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 越界句号）、丢掉 4 篇材料，而原型同一输入 4 窗全过。是不是它导致的没有验，但这里的取舍
   // 很清楚：实测过的配置优先于未实测的约定。复读由解析处的 detectRepetition 挡（见
   // services/brief-block-v6.ts），那才是真正拦得住的那层。
-  brief_block_v6: { provider: 'workers-ai', model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
+  brief_block_v6: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
   // 未迁移，占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
-  article_analysis: { provider: 'workers-ai', model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
+  article_analysis: { model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
 };
 
 // —— 输出语言传感器 ——
@@ -97,7 +95,7 @@ export interface CallLLMOverrides {
 // phase 默认 + caller 覆盖 → 建 chat 请求 → loggedChat（观测+发送）→ 返回 AIResponse。
 // caller 保持自己对返回的处理（读 choices / finish_reason / 截断重试），故返回原始 AIResponse。
 export function callLLM(
-  aiGateway: AIGatewayService,
+  ai: Ai,
   env: CloudflareEnv,
   trace: TraceContext,
   phase: LLMCallPhase,
@@ -106,9 +104,8 @@ export function callLLM(
 ): Promise<AIResponse> {
   const d = PHASE_DEFAULTS[phase];
   const request = {
-    capability: 'chat' as const,
     messages,
-    provider: overrides.provider ?? d.provider,
+    provider: overrides.provider,
     model: overrides.model ?? d.model,
     // ?? 而非 ||：确定性子调用显式传 temperature:0，|| 会吞成默认
     temperature: overrides.temperature ?? d.temperature,
@@ -117,17 +114,15 @@ export function callLLM(
     metadata: overrides.metadata ?? { requestId: `${phase}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, timestamp: Date.now() },
   };
   const t: TraceContext = overrides.callIndex != null ? { ...trace, callIndex: overrides.callIndex } : trace;
-  return loggedChat(aiGateway, env, t, phase, request).then(async res => {
-    if ('choices' in res) {
-      const content = res.choices?.[0]?.message?.content ?? '';
-      const alarm = checkOutputLanguage(phase, content);
-      // 只在报警时落 R2：语言正确是常态，每次调用都写一条会把 sensors/ 目录淹了，
-      // 而"没有记录"在这里等价于"没报警"（与卫生检查器不同——那个零命中也有信息量）。
-      if (alarm) {
-        await recordSensor(env, t, 'output_language', {
-          phase, ...alarm, contentChars: content.length, sample: content.slice(0, 300),
-        }, t.callIndex ?? 0);
-      }
+  return loggedChat(ai, env, t, phase, request).then(async res => {
+    const content = res.choices?.[0]?.message?.content ?? '';
+    const alarm = checkOutputLanguage(phase, content);
+    // 只在报警时落 R2：语言正确是常态，每次调用都写一条会把 sensors/ 目录淹了，
+    // 而"没有记录"在这里等价于"没报警"（与卫生检查器不同——那个零命中也有信息量）。
+    if (alarm) {
+      await recordSensor(env, t, 'output_language', {
+        phase, ...alarm, contentChars: content.length, sample: content.slice(0, 300),
+      }, t.callIndex ?? 0);
     }
     return res;
   });

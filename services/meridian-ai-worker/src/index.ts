@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { AIGatewayService } from './services/ai-gateway'
+import { chat } from './services/workers-ai'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'
 import { callLLM } from './services/call-llm'
@@ -10,7 +10,7 @@ import { loggedChat, readTraceContext } from './services/llm-call-logger'
 import { observeMiddleware } from './services/observe'
 import { getArticleAnalysisPrompt, articleAnalysisSchema } from './prompts/articleAnalysis'
 import { getBriefTitlePrompt } from './prompts/briefGeneration'
-import { CloudflareEnv, ChatResponse } from './types'
+import { CloudflareEnv } from './types'
 import { APIResponse } from './types/api'
 import { createRequestMetadata, parseJSONFromResponse } from './utils/common'
 
@@ -39,7 +39,7 @@ app.use('*', observeMiddleware)
 // ============================================================================
 
 app.post('/meridian/article/analyze', async (c) => {
-  const aiGateway = new AIGatewayService(c.env)
+  const ai = c.env.AI
   const requestMetadata = createRequestMetadata(c)
   
   try {
@@ -90,7 +90,7 @@ app.post('/meridian/article/analyze', async (c) => {
       console.log(`[Article Analysis] 使用模型: ${strategy.model} (提供商: ${strategy.provider}), 温度: ${strategy.temperature}`)
       
       try {
-        const aiResult = await loggedChat(aiGateway, c.env, readTraceContext(c.req.raw), 'article_analysis', {
+        const aiResult = await loggedChat(ai, c.env, readTraceContext(c.req.raw), 'article_analysis', {
           messages: [
             { role: 'user', content: analysisPrompt }
           ],
@@ -201,10 +201,9 @@ app.post('/meridian/cluster/judge', async (c) => {
       }, 500)
     }
 
-    const aiGateway = new AIGatewayService(c.env)
-    const res = await callLLM(aiGateway, c.env, readTraceContext(c.req.raw), 'cluster_judge',
+    const res = await callLLM(c.env.AI, c.env, readTraceContext(c.req.raw), 'cluster_judge',
       [{ role: 'user', content: prompt }])
-    const content = ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+    const content = res.choices?.[0]?.message?.content || ''
     const parsed = parseJSONFromResponse(content) as
       { verdict?: string; title?: string; event?: string; reason?: string } | null
 
@@ -279,16 +278,15 @@ app.post('/meridian/stories/rank', async (c) => {
     // 规模」是本判据第三个维度的定义词，是合法通用词汇。而任何基于通用词的正则都必然误杀
     // （标题里出现 "Judge blocks ..." 就会撞上指令段的 "Judge on a global scale"），
     // 误杀的代价是整期简报排序失败。闸放在人改 prompt 的那一步，收益同样、风险没有。
-    const aiGateway = new AIGatewayService(c.env)
     const trace = readTraceContext(c.req.raw)
     let callIndex = 0
     const result = await rankStories(
       candidates,
       async (prompt: string) => {
-        const res = await callLLM(aiGateway, c.env, trace, 'story_rank', [{ role: 'user', content: prompt }], {
+        const res = await callLLM(c.env.AI, c.env, trace, 'story_rank', [{ role: 'user', content: prompt }], {
           callIndex: callIndex++,
         })
-        return ('choices' in res ? res.choices?.[0]?.message?.content : '') || ''
+        return res.choices?.[0]?.message?.content || ''
       },
       (text: string) => parseJSONFromResponse(text)
     )
@@ -331,7 +329,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
     if (bad >= 0) {
       return c.json<APIResponse<null>>({ success: false, error: `articles[${bad}] needs {id:int, title:string, content:non-empty string}` }, 400)
     }
-    const service = new BriefBlockV6Service(c.env, readTraceContext(c.req.raw))
+    const service = new BriefBlockV6Service(c.env, c.env.AI, readTraceContext(c.req.raw))
     const data = await service.generate(
       { articles, tier: body?.tier }
     )
@@ -351,10 +349,10 @@ app.post('/meridian/brief-title', async (c) => {
     if (!content.trim()) {
       return c.json<APIResponse<null>>({ success: false, error: 'content is required' }, 400)
     }
-    const res = await callLLM(new AIGatewayService(c.env), c.env, readTraceContext(c.req.raw), 'brief_generation',
+    const res = await callLLM(c.env.AI, c.env, readTraceContext(c.req.raw), 'brief_generation',
       [{ role: 'user', content: getBriefTitlePrompt(content) }],
       { temperature: 0.3, maxTokens: 300, callIndex: 690 })
-    const raw = res.capability === 'chat' ? String((res as ChatResponse).choices?.[0]?.message?.content ?? '') : ''
+    const raw = String(res.choices?.[0]?.message?.content ?? '')
     const parsed = parseJSONFromResponse(raw)
     // 解析失败不静默套通用名：留痕，让「模型没给标题」与「本来就叫这个」分得开
     if (!parsed?.title) console.warn(`[BriefTitle] 标题解析失败或缺 title 字段 → 用通用标题。原始输出: ${raw.slice(0, 200)}`)
@@ -382,7 +380,7 @@ app.post('/meridian/generate-brief-summary', async (c) => {
 
     console.log(`[TLDR Prose] 为简报生成散文摘要`)
 
-    const briefService = new BriefGenerationService(c.env, readTraceContext(c.req.raw))
+    const briefService = new BriefGenerationService(c.env, c.env.AI, readTraceContext(c.req.raw))
 
     const result = await briefService.generateProseTldr(body.briefTitle, body.briefContent)
 
@@ -428,10 +426,7 @@ app.post('/meridian/chat', async (c) => {
       }, 400)
     }
 
-    const aiGatewayService = new AIGatewayService(c.env)
-    
     const chatRequest = {
-      capability: 'chat' as const,
       messages: body.messages,
       provider: body.options?.provider || 'workers-ai',
       model: body.options?.model || '@cf/zai-org/glm-4.7-flash',
@@ -439,12 +434,12 @@ app.post('/meridian/chat', async (c) => {
       temperature: body.options?.temperature ?? 0.7,
       max_tokens: body.options?.max_tokens || 1000,
       // 这里是显式白名单：不在名单上的 options 会被静默丢弃且照样 200，加参数必须同时改这里
-      // 和 ai-gateway.ts 的 executeWorkersAIViaBinding。
+      // 和 services/workers-ai.ts 的 chat()。
       response_format: body.options?.response_format,
       metadata: createRequestMetadata(c)
     }
 
-    const chatResult = await aiGatewayService.chat(chatRequest)
+    const chatResult = await chat(c.env.AI, chatRequest)
     
     return c.json<APIResponse<any>>({
       success: true,

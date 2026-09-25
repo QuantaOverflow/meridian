@@ -1,28 +1,6 @@
 import type { RequestMetadata } from './types/api'
 
 // =============================================================================
-// AI Capabilities
-// =============================================================================
-
-// 只剩 chat：其余 capability 从无调用方，已删。
-export type AICapability = 'chat'
-
-// =============================================================================
-// Logging Types
-// =============================================================================
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
-
-export interface LogEntry {
-  level: LogLevel
-  timestamp: number
-  requestId: string
-  message: string
-  metadata?: Record<string, any>
-  error?: Error
-}
-
-// =============================================================================
 // Unified Request Types
 // =============================================================================
 
@@ -41,11 +19,8 @@ interface BaseAIRequest {
 }
 
 export interface ChatRequest extends BaseAIRequest {
-  capability: 'chat'
   messages: ChatMessage[]
 }
-
-export type AIRequest = ChatRequest
 
 // =============================================================================
 // Message Types
@@ -81,39 +56,6 @@ export interface ChatResponse extends BaseAIResponse {
 }
 
 export type AIResponse = ChatResponse
-
-// =============================================================================
-// Provider Configuration
-// =============================================================================
-
-export interface ModelConfig {
-  name: string
-  capabilities: AICapability[]
-}
-
-export interface ProviderConfig {
-  models: ModelConfig[]
-}
-
-// =============================================================================
-// Provider Interface
-// =============================================================================
-
-export interface BaseProvider {
-  config: ProviderConfig
-  
-  getSupportedCapabilities(): AICapability[]
-  
-  mapResponse(response: any, originalRequest: AIRequest): AIResponse
-}
-
-// =============================================================================
-// Capability Handlers
-// =============================================================================
-
-export interface CapabilityHandler<TRequest extends AIRequest, TResponse extends AIResponse> {
-  parseProviderResponse(response: any, model: ModelConfig): TResponse
-}
 
 // Cloudflare Workers environment with string index signature
 export interface CloudflareEnv extends Record<string, string | undefined> {

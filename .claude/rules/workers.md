@@ -48,7 +48,7 @@ paths:
   （`services/meridian-ai-worker/src/services/observe.ts`）。
 - **LLM 调用必须经 `callLLM` / `loggedChat` 否则不落盘**：`callLLM`（`services/meridian-ai-worker/src/services/call-llm.ts`）经
   `loggedChat`（`services/meridian-ai-worker/src/services/llm-call-logger.ts`）才会挂进 span / 落 `llm-calls/`。已知漏斗口：`/meridian/chat`
-  直调 `AIGatewayService.chat`，记不到。
+  直调 `services/meridian-ai-worker/src/services/workers-ai.ts` 的 `chat()`，记不到。
 
 ## 4. LLM 调用
 

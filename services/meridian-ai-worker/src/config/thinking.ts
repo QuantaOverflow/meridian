@@ -1,13 +1,13 @@
 /**
  * Reasoning 模型的思维链开关——单一真源。
  *
- * 两处依赖它，必须同源否则会漂移：
- * - ai-gateway.ts 决定给哪些模型下发 `chat_template_kwargs.enable_thinking=false`
- * - capabilities/chat.ts 决定哪些模型允许在 content 为空时用 reasoning 字段兜底
+ * 两处依赖它，必须同源否则会漂移（现都在 services/workers-ai.ts）：
+ * - `chat()` 决定给哪些模型下发 `chat_template_kwargs.enable_thinking=false`
+ * - `mapResponse()` 决定哪些模型允许在 content 为空时用 reasoning 字段兜底
  *
  * 为什么要"允许兜底"这件事必须限定名单，而不是全局生效：
  * 思维链吃光 max_tokens 时，模型同样会返回 content=null + 一堆 reasoning。若无条件兜底，
- * 这类真故障就会被当成正常输出静默放行（正是 chat.ts 那段"空正文必须响亮地失败"要防的）。
+ * 这类真故障就会被当成正常输出静默放行（正是 mapResponse 那段"空正文必须响亮地失败"要防的）。
  * 只有在**我们明确关掉了 thinking** 的前提下，reasoning 里装的才是正文而非思考链。
  *
  * 各模型关掉 thinking 后正文落在哪个字段并不统一，必须逐个实测：

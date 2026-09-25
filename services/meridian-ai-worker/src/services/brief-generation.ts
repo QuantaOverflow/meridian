@@ -3,7 +3,6 @@
  * 生产环境错误处理，直接抛出错误而不使用fallback
  */
 
-import { AIGatewayService } from './ai-gateway';
 import { TraceContext, LLMCallPhase } from './llm-call-logger';
 import { callLLM } from './call-llm';
 import { getTldrProsePrompt } from '../prompts/tldrGeneration';
@@ -15,11 +14,9 @@ import { QuotaHandler } from '../utils/quota-handler';
 // ============================================================================
 
 export class BriefGenerationService {
-  private aiGatewayService: AIGatewayService;
   private traceContext: TraceContext;
 
-  constructor(private env: CloudflareEnv, traceContext: TraceContext = {}) {
-    this.aiGatewayService = new AIGatewayService(env);
+  constructor(private env: CloudflareEnv, private ai: Ai, traceContext: TraceContext = {}) {
     this.traceContext = traceContext;
   }
 
@@ -80,7 +77,7 @@ export class BriefGenerationService {
   private async callAI(prompt: string, phase: LLMCallPhase): Promise<string> {
     // 配置走 call-llm 单一入口按 phase 定默认；temperature 显式 0（摘要要可复现）。
     const result = await callLLM(
-      this.aiGatewayService,
+      this.ai,
       this.env,
       this.traceContext,
       phase,

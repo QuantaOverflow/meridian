@@ -19,7 +19,6 @@
  *     frequency_penalty 是缓解不是解药，真正挡住要靠解析处的重复检测（memory
  *     repetition-guard-always-on）。检出 → 本次尝试算失败，进下一次。
  */
-import { AIGatewayService } from './ai-gateway';
 import { callLLM } from './call-llm';
 import type { TraceContext } from './llm-call-logger';
 import type { ChatResponse, CloudflareEnv } from '../types';
@@ -121,14 +120,11 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promis
 }
 
 export class BriefBlockV6Service {
-  private ai: AIGatewayService;
   private llmCalls = 0;
   private neurons = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
-  constructor(private env: CloudflareEnv, private traceContext: TraceContext = {}) {
-    this.ai = new AIGatewayService(env);
-  }
+  constructor(private env: CloudflareEnv, private ai: Ai, private traceContext: TraceContext = {}) {}
 
   /**
    * 原型 `chatJson` 的移植：最多三次，温度 [0.1, 0.3, 0.3]，退避 [3s, 8s]。

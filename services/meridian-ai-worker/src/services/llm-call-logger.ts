@@ -1,5 +1,5 @@
-import type { AIGatewayService } from './ai-gateway'
-import type { ChatRequest, AIResponse, ChatResponse, CloudflareEnv } from '../types'
+import { chat } from './workers-ai'
+import type { ChatRequest, AIResponse, CloudflareEnv } from '../types'
 import { recordLLMCall } from './observe'
 
 /**
@@ -36,31 +36,30 @@ export function readTraceContext(req: Request | { headers: Headers }): TraceCont
 }
 
 /**
- * 调用 ai-gateway.chat 并把 input/output/metadata 落 R2：
+ * 调用 workers-ai.chat 并把 input/output/metadata 落 R2：
  *   llm-calls/{trace_id}/{phase}-{idx 3位}.json
  *
  * 失败不阻塞主流程：R2 写入是 best-effort、异步
  * 没有 trace_id 或 R2 binding 时跳过写入，原样返回 chat 结果
  */
 export async function loggedChat(
-  aiGateway: AIGatewayService,
+  ai: Ai,
   env: CloudflareEnv,
   trace: TraceContext,
   phase: LLMCallPhase,
-  request: Omit<ChatRequest, 'capability'>
+  request: ChatRequest
 ): Promise<AIResponse> {
   const startedAt = Date.now()
   let response: AIResponse | null = null
   let errMsg: string | undefined
   try {
-    response = await aiGateway.chat(request)
+    response = await chat(ai, request)
     return response
   } catch (e) {
     errMsg = e instanceof Error ? e.message : String(e)
     throw e
   } finally {
     const latencyMs = Date.now() - startedAt
-    const chat = response && response.capability === 'chat' ? (response as ChatResponse) : null
     // 观测 wrapper：这次调用挂到当前步骤下（只在请求带 x-observe: inline 时记，见 observe.ts）
     await recordLLMCall({
       phase,
@@ -71,8 +70,8 @@ export async function loggedChat(
         response_format: (request as any).response_format,
       },
       messages: request.messages,
-      content: chat?.choices?.[0]?.message?.content,
-      finishReason: chat?.choices?.[0]?.finish_reason,
+      content: response?.choices?.[0]?.message?.content,
+      finishReason: response?.choices?.[0]?.finish_reason,
       usage: response?.usage,
       error: errMsg,
       startedAt,
@@ -82,10 +81,7 @@ export async function loggedChat(
     if (trace.traceId && bucket) {
       const idx = trace.callIndex ?? 0
       const key = `llm-calls/${trace.traceId}/${phase}-${String(idx).padStart(3, '0')}.json`
-      const responseContent =
-        response && response.capability === 'chat'
-          ? (response as ChatResponse).choices?.[0]?.message?.content
-          : undefined
+      const responseContent = response?.choices?.[0]?.message?.content
 
       const record = {
         trace_id: trace.traceId,
@@ -93,7 +89,9 @@ export async function loggedChat(
         call_index: idx,
         timestamp: new Date().toISOString(),
         request: {
-          provider: request.provider,
+          // 只有 workers-ai 一家 provider（call-llm.ts 的 PHASE_DEFAULTS 已去掉 provider 列，
+          // request.provider 常态是 undefined）——日志字段保留字面量，格式不因此漂移。
+          provider: 'workers-ai',
           model: request.model,
           messages: request.messages,
           temperature: request.temperature,
@@ -107,10 +105,7 @@ export async function loggedChat(
               content: responseContent,
               // finish_reason 必须记：截断（length）产出的是残缺 JSON，下游报「响应无 X 字段」，
               // 读起来像模型不配合、实际是预算不够。不记这一格，这两种成因在落盘里分不开。
-              finish_reason:
-                response.capability === 'chat'
-                  ? (response as ChatResponse).choices?.[0]?.finish_reason
-                  : undefined,
+              finish_reason: response.choices?.[0]?.finish_reason,
               usage: response.usage,
               provider_used: response.provider,
               model_used: response.model,

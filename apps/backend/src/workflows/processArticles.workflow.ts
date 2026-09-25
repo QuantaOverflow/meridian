@@ -2,7 +2,7 @@ import { $articles, and, eq, gte, inArray, isNull } from '@meridian/database';
 import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';
 import { getDb } from '../lib/database';
-import { getArticleWithBrowser, getArticleWithFetch } from '../lib/services/article-fetchers';
+import { getArticleFetchFirst } from '../lib/services/article-fetchers';
 import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
@@ -188,18 +188,13 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             async () => {
               // During retries, let errors bubble up naturally
               scrapeLogger.info('Attempting fetch-first approach');
-              try {
-                const fetchResult = await getArticleWithFetch(article.url);
-                return { id: article.id, url: article.url, success: true, html: fetchResult, used_browser: false };
-              } catch (fetchError) {
+              const { html, used_browser } = await getArticleFetchFirst(env, article.url, async () => {
                 // Fetch failed, try browser with jitter
                 scrapeLogger.info('Fetch failed, falling back to browser');
                 const jitterTime = Math.random() * 2500 + 500;
                 await step.sleep(`jitter`, jitterTime);
-
-                const browserResult = await getArticleWithBrowser(env, article.url);
-                return { id: article.id, url: article.url, success: true, html: browserResult, used_browser: true };
-              }
+              });
+              return { id: article.id, url: article.url, success: true, html, used_browser };
             }
           );
           scrapeLogger.info('Individual article scrape completed', { durationMs: Date.now() - individualScrapeStartTime, usedBrowser: result.used_browser });

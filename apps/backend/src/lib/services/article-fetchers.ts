@@ -201,3 +201,18 @@ export async function getArticleWithFetch(url: string) {
     throw new Error(`Article parsing failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+
+/**
+ * 先直接 fetch，失败再降级到浏览器渲染（付费）。
+ *
+ * @param beforeBrowser 降级到浏览器前调用（workflow 在这里打日志、加 jitter）
+ * @returns 正文，以及正文是不是浏览器抓回来的
+ */
+export async function getArticleFetchFirst(env: Env, url: string, beforeBrowser: () => Promise<void>) {
+  try {
+    return { html: await getArticleWithFetch(url), used_browser: false };
+  } catch {
+    await beforeBrowser();
+    return { html: await getArticleWithBrowser(env, url), used_browser: true };
+  }
+}

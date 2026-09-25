@@ -12,7 +12,7 @@ import {
   validateDateRange
 } from '../lib/api/utils';
 import { Logger } from '../lib/core/logger';
-import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
+import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../lib/core/constants';
 import type { Env } from '../index';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -79,11 +79,11 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
       article_ids,
       dateFrom, 
       dateTo, 
-      timeRangeDays = 1, // 默认最近1天内的文章
-      articleLimit = 500, // 默认500篇（embeddings 已卸载 R2，不再受 1MB step 输出限制）
+      timeRangeDays = CRON_BRIEF_PARAMS.TIME_RANGE_DAYS, // 与 cron 同一组默认值（constants.ts）
+      articleLimit = CRON_BRIEF_PARAMS.ARTICLE_LIMIT,
       
       // 业务参数
-      maxStoriesToGenerate = 25,
+      maxStoriesToGenerate = CRON_BRIEF_PARAMS.MAX_STORIES_TO_GENERATE,
       
       // 高级参数（可选）
       clusteringOptions,

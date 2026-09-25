@@ -14,7 +14,7 @@ import {
 import {
   PER_EVENT_BLOCK_CAP,
 } from '../lib/core/storyline';
-import { BRIEF_CLUSTERING_OPTIONS } from '../lib/core/constants';
+import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../lib/core/constants';
 import { createWorkflowObservability } from '../lib/observability';
 import { createMLService, type ClusteringResult } from '../lib/services/ml-service';
 import { createAIServices } from '../lib/services/ai-services';
@@ -281,10 +281,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       dateFrom, 
       dateTo, 
       
-      articleLimit = 30, // 降低默认限制以避免SQLITE_TOOBIG错误
-      timeRangeDays = 2,
+      // 调用方没传的参数一律回落到 CRON_BRIEF_PARAMS（单一真源，理由见 constants.ts）。
+      // 此前这里是另一套 30 篇 / 2 天，外加取数处 `|| 100` 兜底，三处默认值各不相同。
+      articleLimit = CRON_BRIEF_PARAMS.ARTICLE_LIMIT,
+      timeRangeDays = CRON_BRIEF_PARAMS.TIME_RANGE_DAYS,
       clusteringOptions,
-      maxStoriesToGenerate = 25
+      maxStoriesToGenerate = CRON_BRIEF_PARAMS.MAX_STORIES_TO_GENERATE
     } = event.payload;
 
     // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
@@ -327,7 +329,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         dateFrom,
         dateTo,
         timeRangeDays,
-        limit: articleLimit || 100,
+        limit: articleLimit,
       };
       
       // 补算缺失 embedding（成本优化 2026-07-08）：进稿侧不再逐篇实时算——那会让 ml-service

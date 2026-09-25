@@ -12,7 +12,7 @@ export type RunWindow = {
   dateFrom?: string | Date;
   dateTo?: string | Date;
   timeRangeDays?: number;
-  /** 已含 `|| 100` 兜底 */
+  /** 取数上限；调用方未传时 workflow 已回落到 CRON_BRIEF_PARAMS.ARTICLE_LIMIT */
   limit: number;
 };
 

@@ -40,4 +40,17 @@ describe('saveBriefReport', () => {
     const rows = await db.select().from($reports).where(eq($reports.title, title));
     expect(rows).toEqual([]);
   });
+
+  it('step 在事务提交后重试：不再插第二条 report，返回已关联的那条', async () => {
+    const wf = uniq('wf-retry');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const title = uniq('retry');
+
+    const first = await saveBriefReport(db, wf, report(title));
+    const second = await saveBriefReport(db, wf, report(title));
+
+    expect(second).toBe(first);
+    const rows = await db.select().from($reports).where(eq($reports.title, title));
+    expect(rows.map((r) => r.id)).toEqual([first]);
+  });
 });

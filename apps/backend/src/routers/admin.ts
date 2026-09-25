@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { createSource, updateSource } from '../lib/sources';
+import { getSourceDetails, getSourcesOverview } from '../lib/reader/source-stats';
+import { getDb } from '../lib/database';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
   createSuccessResponse, 
@@ -42,6 +44,17 @@ const briefGenerateSchema = z.object({
 const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
 
 // ========== RSS源管理 ==========
+// 后台源页面的读数（总览、单个源的文章列表）在 lib/reader/source-stats.ts，前端只转发
+app.get('/sources', async (c) => {
+  return c.json(await getSourcesOverview(getDb(c.env.HYPERDRIVE)));
+});
+
+app.get('/sources/:id/details', zValidator('param', idParamSchema), async (c) => {
+  const details = await getSourceDetails(getDb(c.env.HYPERDRIVE), c.req.valid('param').id, c.req.query());
+  if (details === null) return c.json({ error: 'Source not found' }, 404);
+  return c.json(details);
+});
+
 // 写表与 DO 启停都在 lib/sources.ts：建源即拉起 DO，改 url / 档位时 DO 跟着变
 app.post('/sources', zValidator('json', sourceCreateSchema), async (c) => {
   const result = await createSource(c.env, c.req.valid('json'));

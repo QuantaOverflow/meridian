@@ -39,9 +39,16 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 
 - `lib/cluster-blocks.spec.ts`：`planBlocksFromJudgements` / `assembleBlocks` 的行为（判定失败不丢块、NO_EVENT 只标记、30 篇上限、跨簇同名合并等）
 
-### 数据库（`lib/source-pause.spec.ts`、`lib/save-brief-report.spec.ts`）
+### 读者视图快照（`lib/reader.spec.ts`）
 
-源暂停/恢复的测试走真实路由 + 真实 DO + **本机** Postgres 测试库（测试会清空 `sources`，非 localhost 的地址直接拒绝）。
+`/reader/*` 与 `GET /admin/sources*` 的响应快照：灌 `fixtures/reader/fixture.ts` 的固定数据，响应存成
+`fixtures/reader/__golden__/*.golden`（首行是状态码与请求路径）。这些文件同时是前端 e2e 里假 backend 回放的响应，
+前端再与改动前的 `/api/*` 快照逐字节比对——两段接起来即端到端不变。日期换成相对「数据库今天」的记号（`fixtures/reader/dates.ts`）。
+行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再跑前端测试确认 `/api/*` 的变化是预期的。
+
+### 数据库（`lib/source-pause.spec.ts`、`lib/sources.spec.ts`、`lib/save-brief-report.spec.ts`、`lib/reader.spec.ts`）
+
+这几个测试走真实路由 + 真实 DO + **本机** Postgres 测试库（测试会清空 `sources`，非 localhost 的地址直接拒绝）。
 没设 `BACKEND_TEST_DATABASE_URL` 时该文件直接报错，不静默跳过。一次性准备：
 
 ```bash

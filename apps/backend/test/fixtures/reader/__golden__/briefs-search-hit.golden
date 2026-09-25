@@ -1,0 +1,2 @@
+{"status":200,"path":"/reader/briefs?q=ukraine&limit=20&offset=0"}
+{"items":[{"id":2,"createdAt":"{D-20}T12:00:00.000Z","title":"ukraine、sanctions","tldrProse":"Talks **stalled** as *sanctions* widened and `tariffs` rose.","storyCount":1,"wordCount":40},{"id":1,"createdAt":"{D-25}T12:00:00.000Z","title":"ukraine, energy prices","tldrProse":null,"storyCount":2,"wordCount":23}],"matched":2,"total":8,"earliest":"{D-25}T12:00:00.000Z"}

@@ -1,0 +1,2 @@
+{"status":200,"path":"/admin/sources/3/details"}
+{"name":"Gamma Daily","url":"https://feeds.example.com/gamma.xml","initialized":false,"pausedAt":"{D-3}T12:00:00.000Z","frequency":"Daily","articles":[],"pagination":{"totalPages":0,"totalItems":0}}

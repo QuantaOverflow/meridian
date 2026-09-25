@@ -3,6 +3,7 @@ import durableObjectsRouter from './routers/durableObjects.router';
 import eventsRouter from './routers/events.router'; // 导入新的路由
 import adminRouter from './routers/admin'; // 导入admin路由
 import observabilityRouter from './routers/observability'; // 导入可观测性路由
+import readerRouter from './routers/reader.router';
 import { Env } from './index';
 import { hasValidAuthToken } from './lib/core/utils';
 import { Hono } from 'hono';
@@ -51,6 +52,12 @@ const app = new Hono<HonoEnv>()
     await next();
   })
   .route('/observability', observabilityRouter) // 添加可观测性路由
+  // /reader/* 是前端读者页的数据源（简报、线索），只有前端 server 带 token 来取，同样挡在挂载处
+  .use('/reader/*', async (c, next) => {
+    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
+  .route('/reader', readerRouter)
   .get('/ping', async c => c.json({ pong: true }));
 
 export default app;

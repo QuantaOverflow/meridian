@@ -1,0 +1,2 @@
+{"status":200,"path":"/reader/briefs?q=100%25&limit=20&offset=0"}
+{"items":[{"id":3,"createdAt":"{D-6}T12:00:00.000Z","title":"gaza, markets, ai, elections, fires, rates, extra topic","tldrProse":"A quiet day. Markets beat 100% of the forecast.","storyCount":4,"wordCount":42}],"matched":1,"total":8,"earliest":"{D-25}T12:00:00.000Z"}

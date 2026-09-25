@@ -1,0 +1,2 @@
+{"status":200,"path":"/reader/stories/4"}
+{"id":4,"title":"Ukraine — sanctions widen","status":"dormant","escalating":false,"summary":"","durationDays":6,"briefCount":2,"entryCount":2,"daysSinceUpdate":20,"firstSeenAt":"{D-25}T12:00:00.000Z","lastSeenAt":"{D-20}T12:00:00.000Z","entries":[{"id":3,"createdAt":"{D-20}T12:00:00.000Z","title":"Ukraine — sanctions widen","description":"","reportId":2,"disputed":false},{"id":1,"createdAt":"{D-25}T12:00:00.000Z","title":"Ukraine — peace talks","description":"","reportId":1,"disputed":false}]}

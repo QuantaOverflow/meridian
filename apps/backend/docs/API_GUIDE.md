@@ -5,7 +5,7 @@
 
 - 本地：`http://localhost:8787`；生产：`https://meridian-backend.swj299792458.workers.dev`
 - 鉴权：`Authorization: Bearer <API_TOKEN>`（`src/lib/core/utils.ts` 的 `hasValidAuthToken`；`API_TOKEN` 未配置时一律拒绝）
-- `/admin/*` 的成功/失败响应形如 `{ success, data?, message?, error?, timestamp }`（`src/lib/api/utils.ts`）；其余路由各自返回
+- `/admin/*` 的写操作响应形如 `{ success, data?, message?, error?, timestamp }`（`src/lib/api/utils.ts`）；`/reader/*` 与 `GET /admin/sources*` 直接回数据、404 回 `{ error }`；其余路由各自返回
 
 ## 路由表
 
@@ -15,6 +15,11 @@
 | `GET /openGraph/default` | 无 | 默认 OG 图（PNG） |
 | `GET /openGraph/brief?title&date&articles&sources` | 无 | 简报 OG 图；`date` 是毫秒时间戳 |
 | `GET /events?date&pagination&page&limit` | 需要 | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
+| `GET /reader/briefs?q&limit&offset` | token | 简报归档：`q` ILIKE 子串检索（≤200 字），`limit` 1–50 默认 20，`offset` ≥0。回 `{items, matched, total, earliest}`（前端 `/api/briefs` 的数据源，下同） |
+| `GET /reader/briefs/latest`、`GET /reader/briefs/:id` | token | 一期简报：正文 markdown 原文 + 简报级来源清单；不存在回 404 |
+| `GET /reader/stories`、`GET /reader/stories/:id` | token | 跨期线索列表 / 单条（含各期条目）；状态与「升级中」在这里判定，不到门槛的簇回 404 |
+| `GET /admin/sources` | token | 后台源总览：每个源近 7 天的文章数与健康度、全局的今日计数与过期源数 |
+| `GET /admin/sources/:id/details?page&status&completeness&quality&sortBy&sortOrder` | token | 单个源的文章列表，每页 50；不认识的筛选值等于不筛选；源不存在回 404 |
 | `POST /admin/sources` | token | 新建 RSS 源：`{url, name?, category?, scrape_frequency?}`（默认 `Unknown` / `news` / 2）；URL 重复回 409。插入后立即启动该源的 DO，启动失败则撤销插入、回 500 |
 | `PUT /admin/sources/:id` | token | 部分更新同上字段；改 url 会停掉旧 url 的 DO、按新 url 启动，改档位会重新初始化 DO（暂停中的源只改表） |
 | `POST /admin/briefs/generate` | token | 启动 `AutoBriefGenerationWorkflow`，回 202 + `workflowId`；空体也要传 `{}`。可选字段见下 |
@@ -32,7 +37,7 @@
 | `GET /observability/trends?days=14` | token | 按天的运行 / 故事趋势，`days` 1–90 |
 | `GET /observability/health/summary` | token | 当日运行状态、文章数、最后一次成功简报 |
 
-`/admin/*`、`/observability/*`、`/do/*`、`/events` 的鉴权都挂在 `app.ts` 的挂载处（2026-09-24 起；此前
+`/admin/*`、`/reader/*`、`/observability/*`、`/do/*`、`/events` 的鉴权都挂在 `app.ts` 的挂载处（2026-09-24 起；此前
 `/do/source/*` 无鉴权、`/events` 的中间件挂错了对象从未生效）。只有 `/openGraph/*`、`/ping` 公开。
 
 ## `POST /admin/briefs/generate` 的可选字段

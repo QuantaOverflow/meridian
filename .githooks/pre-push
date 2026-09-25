@@ -1,0 +1,17 @@
+#!/bin/sh
+# push 前的质量门：任何一项非 0 就拦下这次 push。
+# 由根 package.json 的 prepare 脚本在 pnpm install 时启用（git config core.hooksPath .githooks）。
+# 紧急情况绕过：git push --no-verify（绕过要在 commit/PR 里说明原因）。
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+echo "▶ pre-push 1/3 typecheck（rules 路径校验 + 各包 tsc）"
+pnpm -s typecheck
+
+echo "▶ pre-push 2/3 knip（没人用的文件 / export / 依赖）"
+pnpm -s exec knip --no-progress
+
+echo "▶ pre-push 3/3 ruff（ml-service：未定义名、未用 import/变量）"
+(cd services/meridian-ml-service && uv run --frozen ruff check src test)
+
+echo "✓ pre-push 全部通过"

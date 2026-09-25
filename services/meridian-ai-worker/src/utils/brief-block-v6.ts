@@ -50,7 +50,7 @@ export interface V6Sentence {
 }
 
 /** 窗口字符预算（原型 DIRECT_RAW_WINDOW_CHARS 默认值）。 */
-export const WINDOW_CHARS = 30_000;
+const WINDOW_CHARS = 30_000;
 /** 相邻窗口按文章重叠几篇（原型 DIRECT_RAW_OVERLAP_ARTICLES 默认值）。 */
 const OVERLAP_ARTICLES = 1;
 /** 窗口步每条重点的出处上限。REPAIR_FULL=false 这条路径下推导值是 4。 */

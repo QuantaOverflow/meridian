@@ -20,12 +20,11 @@
         "src/server/**/*.ts"
       ],
       "project": ["src/**/*.{ts,vue}"],
-      "ignoreDependencies": ["@unhead/vue", "vue-router", "vue-tsc", "wrangler"]
+      "ignoreDependencies": ["vue-tsc", "wrangler"]
     },
 
     "services/meridian-ai-worker": {
-      "project": ["src/**/*.ts"],
-      "ignoreBinaries": ["jq"]
+      "project": ["src/**/*.ts"]
     },
 
     "packages/database": {

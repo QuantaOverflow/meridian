@@ -29,7 +29,11 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "ruff>=0.16",   # 由 .githooks/pre-push 运行（只查 F 类：未定义名、未用 import/变量）
 ]
+
+[tool.ruff.lint]
+select = ["F"]
 
 # torch 只从 PyTorch 的 CPU 源取：PyPI 上的 Linux 版带 CUDA（连带 30+ 个 nvidia 包、数 GB），
 # 容器里用不上。lock 与 Dockerfile 都按这里解析，镜像依赖由 uv.lock 锁定。

@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import threading
 from functools import lru_cache
-from typing import Any, List
+from typing import TYPE_CHECKING, Any, List
 import numpy as np
 from tqdm import tqdm
 
 from .config import settings
+
+if TYPE_CHECKING:  # 只给标注用；运行时 torch 在函数体内懒 import
+    import torch
 
 # 类型别名（torch.device 退化成 Any：这是赋值非标注，__future__ 不惰性化它，
 # 必须避免模块级引用 torch，否则照样触发 eager import）
@@ -63,7 +66,7 @@ def _load_embedding_model() -> ModelComponents:
         
     except Exception as e:
         print(f"错误: 模型加载失败: {e}")
-        print(f"请确保模型已下载到缓存目录")
+        print("请确保模型已下载到缓存目录")
         # 打印调试信息
         import os
         print(f"环境变量 HF_HOME: {os.getenv('HF_HOME', 'Not set')}")

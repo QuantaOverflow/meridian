@@ -195,6 +195,18 @@ export class SourceScraperDO extends DurableObject<Env> {
       }
 
       const { sourceId, url, scrapeFrequencyTier } = validatedState.data;
+
+      // 源已从库里删掉（destroy 修好之前删的源，DO 还在按周期跑）：自行停掉，不再抓
+      const sourceRow = await getDb(this.env.HYPERDRIVE).query.$sources.findFirst({
+        where: (s, { eq }) => eq(s.id, sourceId),
+        columns: { id: true },
+      });
+      if (!sourceRow) {
+        alarmLogger.warn('Source no longer exists in DB, stopping this DO', { source_id: sourceId });
+        await this.destroy();
+        return;
+      }
+
       const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
       const now = Date.now();
 
@@ -412,9 +424,12 @@ export class SourceScraperDO extends DurableObject<Env> {
   }
 
   /**
-   * Cleanup method called when the DO is being destroyed
+   * 删源时调用：取消 alarm 并清空 storage。只打日志不清的话，alarm 会按周期继续抓这个
+   * 已删的源，每次插文章都撞外键。
    */
   async destroy() {
-    this.logger.info('DO being destroyed');
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+    this.logger.info('DO destroyed: alarm cancelled, storage cleared');
   }
 }

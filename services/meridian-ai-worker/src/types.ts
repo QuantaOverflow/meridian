@@ -57,5 +57,15 @@ export interface ChatResponse extends BaseAIResponse {
 
 export type AIResponse = ChatResponse
 
-// Cloudflare Workers environment with string index signature
-export interface CloudflareEnv extends Record<string, string | undefined> {}
+// ai-worker 的全部 binding（wrangler.toml）。没有字符串 vars，也没有 secret。
+// 用 type 而不是 interface：hono 的 Bindings 约束带索引签名，只有类型字面量能隐式满足它
+// （interface 不会被推出索引签名），这样不必在这里写 `[k: string]: …` 把任意键放回来。
+export type CloudflareEnv = {
+  /** Workers AI binding：唯一的模型通道 */
+  AI: Ai
+  /**
+   * 生产桶，只写 LLM 调用日志（llm-calls/）与传感器读数（observability/sensors/）。
+   * 可选：没有这个 binding 时（本地/单测）两处写入都跳过。
+   */
+  ARTICLES_BUCKET?: R2Bucket
+}

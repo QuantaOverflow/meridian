@@ -78,7 +78,7 @@ export async function loggedChat(
       startedAt,
       latencyMs,
     })
-    const bucket = (env as any).ARTICLES_BUCKET as R2Bucket | undefined
+    const bucket = env.ARTICLES_BUCKET
     if (trace.traceId && bucket) {
       const idx = trace.callIndex ?? 0
       const key = llmCallKey(trace.traceId, phase, idx)

@@ -26,9 +26,7 @@ import {
 } from '@meridian/contracts'
 
 type HonoEnv = {
-  Bindings: CloudflareEnv & {
-    AI: Ai
-  }
+  Bindings: CloudflareEnv
 }
 
 const app = new Hono<HonoEnv>()

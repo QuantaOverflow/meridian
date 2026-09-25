@@ -26,7 +26,7 @@ export async function recordSensor(
   payload: Record<string, unknown>,
   idx = 0
 ): Promise<void> {
-  const bucket = (env as any).ARTICLES_BUCKET as R2Bucket | undefined;
+  const bucket = env.ARTICLES_BUCKET;
   if (!trace?.traceId || !bucket) return;
   const key = sensorKey(trace.traceId, kind, idx);
   try {

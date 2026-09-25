@@ -24,6 +24,7 @@
 - 代价：改一处要读全文；难以单测单步逻辑。
 - 选项：a) 只把 step 内的纯函数抽到 `lib/core/`，编排留原地；b) 维持现状。
 - 待裁决：是否值得拆；若拆，是否只做 a。
+- 裁决（2026-09-26）：选 a，已做。一期的输入（时间窗、取正文、质量门、同源去重、embeddings 读回）→ `lib/core/run-corpus.ts`；候选故事的下标、选中、分层、出块与文章去向 → `lib/core/story-ledger.ts`（一个 storyId 贯穿全程，`any` 24→1）；保存简报 → `lib/save-brief-report.ts`（与 `brief_runs.report_id` 同事务、重试幂等）。step 名与边界不变，replay 零差异。文件 2053 → 1685 行，剩下的是编排与观测。
 
 ### D2. frontend 直连数据库、原生 SQL 绕过类型
 - 位置：`apps/frontend/src/server/**`，19 处 `` sql` `` 原生 SQL，join `brief_stories` / `story_clusters` / `reports`；连接走 `NUXT_DATABASE_URL`，不经 Hyperdrive，也不经 backend 的 `/reports`（该路由已于 2026-09-24 删除，选 b 需新建接口）。

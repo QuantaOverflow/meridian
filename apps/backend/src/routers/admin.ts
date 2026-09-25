@@ -25,7 +25,8 @@ const sourceCreateSchema = z.object({
   name: z.string().min(1),
   url: z.string().min(1),
   category: z.string().min(1), // DB 列为 notNull,必填(原 `category || null` 是潜在 bug,会向 notNull 列插 null)
-  scrape_frequency: z.number().int().positive().optional(),
+  // 抓取档位 1-4（sourceScraperDO 的 tierIntervals）；超出范围 DO 会回落到 2，库里却留着非法值
+  scrape_frequency: z.number().int().min(1).max(4).optional(),
 });
 const sourceUpdateSchema = sourceCreateSchema.partial();
 const idParamSchema = z.object({ id: z.coerce.number().int() });
@@ -64,7 +65,7 @@ app.post('/sources', zValidator('json', sourceCreateSchema), async (c) => {
       name,
       url,
       category,
-      scrape_frequency: scrape_frequency || 60,
+      scrape_frequency: scrape_frequency ?? 2, // 与 schema.ts 的列默认值一致
     }).returning();
 
     routeLogger.info('RSS源创建成功');

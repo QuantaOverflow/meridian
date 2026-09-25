@@ -81,7 +81,6 @@ export default defineNuxtConfig({
   // In production, these are set via the environment variables
   // NUXT_+{key}
   runtimeConfig: {
-    database: { url: process.env.DATABASE_URL, }, // NUXT_DATABASE_URL
     admin: { username: process.env.ADMIN_USERNAME || 'admin', password: process.env.ADMIN_PASSWORD || 'changeme' }, // NUXT_ADMIN_USERNAME, NUXT_ADMIN_PASSWORD
     worker: { api_token: process.env.WORKER_API_TOKEN || 'localtest' }, // NUXT_WORKER_API_TOKEN
     session: { password: process.env.SESSION_PASSWORD || 'dev_only_session_password_change_me' }, // NUXT_SESSION_PASSWORD

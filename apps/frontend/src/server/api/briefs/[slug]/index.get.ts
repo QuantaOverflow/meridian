@@ -12,10 +12,5 @@ export default defineEventHandler(async (event): Promise<BriefDetail> => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid slug' });
   }
 
-  const brief = await loadBriefDetail(event, { kind: 'id', id: Number(slug) });
-  if (brief === null) {
-    throw createError({ statusCode: 404, statusMessage: 'Report not found' });
-  }
-
-  return brief;
+  return await loadBriefDetail({ kind: 'id', id: Number(slug) }, 'Report not found');
 });

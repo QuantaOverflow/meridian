@@ -11,8 +11,10 @@ pages_build_output_dir = "apps/frontend/dist"
 NUXT_PUBLIC_WORKER_API = "https://meridian-backend.swj299792458.workers.dev"
 
 # 密钥不入库。生产值用 Pages secret 设置；本地放 apps/frontend/.env（已 gitignored）：
-# 运行时只认 NUXT_ 前缀（nuxt.config 里的 process.env.X 只在构建时读）：
-#   wrangler pages secret put NUXT_DATABASE_URL
+# 运行时只认 NUXT_ 前缀（nuxt.config 里的 process.env.X 只在构建时读）。
+# 前端不再连数据库（数据都经 backend），不再需要 NUXT_DATABASE_URL；新版前端部署后可删掉该 Pages secret：
+#   wrangler pages secret delete NUXT_DATABASE_URL
+# 仍需要的：
 #   wrangler pages secret put NUXT_SESSION_PASSWORD
 #   wrangler pages secret put NUXT_WORKER_API_TOKEN
 #   wrangler pages secret put NUXT_ADMIN_USERNAME

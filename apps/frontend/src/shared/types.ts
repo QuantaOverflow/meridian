@@ -1,5 +1,5 @@
 import type { BriefSection } from '~/server/lib/briefContent';
-import type { BriefSource } from '~/server/lib/briefSources';
+import type { BriefSource } from '~/server/lib/backend';
 
 /** 一期简报的完整读者视图，由 /api/briefs/:slug 返回 */
 export interface BriefDetail {

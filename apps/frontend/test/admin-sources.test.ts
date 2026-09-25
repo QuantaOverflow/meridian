@@ -1,41 +1,106 @@
 /**
  * 后台「源」管理的端到端测试：真实构建并启动 Nuxt 服务（node-server preset），
- * 数据库用本机测试库，backend 用本文件起的受控 HTTP 服务假冒。
- *
- * 需要 FRONTEND_TEST_DATABASE_URL 指向一个已迁移到最新的**本机**库（见 README「测试」）。
+ * backend 用本文件起的受控 HTTP 服务假冒。前端不连数据库，页面读到的源列表 / 详情也来自这个假 backend。
  */
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { $sources, eq, getDb, sql } from '@meridian/database';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { $fetch, createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
 
-const DB = process.env.FRONTEND_TEST_DATABASE_URL;
-if (!DB) throw new Error('缺 FRONTEND_TEST_DATABASE_URL（本机测试库，见 apps/frontend/README.md「测试」）');
-// 测试会 TRUNCATE sources：只许连本机库，防止误指到生产
-if (!/@(localhost|127\.0\.0\.1)[:/]/.test(DB)) throw new Error(`FRONTEND_TEST_DATABASE_URL 必须是本机库，拒绝: ${DB.replace(/:[^:@]*@/, ':***@')}`);
-
-const db = getDb(DB, { max: 1 });
-
-// ── 假 backend：状态码由测试控制，记录收到的请求 ──────────────────────────
-// 建源成功时替 backend 把行写进测试库（真 backend 就是这么做的），页面列表才读得到
+// ── 假 backend ─────────────────────────────────────────────────────────
+// 读（GET /admin/sources、/admin/sources/:id/details）按内存里的源列表回答；
+// 写（其余方法）的状态码由测试控制、记录请求，建源成功时把源加进列表（真 backend 就是这么做的），页面列表才读得到
+interface FakeSource {
+  id: number;
+  url: string;
+  name: string;
+  pausedAt: string | null;
+}
+let sources: FakeSource[] = [];
 let backendStatus = 200;
 const backendHits: string[] = [];
 const backendBodies: unknown[] = [];
+
+function sourceStats(s: FakeSource) {
+  return {
+    id: s.id,
+    name: s.name,
+    url: s.url,
+    category: 'news',
+    paywall: false,
+    frequency: '4 Hours',
+    totalArticles: 0,
+    avgPerDay: 0,
+    processSuccessRate: null,
+    errorRate: null,
+    lowQualityRate: null,
+  };
+}
+
+function readReply(path: string): { status: number; body: unknown } {
+  if (path === '/admin/sources') {
+    return {
+      status: 200,
+      body: {
+        overview: {
+          lastSourceCheck: null,
+          lastArticleProcessed: null,
+          lastArticleFetched: null,
+          articlesProcessedToday: 0,
+          articlesFetchedToday: 0,
+          errorsToday: 0,
+          staleSourcesCount: 0,
+          totalSourcesCount: sources.length,
+        },
+        sources: sources.map(sourceStats),
+      },
+    };
+  }
+  const details = path.match(/^\/admin\/sources\/(\d+)\/details(\?|$)/);
+  const source = details && sources.find(s => s.id === Number(details[1]));
+  if (source) {
+    return {
+      status: 200,
+      body: {
+        name: source.name,
+        url: source.url,
+        initialized: true,
+        pausedAt: source.pausedAt,
+        frequency: '4 Hours',
+        articles: [],
+        pagination: { totalPages: 0, totalItems: 0 },
+      },
+    };
+  }
+  return { status: 404, body: { error: 'Source not found' } };
+}
+
 const backend = http.createServer(async (req, res) => {
+  res.setHeader('content-type', 'application/json');
+  if (req.headers.authorization !== 'Bearer test-token') {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: 'Unauthorized' }));
+    return;
+  }
+  if (req.method === 'GET') {
+    const reply = readReply(req.url ?? '');
+    res.statusCode = reply.status;
+    res.end(JSON.stringify(reply.body));
+    return;
+  }
   backendHits.push(`${req.method} ${req.url}`);
   let raw = '';
   for await (const chunk of req) raw += chunk;
   const body = raw ? JSON.parse(raw) : undefined;
   backendBodies.push(body);
-  res.setHeader('content-type', 'application/json');
   if (backendStatus >= 400) {
     res.statusCode = backendStatus;
     res.end(JSON.stringify({ success: false, error: `backend says ${backendStatus}` }));
     return;
   }
   if (req.method === 'POST' && req.url === '/admin/sources') {
-    const [row] = await db.insert($sources).values({ url: body.url, name: 'Unknown', category: 'news' }).returning();
+    const row = { id: Math.max(0, ...sources.map(s => s.id)) + 1, url: body.url, name: 'Unknown', pausedAt: null };
+    sources.push(row);
     res.statusCode = 201;
     res.end(JSON.stringify({ success: true, data: row }));
     return;
@@ -54,7 +119,6 @@ await setup({
   browser: true,
   nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
-    NUXT_DATABASE_URL: DB,
     NUXT_PUBLIC_WORKER_API: backendUrl,
     NUXT_WORKER_API_TOKEN: 'test-token',
     NUXT_ADMIN_USERNAME: ADMIN.username,
@@ -67,14 +131,9 @@ afterAll(() => {
   backend.close();
 });
 
-let sourceId: number;
-beforeEach(async () => {
-  await db.execute(sql`truncate sources restart identity cascade`);
-  const [row] = await db
-    .insert($sources)
-    .values({ url: EXISTING_URL, name: 'Example', category: 'news', scrape_frequency: 2 })
-    .returning({ id: $sources.id });
-  sourceId = row.id;
+const sourceId = 1;
+beforeEach(() => {
+  sources = [{ id: sourceId, url: EXISTING_URL, name: 'Example', pausedAt: null }];
   backendStatus = 200;
   backendHits.length = 0;
   backendBodies.length = 0;
@@ -196,7 +255,7 @@ describe('DELETE /api/admin/sources/:id', () => {
     expect(res.status).toBe(409);
   });
 
-  it('不预读库：源是否存在由 backend 判定（404 原样透传）', async () => {
+  it('源是否存在由 backend 判定（404 原样透传）', async () => {
     backendStatus = 404;
     const cookie = await loginCookie();
     const res = await fetch('/api/admin/sources/999999', { method: 'DELETE', headers: { cookie } });
@@ -215,7 +274,7 @@ describe('暂停 / 恢复自动抓取：接口', () => {
       expect(res.status).toBeGreaterThanOrEqual(500);
     });
 
-    it(`${action}：不预读库，源不存在由 backend 回 404 并原样透传`, async () => {
+    it(`${action}：源不存在由 backend 回 404 并原样透传`, async () => {
       backendStatus = 404;
       const cookie = await loginCookie();
       const res = await fetch(`/api/admin/sources/999999/${action}`, { method: 'POST', headers: { cookie } });
@@ -255,7 +314,7 @@ describe('源详情页：暂停状态与按钮', () => {
 
   it('已暂停的源：显示已暂停，只给「恢复」，不给「Init DOs」；点恢复会调 backend', async () => {
     backendStatus = 200;
-    await db.update($sources).set({ paused_at: new Date('2026-09-26T00:00:00Z') }).where(eq($sources.id, sourceId));
+    sources[0].pausedAt = '2026-09-26T00:00:00.000Z';
     const { page, dialogs } = await feedPage();
 
     expect(await page.locator('text=Paused since').count()).toBe(1);

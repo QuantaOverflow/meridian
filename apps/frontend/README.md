@@ -14,10 +14,14 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 
 ## 数据从哪来（`src/server/`）
 
-- 读者端 API（`server/api/briefs/*`、`server/api/stories/*`）经 `@meridian/database` **直连 Postgres** 读取，不经过 backend。
-- 后台 API（`server/api/admin/*`）需要登录会话；增、查源直接写库，初始化 / 删除源的 DO 转发到 backend 的
-  `/do/admin/source/:id/init`、`DELETE /do/admin/source/:id`（带 `NUXT_WORKER_API_TOKEN`）。
-  新增源时**不会**自动初始化 DO，要在源详情页手动初始化。
+前端**不连数据库**，所有数据都经 backend（`NUXT_PUBLIC_WORKER_API`，带 `NUXT_WORKER_API_TOKEN`）：
+
+- 读者端 API（`server/api/briefs/*`、`server/api/stories/*`）从 backend 的 `/reader/*` 取数（`server/lib/backend.ts`），
+  这里只做展示：正文 markdown 解析成板块 / 条目（`server/lib/briefContent.ts`）、中文日期、「N 天前更新」文案。
+  查询、线索状态与升级判定在 backend 的 `src/lib/reader/`。
+- 后台 API（`server/api/admin/*`）需要登录会话；源总览与详情转发 backend 的 `GET /admin/sources*`，
+  建源、暂停 / 恢复、删源、初始化 DO 转发到 backend 的 `/admin/sources`、`/do/admin/source/:id/*`（`server/lib/sourceActions.ts`）。
+- backend 回 404 时前端回 404，其余失败回 502。
 
 ## 环境变量
 
@@ -25,7 +29,6 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 
 | 名称 | 用途 |
 |---|---|
-| `NUXT_DATABASE_URL` | Postgres 连接串 |
 | `NUXT_PUBLIC_WORKER_API` | backend 地址，默认 `http://localhost:8787` |
 | `NUXT_WORKER_API_TOKEN` | 调 backend 的 Bearer token，等于 backend 的 `API_TOKEN` |
 | `NUXT_ADMIN_USERNAME`、`NUXT_ADMIN_PASSWORD` | 后台登录账号 |
@@ -45,20 +48,17 @@ pnpm -F @meridian/frontend typecheck   # nuxt typecheck
 ## 测试
 
 端到端测试（`test/*.test.ts`）：`@nuxt/test-utils` 真实构建并启动服务（测试里改用 `node-server` preset），
-Playwright 驱动浏览器，backend 由测试自己起的 HTTP 服务假冒，数据库用**本机**测试库（测试会清空 `sources`，
-非 localhost 的地址直接拒绝）。只测逻辑与交互；Workers（workerd）才有的问题测不到。
+Playwright 驱动浏览器，backend 由测试自己起的 HTTP 服务假冒。**不需要数据库**。只测逻辑与交互；Workers（workerd）才有的问题测不到。
 
-一次性准备测试库（本机 Postgres，需 pgvector；不要先手动建 `vector` 扩展，第一个 migration 会建）：
-
-```bash
-createdb meridian_frontend_test
-DATABASE_URL=postgresql://<user>:<pw>@localhost:5432/meridian_frontend_test pnpm -F @meridian/database migrate
-```
+- `reader-api-golden.test.ts`：读接口的响应快照。假 backend 回放 backend 自己的快照（`apps/backend/test/fixtures/reader/__golden__/`，
+  由 backend 的 `test/lib/reader.spec.ts` 生成），前端 `/api/*` 的输出与 `test/__golden__/reader-api/` 逐字节比对
+  （后者录于前端还直连数据库时，是「搬到 backend 前后不变」的基准）。backend 快照变了，先确认是有意的，再看这里是否跟着变。
+- `admin-sources.test.ts`：后台源管理的转发与页面交互。
 
 运行（每个文件先构建一次，约一分钟）：
 
 ```bash
-FRONTEND_TEST_DATABASE_URL=postgresql://<user>:<pw>@localhost:5432/meridian_frontend_test pnpm -F @meridian/frontend test
+pnpm -F @meridian/frontend test
 ```
 
-改了 schema 之后要对测试库重跑 migrate。浏览器用 `playwright-core` 1.53.2 对应的 Chromium（本机缓存 `~/Library/Caches/ms-playwright/chromium-1179`；新机器 `npx playwright-core@1.53.2 install chromium`）。
+浏览器用 `playwright-core` 1.53.2 对应的 Chromium（本机缓存 `~/Library/Caches/ms-playwright/chromium-1179`；新机器 `npx playwright-core@1.53.2 install chromium`）。

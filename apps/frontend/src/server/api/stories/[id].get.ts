@@ -7,10 +7,5 @@ export default defineEventHandler(async (event): Promise<StoryThreadDetail> => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid story id' });
   }
 
-  const thread = await getStoryThread(event, id);
-  if (thread === null) {
-    throw createError({ statusCode: 404, statusMessage: 'Story thread not found' });
-  }
-
-  return thread;
+  return await getStoryThread(id);
 });

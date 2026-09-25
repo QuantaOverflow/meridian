@@ -30,6 +30,8 @@
 - 代价：表结构事实上成为对外 API；改列名时 typecheck（项目唯一验收门）抓不住原生 SQL。
 - 选项：a) 改用 drizzle 查询构造器，让改列名能被 typecheck 捕获；b) 走 backend API；c) 接受，改 schema 时人工 grep frontend。
 - 待裁决：选哪条。
+- 裁决（2026-09-26）：选 b，已解决。读者页与后台源页面的查询搬到 backend 的 `apps/backend/src/lib/reader/`（`/reader/*`、`GET /admin/sources*`），
+  CTE / LATERAL 仍是原生 SQL，但表名列名走 drizzle 的表 / 列对象，改列名 typecheck 能拦住；前端去掉 `@meridian/database` 依赖与 `NUXT_DATABASE_URL`。
 
 ### D3. backend → ML 服务走公网 URL
 - 位置：`MERIDIAN_ML_SERVICE_URL = https://meridian-ml-service.swj299792458.workers.dev`（`apps/backend/wrangler.jsonc`），调用见 `lib/services/ai-services.ts`、`lib/services/clustering.ts`。

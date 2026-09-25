@@ -1,14 +1,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { getDb } from '../lib/database';
-import { $sources, eq } from '@meridian/database';
+import { createSource, updateSource } from '../lib/sources';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
   createSuccessResponse, 
   createErrorResponse, 
   handleDatabaseError,
-  checkResourceExists,
   validateDateRange
 } from '../lib/api/utils';
 import { Logger } from '../lib/core/logger';
@@ -21,12 +19,13 @@ const logger = new Logger({ router: 'admin' });
 // ===== 入参校验 schema =====
 // 与其余 backend 路由(do/events/...)一致,用 zValidator 在边界挡畸形输入,
 // 避免畸形 payload 潜入下游变成隐晦崩溃。可选字段保持 optional,默认值仍由各 handler 兜底。
+// name / category 缺省由 lib/sources.ts 兜底（'Unknown' / 'news'）：后台前端只传 url
 const sourceCreateSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).optional(),
   url: z.string().min(1),
-  category: z.string().min(1), // DB 列为 notNull,必填(原 `category || null` 是潜在 bug,会向 notNull 列插 null)
+  category: z.string().min(1).optional(),
   // 抓取档位 1-4（sourceScraperDO 的 tierIntervals）；超出范围 DO 会回落到 2，库里却留着非法值
-  scrape_frequency: z.number().int().min(1).max(4).optional(),
+  scrape_frequency: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
 });
 const sourceUpdateSchema = sourceCreateSchema.partial();
 const idParamSchema = z.object({ id: z.coerce.number().int() });
@@ -43,75 +42,19 @@ const briefGenerateSchema = z.object({
 const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
 
 // ========== RSS源管理 ==========
+// 写表与 DO 启停都在 lib/sources.ts：建源即拉起 DO，改 url / 档位时 DO 跟着变
 app.post('/sources', zValidator('json', sourceCreateSchema), async (c) => {
-  try {
-    const { name, url, category, scrape_frequency } = c.req.valid('json');
-
-    const db = getDb(c.env.HYPERDRIVE);
-    const routeLogger = logger.child({ operation: 'create-source', url });
-
-    // 检查URL是否已存在
-    const { exists } = await checkResourceExists(
-      () => db.query.$sources.findFirst({ where: eq($sources.url, url) }),
-      'Source with URL',
-      routeLogger
-    );
-
-    if (exists) {
-      return c.json(createErrorResponse('该URL已存在'), 409 as any);
-    }
-
-    const newSource = await db.insert($sources).values({
-      name,
-      url,
-      category,
-      scrape_frequency: scrape_frequency ?? 2, // 与 schema.ts 的列默认值一致
-    }).returning();
-
-    routeLogger.info('RSS源创建成功');
-    return c.json(createSuccessResponse(newSource[0], 'RSS源添加成功'), 201 as any);
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Create source', 
-      logger.child({ operation: 'create-source' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
-  }
+  const result = await createSource(c.env, c.req.valid('json'));
+  if (!result.ok) return c.json(createErrorResponse(result.error), result.status);
+  return c.json(createSuccessResponse(result.value, 'RSS源添加成功'), 201);
 });
 
 app.put('/sources/:id', zValidator('param', idParamSchema), zValidator('json', sourceUpdateSchema), async (c) => {
-  try {
-    const sourceId = c.req.valid('param').id;
-    const { name, url, category, scrape_frequency } = c.req.valid('json');
-
-    const db = getDb(c.env.HYPERDRIVE);
-    const routeLogger = logger.child({ operation: 'update-source', source_id: sourceId });
-
-    const updated = await db.update($sources)
-      .set({
-        name: name || undefined,
-        url: url || undefined, 
-        category: category !== undefined ? category : undefined,
-        scrape_frequency: scrape_frequency || undefined,
-      })
-      .where(eq($sources.id, sourceId))
-      .returning();
-
-    if (updated.length === 0) {
-      return c.json(createErrorResponse('未找到指定的RSS源'), 404 as any);
-    }
-
-    routeLogger.info('RSS源更新成功');
-    return c.json(createSuccessResponse(updated[0], 'RSS源更新成功'));
-  } catch (error) {
-    const { error: errorMsg, statusCode } = handleDatabaseError(
-      error, 
-      'Update source', 
-      logger.child({ operation: 'update-source' })
-    );
-    return c.json(createErrorResponse(errorMsg), statusCode as any);
+  const result = await updateSource(c.env, c.req.valid('param').id, c.req.valid('json'));
+  if (!result.ok) {
+    return c.json(createErrorResponse(result.status === 404 ? '未找到指定的RSS源' : result.error), result.status);
   }
+  return c.json(createSuccessResponse(result.value, 'RSS源更新成功'));
 });
 
 // ========== 简报管理 ==========

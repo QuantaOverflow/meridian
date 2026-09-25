@@ -57,25 +57,6 @@ export function handleDatabaseError(
   return { error: 'Internal server error', statusCode: 500 };
 }
 
-// 通用的资源存在性检查
-export async function checkResourceExists<T>(
-  queryFn: () => Promise<T | undefined>,
-  resourceName: string,
-  logger: Logger
-): Promise<{ exists: boolean }> {
-  try {
-    const resource = await queryFn();
-    if (resource === undefined) {
-      logger.warn(`${resourceName} not found`);
-      return { exists: false };
-    }
-    return { exists: true };
-  } catch (error) {
-    handleDatabaseError(error, `Check ${resourceName} existence`, logger);
-    return { exists: false };
-  }
-}
-
 // 日期范围验证
 export function validateDateRange(dateFrom?: string, dateTo?: string) {
   const from = dateFrom ? new Date(dateFrom) : undefined;

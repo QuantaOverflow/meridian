@@ -104,6 +104,17 @@ async function initDOs() {
   });
 }
 
+async function setPaused(paused: boolean) {
+  const action = paused ? 'pause' : 'resume';
+  try {
+    await $fetch(`/api/admin/sources/${sourceId}/${action}`, { method: 'POST' });
+  } catch (error) {
+    console.error(`Failed to ${action} source:`, error);
+    alert(`Failed to ${action} fetching. Please try again.`);
+  }
+  await refresh();
+}
+
 // Add delete functionality
 async function deleteSource() {
   if (!confirm('Are you sure you want to delete this source? This action cannot be undone.')) {
@@ -133,11 +144,25 @@ async function deleteSource() {
           <h1 class="text-xl font-medium text-gray-900">{{ feedDetails.name }}</h1>
           <div class="flex gap-2">
             <button
-              v-if="feedDetails.initialized === false"
+              v-if="feedDetails.initialized === false && !feedDetails.pausedAt"
               class="border bg-red-500 px-4 py-2 rounded hover:cursor-pointer hover:bg-red-600 text-white"
               @click="initDOs"
             >
               Init DOs
+            </button>
+            <button
+              v-if="feedDetails.pausedAt"
+              class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-50"
+              @click="setPaused(false)"
+            >
+              Resume Fetching
+            </button>
+            <button
+              v-else
+              class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-50"
+              @click="setPaused(true)"
+            >
+              Pause Fetching
             </button>
             <button
               class="border bg-red-500 px-4 py-2 rounded hover:cursor-pointer hover:bg-red-600 text-white"
@@ -157,6 +182,9 @@ async function deleteSource() {
           <div>
             <span class="text-gray-500">Frequency:</span>
             <span class="ml-2">{{ feedDetails.frequency }}</span>
+          </div>
+          <div v-if="feedDetails.pausedAt" class="col-span-2 text-amber-700">
+            Paused since {{ formatDate(feedDetails.pausedAt) }} — no automatic fetching until resumed
           </div>
           <div>
             <span class="text-gray-500">Last Fetched:</span>

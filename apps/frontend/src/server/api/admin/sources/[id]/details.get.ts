@@ -97,6 +97,7 @@ export default defineEventHandler(async event => {
     name: source.name,
     url: source.url,
     initialized: source.do_initialized_at !== null,
+    pausedAt: source.paused_at?.toISOString() ?? null,
     frequency: formatScrapeFrequency(source.scrape_frequency),
     lastFetched: source.lastChecked?.toISOString(),
     articles: articles.map(article => ({

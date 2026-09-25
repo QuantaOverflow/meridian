@@ -27,7 +27,6 @@ import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
 import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt } from '../prompts/briefBlockV6';
 import {
-  WINDOW_CHARS,
   anchorOk,
   cleanWrite,
   contextOf,
@@ -82,14 +81,13 @@ export interface BriefBlockV6Input {
   tier?: V6Tier | string;
 }
 
+// backend 落观测只读这几项（auto-brief-generation 的 brief-v3 记录）；复读重试另有 console.warn
 interface BriefBlockV6Trace {
-  articles: number;
   windows: number;
   anchors: number;
   citationsRepaired: number;
   /** 三次尝试全失败、被跳过的窗口数。>0 意味着这块的材料不完整。 */
   windowFailures: number;
-  repetitionRetries: number;
   /**
    * 写作步每次被确定性校验拒收的原因（`#尝试次 原因码…`）。空数组 = 一次过。
    * 不记的话「一次过」和「第三次才过」在观测里分不开。
@@ -98,10 +96,6 @@ interface BriefBlockV6Trace {
   llmCalls: number;
   /** 全部 LLM 调用的 neurons 合计（成本验收读它）。 */
   neurons: number;
-  model: string;
-  windowChars: number;
-  /** 这一块实际用的篇幅档。不记的话观测里分不出「写短了」是档位生效还是模型偷懒。 */
-  tier: V6Tier;
 }
 
 export interface BriefBlockV6Result {
@@ -130,7 +124,6 @@ export class BriefBlockV6Service {
   private ai: AIGatewayService;
   private llmCalls = 0;
   private neurons = 0;
-  private repetitionRetries = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
   constructor(private env: CloudflareEnv, private traceContext: TraceContext = {}) {
@@ -191,7 +184,6 @@ export class BriefBlockV6Service {
       lastReasons = reasons ?? [];
       if (reasons && reasons.length === 0) {
         if (!detectRepetition(repetitionTextOf(parsed))) return parsed;
-        this.repetitionRetries++;
         console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
       } else {
         if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
@@ -284,18 +276,13 @@ export class BriefBlockV6Service {
       ...(written.verdict === 'not_a_single_event' ? { reason: String(written.reason) } : {}),
       block,
       trace: {
-        articles: articles.length,
         windows: windows.length,
         anchors: anchors.length,
         citationsRepaired,
         windowFailures: this.windowFailures,
-        repetitionRetries: this.repetitionRetries,
         writeRejects: this.writeRejects,
         llmCalls: this.llmCalls,
         neurons: this.neurons,
-        model: MODEL,
-        windowChars: WINDOW_CHARS,
-        tier,
       },
     };
   }

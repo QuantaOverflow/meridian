@@ -114,63 +114,6 @@
         "timesSelected": 1
       }
     ],
-    "nearMisses": [
-      {
-        "id": 3,
-        "why": "Repetitive coverage of the same US-Iran talks event as #0, violating the constraint against reporting the same event.",
-        "times": 2
-      },
-      {
-        "id": 9,
-        "why": "Repetitive coverage of the same US-Iran talks event as #0, violating the constraint against reporting the same event.",
-        "times": 2
-      },
-      {
-        "id": 21,
-        "why": "Repetitive coverage of the same US-Iran talks event as #0, violating the constraint against reporting the same event.",
-        "times": 2
-      },
-      {
-        "id": 23,
-        "why": "Lacks a substantive new development today, being a routine market reaction to a previously announced meeting.",
-        "times": 2
-      },
-      {
-        "id": 10,
-        "why": "Lacks strategic/policy consequence, being a routine administrative procedure in a single country.",
-        "times": 1
-      },
-      {
-        "id": 11,
-        "why": "Low human/scale impact and no strategic/policy consequence, a routine military accident.",
-        "times": 1
-      },
-      {
-        "id": 13,
-        "why": "Lacks strategic/policy consequence, being a single incident of law enforcement interaction.",
-        "times": 1
-      },
-      {
-        "id": 16,
-        "why": "Repetitive coverage of the same US-Iran talks event as #0, violating the constraint against reporting the same event.",
-        "times": 1
-      },
-      {
-        "id": 17,
-        "why": "Repetitive coverage of the same US-Iran talks event as #0, violating the constraint against reporting the same event.",
-        "times": 1
-      },
-      {
-        "id": 31,
-        "why": "Lacks strategic/policy consequence, being a routine election in a single country.",
-        "times": 1
-      },
-      {
-        "id": 34,
-        "why": "Lacks strategic/policy consequence, being a routine labor settlement in a single city.",
-        "times": 1
-      }
-    ],
     "rounds": [
       {
         "round": 1,

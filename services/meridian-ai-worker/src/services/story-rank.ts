@@ -52,8 +52,6 @@ interface RankRoundDiag {
 export interface StoryRankResult {
   /** Borda 降序的前 N 条 */
   picks: RankedPick[]
-  /** 落选名单（合并三轮，按出现次数降序）——唯一能看见模型判据的窗口，只进观测 */
-  nearMisses: Array<{ id: number; why: string; times: number }>
   rounds: RankRoundDiag[]
   roundsOk: number
   /** 三轮前 N 的交集大小。小说明排序在飘，调用方只进观测 */
@@ -86,7 +84,8 @@ function shuffled<T>(items: T[], seed: number): T[] {
 }
 
 type RawPick = { id?: unknown; eventKey?: unknown; category?: unknown; why?: unknown }
-type RawResponse = { selected?: unknown; nearMisses?: unknown }
+// prompt 仍要求模型给 nearMisses（改 prompt 会改模型行为），但没人读，这里不解析；原文在 R2 llm-calls/
+type RawResponse = { selected?: unknown }
 
 function coercePicks(parsed: RawResponse | null, valid: Set<number>) {
   const raw = Array.isArray(parsed?.selected) ? (parsed!.selected as RawPick[]) : []
@@ -120,13 +119,7 @@ function coercePicks(parsed: RawResponse | null, valid: Set<number>) {
       why: String(p?.why ?? '').trim(),
     })
   }
-  const misses: Array<{ id: number; why: string }> = []
-  const rawMiss = Array.isArray(parsed?.nearMisses) ? (parsed!.nearMisses as RawPick[]) : []
-  for (const m of rawMiss) {
-    const id = typeof m?.id === 'number' ? m.id : Number(m?.id)
-    if (Number.isInteger(id) && valid.has(id)) misses.push({ id, why: String(m?.why ?? '').trim() })
-  }
-  return { picks, misses, duplicates, outOfRange, eventKeyDupes }
+  return { picks, duplicates, outOfRange, eventKeyDupes }
 }
 
 /**
@@ -142,7 +135,6 @@ export async function rankStories(
   const valid = new Set(candidates.map(c => c.id))
   const rounds: RankRoundDiag[] = []
   const perRound: Array<Array<{ id: number; eventKey: string; category: string; why: string }>> = []
-  const missTally = new Map<number, { why: string; times: number }>()
 
   for (let r = 1; r <= ROUNDS; r++) {
     let retried = false
@@ -160,7 +152,7 @@ export async function rankStories(
         const prompt = getStoryRankPrompt(shuffled(candidates, r))
         const content = await callOnce(prompt)
         const parsed = parseJson(content) as RawResponse | null
-        const { picks, misses, duplicates, outOfRange, eventKeyDupes } = coercePicks(parsed, valid)
+        const { picks, duplicates, outOfRange, eventKeyDupes } = coercePicks(parsed, valid)
         diag = {
           round: r,
           ok: picks.length === RANK_TOP_N,
@@ -172,10 +164,6 @@ export async function rankStories(
         }
         if (diag.ok) {
           perRound.push(picks)
-          for (const m of misses) {
-            const prev = missTally.get(m.id)
-            missTally.set(m.id, { why: prev?.why || m.why, times: (prev?.times ?? 0) + 1 })
-          }
           break
         }
         diag.error = `选出 ${picks.length} 条，期望 ${RANK_TOP_N}（重复 ${duplicates}／越界 ${outOfRange}／eventKey 重复 ${eventKeyDupes}）`
@@ -224,9 +212,6 @@ export async function rankStories(
 
   return {
     picks,
-    nearMisses: [...missTally.entries()]
-      .map(([id, v]) => ({ id, why: v.why, times: v.times }))
-      .sort((a, b) => b.times - a.times || a.id - b.id),
     rounds,
     roundsOk: perRound.length,
     intersectionSize,

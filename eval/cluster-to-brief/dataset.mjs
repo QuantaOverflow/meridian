@@ -21,7 +21,7 @@
  *
  * 顶层 `split`（可选，2026-09-20 加）标这**整份**属于 dev / validation / test。
  * 对齐 Inspect 的口径：split 是「载入哪一份数据集」，不是样本的属性。
- * 簇级 `metadata.split` 是它之前的错误形状，已废弃（保留不删，见 datasetClusters）。
+ * 簇级 `metadata.split` 是它之前的错误形状，已废弃（既有值保留不删）。
  *
  * 顶层 `targetOf`（可选，2026-09-22 加）标这份 dataset 是**考谁的**：`product` 考被测系统，
  * `judge` 考判官本身。同一个 `{input, target}` 形状，solver 槽里坐的是谁决定了读数的含义。
@@ -106,8 +106,8 @@ export function validateManifest(ds, expectedId, where = 'inline') {
   }
 
   // 顶层 labelBalance（可选，2026-09-22 加）：target 各取值的条数，用来解释 κ / agreement。
-  // 只校验形状（对象、值是非负整数），不校验它与 labels 对不对得上——对账要遍历全部标注，
-  // 那是 countLabelBalance() 的事；这里拦的是手填出来的坏形状。
+  // 只校验形状（对象、值是非负整数），不校验它与 labels 对不对得上（对账要遍历全部标注，
+  // 这里不做）；这里拦的是手填出来的坏形状。
   if (ds.labelBalance !== undefined) {
     if (!isObj(ds.labelBalance)) fail('labelBalance 不是对象');
     for (const [k, v] of Object.entries(ds.labelBalance)) {
@@ -203,16 +203,14 @@ export function loadDataset(id, opts = {}) {
 }
 
 /**
- * 簇编号列表（整数、升序）。`split` 按 **簇级** `metadata.split` 过滤；不传就是全部。
+ * 簇编号列表（整数、升序）。
  *
- * 簇级 `metadata.split` 已废弃（2026-09-20）：分层是整份 dataset 的属性（顶层 `split`），
- * 不是某个簇的。这个参数只为老清单（`fixtures-r94` / `prod-0919`）的既有调用方留着，
- * 行为一个字不改；**新 dataset 不再写 `metadata.split`，新代码不要依赖它**。
+ * 簇级 `metadata.split` 已废弃（2026-09-20）：分层是整份 dataset 的属性（顶层 `split`）。
+ * 按它过滤的 `{split}` 参数没有调用方，2026-09-25 删除。
  */
-export function datasetClusters(ds, { split } = {}) {
-  return Object.entries(ds.clusters)
-    .filter(([, c]) => split === undefined || c.metadata.split === split)
-    .map(([cid]) => Number(cid))
+export function datasetClusters(ds) {
+  return Object.keys(ds.clusters)
+    .map(cid => Number(cid))
     .sort((a, b) => a - b);
 }
 
@@ -226,7 +224,6 @@ function clusterOf(ds, clusterId) {
  * 一个簇的全量输入。`sentences` 下标 +1 = 输出契约里的 `sources[].sentence`，
  * 切句直接用 lib.mjs 的 splitSentences（与生产 report-v3.ts 同构）——**不许在这里另写一份**，
  * 偏一点就让出处静默指向错误的句子。
- * `content` 一并返回：scorer 要验 `quote` 是正文子串，否则它得再读一遍文件。
  */
 export function loadClusterArticles(ds, clusterId) {
   return loadArticlesByIds(ds, clusterOf(ds, clusterId).articleIds, `cluster ${clusterId}`);
@@ -308,7 +305,7 @@ export function labelsOf(ds, clusterId) {
  * 与 `datasetClusters` 的关系：`datasetClusters` 只回簇编号，调用方还得自己再去取标注与元数据，
  * 于是「一个 sample 是什么」散在每个臂里各写一遍。`sampleView` 是它的上层，把
  * 编号 + input + target + metadata 一次给全。**后续新臂走 `sampleView`**；
- * `datasetClusters` 留给已有调用方（含它的 `split` 过滤），不动。
+ * `datasetClusters` 留给已有调用方，不动。
  *
  * `input` 只给 articleIds，**不在这里读正文**：视图只管切分，正文由 `loadClusterArticles` /
  * `loadClusterFrom` 按需读。把 665 篇正文塞进视图，只为拿一个簇编号列表也要全读一遍。
@@ -316,7 +313,7 @@ export function labelsOf(ds, clusterId) {
  * @param {object} ds       loadDataset 的返回
  * @param {object} [o]
  * @param {'cluster'|'day'} [o.view='cluster']  切分粒度
- * @param {{clusters?: number[], limit?: number}} [o.scope]  范围；不传 = 全部
+ * @param {{clusters?: number[]}} [o.scope]  范围；不传 = 全部
  * @returns {Array<{id: string, input: object, target: object, metadata: object}>}
  */
 export function sampleView(ds, { view = 'cluster', scope } = {}) {
@@ -329,11 +326,7 @@ export function sampleView(ds, { view = 'cluster', scope } = {}) {
   }
   if (view !== 'cluster') throw new Error(`sampleView: 不认识的 view "${view}"（现有 cluster，day 留桩）`);
 
-  let ids = scope?.clusters ? scope.clusters.map(Number) : datasetClusters(ds);
-  if (scope?.limit !== undefined) {
-    if (!Number.isInteger(scope.limit) || scope.limit < 0) throw new Error('sampleView: scope.limit 必须是非负整数');
-    ids = ids.slice(0, scope.limit);
-  }
+  const ids = scope?.clusters ? scope.clusters.map(Number) : datasetClusters(ds);
   return ids.map(cid => {
     const c = clusterOf(ds, cid); // 点名了不存在的簇就当场炸：抄错簇号不该静默少一个样本
     return {

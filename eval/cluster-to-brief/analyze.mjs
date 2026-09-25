@@ -49,7 +49,7 @@ const EPOCH_DIRS = (args.epochs ? String(args.epochs).split(',') : [ARM])
 const AXES = [
   ['blocks', 0], ['sentences', 0],
   ['unresolvedSources', 0], ['sentencesWithoutSource', 0], ['markerLeaks', 0],
-  ['truncatedSentences', 0], ['sourceQuoteMismatches', 0], ['sourceQuotesChecked', 0],
+  ['truncatedSentences', 0],
   ['mixedBlocks', 0],
   ['impureSentences', 0], ['impurityRate', 3], ['citedImpurityArticles', 0],
   ['sentencesWithUncitedNumbers', 0], ['sentencesWithUncitedQuotes', 0],

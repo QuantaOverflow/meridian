@@ -115,8 +115,6 @@ assert.throws(() => loadDataset('broken'), /不是合法 JSON/);
 write('synth', good());
 const ds = loadDataset('synth');
 assert.deepEqual(datasetClusters(ds), [10, 11]);
-assert.deepEqual(datasetClusters(ds, { split: 'dev' }), [10]);
-assert.deepEqual(datasetClusters(ds, { split: 'heldout' }), [11]);
 // 顶层 split 两个方向:缺键合法(good() 就没写),写对了照常载入
 assert.equal(ds.split, undefined, '缺 split 的清单照常合法');
 const withSplit = good();
@@ -172,11 +170,9 @@ assert.deepEqual(samples[0].input, { clusterId: 10, articleIds: [101, 102, 103] 
 assert.deepEqual(samples[0].target, { impurities: [103], eventGroups: { 'Two boats collided': [101, 102] } });
 assert.equal(samples[0].metadata.routerStructure, 'topic_bag');
 assert.equal('content' in samples[0].input, false, 'input 只给编号,正文按需读');
-// scope:显式列表与 limit
+// scope:显式列表
 assert.deepEqual(sampleView(ds, { scope: { clusters: [11] } }).map(s => s.id), ['c11']);
 assert.deepEqual(sampleView(ds, { scope: { clusters: [11] } })[0].input.articleIds, [201]);
-assert.deepEqual(sampleView(ds, { scope: { limit: 1 } }).map(s => s.id), ['c10']);
-assert.deepEqual(sampleView(ds, { scope: { limit: 0 } }), []);
 // 抄错簇号不该静默少一个样本
 assert.throws(() => sampleView(ds, { scope: { clusters: [999] } }), /没有 cluster 999/);
 // target 是副本:调用方改了不该回写清单

@@ -1,7 +1,7 @@
 /**
  * 快档 verifier —— 零 LLM、秒级、退出码表判定,给 codex 自主迭代用。
  *
- * 它只判**机械可判**的东西:schema 合规、出处能不能解析、quote 对不对得上原文、出处编号有没有漏进正文、
+ * 它只判**机械可判**的东西:schema 合规、出处能不能解析、出处编号有没有漏进正文、
  * 句子有没有写完、杂质率、数字有没有出处、块内是否跨事件。覆盖率与事实正确性属于慢档,要 LLM,不在这里。
  *
  * 为什么快档值得单独存在:这轮诊断出的主缺陷正是杂质(委内瑞拉/尼日尔混进 houthi 块),
@@ -27,14 +27,13 @@
  *       {
  *         "title": "...",
  *         "sentences": [
- *           { "text": "...", "sources": [ { "articleId": 1009385, "sentence": 12, "quote": "原句原文" } ] }
+ *           { "text": "...", "sources": [ { "articleId": 1009385, "sentence": 12 } ] }
  *         ]
  *       }
  *     ]
  *   }
  *
  * 出处是强制的:多条判据靠它。它对内部架构不构成限制——拆几步、传什么表示,都能标出处。
- * `quote` 是契约新增的选填→必填过渡字段:有它就核,没它就跳过(现有臂还没产出它)。
  *
  * ── 用法 ────────────────────────────────────────────────────────────────
  *   node verify.mjs --arm=out/arm-a                 # 跑 dev 五簇
@@ -91,9 +90,6 @@ const SENTENCE_END = /["'”’」』）)\]…。？！.?!]$/u;
 // 也抓合并写法 [986133:3, 1006787:2],所以只匹配开头「[ + 编号:句号」。
 // direct-raw 的 c1/c36/c51 都出现过。标题一并查。
 const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
-
-/** quote 比对用的归一:**只压空白**。契约要求 quote 是逐字原文,大小写与标点不许动。 */
-const normWhitespace = s => String(s ?? '').replace(/\s+/g, ' ').trim();
 
 // ── 事实层:只出读数与 findings,不判过不过 ────────────────────────────────
 function readCluster(cid, exp) {
@@ -178,7 +174,7 @@ function readCluster(cid, exp) {
     }
   }
 
-  // —— 逐句:出处解析、quote、截断、杂质、数字 ——
+  // —— 逐句:出处解析、截断、杂质、数字 ——
   const allSents = blocks.flatMap(b => (Array.isArray(b.sentences) ? b.sentences : []));
   read.sentences = allSents.length;
   if (out.verdict === 'written' && allSents.length === 0 && !envFail.length) {
@@ -186,9 +182,9 @@ function readCluster(cid, exp) {
   }
 
   let unresolved = 0, noSource = 0, impureSents = 0, numbersMissing = 0, markerLeaks = 0, quotesMissing = 0;
-  let truncated = 0, quoteChecked = 0, quoteMismatch = 0;
+  let truncated = 0;
   const impureExamples = [], unresolvedExamples = [], numberExamples = [], markerExamples = [], quoteExamples = [];
-  const truncatedExamples = [], srcQuoteExamples = [];
+  const truncatedExamples = [];
   for (const b of blocks) {
     if (MARKER.test(String(b?.title ?? ''))) { markerLeaks++; if (markerExamples.length < 3) markerExamples.push(`标题 "${String(b.title).slice(0, 60)}"`); }
   }
@@ -218,18 +214,6 @@ function readCluster(cid, exp) {
         if (unresolvedExamples.length < 3) unresolvedExamples.push(`解析不到 ${sr?.articleId}:${sr?.sentence}`);
       } else srcTexts.push(t);
       if (impurities.has(sr?.articleId)) { sentImpure = true; citedImpurityIds.add(sr.articleId); }
-      // quote 核对(2026-09-20 加,契约 §3):quote 必须是该文章**正文**的子串(只压空白)。
-      // 为什么比 sentence 编号强:scorer 不再需要复制生产的切句逻辑,两边切句口径不一致的静默错位消失。
-      // 选填:现有臂还没产出 quote,缺了就跳过,不当失败。
-      if (typeof sr?.quote === 'string' && sr.quote.trim()) {
-        quoteChecked++;
-        const art = cluster.articles.find(x => x.id === sr?.articleId);
-        const hay = normWhitespace(art?.content);
-        if (!hay.includes(normWhitespace(sr.quote))) {
-          quoteMismatch++;
-          if (srcQuoteExamples.length < 3) srcQuoteExamples.push(`${sr?.articleId}:${sr?.sentence} quote "${String(sr.quote).slice(0, 55)}" 不在该文正文里`);
-        }
-      }
     }
     if (sentImpure) {
       impureSents++;
@@ -243,7 +227,6 @@ function readCluster(cid, exp) {
       if (numberExamples.length < 3) numberExamples.push(`"${text.slice(0, 55)}" 缺 [${miss.slice(0, 4)}]`);
     }
     // 正文引语核对(2026-09-19 加):引号内 ≥2 词的原话,归一后须是所引原句的子串。
-    // 与上面的 sources[].quote 是两把不同的尺:这把量**成稿里出现的引号**,那把量**出处自报的原句**。
     // 对不上 = 引语编造,或(更常见)原话在材料里但标错了出处。
     const srcNorm = normQuote(srcTexts.join(' '));
     const qMiss = quotesIn(text).filter(q => !srcNorm.includes(normQuote(q)));
@@ -293,17 +276,13 @@ function readCluster(cid, exp) {
   read.markerLeaks = markerLeaks;
   read.sentencesWithUncitedQuotes = quotesMissing;
   read.truncatedSentences = truncated;
-  read.sourceQuotesChecked = quoteChecked;      // 0 = 本臂还没产出 quote,这一轴无读数
-  read.sourceQuoteMismatches = quoteMismatch;
   if (quoteExamples.length) read.quoteExamples = quoteExamples;
   if (truncatedExamples.length) read.truncatedExamples = truncatedExamples;
-  if (srcQuoteExamples.length) read.sourceQuoteExamples = srcQuoteExamples;
 
   if (unresolved) note('unresolvedSources', unresolved, unresolvedExamples);
   if (noSource) note('sentencesWithoutSource', noSource, unresolvedExamples);
   if (markerLeaks) note('markerLeaks', markerLeaks, markerExamples);
   if (truncated) note('truncatedSentences', truncated, truncatedExamples);
-  if (quoteMismatch) note('sourceQuoteMismatches', quoteMismatch, srcQuoteExamples);
   if (numbersMissing) note('sentencesWithUncitedNumbers', numbersMissing, numberExamples);
   if (quotesMissing) note('sentencesWithUncitedQuotes', quotesMissing, quoteExamples);
   if (dupSents) note('redundantSentences', dupSents, dupExamples);
@@ -322,7 +301,6 @@ function applyPolicy(cid, read, findings) {
   if (findings.sentencesWithoutSource) say('sentencesWithoutSource', `${findings.sentencesWithoutSource.count} 句没有任何出处 —— 出处是契约的强制项: ${findings.sentencesWithoutSource.examples.join(' | ')}`);
   if (findings.markerLeaks) say('markerLeaks', `${findings.markerLeaks.count} 处正文或标题混入出处编号 [articleId:sentence],读者会看到: ${findings.markerLeaks.examples.join(' | ')}`);
   if (findings.truncatedSentences) say('truncatedSentences', `${findings.truncatedSentences.count} 句没有句末标点,是写到一半被截断: ${findings.truncatedSentences.examples.join(' | ')}`);
-  if (findings.sourceQuoteMismatches) say('sourceQuoteMismatches', `${findings.sourceQuoteMismatches.count} 条出处的 quote 与原文对不上: ${findings.sourceQuoteMismatches.examples.join(' | ')}`);
   if (findings.noEventMixing) say('noEventMixing', `${findings.noEventMixing.count} 个块跨事件(一块只许引同一个 eventGroup 的文章): ${findings.noEventMixing.examples.join(' | ')}`);
 
   // 杂质率:阈值来自 policy,只在 verdict=written 时生效(判不可写没有正文可量)

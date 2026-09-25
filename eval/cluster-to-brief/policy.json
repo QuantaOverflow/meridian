@@ -14,7 +14,6 @@
     "sentencesWithoutSource": { "gate": true, "why": "同上" },
     "markerLeaks": { "gate": true, "why": "[articleId:sentence] 抄进成稿,读者会看到(direct-raw c1/c36/c51 都出现过)" },
     "truncatedSentences": { "gate": true, "why": "2026-09-20 加:句子没写完就截断(实例 'US President Donald Trump criticized the idea as ')是生成缺陷,读者直接可感知" },
-    "sourceQuoteMismatches": { "gate": true, "why": "2026-09-20 加:sources[].quote 对不上原文 = 出处标错或原句编造,零歧义" },
     "noEventMixing": { "gate": true, "why": "取代 requireSplitOrReject:一块只许引同一个 eventGroup 的文章。一簇一块、拆多块、判不可写都能满足" },
     "impurityRate": { "gate": true, "why": "选材这一步存在的意义就是筛掉搭便车的文章" },
     "minSentences": { "gate": true, "why": "干净簇写太薄同样不合格(参照 emmy awards:8 篇写出一句话)" },

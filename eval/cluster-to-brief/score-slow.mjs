@@ -31,12 +31,7 @@ const ARM = String(args.arm).replace(/\/$/, '');
 const SPLIT = String(args.split ?? 'dev');
 const EXP = loadExpectations();
 const COVERAGE_RATIO = EXP.meta.coverageRatio ?? 0.667;
-/**
- * 清单目录。默认读 fixtures/checklists/,`--checklists=<dir>` 可覆盖。
- * 加这个开关只为一个用途:自测要喂伪造的清单去碰通过线的每条边界,而它**不能写进真清单目录**
- * —— 一个会覆盖真基准的自测,比没有自测更危险。
- */
-const CK_DIR = String(args.checklists ?? `${FIX}checklists`).replace(/\/$/, '');
+const CK_DIR = `${FIX}checklists`;
 
 let targets = Object.entries(EXP.clusters);
 if (args.cluster) targets = targets.filter(([c]) => c === String(args.cluster));

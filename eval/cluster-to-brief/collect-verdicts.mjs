@@ -67,33 +67,17 @@ export function refsOf(brief) {
 /**
  * 这个 run 里有哪些样本要判。
  *
- * 优先读 `run.json` 的 `samples`(契约 §2):**样本失败是一等状态**,`status=error` 的样本
- * 不该被要求判定,但必须单独列出个数 —— 悄悄少一个样本正是这里要防的。
- * 没有 run.json 的旧目录退化成扫 `c<数字>.json`(排除 `c7-run.json` / `c7-anchors.json` 这类边料)。
+ * 扫 `c<数字>.json`(排除 `c7-run.json` / `c7-anchors.json` 这类边料)。
+ * (原先优先读契约 §2 的 `run.json`,但没有任何 runner 写它,2026-09-25 删掉那条分支。)
  */
 export function samplesOf(runDir) {
   const dir = String(runDir).replace(/\/$/, '');
   if (!existsSync(dir)) throw new Error(`run 目录不存在: ${dir}`);
 
-  let ids = null;
-  const notOk = [];
-  const runF = `${dir}/run.json`;
-  if (existsSync(runF)) {
-    const meta = JSON.parse(readFileSync(runF, 'utf8'));
-    if (meta && typeof meta.samples === 'object' && meta.samples) {
-      ids = [];
-      for (const [cid, s] of Object.entries(meta.samples)) {
-        if ((s?.status ?? 'ok') === 'ok') ids.push(Number(cid));
-        else notOk.push({ cluster: Number(cid), status: s?.status, error: s?.error ?? '' });
-      }
-    }
-  }
-  if (!ids) {
-    ids = readdirSync(dir)
-      .map(f => /^c(\d+)\.json$/.exec(f))
-      .filter(Boolean)
-      .map(m => Number(m[1]));
-  }
+  const ids = readdirSync(dir)
+    .map(f => /^c(\d+)\.json$/.exec(f))
+    .filter(Boolean)
+    .map(m => Number(m[1]));
   ids.sort((a, b) => a - b);
 
   const samples = [];
@@ -105,7 +89,7 @@ export function samplesOf(runDir) {
     catch (e) { samples.push({ cluster, briefFile: f, badBrief: String(e.message), refs: [] }); continue; }
     samples.push({ cluster, briefFile: f, verdict: brief.verdict ?? null, refs: refsOf(brief) });
   }
-  return { samples, notOk };
+  return { samples };
 }
 
 /**
@@ -149,12 +133,12 @@ export function verdictProblems(v, { axis, cluster, expectedRefs, expectPromptId
   return P;
 }
 
-/** 验收一个 run 的一轴。返回 { ok, expectPromptId, rows, notOk, problems } —— 不打印、不退出。 */
+/** 验收一个 run 的一轴。返回 { ok, expectPromptId, rows, problems } —— 不打印、不退出。 */
 export function collect({ runDir, axis, judgesDir = `${HERE}judges` }) {
   if (!AXES[axis]) throw new Error(`未知 axis: ${axis}(可选: ${Object.keys(AXES).join(' ')})`);
   const dir = String(runDir).replace(/\/$/, '');
   const expectPromptId = promptId(axis, judgesDir);
-  const { samples, notOk } = samplesOf(dir);
+  const { samples } = samplesOf(dir);
   const scope = AXES[axis].scope;
 
   const rows = [];
@@ -186,7 +170,7 @@ export function collect({ runDir, axis, judgesDir = `${HERE}judges` }) {
 
   const graded = rows.filter(r => r.state !== 'skipped');
   if (!graded.length) bad(null, 'empty', `这个 run 里没有任何要判的样本 —— 先确认 ${dir} 里有成稿`);
-  return { ok: problems.length === 0, expectPromptId, rows, notOk, problems };
+  return { ok: problems.length === 0, expectPromptId, rows, problems };
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────
@@ -202,13 +186,11 @@ function main() {
     console.error(`axis 可选: ${Object.keys(AXES).join(' ')}`);
     process.exit(2);
   }
-  const judgesDir = args.judges ? String(args.judges) : `${HERE}judges`;
-
-  if (args['prompt-id']) { console.log(promptId(axis, judgesDir)); process.exit(0); }
+  if (args['prompt-id']) { console.log(promptId(axis)); process.exit(0); }
   if (!args.run) { console.error('用法: node collect-verdicts.mjs --run=out/<runId> --axis=<axis>'); process.exit(2); }
 
   let r;
-  try { r = collect({ runDir: String(args.run), axis, judgesDir }); }
+  try { r = collect({ runDir: String(args.run), axis }); }
   catch (e) { console.error(`✗ ${e.message}`); process.exit(2); }
 
   const graded = r.rows.filter(x => x.state !== 'skipped');
@@ -217,11 +199,6 @@ function main() {
   console.log(`axis=${axis}  run=${String(args.run).replace(/\/$/, '')}  promptId=${r.expectPromptId}`);
   console.log(`要判样本 ${graded.length} · 要判条目 ${refN} · 合规判定文件 ${okN}/${graded.length}` +
     (r.rows.length - graded.length ? ` · 跳过 ${r.rows.length - graded.length} 簇(判不可写/无正文)` : ''));
-  if (r.notOk.length) {
-    // 契约 §2:样本失败是一等状态,不计入比例但必须列出来,不允许悄悄少一个样本
-    console.log(`run.json 里非 ok 的样本 ${r.notOk.length} 个(不要求判定): ` +
-      r.notOk.map(x => `c${x.cluster}=${x.status}`).join(' '));
-  }
 
   if (r.ok) { console.log('✓ 齐全且合规'); process.exit(0); }
   // 缺文件单列一节:判官还没落盘时这是唯一要看的东西,混在问题流水里反而找不到

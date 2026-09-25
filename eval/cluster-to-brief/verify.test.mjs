@@ -162,40 +162,6 @@ test('真实案例:句子停在 "criticized the idea as " → 不合格', () => 
   assert.equal(r.read.truncatedSentences, 1);
 });
 
-// ── 5/6. sources[].quote ────────────────────────────────────────────────
-test('quote 对不上原文 → 不合格', () => {
-  const r = run(written({
-    title: 'Alpha reactor outage',
-    sentences: [S('Officials said the shutdown was planned.',
-      [{ articleId: 101, sentence: 2, quote: 'Officials said the shutdown was unplanned' }])],
-  }));
-  assert.equal(r.code, 1, `应因 quote 对不上不合格,实际 exit=${r.code}\n${r.out}`);
-  assert.equal(r.read.sourceQuotesChecked, 1);
-  assert.equal(r.read.sourceQuoteMismatches, 1);
-  assert.match(r.out, /quote 与原文对不上/);
-});
-
-test('quote 是原文子串(只压空白)→ 合格', () => {
-  const r = run(written({
-    title: 'Alpha reactor outage',
-    sentences: [S('Officials said the shutdown was planned.',
-      [{ articleId: 101, sentence: 2, quote: '  Officials said   the shutdown\nwas planned.  ' }])],
-  }));
-  assert.equal(r.code, 0, `应合格,实际 exit=${r.code}\n${r.out}`);
-  assert.equal(r.read.sourceQuotesChecked, 1);
-  assert.equal(r.read.sourceQuoteMismatches, 0);
-});
-
-test('没有 quote 字段 → 这一轴跳过,不当失败(现有臂都还没产出 quote)', () => {
-  const r = run(written({
-    title: 'Alpha reactor outage',
-    sentences: [S('Officials said the shutdown was planned.', [{ articleId: 101, sentence: 2 }])],
-  }));
-  assert.equal(r.code, 0, `应合格,实际 exit=${r.code}\n${r.out}`);
-  assert.equal(r.read.sourceQuotesChecked, 0);
-  assert.equal(r.read.sourceQuoteMismatches, 0);
-});
-
 // ── 7. 通过线搬到 policy 之后,同一份读数能被判成不同结果 ────────────────
 test('policy 的句数下限决定过不过,读数一字不变', () => {
   const brief = written({

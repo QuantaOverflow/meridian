@@ -26,7 +26,7 @@ const run = (script, args) => {
   return { code: r.status, out: r.stdout ?? '', err: r.stderr ?? '', all: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 };
 
-// ── 伪造一个 run:c7 有 7 句,c8 判不可写(无正文、不该被要求判定),c9 是失败样本 ──────────
+// ── 伪造一个 run:c7 有 7 句,c8 判不可写(无正文、不该被要求判定) ──────────
 const RUN = join(TMP, 'run1');
 mkdirSync(join(RUN, 'verdicts'), { recursive: true });
 const sent = t => ({ text: t, sources: [{ articleId: 1001, sentence: 1, quote: t }] });
@@ -40,10 +40,6 @@ const brief7 = {
 };
 J(join(RUN, 'c7.json'), brief7);
 J(join(RUN, 'c8.json'), { cluster: 8, verdict: 'not_a_single_event', reason: '题材袋', blocks: [] });
-J(join(RUN, 'run.json'), {
-  runId: 'selftest@fake#1', dataset: 'fake', solver: 'selftest', epoch: 1, configHash: 'sha256:0', config: {},
-  samples: { 7: { status: 'ok' }, 8: { status: 'ok' }, 9: { status: 'error', error: 'boom' } },
-});
 
 const REFS = refsOf(brief7);
 assert.deepEqual(REFS, ['b1s1', 'b1s2', 'b1s3', 'b1s4', 'b2s1', 'b2s2', 'b2s3']);
@@ -69,7 +65,6 @@ const verdict = (refs, over = {}) => ({
   assert.match(r.all, /缺判定文件 1 个/);
   assert.match(r.all, new RegExp(`${AXIS}-c7\\.json`));
   assert.doesNotMatch(r.all, /c8/, 'c8 判不可写,不该被要求判定');
-  assert.match(r.all, /c9=error/, '失败样本必须列出来,不允许悄悄少一个');
 }
 
 // ── ② 齐全合规 —— 反向对照:门修好了也要能放行 ─────────────────────────────────────
@@ -175,7 +170,7 @@ const GOLD_SMALL = join(TMP, 'gold-small.json');
     ],
   });
 
-  const r = run(ALIGN, [`--axis=${AXIS}`, `--run=${RUN}`, `--gold=${GOLD_SMALL}`]);
+  const r = run(ALIGN, [`--axis=${AXIS}`, `--run=${RUN}`, `--gold=${GOLD_SMALL}`, '--epoch=1']);
   assert.equal(r.code, 0, r.all);
   assert.match(r.out, /TP\s+2\s+FN\s+1/);
   assert.match(r.out, /FP\s+1\s+TN\s+3/);
@@ -193,7 +188,7 @@ const GOLD_SMALL = join(TMP, 'gold-small.json');
 
 // ── ⑨ 反向对照:金标 ≥30 条时不该再打小样本警告 ───────────────────────────────────
 {
-  const RUN2 = join(TMP, 'run2');                                       // 无 run.json —— 顺带走一遍扫 c<N>.json 的退化路径
+  const RUN2 = join(TMP, 'run2');
   mkdirSync(join(RUN2, 'verdicts'), { recursive: true });
   const many = Array.from({ length: 30 }, (_, i) => sent(`Sentence ${i + 1}.`));
   J(join(RUN2, 'c10.json'), { cluster: 10, verdict: 'written', blocks: [{ title: 'B1', sentences: many }] });

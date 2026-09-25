@@ -65,8 +65,8 @@
 - 现状：`d0916` = dev（47 簇）、`d0911` = validation（37 簇）、`d0906` = test（23 簇）。
 
 **簇级 `metadata.split` 已废弃**（`prod-0919` 里全是 `"fresh"`，`fixtures-r94` 里是 `dev`/`heldout`）：
-分层是整份的属性，簇级打标记是它之前的错误形状。既有值**保留不删**、`datasetClusters(ds, {split})`
-的行为也不改（还有调用方在用）；但**新 dataset 不再写它，新代码不要依赖它**。
+分层是整份的属性，簇级打标记是它之前的错误形状。既有值**保留不删**；按它过滤的
+`datasetClusters(ds, {split})` 参数没有调用方，2026-09-25 删除。**新 dataset 不再写它**。
 
 ### 1.0.1 `targetOf` 与 `labelBalance`：这份考谁、正负怎么分（可选键，2026-09-22 加）
 
@@ -144,13 +144,13 @@ sampleView(ds, { view = 'cluster', scope } = {})
 
 - `input` 只给 `articleIds`，**不读正文**：视图只管切分，正文由 `loadClusterArticles` / `loadClusterFrom` 按需读。
   否则只为拿一份簇编号列表也要把几百篇正文全读进内存。
-- `scope` 管范围：`{ clusters: [id...] }` 显式列表、`{ limit: n }` 取前 n 个，不传 = 全部。
+- `scope` 管范围：`{ clusters: [id...] }` 显式列表，不传 = 全部。
   点名了不存在的簇当场炸——抄错簇号不该静默少一个样本。
 - `day` 为什么留桩：它的 target 是当天的全局事件清单，而**这份清单怎么造还没验过精度**。
   target 本身不可信，拿它判出来的读数只会把标注的错算成系统的。见 ADR 0003 已证伪清单第 6 条。
 - 与 `datasetClusters` 的关系：后者只回簇编号，调用方还得自己再取标注与元数据，于是「一个 sample 是什么」
   在每个臂里各写一遍。`sampleView` 是它的上层。**后续新臂走 `sampleView`**；`datasetClusters`
-  留给已有调用方（含它的 `split` 过滤），行为不动。
+  留给已有调用方。
 
 ## 1.3 Runner / Solver 的职责边界（`runner.mjs`，2026-09-20 加）
 
@@ -160,7 +160,7 @@ sampleView(ds, { view = 'cluster', scope } = {})
 
 | | 归谁 |
 |---|---|
-| argv 解析（`--dataset` / `--cluster` / `--plan` / `--resume` / `--all` / `--split`） | runner |
+| argv 解析（`--dataset` / `--cluster` / `--plan` / `--resume` / `--all`） | runner |
 | 样本集合：dataset 模式走 `sampleView`，fixtures 模式走 `loadCluster` | runner |
 | 正文加载（臂拿到的是已载好的 `{clusterId, articles}`） | runner |
 | `DEV` 白名单 + `ALLOW_HELDOUT` 守卫 | runner |
@@ -226,7 +226,7 @@ chained together」），同型，所以 `system_message()` / `generate()` / `se
 
 - 原型 solver：`arms/<name>/*.mjs`（现状）。
 - 生产 solver：HTTP 端点（迁移后）。
-- 每次运行落 `out/<runId>/`，含 `run.json`：
+- 每次运行落 `out/<runId>/`。下面的 `run.json` **尚未实现**：现有 runner 不写它（2026-09-25 读它的分支已删，judge-alignment 的 epoch 改由 `--epoch` 显式传）；落地时按此形状实现：
 
 ```json
 {
@@ -273,7 +273,7 @@ chained together」），同型，所以 `system_message()` / `generate()` / `se
 
 - **它解决的问题现在不存在。** `verify.mjs` 与 `direct-raw` 都 `import { sentenceOf } from lib.mjs`
   ——同一个切句器。两边口径不一致的风险要等评**生产 solver**（`report-v3` 自带切句器）时才出现。
-- **它抓不到坐标错位。** `verify.mjs:228` 验的是 `article.content.includes(quote)`——
+- **它抓不到坐标错位。** 当时的 `verify.mjs` 验的是 `article.content.includes(quote)`——
   「这段文字在这篇文章的某处」，不是「在第 N 句」。模型把第 12 句标成第 11 句，两句都在正文里，
   照样通过。要抓错位得把检查改成比对 `sentence[n]` 本身，那是判定侧的改动，会让历史读数换口径。
 - **代价是真的。** 每个出处多带一整句原文，输出体积约翻倍。实测 c23 写作步第一次就打满
@@ -298,10 +298,10 @@ chained together」），同型，所以 `system_message()` / `generate()` / `se
 
 **scorer 只输出事实，不输出「过/不过」**。通过线单独放 `policy.json`，产品目标变了只改它，历史判定不作废。
 
-- 机械 scorer（零 LLM，`scorers/*.mjs`）：出处可解析、出处编号是否漏进正文、句末是否截断、数字有无出处、引语有无出处、块内重复、杂质率、**块内是否跨事件**。
+- 机械 scorer（零 LLM，现为 `verify.mjs` 一个文件）：出处可解析、出处编号是否漏进正文、句末是否截断、数字有无出处、引语有无出处、块内重复、杂质率、**块内是否跨事件**。
 - 判官 scorer（LLM，见 §5）：出处支撑、编造事实、编造关系、主体搬错、强度方向、多事件混写。
 
-评分产物 `out/<runId>/scores.json`：
+评分产物 `out/<runId>/scores.json`（**尚未实现**，现在 verify.mjs 直接打印读数与 findings）：
 
 ```json
 {
@@ -326,7 +326,7 @@ chained together」），同型，所以 `system_message()` / `generate()` / `se
 - 判官产物落 `out/<runId>/verdicts/<axis>-c<clusterId>.json`，带 `promptId`（规格文件哈希）。`promptId` 不同的判定**不可混用**。
 - 派完必须跑 `collect-verdicts.mjs --run=<runId> --axis=<axis>` 验收：文件在不在、schema 合不合、样本覆盖全不全。不过就 exit≠0，结果一律不采用。
   （2026-09-20 教训：一个判官自报完成、文件根本没落盘，差点直接采用它报的比例。）
-- **判官必须先与人工标注对齐**：`gold/<axis>.json` 存人工标注，`judge-alignment.mjs` 报真阳率/真阴率。没对齐过的判官，其比例只能当量级参考，不能进对比表。
+- **判官必须先与人工标注对齐**：`eval/_data/ctb-<axis>-v1/labels.json` 存人工标注，`judge-alignment.mjs` 报真阳率/真阴率。没对齐过的判官，其比例只能当量级参考，不能进对比表。
 
 ## 6. Epoch 与汇总
 

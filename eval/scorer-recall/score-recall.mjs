@@ -4,7 +4,7 @@
  * 金标:2026-09-18 逐句手工标注的 82 句自然候选句,15 句含事实错。
  * 主读数是召回(15 条里认出几条)与精确率(报出来的里有几条是真的)。
  *
- * 用法: node score-recall.mjs --verdicts=out/base/judgeA [--variant=base]
+ * 用法: node score-recall.mjs --verdicts=out/base/judgeA
  *       verdicts 目录里每个 block 一个 `verdict-<block>.json`
  *
  * 退出码: 0 算完;2 缺文件或判定不完整。

@@ -70,7 +70,7 @@
 dataset / solver / scorer / judge 互不依赖，细则见 `eval/cluster-to-brief/CONTRACTS.md`：
 
 - dataset 定在最宽的稳定边界（一天全量 + 聚类快照 + 选中列表），标注挂在**输入**上；
-- 输出契约架构中立，带逐句出处与原句原文（`quote`），scorer 因此不依赖生产的切句逻辑；
+- 输出契约架构中立，带逐句出处（`quote` 原句原文 2026-09-20 加了又撤，理由见 `eval/cluster-to-brief/CONTRACTS.md` §3）；
 - scorer 只出事实，通过线单独放 `policy.json`，改通过线不作废历史读数；
 - **评分与生成分离**：scorer 只读已落盘产物，判据变了不必重新生成（抄自 Inspect 的 offline scoring）。
 

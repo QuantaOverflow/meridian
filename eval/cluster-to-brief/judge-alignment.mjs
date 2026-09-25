@@ -50,7 +50,7 @@ const rate = (num, den) => (den ? `${num}/${den} = ${(num / den).toFixed(3)}` : 
 
 /** 读金标。格式见 gold/README.md。 */
 export function loadGold(file, axis) {
-  if (!existsSync(file)) throw new Error(`缺人工标注 ${file} —— 先按 gold/README.md 标一批,再谈判官的比例`);
+  if (!existsSync(file)) throw new Error(`缺人工标注 ${file} —— 先按 eval/_data/README.md 标一批,再谈判官的比例`);
   const g = JSON.parse(readFileSync(file, 'utf8'));
   if (g.axis && g.axis !== axis) throw new Error(`金标的 axis 是 ${g.axis},与 --axis=${axis} 不符`);
   if (!Array.isArray(g.labels)) throw new Error(`${file} 里 labels 不是数组`);
@@ -94,22 +94,17 @@ function main() {
   const runDir = String(args.run).replace(/\/$/, '');
   // `--gold=` 只为自测换路径用:自测要喂伪造的金标,而它**不能写进真金标目录**
   const goldF = args.gold ? String(args.gold) : `${HERE}../_data/ctb-${axis}-v1/labels.json`;
-  const judgesDir = args.judges ? String(args.judges) : `${HERE}judges`;
 
   let gold, verdicts, curPromptId;
   try {
-    curPromptId = promptId(axis, judgesDir);
+    curPromptId = promptId(axis);
     gold = loadGold(goldF, axis);
     verdicts = loadVerdicts(runDir, axis);
   } catch (e) { console.error(`✗ ${e.message}`); process.exit(2); }
 
-  // epoch:金标条目标的是「哪一次重复跑出来的稿」。run.json 有 epoch 就按它筛,
+  // epoch:金标条目标的是「哪一次重复跑出来的稿」。传了 --epoch 就按它筛,
   // 否则不筛并说明 —— 悄悄跨 epoch 比对会把另一稿的标注算进来,而这不报错。
-  let epoch = args.epoch !== undefined ? Number(args.epoch) : null;
-  if (epoch === null && existsSync(`${runDir}/run.json`)) {
-    const meta = JSON.parse(readFileSync(`${runDir}/run.json`, 'utf8'));
-    if (Number.isInteger(meta?.epoch)) epoch = meta.epoch;
-  }
+  const epoch = args.epoch !== undefined ? Number(args.epoch) : null;
   const all = gold.labels;
   const used = epoch === null ? all : all.filter(l => l.run === undefined || Number(l.run) === epoch);
   const skippedEpoch = all.length - used.length;

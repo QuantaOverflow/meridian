@@ -9,18 +9,27 @@ import type { ArticleAnalysis } from '@meridian/contracts';
 
 /**
  * 检查请求是否有有效的认证令牌
+ *
+ * 恒定时间比较（Cloudflare Workers 最佳实践）：普通 `!==` 在第一个不同的字符处就返回，
+ * 响应时间会泄露 token 猜对了几位。两边先各取 SHA-256 定长，再 timingSafeEqual——
+ * 定长也避免泄露 token 的长度。
  */
-export function hasValidAuthToken(c: Context<HonoEnv>) {
+export async function hasValidAuthToken(c: Context<HonoEnv>): Promise<boolean> {
   // API_TOKEN 没配时必须拒绝：否则模板串出来是字面量 "Bearer undefined",
   // 等于把一个可猜到的令牌当成有效凭据放行。
   if (!c.env.API_TOKEN) {
     return false;
   }
   const auth = c.req.header('Authorization');
-  if (auth === undefined || auth !== `Bearer ${c.env.API_TOKEN}`) {
+  if (auth === undefined) {
     return false;
   }
-  return true;
+  const encoder = new TextEncoder();
+  const [provided, expected] = await Promise.all([
+    crypto.subtle.digest('SHA-256', encoder.encode(auth)),
+    crypto.subtle.digest('SHA-256', encoder.encode(`Bearer ${c.env.API_TOKEN}`)),
+  ]);
+  return crypto.subtle.timingSafeEqual(provided, expected);
 }
 
 /**

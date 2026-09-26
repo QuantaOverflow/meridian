@@ -19,16 +19,16 @@ const app = new Hono<HonoEnv>()
   // 完全不校验（公网可触发 force-scrape），/events 的中间件挂在 router 文件里一个没导出的 Hono
   // 实例上、从未生效。/do/admin/* 各 handler 里原有的逐个校验随之删除。
   .use('/do/*', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/do', durableObjectsRouter)
   .use('/events', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .use('/events/*', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/events', eventsRouter) // 添加新的路由
@@ -37,7 +37,7 @@ const app = new Hono<HonoEnv>()
   // 逐 handler 加(do 是逐 handler 的写法)，是为了让以后新增的 admin 路由
   // 默认就在门后面——漏加一个 handler 的代价是重开一个洞。令牌与其余路由共用 API_TOKEN。
   .use('/admin/*', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/admin', adminRouter) // 添加admin路由
@@ -48,13 +48,13 @@ const app = new Hono<HonoEnv>()
   // 仅因内容非 JSON 才在 parse 处崩)。列表接口也裸吐生产元数据(简报标题/24h 文章数/run 状态)。
   // 鉴权是上游根治：外部进不来，任意 key 读取与元数据泄露一并消除，胜过逐路由补前缀校验。
   .use('/observability/*', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/observability', observabilityRouter) // 添加可观测性路由
   // /reader/* 是前端读者页的数据源（简报、线索），只有前端 server 带 token 来取，同样挡在挂载处
   .use('/reader/*', async (c, next) => {
-    if (!hasValidAuthToken(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
     await next();
   })
   .route('/reader', readerRouter)

@@ -205,6 +205,15 @@ export class SourceScraperDO extends DurableObject<Env> {
 
       const { sourceId, url, scrapeFrequencyTier } = validatedState.data;
 
+      const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
+      const now = Date.now();
+
+      // 先排下一次、再做任何可能抛错的事（查库、抓取）：本次 alarm 已被消费，下面一抛错就被外层
+      // catch 吞掉，没排上的话这个 DO 永久停抓。下面源已删/已暂停的分支由 destroy() 取消这次排的 alarm
+      const nextScheduledAlarmTime = Date.now() + interval;
+      await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
+      alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
+
       // 源已从库里删掉（destroy 修好之前删的源，DO 还在按周期跑）：自行停掉，不再抓
       const sourceRow = await getDb(this.env.HYPERDRIVE).query.$sources.findFirst({
         where: (s, { eq }) => eq(s.id, sourceId),
@@ -221,14 +230,6 @@ export class SourceScraperDO extends DurableObject<Env> {
         await this.destroy();
         return;
       }
-
-      const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
-      const now = Date.now();
-
-      // Schedule next alarm first to ensure continuity
-      const nextScheduledAlarmTime = Date.now() + interval;
-      await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
-      alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
 
       // 回收本源卡住的文章。放在抓取前、单独 try：feed 抓不到时也照做；回收失败下次 alarm 再来
       try {

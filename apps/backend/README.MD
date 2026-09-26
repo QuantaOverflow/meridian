@@ -17,7 +17,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
 1. **抓取**：每个源一个 `SourceScraperDO`（`src/durable_objects/sourceScraperDO.ts`，以源 URL 为 DO 名），
    按 `scrape_frequency` 用 alarm 定时抓 RSS，新文章入库后把 id 发到队列。
 2. **ProcessArticles**（`src/workflows/processArticles.workflow.ts`）：抓正文（`src/lib/services/article-fetchers.ts`，
-   需要时走 Browser Rendering）→ 正文存 R2 → ai-worker `/meridian/article/analyze` 写结构化字段。
+   需要时走 Browser Run binding `BROWSER`）→ 正文存 R2 → ai-worker `/meridian/article/analyze` 写结构化字段。
    这一步不算 embedding。
 3. **AutoBriefGenerationWorkflow**（`src/workflows/auto-brief-generation.ts`）：
    批量补算缺失 embedding（ml-service `/embeddings`）→ 聚类（ml-service `/ai-worker/clustering`，
@@ -39,12 +39,12 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
 | `SOURCE_SCRAPER` | Durable Object | `SourceScraperDO` |
 | `PROCESS_ARTICLES` / `AUTO_BRIEF` | Workflow | `ProcessArticles` / `AutoBriefGenerationWorkflow` |
 | `AI_WORKER` | Service binding | `meridian-ai-worker` |
+| `BROWSER` | Browser Run（`remote: true`） | 抓取降级到浏览器时调 `quickAction('content')`；无本地模拟，本地 dev 也走真实 Browser Run、产生用量。要求 `compatibility_date >= 2026-03-24` |
 | `CLOUDFLARE_ACCOUNT_ID`、`MERIDIAN_ML_SERVICE_URL` | vars | 明文写在 `wrangler.jsonc` |
 
 Secret（本地复制 `.dev.vars.example` 为 `.dev.vars`；生产在本目录 `npx wrangler@4.120.0 secret put <NAME>`）：
 
 - `API_TOKEN`：`/admin/*`、`/observability/*`、`/do/admin/*` 的 Bearer token
-- `CLOUDFLARE_API_TOKEN`：抓取时的 Browser Rendering
 - `MERIDIAN_ML_SERVICE_API_KEY`：发给 ml-service 的 `X-API-Token`，须与 ml-service 的 `API_TOKEN` 一致
 
 ## 命令

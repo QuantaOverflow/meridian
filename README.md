@@ -149,7 +149,6 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    ```bash
    cd apps/backend
    wrangler secret put API_TOKEN                     # Bearer token for /admin/* and /observability/*
-   wrangler secret put CLOUDFLARE_API_TOKEN          # browser rendering for scraping
    wrangler secret put MERIDIAN_ML_SERVICE_API_KEY   # = ml-service's API_TOKEN
    wrangler deploy
    ```
@@ -204,11 +203,11 @@ The route tables in `apps/backend/src/app.ts` + `src/routers/`, `services/meridi
 
 The `.dev.vars.example` files listed above are the source of truth for each Worker's variables. Key ones:
 
-- **Backend**: `API_TOKEN`, `CLOUDFLARE_API_TOKEN` (browser rendering), `MERIDIAN_ML_SERVICE_API_KEY` (must equal the ML service's `API_TOKEN`), `MERIDIAN_ML_SERVICE_URL` (var in `wrangler.jsonc`)
+- **Backend**: `API_TOKEN`, `MERIDIAN_ML_SERVICE_API_KEY` (must equal the ML service's `API_TOKEN`), `MERIDIAN_ML_SERVICE_URL` (var in `wrangler.jsonc`)
 - **AI Worker**: 无 secret（模型走 Workers AI binding）
 - **ML Service**: `API_TOKEN`
 
-Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
+Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service binding `AI_WORKER`, Browser Run `BROWSER` (scraping fallback; `remote: true`, so local dev uses real Browser Run), `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
 
 ## 📈 Monitoring & Observability
 

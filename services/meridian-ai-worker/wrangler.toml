@@ -21,6 +21,9 @@ bucket_name = "meridian-articles-prod"
 remote = true
 
 # 日志与 trace 全量（采样率 1），取值与用量/费用依据见根 README「Monitoring」的 Logs & traces。
+[observability]
+enabled = true
+
 [observability.logs]
 enabled = true
 head_sampling_rate = 1

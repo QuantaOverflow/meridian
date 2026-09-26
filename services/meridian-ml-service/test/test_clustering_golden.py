@@ -98,3 +98,24 @@ def test_clustering_is_deterministic_across_repeated_calls(client, request_body)
     first = _call_clustering(client, request_body)
     second = _call_clustering(client, request_body)
     assert first == second
+
+
+# ---- token 门（dependencies.verify_token）----
+
+def _post_with_token(client: TestClient, request_body: dict, token):
+    headers = {} if token is None else {"X-API-Token": token}
+    return client.post("/ai-worker/clustering", json=request_body, headers=headers)
+
+
+def test_token_gate_rejects_missing_or_wrong_token(client, request_body):
+    assert _post_with_token(client, request_body, None).status_code == 403
+    assert _post_with_token(client, request_body, "x" * len(API_TOKEN)).status_code == 403
+    assert _post_with_token(client, request_body, "short").status_code == 403
+
+
+def test_token_gate_rejects_everything_when_token_unconfigured(client, request_body, monkeypatch):
+    # 服务端没配 API_TOKEN（空串）时，带一个空 X-API-Token 头也不能过门
+    from src.config import settings
+
+    monkeypatch.setattr(settings, "api_token", "")
+    assert _post_with_token(client, request_body, "").status_code == 403

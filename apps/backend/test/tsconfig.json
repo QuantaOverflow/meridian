@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"moduleResolution": "bundler",
 		"types": [
-			"@cloudflare/vitest-pool-workers",
+			"@cloudflare/vitest-pool-workers/types",
+			"node",
 			"vitest/globals"
 		]
 	},

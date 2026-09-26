@@ -1,4 +1,4 @@
-import { fetchMock } from 'cloudflare:test';
+import { fetchMock } from '../fetch-mock';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { browserTriedFromError, getArticleFetchFirst, getArticleWithBrowser } from '../../src/lib/services/article-fetchers';
 

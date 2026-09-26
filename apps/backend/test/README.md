@@ -60,9 +60,10 @@ DATABASE_URL=postgresql://<user>@localhost:5432/meridian_backend_test pnpm -F @m
 
 ## 配置文件
 
-### vitest.config.ts
-- 使用 @cloudflare/vitest-pool-workers
-- 禁用文件并行执行，并开 `singleWorker`（否则多个测试文件一起跑时 workerd 起不来，原因见配置注释）
+### vitest.config.mts
+- 使用 @cloudflare/vitest-pool-workers 的 `cloudflareTest()` 插件（0.13 起取代 `defineWorkersConfig`；包是 ESM-only，所以配置文件是 `.mts`）
+- 禁用文件并行执行（数据库测试共用一个本机库）。存储按测试文件隔离，同一文件内各测试共享 DO 与存储
+- `cloudflare:test` 的 `fetchMock` 在 0.13 被删，测试改用 `test/fetch-mock.ts`（替换 `globalThis.fetch`，只实现本仓用到的那部分）
 
 ### wrangler.test.jsonc
 - 测试专用的 Wrangler 配置

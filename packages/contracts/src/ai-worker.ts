@@ -93,7 +93,7 @@ export interface ClusterJudgeRequest {
   articles: JudgeArticle[];
 }
 
-export type ClusterJudgeVerdict = 'EVENT' | 'NO_EVENT' | 'UNSURE';
+type ClusterJudgeVerdict = 'EVENT' | 'NO_EVENT' | 'UNSURE';
 
 export interface ClusterJudgeResult {
   verdict: ClusterJudgeVerdict;
@@ -120,7 +120,7 @@ export interface BriefBlockV6Sentence {
   sources: BriefBlockV6Source[];
 }
 
-export interface BriefBlockV6ArticleInput {
+interface BriefBlockV6ArticleInput {
   id: number;
   title: string;
   content: string;
@@ -138,7 +138,7 @@ export interface BriefBlockV6Request {
 }
 
 // backend 落观测只读这几项（auto-brief-generation 的 brief-v3 记录）；复读重试另有 console.warn
-export interface BriefBlockV6Trace {
+interface BriefBlockV6Trace {
   windows: number;
   anchors: number;
   citationsRepaired: number;

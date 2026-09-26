@@ -68,6 +68,7 @@
 - 位置：`apps/backend/wrangler.jsonc`，对应 `auto_brief_generation`。
 - 选项：改为 `AUTO_BRIEF` 之类；只改 binding 名，不改 workflow 名，不影响已有实例。
 - 待裁决：是否改。
+- 裁决（2026-09-26）：已改为 `AUTO_BRIEF`。只改 binding 名，workflow 名 `auto_brief_generation` 与已有实例不受影响。
 
 ### D8. `articleAnalysisSchema` 两处各写一份
 - 位置：`apps/backend/src/prompts/articleAnalysis.prompt.ts` 与 `services/meridian-ai-worker/src/prompts/articleAnalysis.ts`；backend 那份只给 `lib/core/utils.ts` 的 `generateSearchText` 当类型用。当前字段一致。

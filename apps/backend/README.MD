@@ -37,7 +37,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
 | `ARTICLES_BUCKET` | R2 `meridian-articles-prod`（`remote: true`） | 文章正文 + 观测数据；本地 dev 也读写生产桶 |
 | `ARTICLE_PROCESSING_QUEUE` | Queue | 生产者与消费者都是本 Worker，DLQ `meridian-article-processing-dlq` |
 | `SOURCE_SCRAPER` | Durable Object | `SourceScraperDO` |
-| `PROCESS_ARTICLES` / `MY_WORKFLOW` | Workflow | `ProcessArticles` / `AutoBriefGenerationWorkflow` |
+| `PROCESS_ARTICLES` / `AUTO_BRIEF` | Workflow | `ProcessArticles` / `AutoBriefGenerationWorkflow` |
 | `AI_WORKER` | Service binding | `meridian-ai-worker` |
 | `CLOUDFLARE_ACCOUNT_ID`、`MERIDIAN_ML_SERVICE_URL` | vars | 明文写在 `wrangler.jsonc` |
 

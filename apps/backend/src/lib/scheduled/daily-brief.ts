@@ -50,7 +50,7 @@ export async function runDailyBriefCron(env: Env): Promise<DailyBriefCronResult>
     }
 
     const workflowId = `cron-brief-${Date.now()}`;
-    const instance = await env.MY_WORKFLOW.create({
+    const instance = await env.AUTO_BRIEF.create({
       id: workflowId,
       params: {
         timeRangeDays: CRON_BRIEF_PARAMS.TIME_RANGE_DAYS,

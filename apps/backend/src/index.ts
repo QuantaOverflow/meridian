@@ -12,7 +12,7 @@ export type Env = {
   ARTICLE_PROCESSING_QUEUE: Queue<ArticleQueueMessage>;
   SOURCE_SCRAPER: DurableObjectNamespace<SourceScraperDO>;
   PROCESS_ARTICLES: Workflow;
-  MY_WORKFLOW: Workflow; // 简报生成工作流
+  AUTO_BRIEF: Workflow; // 简报生成工作流
   HYPERDRIVE: Hyperdrive;
   
   // AI Worker Service Binding - connects to meridian-ai-worker

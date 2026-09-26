@@ -12,7 +12,7 @@ declare namespace Cloudflare {
 		ARTICLE_PROCESSING_QUEUE: Queue;
 		HYPERDRIVE: Hyperdrive;
 		PROCESS_ARTICLES: Workflow;
-		MY_WORKFLOW: Workflow;
+		AUTO_BRIEF: Workflow;
 		MERIDIAN_ML_SERVICE_URL: string;
 		MERIDIAN_ML_SERVICE_API_KEY: string;
 	}

@@ -208,7 +208,7 @@ The `.dev.vars.example` files listed above are the source of truth for each Work
 - **AI Worker**: 无 secret（模型走 Workers AI binding）
 - **ML Service**: `API_TOKEN`
 
-Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `MY_WORKFLOW` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
+Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
 
 ## 📈 Monitoring & Observability
 

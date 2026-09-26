@@ -135,7 +135,7 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
     });
 
     // 创建并启动简报生成工作流
-    const workflowInstance = await c.env.MY_WORKFLOW.create({
+    const workflowInstance = await c.env.AUTO_BRIEF.create({
       id: `admin-brief-${Date.now()}`,
       params: workflowParams
     });

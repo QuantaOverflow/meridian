@@ -58,7 +58,7 @@
     },
     {
       "name": "auto_brief_generation_test",
-      "binding": "MY_WORKFLOW",
+      "binding": "AUTO_BRIEF",
       "class_name": "AutoBriefGenerationWorkflow"
     }
   ],

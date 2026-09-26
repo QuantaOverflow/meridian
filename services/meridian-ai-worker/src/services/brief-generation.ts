@@ -7,6 +7,9 @@ import { TraceContext, LLMCallPhase } from './llm-call-logger';
 import { callLLMUntilAccepted, isTransientLLMError, LLMAttemptsExhausted } from './call-llm';
 import { getTldrProsePrompt } from '../prompts/tldrGeneration';
 import { CloudflareEnv } from '../types';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger({ component: 'brief-generation' });
 
 const MAX_ATTEMPTS = 4;
 const BASE_DELAY_MS = 1000;
@@ -32,7 +35,7 @@ export class BriefGenerationService {
     briefContent: string
   ): Promise<{ success: boolean; data?: { tldrProse: string }; error?: string }> {
     try {
-      console.log(`[TLDR Prose] 为简报生成散文摘要`);
+      logger.info(`[TLDR Prose] 为简报生成散文摘要`);
 
       const phase: LLMCallPhase = 'tldr_prose_generation';
       // 只对可自愈错误重试：最多 4 次，指数退避 + 抖动（1s·2^n + [0,1s)）
@@ -55,7 +58,7 @@ export class BriefGenerationService {
 
           // 截断绝不能静默：打满 max_tokens 时留痕，免得下游把残缺输出当正常摘要。
           if (choice?.finish_reason === 'length') {
-            console.warn(`[Brief Generation] 输出被 max_tokens 截断（phase=${phase} chars=${response.length}）`);
+            logger.warn(`[Brief Generation] 输出被 max_tokens 截断（phase=${phase} chars=${response.length}）`);
           }
 
           let content = response.trim();
@@ -81,21 +84,21 @@ export class BriefGenerationService {
           if (!isTransientLLMError(error)) return false;
           const message = error instanceof Error ? error.message : String(error);
           if (attempt === MAX_ATTEMPTS - 1) {
-            console.error(`[TLDR Prose] 重试 ${MAX_ATTEMPTS - 1} 次后仍失败，可自愈错误:`, { error: message, attempt: attempt + 1 });
+            logger.error(`[TLDR Prose] 重试 ${MAX_ATTEMPTS - 1} 次后仍失败，可自愈错误:`, { error_message: message, attempt: attempt + 1 });
           } else {
-            console.warn(`[TLDR Prose] 可自愈错误，第 ${attempt + 1}/${MAX_ATTEMPTS} 次尝试失败，退避后重试:`, { error: message });
+            logger.warn(`[TLDR Prose] 可自愈错误，第 ${attempt + 1}/${MAX_ATTEMPTS} 次尝试失败，退避后重试:`, { error_message: message });
           }
           return true;
         },
         backoffMs: attempt => BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 1000,
       });
 
-      console.log(`[TLDR Prose] 散文摘要生成完成 (${prose.length} 字符)`);
+      logger.info(`[TLDR Prose] 散文摘要生成完成 (${prose.length} 字符)`);
       return { success: true, data: { tldrProse: prose } };
 
     } catch (e) {
       const error = e instanceof LLMAttemptsExhausted ? e.lastError : e;
-      console.error('[TLDR Prose] 生成失败:', error);
+      logger.error('[TLDR Prose] 生成失败:', undefined, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'

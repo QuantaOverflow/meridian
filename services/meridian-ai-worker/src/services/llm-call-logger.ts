@@ -2,6 +2,9 @@ import { chat } from './workers-ai'
 import type { ChatRequest, AIResponse, CloudflareEnv } from '../types'
 import { recordLLMCall } from './observe'
 import { llmCallKey } from '@meridian/contracts'
+import { Logger } from '../utils/logger'
+
+const logger = new Logger({ component: 'llm-call-logger' })
 
 /**
  * LLM 调用阶段，用于 R2 key 分类
@@ -122,7 +125,7 @@ export async function loggedChat(
       try {
         await bucket.put(key, JSON.stringify(record, null, 2))
       } catch (err) {
-        console.warn(`[LLMCallLogger] R2 put failed key=${key}:`, err)
+        logger.warn(`[LLMCallLogger] R2 put failed key=${key}:`, undefined, err)
       }
     }
   }

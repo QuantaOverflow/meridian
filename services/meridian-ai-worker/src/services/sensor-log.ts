@@ -12,6 +12,9 @@
 import type { CloudflareEnv } from '../types';
 import type { TraceContext } from './llm-call-logger';
 import { sensorKey } from '@meridian/contracts';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger({ component: 'sensor-log' });
 
 export type SensorKind = 'output_language';
 
@@ -36,6 +39,6 @@ export async function recordSensor(
     );
   } catch (e) {
     // 观测写入失败绝不能拖垮主流程——但要留痕，否则"传感器没数据"和"没触发"无法区分
-    console.warn(`[SensorLog] 落盘失败 ${key}: ${e instanceof Error ? e.message : String(e)}`);
+    logger.warn(`[SensorLog] 落盘失败 ${key}: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

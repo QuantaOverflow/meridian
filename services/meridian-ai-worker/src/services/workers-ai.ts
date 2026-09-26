@@ -1,5 +1,8 @@
 import type { ChatRequest, ChatResponse } from '../types'
 import { isThinkingDisabled } from '../config/thinking'
+import { Logger } from '../utils/logger'
+
+const logger = new Logger({ component: 'workers-ai' })
 
 /**
  * Workers AI 支持的模型表。mapResponse 按 model 名查表（不在表里的 model 会被拒）。
@@ -13,24 +16,15 @@ export const WORKERS_AI_MODELS: readonly string[] = [
 ]
 
 function logDebug(message: string, metadata: Record<string, unknown>): void {
-  console.debug(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'DEBUG',
-    requestId: metadata.requestId || 'unknown',
-    message,
-    metadata,
-  }))
+  logger.debug(message, { request_id: metadata.requestId || 'unknown', metadata })
 }
 
 function logProviderError(requestId: string, error: Error, context?: Record<string, unknown>): void {
-  console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'ERROR',
-    requestId,
-    message: 'Provider request failed',
-    metadata: { requestId, provider: 'workers-ai', errorMessage: error.message, ...context },
-    error: { message: error.message },
-  }))
+  logger.error(
+    'Provider request failed',
+    { request_id: requestId, metadata: { requestId, provider: 'workers-ai', errorMessage: error.message, ...context } },
+    error,
+  )
 }
 
 function mapResponse(body: any, modelName: string): ChatResponse {

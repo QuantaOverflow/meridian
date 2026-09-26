@@ -1,6 +1,9 @@
 import type { AIResponse, ChatMessage, ChatResponse, CloudflareEnv } from '../types';
 import { loggedChat, type LLMCallPhase, type TraceContext } from './llm-call-logger';
 import { recordSensor } from './sensor-log';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger({ component: 'call-llm' });
 
 // 「调 LLM」的单一配置入口（候选 A）。抽此层前，provider/model/temperature 散在
 // 各 service 的 callAI/callJudge helper 里各写一份并已漂移：temperature 默认 `?? 0.1` 五份副本、
@@ -70,10 +73,8 @@ function checkOutputLanguage(phase: LLMCallPhase, content: string): { cjk: numbe
   const cjk = content.match(/[一-鿿]/g)?.length ?? 0;
   const ratio = cjk / content.length;
   if (ratio <= CJK_ALARM_RATIO) return null;
-  console.error(
-    `[LangSensor] ${phase} 输出疑似切换到中文：CJK ${cjk}/${content.length} 字符 ` +
-    `(${(ratio * 100).toFixed(1)}% > ${CJK_ALARM_RATIO * 100}%)。样本: ${JSON.stringify(content.slice(0, 200))}`
-  );
+  logger.error(`[LangSensor] ${phase} 输出疑似切换到中文：CJK ${cjk}/${content.length} 字符 ` +
+    `(${(ratio * 100).toFixed(1)}% > ${CJK_ALARM_RATIO * 100}%)。样本: ${JSON.stringify(content.slice(0, 200))}`);
   return { cjk, ratio };
 }
 

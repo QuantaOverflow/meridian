@@ -7,7 +7,8 @@
  * 3. 删除后 ⇒ 表里没有行，DO 没有 alarm、storage 清空
  * 4. 失败不留半截状态：表与 DO 保持操作前的样子
  */
-import { env, fetchMock, runInDurableObject, SELF } from 'cloudflare:test';
+import { env, runInDurableObject, SELF } from 'cloudflare:test';
+import { fetchMock } from '../fetch-mock';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { $articles, $brief_runs, $brief_stories, $sources, eq, sql } from '@meridian/database';
 import { getDb } from '../../src/lib/database';

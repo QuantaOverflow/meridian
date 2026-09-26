@@ -9,7 +9,7 @@ paths:
 ## 1. 本地验证
 
 - **ai-worker 单端点**：`cd services/meridian-ai-worker && pnpm wrangler dev --port 8787`，
-  curl 打 `/meridian/<endpoint>`。本目录 `wrangler` 锁在 4.120.0（remote R2 binding 需要 `>= 4.37`）。
+  curl 打 `/meridian/<endpoint>`。本目录 `wrangler` 依赖 `^4.141.0`（remote R2 binding 需要 `>= 4.37`）。
 - **backend + ai-worker 联调**：单条命令多 `-c`，两个分开的 `wrangler dev` 进程不会自动互连，
   service binding 名是 `AI_WORKER`：
   `pnpm wrangler dev -c apps/backend/wrangler.jsonc -c services/meridian-ai-worker/wrangler.toml`。

@@ -1,7 +1,8 @@
 /**
  * 暂停 / 恢复某个源的自动抓取。走真实路由 + 真实 DO + 本机测试库（BACKEND_TEST_DATABASE_URL，见 test/README.md）。
  */
-import { env, fetchMock, runDurableObjectAlarm, runInDurableObject, SELF } from 'cloudflare:test';
+import { env, runDurableObjectAlarm, runInDurableObject, SELF } from 'cloudflare:test';
+import { fetchMock } from '../fetch-mock';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { $articles, $sources, eq, sql } from '@meridian/database';
 import { getDb } from '../../src/lib/database';

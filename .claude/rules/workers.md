@@ -17,6 +17,9 @@ paths:
 - **R2 是生产桶，不是模拟桶**：`apps/backend/wrangler.jsonc` 与 `services/meridian-ai-worker/wrangler.toml`
   的 `r2_buckets` 都写了 `remote: true`（bucket 是 `meridian-articles-prod`）。本地 `wrangler dev`
   **直连生产 R2**，本地写入会落进生产桶——调观测/日志类写入前先看第 3 节的 `x-observe: inline`。
+- **浏览器抓取也是真实的**：backend 的 `browser` binding（`BROWSER`）同样 `remote: true`（`quickAction` 没有本地模拟），
+  本地触发浏览器降级会产生真实 Browser Run 用量。测试里给 `env.BROWSER` 塞按 Response 契约回包的假对象
+  （`apps/backend/test/lib/article-fetchers.spec.ts`），不连真服务。
 - **Workflow 本地触发**：`curl -X POST http://localhost:8787/admin/briefs/generate -H 'Authorization: Bearer <API_TOKEN>'`，
   或 `wrangler workflows instances list <WORKFLOW_NAME>` 查实例状态。
 - **typecheck 坑 1**：`pnpm typecheck` 走 turbo 整包缓存，显示 `FULL TURBO` 等于没验；要验证就进包内直接跑

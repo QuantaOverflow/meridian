@@ -8,10 +8,10 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from .dependencies import ModelDep, verify_token
+from .dependencies import ModelDep
 from .schemas import (
     # 核心请求/响应模型
     EmbeddingRequest, EmbeddingResponse,
@@ -123,7 +123,6 @@ async def health_check():
 async def generate_embeddings(
     request: EmbeddingRequest,
     model_components: ModelDep,
-    _: None = Depends(verify_token),
 ):
     """生成文本嵌入向量"""
     print(f"[Embeddings] 收到请求：{len(request.texts)} 个文本")
@@ -159,7 +158,6 @@ async def generate_embeddings(
 async def ai_worker_clustering(
     items: List[Dict[str, Any]],
     config: BaseClusteringConfig = None,
-    _: None = Depends(verify_token),
 ):
     """backend（apps/backend/src/lib/services/ml-service.ts）专用聚类端点。
     输入：[{"id": 1, "embedding": [...]}, ...]

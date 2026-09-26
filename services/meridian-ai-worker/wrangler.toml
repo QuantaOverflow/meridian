@@ -15,7 +15,7 @@ binding = "AI"
 [[r2_buckets]]
 binding = "ARTICLES_BUCKET"
 bucket_name = "meridian-articles-prod"
-# 本地 wrangler dev 直连线上桶（remote binding，需 wrangler >= 4.37；本包锁 4.120.0）。
+# 本地 wrangler dev 直连线上桶（remote binding，需 wrangler >= 4.37；本包依赖 ^4.141.0）。
 # ai-worker 只往桶里写 LLM 调用日志（llm-calls/、sensor 日志），不读。
 # 代价是本地 dev 的写入也落生产桶。
 remote = true

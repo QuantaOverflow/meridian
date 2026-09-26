@@ -70,7 +70,7 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 ## 开发、测试、部署
 
 ```bash
-# 本地起服务。wrangler.toml 的 R2 是 remote = true（需 wrangler ≥ 4.37，本包锁 4.120.0）；
+# 本地起服务。wrangler.toml 的 R2 是 remote = true（需 wrangler ≥ 4.37，本包依赖 ^4.141.0）；
 # 本地 dev 的 R2 写入会落生产桶
 cd services/meridian-ai-worker && pnpm wrangler dev --port 8787
 

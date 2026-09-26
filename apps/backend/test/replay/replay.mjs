@@ -177,6 +177,8 @@ function generateConfigs({ replayPort, mlPort, apiToken }) {
   be.main = path.join(BACKEND_DIR, be.main);
   delete be.triggers; // 不让本地 cron 自己起一期
   be.r2_buckets = be.r2_buckets.map((b) => ({ binding: b.binding, bucket_name: BUCKET })); // 去掉 remote:true
+  // Browser Run 只有 remote 一种接法；简报 workflow 不抓正文、用不到它，留着会让 wrangler dev 启动时去连远端
+  delete be.browser;
   const bePath = writeConfig('backend', be, { API_TOKEN: apiToken });
 
   // ml：backend 的 ML_SERVICE binding 按 Worker 名指向 meridian-ml-service；本地由 dev-shim 顶替，转发到本地 uvicorn

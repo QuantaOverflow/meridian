@@ -22,11 +22,16 @@ type BatchItem<IdType = number | string> = {
  * Rate limiter that respects per-domain cooldowns to prevent overloading specific domains
  * when making HTTP requests. Handles batching and throttling of requests.
  *
+ * 跑在 Workflow 的 run() 里，所以调度必须**确定**：只由输入的 items 决定，不读实时时钟、
+ * 不靠跨 step 存活的内存状态（Workflow 休眠醒来会清空内存、重放 run()）。做法是用一个
+ * 模拟时钟排出分轮计划——每轮之后固定 sleep globalCooldownMs，同一域名两次访问之间在模拟时钟上
+ * 至少隔 domainCooldownMs。真实时间 = 模拟时间 + 处理耗时，所以真实间隔只会更长，不会更短。
+ * sleep 的 step 名带轮次序号（不带实时算出的秒数），同一输入重放时名字逐个相同、互不重复。
+ *
  * @template T Type of the batch items, must extend BatchItem
  * @template I Type of the ID field, defaults to number | string
  */
 export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
-  private lastDomainAccess = new Map<string, number>();
   private options: RateLimiterOptions;
   private logger: Logger;
 
@@ -43,10 +48,10 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
   /**
    * Processes a batch of items with domain-aware rate limiting
    *
-   * @param items Array of items to process
+   * @param items Array of items to process（URL 非法的跳过）
    * @param step Workflow step instance for handling sleeps/delays
    * @param processItem Function that processes a single item and returns a result
-   * @returns Promise resolving to an array of results in the same order as input items
+   * @returns 按处理顺序排列的结果；processItem 抛错的 item 不进结果（错误已记日志）
    *
    * @template R The return type of the processItem function
    */
@@ -59,61 +64,51 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
     batchLogger.info('Starting batch processing');
 
     const results: R[] = [];
-    const remainingItems = [...items];
+    const remaining: Array<{ item: T; domain: string }> = [];
+    for (const item of items) {
+      try {
+        remaining.push({ item, domain: new URL(item.url).hostname });
+      } catch {
+        batchLogger.warn('Skipping item with invalid URL', { item_id: item.id });
+      }
+    }
 
-    while (remainingItems.length > 0) {
-      const currentBatch: T[] = [];
-      const currentTime = Date.now();
+    // 模拟时钟：只由已排的 sleep 推进
+    const lastAccess = new Map<string, number>();
+    let clock = 0;
+    let round = 0;
 
-      // Select items for current batch based on domain cooldown
-      for (const item of [...remainingItems]) {
-        if (currentBatch.length >= this.options.maxConcurrent) break;
-
-        try {
-          const domain = new URL(item.url).hostname;
-          const lastAccess = this.lastDomainAccess.get(domain) || 0;
-
-          if (currentTime - lastAccess >= this.options.domainCooldownMs) {
-            currentBatch.push(item);
-            // Remove from remaining items
-            const idx = remainingItems.findIndex(i => i.id === item.id);
-            if (idx >= 0) remainingItems.splice(idx, 1);
-          }
-        } catch (e) {
-          // Skip invalid URLs
-          const idx = remainingItems.findIndex(i => i.id === item.id);
-          if (idx >= 0) remainingItems.splice(idx, 1);
+    while (remaining.length > 0) {
+      const currentBatch: Array<{ item: T; domain: string }> = [];
+      for (let i = 0; i < remaining.length && currentBatch.length < this.options.maxConcurrent; ) {
+        const { domain } = remaining[i];
+        const last = lastAccess.get(domain);
+        if (last === undefined || clock - last >= this.options.domainCooldownMs) {
+          // 选中即记访问时间：同一域名的多篇不会进同一轮
+          lastAccess.set(domain, clock);
+          currentBatch.push(remaining.splice(i, 1)[0]);
+        } else {
+          i++;
         }
       }
 
       if (currentBatch.length === 0) {
-        // Nothing ready yet, wait for next domain to be ready
-        const nextReady = Math.min(
-          ...remainingItems
-            .map(item => {
-              try {
-                const domain = new URL(item.url).hostname;
-                const lastAccess = this.lastDomainAccess.get(domain) || 0;
-                return this.options.domainCooldownMs - (currentTime - lastAccess);
-              } catch {
-                return Infinity; // Skip invalid URLs
-              }
-            })
-            .filter(time => time > 0) // Only consider positive wait times
+        // 没有域名冷却完：等到最早的那个冷却完。剩下的每个域名都访问过（否则上面就选中了）
+        const wait = Math.min(
+          ...remaining.map(({ domain }) => lastAccess.get(domain)! + this.options.domainCooldownMs - clock)
         );
-        batchLogger.debug('Waiting for domain cooldown', { wait_time_ms: Math.max(500, nextReady) });
-        await step.sleep(`waiting for domain cooldown (${Math.round(nextReady / 1000)}s)`, Math.max(500, nextReady));
+        batchLogger.debug('Waiting for domain cooldown', { wait_time_ms: wait });
+        await step.sleep(`domain cooldown before round ${round + 1}`, wait);
+        clock += wait;
         continue;
       }
 
-      batchLogger.debug('Processing batch', { batch_size: currentBatch.length, remaining: remainingItems.length });
+      round++;
+      batchLogger.debug('Processing batch', { round, batch_size: currentBatch.length, remaining: remaining.length });
 
-      // Process current batch in parallel
       const batchResults = await Promise.allSettled(
-        currentBatch.map(async item => {
+        currentBatch.map(async ({ item, domain }) => {
           try {
-            const domain = new URL(item.url).hostname;
-            this.lastDomainAccess.set(domain, Date.now());
             return await processItem(item, domain);
           } catch (error) {
             const itemLogger = batchLogger.child({ item_id: item.id });
@@ -127,7 +122,6 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
         })
       );
 
-      // Add results
       batchResults.forEach(result => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
@@ -135,12 +129,10 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
       });
 
       // Apply global cooldown between batches if we have more items to process
-      if (remainingItems.length > 0) {
+      if (remaining.length > 0) {
         batchLogger.debug('Applying global rate limit', { cooldown_ms: this.options.globalCooldownMs });
-        await step.sleep(
-          `global rate limit (${Math.round(this.options.globalCooldownMs / 1000)}s)`,
-          this.options.globalCooldownMs
-        );
+        await step.sleep(`global rate limit after round ${round}`, this.options.globalCooldownMs);
+        clock += this.options.globalCooldownMs;
       }
     }
 

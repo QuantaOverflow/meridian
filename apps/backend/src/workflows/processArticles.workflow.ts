@@ -83,7 +83,8 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
    */
   async run(_event: WorkflowEvent<ProcessArticlesParams>, step: WorkflowStep) {
     const env = this.env;
-    const db = getDb(env.HYPERDRIVE);
+    // 数据库连接在每个 step 里各建一次（getDb(env.HYPERDRIVE)），不跨 step 复用：
+    // Workflow 规则要求 Hyperdrive 连接只在创建它的那个 step.do 里用。
     const workflowId = _event.instanceId;
     
     // 观测性：注入 workflow instance id，确保 article_analysis 的 LLM I/O 能按 trace 落 R2。
@@ -102,7 +103,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
       const articlesDbFetchStartTime = Date.now();
       const articles = await step.do('get articles', dbStepConfig, async () =>
-        db
+        getDb(env.HYPERDRIVE)
           .select({ id: $articles.id, url: $articles.url, title: $articles.title })
           .from($articles)
           .where(
@@ -145,7 +146,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
 
           // Update the article status to mark it as skipped PDF
           await step.do(`mark PDF article ${article.id} as skipped`, dbStepConfig, async () => {
-            return db
+            return getDb(env.HYPERDRIVE)
               .update($articles)
               .set({
                 status: 'SKIPPED_PDF',
@@ -174,8 +175,10 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               const { html, used_browser } = await getArticleFetchFirst(env, article.url, async () => {
                 // Fetch failed, try browser with jitter
                 scrapeLogger.info('Fetch failed, falling back to browser');
+                // 这里已经在 step.do 里面：不能再调 step.sleep（step 不能嵌套，且每篇都叫 jitter 会重名），
+                // 用普通延时。它只是错开浏览器渲染的并发，不需要跨重放持久化。
                 const jitterTime = Math.random() * 2500 + 500;
-                await step.sleep(`jitter`, jitterTime);
+                await new Promise(resolve => setTimeout(resolve, jitterTime));
               });
               return { id: article.id, url: article.url, success: true, html, used_browser };
             }
@@ -227,7 +230,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               articleLogger.warn('Marking article as extraction junk (fetched but no real article body)', {
                 reason: junkReason,
               });
-              return db
+              return getDb(env.HYPERDRIVE)
                 .update($articles)
                 .set({
                   processedAt: new Date(),
@@ -251,7 +254,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
           const dbUpdateStartTime = Date.now();
           await step.do(`update db for successful article ${result.id}`, dbStepConfig, async () => {
             articleLogger.debug('Updating article status to CONTENT_FETCHED');
-            return db
+            return getDb(env.HYPERDRIVE)
               .update($articles)
               .set({
                 status: 'CONTENT_FETCHED',
@@ -275,7 +278,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               status,
             });
 
-            return db
+            return getDb(env.HYPERDRIVE)
               .update($articles)
               .set({
                 processedAt: new Date(),
@@ -361,6 +364,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             // handle results in a separate step
             const finalDbUpdateStartTime = Date.now();
             await step.do(`update article ${article.id} status`, async () => {
+              const db = getDb(env.HYPERDRIVE);
               // check for failures
               if (uploadResult.status === 'rejected') {
                 const error = uploadResult.reason;
@@ -416,7 +420,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
             );
 
             await step.do(`mark article ${article.id} as failed in analysis`, dbStepConfig, async () =>
-              db
+              getDb(env.HYPERDRIVE)
                 .update($articles)
                 .set({
                   processedAt: new Date(),

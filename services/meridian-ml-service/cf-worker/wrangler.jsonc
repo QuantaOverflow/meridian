@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "meridian-ml-service",
   "main": "src/index.ts",
-  "compatibility_date": "2025-04-30",
+  "compatibility_date": "2026-03-24",
   "compatibility_flags": ["nodejs_compat"],
   // 不开公网入口（*.workers.dev 与 Version/Preview URL 都关）：唯一调用方 backend 走 service binding
   // （ML_SERVICE），所以容器里不做 token 校验。只写 workers_dev:false 关不掉 preview URL；

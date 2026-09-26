@@ -91,8 +91,7 @@
     },
   ],
 "vars": {
-  "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
-  "MERIDIAN_ML_SERVICE_URL": "https://meridian-ml-service.swj299792458.workers.dev"
+  "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936"
 },
   /**
    * Service Bindings (communicate between multiple Workers)
@@ -102,6 +101,12 @@
     {
       "binding": "AI_WORKER",
       "service": "meridian-ai-worker"
+    },
+    // ml-service 的 Worker（前面挂 Container）。本地 dev 没有 Container：加
+    // `-c services/meridian-ml-service/dev-shim/wrangler.jsonc`，由它转发到本机 uvicorn。
+    {
+      "binding": "ML_SERVICE",
+      "service": "meridian-ml-service"
     }
   ]
 }

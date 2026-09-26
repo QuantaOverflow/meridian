@@ -1,0 +1,10 @@
+// 本地 dev 顶替 meridian-ml-service（见 index.js）。只用于 `wrangler dev -c ... -c 本文件`，永不 deploy。
+{
+  "name": "meridian-ml-service",
+  "main": "index.js",
+  "compatibility_date": "2025-04-30",
+  "vars": {
+    // 本机 uvicorn 地址；换端口时在同目录 .dev.vars 里写 ML_LOCAL_URL=... 覆盖
+    "ML_LOCAL_URL": "http://127.0.0.1:8081"
+  }
+}

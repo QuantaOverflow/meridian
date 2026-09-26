@@ -32,7 +32,7 @@ binding 路径**（`executeWorkersAIViaBinding`），不是 REST。prompt 构造
 |---|---|
 | Postgres | Neon 分支（`REPLAY_DATABASE_URL`，经 `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` 注入 Hyperdrive） |
 | R2 | 本地模拟桶 `meridian-replay-articles`，每次跑用全新 `--persist-to`，只播种这一期的 630 篇正文 |
-| ml-service | 本地 uvicorn + 真模型（聚类是确定性的，不录像） |
+| ml-service | 本地 uvicorn + 真模型（聚类是确定性的，不录像）；backend 的 `ML_SERVICE` binding 经 `services/meridian-ml-service/dev-shim` 转发过去 |
 | 输入文章 | 生产那期聚类快照里全部 article id，以 `article_ids` 传给 `/admin/briefs/generate`；其余参数取 `brief_runs.params` |
 
 生成的 wrangler 配置在 `data/<wf>/out/<时间>/gen/`，从仓库里的 `wrangler.jsonc` / `wrangler.toml`

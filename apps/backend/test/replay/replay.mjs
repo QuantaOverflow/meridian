@@ -177,8 +177,17 @@ function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
   be.main = path.join(BACKEND_DIR, be.main);
   delete be.triggers; // 不让本地 cron 自己起一期
   be.r2_buckets = be.r2_buckets.map((b) => ({ binding: b.binding, bucket_name: BUCKET })); // 去掉 remote:true
-  be.vars = { ...be.vars, MERIDIAN_ML_SERVICE_URL: `http://127.0.0.1:${mlPort}` };
   const bePath = writeConfig('backend', be, { API_TOKEN: apiToken, MERIDIAN_ML_SERVICE_API_KEY: mlToken });
+
+  // ml：backend 的 ML_SERVICE binding 按 Worker 名指向 meridian-ml-service；本地由 dev-shim 顶替，转发到本地 uvicorn
+  const shimDir = path.join(ML_DIR, 'dev-shim');
+  const shim = parseJsonc(fs.readFileSync(path.join(shimDir, 'wrangler.jsonc'), 'utf8'));
+  if (!be.services?.some((s) => s.binding === 'ML_SERVICE' && s.service === shim.name)) {
+    throw new Error(`backend wrangler.jsonc 的 ML_SERVICE binding 不再指向 ${shim.name}，更新重放配置`);
+  }
+  shim.main = path.join(shimDir, shim.main);
+  shim.vars = { ...shim.vars, ML_LOCAL_URL: `http://127.0.0.1:${mlPort}` };
+  const mlPath = writeConfig('ml-shim', shim, {});
 
   // ai-worker：wrangler.toml 很小，照抄其形状；唯一的实质改动是 AI binding → 替身
   const toml = fs.readFileSync(path.join(AI_WORKER_DIR, 'wrangler.toml'), 'utf8');
@@ -208,7 +217,7 @@ function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
   };
   const raPath = writeConfig('replay-ai', ra, {});
   // 第一个 -c 是唯一暴露 HTTP 的（primary）；替身排第一，其余请求它转给 backend
-  return [raPath, bePath, awPath];
+  return [raPath, bePath, awPath, mlPath];
 }
 
 // ── 子进程 ────────────────────────────────────────────────────────────────

@@ -84,7 +84,6 @@
   // 测试环境变量
   "vars": {
     "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
-    "MERIDIAN_ML_SERVICE_URL": "https://meridian-ml.pathsoflight.org",
     "MERIDIAN_ML_SERVICE_API_KEY": "test-ml-service-key",
     "API_TOKEN": "test-api-token"
   }

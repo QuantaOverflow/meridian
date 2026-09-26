@@ -19,6 +19,9 @@ export type Env = {
   AI_WORKER: {
     fetch(request: Request): Promise<Response>
   };
+
+  // ML Service Binding - connects to meridian-ml-service（本地由 services/meridian-ml-service/dev-shim 顶替）
+  ML_SERVICE: Fetcher;
   
   // Secrets
   API_TOKEN: string;
@@ -26,7 +29,6 @@ export type Env = {
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
 
-  MERIDIAN_ML_SERVICE_URL: string;
   MERIDIAN_ML_SERVICE_API_KEY: string;
 };
 

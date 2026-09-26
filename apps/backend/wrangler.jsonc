@@ -78,6 +78,15 @@
       "remote": true,
     },
   ],
+  /**
+   * Browser Run（原 Browser Rendering）：抓取降级到浏览器时调 env.BROWSER.quickAction('content')。
+   * quickAction 要求 compatibility_date >= 2026-03-24，且没有本地模拟：remote 让本地 wrangler dev
+   * 也打真实 Browser Run，会产生真实用量。
+   */
+  "browser": {
+    "binding": "BROWSER",
+    "remote": true,
+  },
   "workflows": [
     {
       "name": "meridian_process_articles",

@@ -5,7 +5,7 @@ declare namespace Cloudflare {
 	interface Env {
 		API_TOKEN: string;
 		CLOUDFLARE_ACCOUNT_ID: string;
-		CLOUDFLARE_API_TOKEN: string;
+		BROWSER: Fetcher /* Browser Run；本版 workers-types 无 BrowserRun 类型，代码用 src/index.ts 的 Env */;
 		SOURCE_SCRAPER: DurableObjectNamespace<import("./src/index").SourceScraperDO>;
 		ARTICLES_BUCKET: R2Bucket;
 		AI_WORKER: Fetcher /* meridian-ai-worker */;
@@ -22,7 +22,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "API_TOKEN" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_API_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "API_TOKEN" | "CLOUDFLARE_ACCOUNT_ID">> {}
 }
 
 // Begin runtime types

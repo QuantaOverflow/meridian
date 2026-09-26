@@ -139,3 +139,4 @@
 ### G2. `apps/backend/worker-configuration.d.ts` 与当前 wrangler 严重漂移
 - 现象：跑 `wrangler types` 会改动约 1.3 万行（runtime 类型版本变化），本次只手删了 `AI: Ai;` 一行。
 - 待裁决：是否单独提交一次重新生成（需确认新类型下 typecheck 仍绿）。
+- 裁决（2026-09-26）：修，已重新生成（wrangler 4.141 / workerd 2026-09-25，compat 2026-03-24）。`src/index.ts` 的 `Env` 改为从生成的 `Cloudflare.Env` 派生，只收窄队列消息体；`BROWSER` 用官方 `BrowserRun`。secret 名改在 `wrangler.jsonc` 的 `secrets.required` 声明，生成结果不再随本地 `.dev.vars` 变；backend `typecheck` 先跑 `wrangler types --check`，配置改了没重新生成就红。新类型顺带查出两处：`BriefGenerationParams.dateFrom/dateTo` 声明为 `Date`、实际传 ISO 字符串（改为 `string`）；抓取 step 返回的 `success` 需 `as const` 才能区分成败分支。测试的 `env`/`SELF` 改从 `cloudflare:workers` 取（`env`/`exports.default`）。ai-worker 与 ml cf-worker 不上 `wrangler types`：binding 各只有 1–2 个、手写类型已显式（D4），runtime 类型来自 `@cloudflare/workers-types` 5.20260926，与生成版同期；ai-worker 的 `ARTICLES_BUCKET` 有意为可选（单测跑在 node、无 bucket），生成类型会把它变成必填。

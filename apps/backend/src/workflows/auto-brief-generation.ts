@@ -61,8 +61,9 @@ interface LightweightArticleDataset {
 export interface BriefGenerationParams {
   article_ids?: number[];  // 从上游工作流传入的文章ID列表
   triggeredBy?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
+  // ISO 字符串：workflow params 经序列化传入，调用方（admin 路由）传的就是 toISOString()
+  dateFrom?: string;
+  dateTo?: string;
   
   // 简化的配置参数
   articleLimit?: number;

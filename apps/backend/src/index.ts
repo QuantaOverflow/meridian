@@ -6,32 +6,11 @@ import { runDailyBriefCron } from './lib/scheduled/daily-brief';
 
 type ArticleQueueMessage = { articles_id: number[] };
 
-export type Env = {
-  // Bindings
-  ARTICLES_BUCKET: R2Bucket;
+// binding 类型以 `wrangler types` 生成的 Cloudflare.Env（worker-configuration.d.ts）为准，
+// 改 wrangler.jsonc 后重跑 `pnpm cf-typegen`（typecheck 会用 `wrangler types --check` 拦漂移）。
+// 只收窄生成类型给不出的：队列消息体。
+export type Env = Omit<Cloudflare.Env, 'ARTICLE_PROCESSING_QUEUE'> & {
   ARTICLE_PROCESSING_QUEUE: Queue<ArticleQueueMessage>;
-  SOURCE_SCRAPER: DurableObjectNamespace<SourceScraperDO>;
-  PROCESS_ARTICLES: Workflow;
-  AUTO_BRIEF: Workflow; // 简报生成工作流
-  HYPERDRIVE: Hyperdrive;
-  
-  // AI Worker Service Binding - connects to meridian-ai-worker
-  AI_WORKER: {
-    fetch(request: Request): Promise<Response>
-  };
-
-  // Browser Run binding（wrangler.jsonc 的 browser）。运行时类型来自 2025-04 生成的 worker-configuration.d.ts，
-  // 早于 quickAction，没有 BrowserRun 类型；这里只声明用到的方法，签名与新版 BrowserRun 一致
-  // （options 字段表见其 BrowserRunContentOptions）。`wrangler types` 重新生成后（debt G2）换成 BrowserRun。
-  BROWSER: {
-    quickAction(action: 'content', options: { url: string } & Record<string, unknown>): Promise<Response>;
-  };
-
-  // ML Service Binding - connects to meridian-ml-service（本地由 services/meridian-ml-service/dev-shim 顶替）
-  ML_SERVICE: Fetcher;
-  
-  // Secrets
-  API_TOKEN: string;
 };
 
 // Create a base logger for the queue handler

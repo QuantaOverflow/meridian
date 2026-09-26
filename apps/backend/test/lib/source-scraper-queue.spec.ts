@@ -3,7 +3,8 @@
  * 真实 DO + 本机测试库（BACKEND_TEST_DATABASE_URL，见 test/README.md「数据库」）；
  * 队列是外部服务，用记录/失败的假队列替换 DO 的 ARTICLE_PROCESSING_QUEUE，feed 用 fetchMock 假冒。
  */
-import { env, fetchMock, runInDurableObject } from 'cloudflare:test';
+import { env, runInDurableObject } from 'cloudflare:test';
+import { fetchMock } from '../fetch-mock';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { $articles, $sources, eq, sql } from '@meridian/database';
 import { getDb } from '../../src/lib/database';

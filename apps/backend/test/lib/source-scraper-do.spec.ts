@@ -29,7 +29,13 @@ describe('SourceScraperDO.alarm', () => {
     await runInDurableObject(stub, async (instance: SourceScraperDO, state) => {
       await state.storage.put('state', { sourceId: 1, url, scrapeFrequencyTier: 1, lastChecked: null });
       const self = instance as unknown as { env: Env };
-      self.env = { ...self.env, HYPERDRIVE: { connectionString: 'postgresql://u:p@127.0.0.1:1/none' } as Hyperdrive };
+      // 取连接串即抛错来模拟库不可用：真连死端口时 postgres 驱动内部有个没人接的 socket promise，会变成测试进程的 unhandled rejection
+      const downHyperdrive = {
+        get connectionString(): string {
+          throw new Error('database unavailable');
+        },
+      } as unknown as Hyperdrive;
+      self.env = { ...self.env, HYPERDRIVE: downHyperdrive };
       await instance.alarm();
       expect(await state.storage.getAlarm()).not.toBeNull();
       await instance.destroy();

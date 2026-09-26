@@ -20,9 +20,9 @@ export type Env = {
     fetch(request: Request): Promise<Response>
   };
 
-  // Browser Run binding（wrangler.jsonc 的 browser）。已装的 @cloudflare/workers-types 4.20250519
+  // Browser Run binding（wrangler.jsonc 的 browser）。运行时类型来自 2025-04 生成的 worker-configuration.d.ts，
   // 早于 quickAction，没有 BrowserRun 类型；这里只声明用到的方法，签名与新版 BrowserRun 一致
-  // （options 字段表见其 BrowserRunContentOptions）。升级 workers-types 后换成 BrowserRun。
+  // （options 字段表见其 BrowserRunContentOptions）。`wrangler types` 重新生成后（debt G2）换成 BrowserRun。
   BROWSER: {
     quickAction(action: 'content', options: { url: string } & Record<string, unknown>): Promise<Response>;
   };

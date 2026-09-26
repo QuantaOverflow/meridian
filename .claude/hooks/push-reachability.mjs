@@ -87,8 +87,9 @@ process.stderr.write(
     section('新增的源码文件：', addedFiles) +
     section('新增的路由：', [...addedRoutes, ...addedFrontendApi.map((f) => `${f}（Nuxt 文件路由）`)]) +
     section('改动过的 binding / 配置 / Env / DB schema 文件：', configFiles) +
-    `\n\n按全局 CLAUDE.md「Cleanup / purify」从入口往下追：每条新路由要有真实调用方或文档化的维护入口；` +
-    `新文件里的导出、类方法、按名查的注册项要追得到入口；新 binding / 变量 / 列要有代码读；只被测试引用的算死。` +
+    `\n\n按全局 CLAUDE.md「Cleanup / purify」从入口往下追，只查工具看不见的：每条新路由要有真实调用方或文档化的维护入口；` +
+    `类方法、按名查的注册项要追得到入口；新 binding / 变量 / 列要有代码读；只被测试引用的算死。` +
+    `\n模块级的导出与 import、未用依赖不用查——push 时 git 的 pre-push 会跑 knip，报错再修。` +
     `\n复查完（有死代码先删、commit），运行 \`node .claude/hooks/push-reachability.mjs --mark\` 记录，再重新 push。\n`
 );
 process.exit(2);

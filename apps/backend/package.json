@@ -9,7 +9,7 @@
     "test": "vitest run",
     "replay": "node test/replay/replay.mjs",
     "cf-typegen": "wrangler types",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "wrangler types --check && tsc --noEmit && tsc --noEmit -p test/tsconfig.json"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",

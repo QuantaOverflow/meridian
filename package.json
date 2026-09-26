@@ -8,14 +8,17 @@
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "typecheck": "node scripts/check-rules.mjs && turbo run typecheck",
+    "lint": "eslint apps/backend/src apps/backend/test services/meridian-ai-worker/src services/meridian-ai-worker/test services/meridian-ml-service/cf-worker/src",
     "prepare": "git config core.hooksPath .githooks",
     "knowledge": "node node_modules/.pnpm/tsx@4.19.3/node_modules/tsx/dist/cli.mjs scripts/knowledge/build.ts"
   },
   "devDependencies": {
+    "eslint": "^10.11.0",
     "knip": "^6.37.0",
     "prettier": "^3.5.3",
     "turbo": "^2.4.4",
-    "typescript": "5.8.2"
+    "typescript": "5.8.2",
+    "typescript-eslint": "^8.70.1"
   },
   "packageManager": "pnpm@10.9.0",
   "engines": {

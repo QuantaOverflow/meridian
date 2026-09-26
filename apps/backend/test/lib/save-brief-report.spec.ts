@@ -2,7 +2,7 @@
  * 「保存简报」step 的落库：reports 行与 brief_runs.report_id 必须同时出现或同时不出现。
  * 走本机测试库（BACKEND_TEST_DATABASE_URL，见 test/README.md「数据库」），不 mock。
  */
-import { env } from 'cloudflare:test';
+import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { $brief_runs, $reports, eq } from '@meridian/database';
 import { getDb } from '../../src/lib/database';

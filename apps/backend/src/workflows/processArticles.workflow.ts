@@ -180,7 +180,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
                 const jitterTime = Math.random() * 2500 + 500;
                 await new Promise(resolve => setTimeout(resolve, jitterTime));
               });
-              return { id: article.id, url: article.url, success: true, html, used_browser };
+              return { id: article.id, url: article.url, success: true as const, html, used_browser };
             }
           );
           scrapeLogger.info('Individual article scrape completed', { durationMs: Date.now() - individualScrapeStartTime, usedBrowser: result.used_browser });

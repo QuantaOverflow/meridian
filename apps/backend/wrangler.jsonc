@@ -8,6 +8,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-03-24",
   "compatibility_flags": ["nodejs_compat"],
+  // 声明 Worker 读的 secret 名（值用 wrangler secret put，不入库）。`wrangler types` 只按这里生成
+  // Env 的 secret 字段，不再从各人本地的 .dev.vars 推断，生成结果在每台机器上一致；
+  // deploy 时缺这个 secret 会直接报错。
+  "secrets": {
+    "required": ["API_TOKEN"],
+  },
   "migrations": [
     {
       "new_sqlite_classes": ["SourceScraperDO"],

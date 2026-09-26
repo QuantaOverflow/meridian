@@ -1,4 +1,4 @@
-// cloudflare:test 的 env 类型是 Cloudflare.Env（绑定取 worker-configuration.d.ts，测试绑定见 wrangler.test.jsonc），
+// 测试里 `import { env } from 'cloudflare:workers'` 的类型是 Cloudflare.Env（绑定取 worker-configuration.d.ts，测试绑定见 wrangler.test.jsonc），
 // 这里只补测试专用的绑定
 declare namespace Cloudflare {
   interface Env {

@@ -7,7 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
-import { env, SELF } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
 import { anchorFromDate, tokenizeDates } from '../fixtures/reader/dates';
@@ -58,7 +58,7 @@ const CASES: Record<string, string> = {
 describe('读者视图与后台源读数快照', () => {
   for (const [name, path] of Object.entries(CASES)) {
     it(name, async () => {
-      const res = await SELF.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       const meta = JSON.stringify({ status: res.status, path });
       await expect(`${meta}\n${tokenizeDates(await res.text(), anchor)}\n`).toMatchFileSnapshot(
         `../fixtures/reader/__golden__/${name}.golden`
@@ -69,19 +69,19 @@ describe('读者视图与后台源读数快照', () => {
 
 describe('边界', () => {
   it('期号 0：404 而不是 400（前端的 slug 校验放行 0，原先直连库时回「Report not found」）', async () => {
-    const res = await SELF.fetch('http://backend/reader/briefs/0', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+    const res = await exports.default.fetch('http://backend/reader/briefs/0', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
     expect(res.status).toBe(404);
   });
 
   it('不带 token：401', async () => {
     for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources', '/admin/sources/1/details']) {
-      expect((await SELF.fetch(`http://backend${path}`)).status, path).toBe(401);
+      expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });
 
   it('参数不合法：400', async () => {
     for (const path of ['/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/stories/1.5', '/admin/sources/abc/details']) {
-      const res = await SELF.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       expect(res.status, path).toBe(400);
     }
   });

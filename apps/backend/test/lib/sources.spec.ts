@@ -7,7 +7,8 @@
  * 3. 删除后 ⇒ 表里没有行，DO 没有 alarm、storage 清空
  * 4. 失败不留半截状态：表与 DO 保持操作前的样子
  */
-import { env, runInDurableObject, SELF } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
+import { runInDurableObject } from 'cloudflare:test';
 import { fetchMock } from '../fetch-mock';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { $articles, $brief_runs, $brief_stories, $sources, eq, sql } from '@meridian/database';
@@ -20,7 +21,7 @@ if (!env.BACKEND_TEST_DB) {
 const db = getDb(env.HYPERDRIVE);
 
 function api(path: string, method = 'POST', body?: unknown) {
-  return SELF.fetch(`http://backend${path}`, {
+  return exports.default.fetch(`http://backend${path}`, {
     method,
     headers: { Authorization: `Bearer ${env.API_TOKEN}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),

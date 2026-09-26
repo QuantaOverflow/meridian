@@ -1,7 +1,8 @@
 /**
  * 暂停 / 恢复某个源的自动抓取。走真实路由 + 真实 DO + 本机测试库（BACKEND_TEST_DATABASE_URL，见 test/README.md）。
  */
-import { env, runDurableObjectAlarm, runInDurableObject, SELF } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
+import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { fetchMock } from '../fetch-mock';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { $articles, $sources, eq, sql } from '@meridian/database';
@@ -14,7 +15,7 @@ if (!env.BACKEND_TEST_DB) {
 const db = getDb(env.HYPERDRIVE);
 
 function api(path: string, method = 'POST') {
-  return SELF.fetch(`http://backend${path}`, { method, headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+  return exports.default.fetch(`http://backend${path}`, { method, headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
 }
 
 async function alarmOf(url: string) {

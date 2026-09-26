@@ -3,11 +3,11 @@
  * 打 POST /admin/briefs/generate 带一个类型错的请求体：过了门会被 zValidator 回 400、
  * 不会真的启动 workflow；没过门回 401。
  */
-import { env, SELF } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 function generate(auth?: string) {
-  return SELF.fetch('http://backend/admin/briefs/generate', {
+  return exports.default.fetch('http://backend/admin/briefs/generate', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(auth === undefined ? {} : { Authorization: auth }) },
     body: JSON.stringify({ articleLimit: 'not-a-number' }),

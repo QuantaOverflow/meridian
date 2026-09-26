@@ -32,7 +32,7 @@
   前端端到端 `pnpm -F @meridian/frontend test`（不需要数据库，backend 由测试假冒，见 `apps/frontend/README.md`「测试」）；
   整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
 - 报错先 `wrangler tail`，再加 console.log
-- push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip + ruff；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
+- push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip + eslint（no-floating-promises）+ ruff；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
 
 ## 已知坑
 - `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）

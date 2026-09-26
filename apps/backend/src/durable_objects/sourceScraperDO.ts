@@ -217,7 +217,7 @@ export class SourceScraperDO extends DurableObject<Env> {
       // 源已从库里删掉（destroy 修好之前删的源，DO 还在按周期跑）：自行停掉，不再抓
       const sourceRow = await getDb(this.env.HYPERDRIVE).query.$sources.findFirst({
         where: (s, { eq }) => eq(s.id, sourceId),
-        columns: { id: true, paused_at: true },
+        columns: { id: true, paused_at: true, url: true },
       });
       if (!sourceRow) {
         alarmLogger.warn('Source no longer exists in DB, stopping this DO', { source_id: sourceId });
@@ -227,6 +227,13 @@ export class SourceScraperDO extends DurableObject<Env> {
       // 源已暂停（正常由 pause 接口停掉 DO；这里兜底停 DO 失败或暂停后又被 init 的情况）：自行停掉，恢复走 resume
       if (sourceRow.paused_at) {
         alarmLogger.warn('Source is paused, stopping this DO', { source_id: sourceId });
+        await this.destroy();
+        return;
+      }
+
+      // 源的地址已改：本 DO 按旧地址命名，是改地址时没停掉的遗留（新地址另有自己的 DO）。自行停掉，不再抓旧地址
+      if (sourceRow.url !== url) {
+        alarmLogger.warn('Source URL changed, stopping this stale DO', { source_id: sourceId, stale_url: url });
         await this.destroy();
         return;
       }

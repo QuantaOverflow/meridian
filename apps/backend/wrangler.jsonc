@@ -28,8 +28,19 @@
       },
     ],
   },
+  // 日志与 trace 全量（采样率 1）：每天 1 期简报、每源每小时 1 次 alarm，调用量小，
+  // 采样会丢掉最需要看的那一期。取值与用量/费用依据见根 README「Monitoring」的 Logs & traces。
   "observability": {
     "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+    },
   },
   /**
    * Cron 触发器 — 每日简报

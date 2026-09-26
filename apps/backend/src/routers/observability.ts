@@ -3,6 +3,9 @@ import type { Env } from '../index';
 import { getDb } from '../lib/database';
 import { $reports, $brief_runs, $brief_stories, $articles, eq, desc, gte, sql } from '@meridian/database';
 import { clusteringSnapshotKey, LLM_CALLS_ROOT, llmCallsPrefix, workflowObservabilityKey } from '@meridian/contracts';
+import { Logger } from '../lib/core/logger';
+
+const logger = new Logger({ router: 'observability' });
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -49,7 +52,7 @@ app.get('/runs/:workflowId', async (c) => {
       observability: observabilitySnapshot,
     });
   } catch (error) {
-    console.error('/observability/runs/:workflowId 失败:', error);
+    logger.error('/observability/runs/:workflowId 失败:', undefined, error);
     return c.json(
       {
         success: false,
@@ -76,7 +79,7 @@ app.get('/runs/:workflowId/clustering', async (c) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('/observability/runs/:workflowId/clustering 失败:', error);
+    logger.error('/observability/runs/:workflowId/clustering 失败:', undefined, error);
     return c.json(
       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       500
@@ -131,7 +134,7 @@ app.get('/trends', async (c) => {
       storyTrends,
     });
   } catch (error) {
-    console.error('/observability/trends 失败:', error);
+    logger.error('/observability/trends 失败:', undefined, error);
     return c.json(
       {
         success: false,
@@ -225,7 +228,7 @@ app.get('/health/summary', async (c) => {
       })),
     });
   } catch (error) {
-    console.error('/observability/health/summary 失败:', error);
+    logger.error('/observability/health/summary 失败:', undefined, error);
     return c.json(
       {
         success: false,
@@ -272,7 +275,7 @@ app.get('/runs/:workflowId/llm-calls', async (c) => {
 
     return c.json({ success: true, total: list.objects.length, calls: calls.filter(Boolean) });
   } catch (error) {
-    console.error('/observability/runs/:workflowId/llm-calls 失败:', error);
+    logger.error('/observability/runs/:workflowId/llm-calls 失败:', undefined, error);
     return c.json(
       {
         success: false,
@@ -303,7 +306,7 @@ app.get('/llm-calls/*', async (c) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('/observability/llm-calls/* 失败:', error);
+    logger.error('/observability/llm-calls/* 失败:', undefined, error);
     return c.json(
       {
         success: false,

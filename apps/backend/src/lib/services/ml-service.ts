@@ -9,6 +9,9 @@
 
 import { BRIEF_CLUSTERING_OPTIONS } from '../core/constants';
 import type { ServiceResult } from './ai-services';
+import { Logger } from '../core/logger';
+
+const logger = new Logger({ component: 'ml-service' });
 
 export interface MLServiceEnv {
   ML_SERVICE: {
@@ -343,10 +346,8 @@ class MLService {
 
         if (!clusteringResult.buildIdentityCheck.verified) {
           // 只打日志 + 往上报结构化信号，不在这里改流程：status 归 workflow。
-          console.warn(
-            `[Clustering] ml 镜像身份未通过断言 status=${clusteringResult.buildIdentityCheck.status} ` +
-            `detail=${clusteringResult.buildIdentityCheck.detail}`
-          );
+          logger.warn(`[Clustering] ml 镜像身份未通过断言 status=${clusteringResult.buildIdentityCheck.status} ` +
+            `detail=${clusteringResult.buildIdentityCheck.detail}`);
         }
 
         return {

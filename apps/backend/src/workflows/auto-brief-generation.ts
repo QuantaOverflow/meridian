@@ -23,6 +23,7 @@ import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loa
 import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
+import { Logger } from '../lib/core/logger';
 import {
   articleJourneyKey,
   briefV3RecordKey,
@@ -34,6 +35,9 @@ import {
   type BriefV3Record,
   type BriefV3WrittenBlock,
 } from '@meridian/contracts';
+
+// run() 里用带 workflow_id 的 child（见 run 开头）；这里给 run 外的辅助函数用
+const briefLog = new Logger({ component: 'AutoBrief' });
 
 // ============================================================================
 // 数据接口定义 - 轻量级版本，避免SQLITE_TOOBIG错误
@@ -197,7 +201,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
-      console.log(`[AutoBrief] 并行处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)}, 大小: ${batch.length}`);
+      briefLog.info(`[AutoBrief] 并行处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)}, 大小: ${batch.length}`);
       
       // 并行处理当前批次
       const batchPromises = batch.map((item, batchIndex) => 
@@ -211,7 +215,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         if (result.status === 'fulfilled') {
           results.push(result.value);
         } else {
-          console.warn(`[AutoBrief] 批次处理项目失败:`, result.reason);
+          briefLog.warn(`[AutoBrief] 批次处理项目失败:`, undefined, result.reason);
         }
       }
     }
@@ -231,14 +235,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     /** 正文取用结果，OK 之外都是失败（为什么不再吞失败见 BodyStatus） */
     contentStatus: BodyStatus;
   }>> {
-      console.log(`[AutoBrief] 开始并行获取 ${articleIds.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
+      briefLog.info(`[AutoBrief] 开始并行获取 ${articleIds.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
 
   // 过滤出有效的文章信息
   const validArticleInfos = articleIds
     .map(articleId => lightweightDataset.articles.find(a => a.id === articleId))
     .filter((article): article is NonNullable<typeof article> => !!article);
 
-  console.log(`[AutoBrief] 有效文章信息: ${validArticleInfos.length} 篇`);
+  briefLog.info(`[AutoBrief] 有效文章信息: ${validArticleInfos.length} 篇`);
 
   // 并行处理函数
   const processArticle = async (lightweightArticle: typeof validArticleInfos[0], index: number) => {
@@ -249,11 +253,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     };
     const { status, content, error } = await fetchBody(this.env.ARTICLES_BUCKET, lightweightArticle.contentFileKey);
     if (status === 'MISSING_CONTENT_KEY') {
-      console.warn(`[AutoBrief] 取正文失败 MISSING_CONTENT_KEY (ID: ${lightweightArticle.id})`);
+      briefLog.warn(`[AutoBrief] 取正文失败 MISSING_CONTENT_KEY (ID: ${lightweightArticle.id})`);
     } else if (status === 'R2_FETCH_ERROR') {
-      console.warn(`[AutoBrief] 取正文失败 R2_FETCH_ERROR (ID: ${lightweightArticle.id}):`, error);
+      briefLog.warn(`[AutoBrief] 取正文失败 R2_FETCH_ERROR (ID: ${lightweightArticle.id}):`, undefined, error);
     } else if (status !== 'OK') {
-      console.warn(`[AutoBrief] 取正文失败 ${status} (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
+      briefLog.warn(`[AutoBrief] 取正文失败 ${status} (ID: ${lightweightArticle.id}, key: ${lightweightArticle.contentFileKey})`);
     }
     return { ...base, content, contentStatus: status };
   };
@@ -266,11 +270,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
   );
 
   const contentFailures = articlesWithContent.filter(a => a.contentStatus !== 'OK');
-  console.log(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇（取正文失败 ${contentFailures.length} 篇）`);
+  briefLog.info(`[AutoBrief] 并行获取文章内容完成: ${articlesWithContent.length} 篇（取正文失败 ${contentFailures.length} 篇）`);
   if (contentFailures.length > 0) {
     const byReason: Record<string, number> = {};
     for (const a of contentFailures) byReason[a.contentStatus] = (byReason[a.contentStatus] ?? 0) + 1;
-    console.warn(`[AutoBrief] 取正文失败分因: ${JSON.stringify(byReason)}`);
+    briefLog.warn(`[AutoBrief] 取正文失败分因: ${JSON.stringify(byReason)}`);
   }
     return articlesWithContent;
   }
@@ -292,6 +296,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
     // 使用 Cloudflare Workflow 实例的真实ID，而不是自生成的UUID
     const workflowId = event.instanceId;
+    const log = briefLog.child({ workflow_id: workflowId });
     const observability = createWorkflowObservability(workflowId, this.env);
     
     await observability.logStep('workflow_start', 'started', {
@@ -317,7 +322,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     });
 
     try {
-      console.log(`[AutoBriefGeneration] 开始简报生成工作流, 参数:`, event.payload);
+      log.info(`[AutoBriefGeneration] 开始简报生成工作流, 参数:`, { detail: event.payload });
 
       // =====================================================================
       // 步骤 1: 获取文章数据并构建 ArticleDataset
@@ -350,7 +355,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           .where(runWindowWhere(runWindow, 'missing'))
           .orderBy(desc($articles.publishDate))
           .limit(runWindow.limit);
-        console.log(`[AutoBrief] embedding 补算：窗口内缺失 ${rows.length} 篇`);
+        log.info(`[AutoBrief] embedding 补算：窗口内缺失 ${rows.length} 篇`);
         return rows.map(r => r.id);
       });
 
@@ -406,7 +411,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             for (let j = 0; j < batch.length; j++) {
               const emb = embeddings[j]?.embedding;
               if (!Array.isArray(emb) || emb.length !== EMBEDDING_DIM) {
-                console.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 ${EMBEDDING_DIM}，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
+                log.error(`[AutoBrief] embedding 维度异常(文章 ${batch[j].id})：期望 ${EMBEDDING_DIM}，实得 ${Array.isArray(emb) ? emb.length : '非数组'}`);
                 continue;
               }
               await db.update($articles).set({ embedding: emb }).where(eq($articles.id, batch[j].id));
@@ -417,11 +422,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           embedBackfilled += written;
         } catch (error) {
           embedFailed += batchIds.length;
-          console.error(`[AutoBrief] embedding 批次 ${batchNo} 重试后仍失败(${batchIds.length} 篇，跳过不中断): ${String(error)}`);
+          log.error(`[AutoBrief] embedding 批次 ${batchNo} 重试后仍失败(${batchIds.length} 篇，跳过不中断): ${String(error)}`);
         }
       }
       if (pendingIds.length > 0) {
-        console.log(`[AutoBrief] embedding 补算完成: 成功 ${embedBackfilled} / 失败 ${embedFailed} / 待补 ${pendingIds.length}`);
+        log.info(`[AutoBrief] embedding 补算完成: 成功 ${embedBackfilled} / 失败 ${embedFailed} / 待补 ${pendingIds.length}`);
       }
 
       const dataset: LightweightArticleDataset = await step.do('准备文章数据集', defaultStepConfig, async (): Promise<LightweightArticleDataset> => {
@@ -429,12 +434,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           const db = getDb(this.env.HYPERDRIVE);
           
           if (article_ids.length > 0) {
-            console.log(`[AutoBrief] 使用上游提供的 ${article_ids.length} 个文章ID`);
+            log.info(`[AutoBrief] 使用上游提供的 ${article_ids.length} 个文章ID`);
           }
           // 与 runWindowWhere 里的时间条件同口径，只为保留这行日志
           const timeConditionCount = article_ids.length > 0 ? 0
             : (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (!dateFrom && !dateTo && timeRangeDays && timeRangeDays > 0 ? 1 : 0);
-          console.log(`[AutoBrief] 最终时间条件数量: ${timeConditionCount}`);
+          log.info(`[AutoBrief] 最终时间条件数量: ${timeConditionCount}`);
 
                      // 查询已处理的文章
            const queryResult = await db
@@ -457,18 +462,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
              // 会截掉最新文章。日报必须优先最新，否则新增源/当天新闻进不了简报。
              .orderBy(desc($articles.publishDate))
              .limit(runWindow.limit);
-          console.log(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
+          log.info(`[AutoBrief] 从数据库获取到 ${queryResult.length} 篇文章`);
 
           // 窗口截短的判别信号。取数是「窗口内按 publish_date 倒序取前 N 篇」，取满 N 就说明
           // 窗口里还有更旧的合格文章没被看过——**时间窗被 limit 悄悄截短了**，而这在旧代码里
           // 只能靠事后翻库反推（08-15 那次 2 天窗实际只覆盖 21.1 小时就是这么发现的）。
           // 取满不等于一定出问题（正好相等也可能），但它是唯一能在日志里直接看见的信号。
           if (article_ids.length === 0 && queryResult.length >= (runWindow.limit)) {
-            console.warn(
-              `[AutoBrief] ⚠️ 取数取满上限 ${runWindow.limit} 篇，时间窗可能被截短：` +
+            log.warn(`[AutoBrief] ⚠️ 取数取满上限 ${runWindow.limit} 篇，时间窗可能被截短：` +
                 `窗口设定 ${timeRangeDays} 天，但更旧的合格文章不会进入本期。` +
-                `若持续出现，调高 CRON_BRIEF_PARAMS.ARTICLE_LIMIT。`
-            );
+                `若持续出现，调高 CRON_BRIEF_PARAMS.ARTICLE_LIMIT。`);
           }
 
           // 验证嵌入向量有效性
@@ -477,7 +480,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           );
           
           if (queryResult.length !== validArticles.length) {
-            console.warn(`[AutoBrief] 过滤掉 ${queryResult.length - validArticles.length} 篇无效嵌入向量的文章`);
+            log.warn(`[AutoBrief] 过滤掉 ${queryResult.length - validArticles.length} 篇无效嵌入向量的文章`);
           }
 
           if (validArticles.length < 2) {
@@ -545,7 +548,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             };
           };
 
-          console.log(`[AutoBrief] 开始并行获取 ${validArticles.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
+          log.info(`[AutoBrief] 开始并行获取 ${validArticles.length} 篇文章内容，批量大小: ${R2_BATCH_SIZE}`);
 
           // 使用批量并行处理 R2 内容获取
           const processResults = await this.batchProcessParallel(
@@ -572,16 +575,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               failuresByReason[reason] = (failuresByReason[reason] || 0) + 1;
 
               if (result.reason === 'MISSING_CONTENT_KEY') {
-                console.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (索引: ${processResults.indexOf(result)})`);
+                log.warn(`[AutoBrief] 文章缺少内容文件键，跳过 (索引: ${processResults.indexOf(result)})`);
               } else if (result.reason === 'R2_CONTENT_MISSING') {
-                console.error(`[AutoBrief] R2内容缺失，跳过文章 (索引: ${processResults.indexOf(result)})`);
+                log.error(`[AutoBrief] R2内容缺失，跳过文章 (索引: ${processResults.indexOf(result)})`);
               } else if (result.reason === 'EMPTY_R2_CONTENT') {
-                console.error(`[AutoBrief] R2返回空内容，跳过文章 (索引: ${processResults.indexOf(result)})`);
+                log.error(`[AutoBrief] R2返回空内容，跳过文章 (索引: ${processResults.indexOf(result)})`);
               } else if (result.reason?.startsWith('QUALITY_FILTER_')) {
                 const qualityReason = result.reason.replace('QUALITY_FILTER_', '');
-                console.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (索引: ${processResults.indexOf(result)}, 原因: ${qualityReason})`);
+                log.warn(`[AutoBrief] 内容质量不符合要求，跳过文章 (索引: ${processResults.indexOf(result)}, 原因: ${qualityReason})`);
               } else if (result.reason === 'R2_FETCH_ERROR') {
-                console.error(`[AutoBrief] R2内容获取异常，跳过文章 (索引: ${processResults.indexOf(result)}):`, result.error);
+                log.error(`[AutoBrief] R2内容获取异常，跳过文章 (索引: ${processResults.indexOf(result)}):`, undefined, result.error);
               }
             }
           }
@@ -589,10 +592,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // 同源模板页去重：同一个 source 下、正文去掉首行后完全相同的，只留 id 最小的一篇（实测读数见 dropSameSourceDuplicates）
           const { kept, dropped } = dropSameSourceDuplicates(passed);
           if (dropped.length > 0) {
-            console.warn(
-              `[AutoBrief] 同源重复正文丢弃 ${dropped.length} 篇 (DUPLICATE_BODY_SAME_SOURCE): ` +
-              dropped.map(d => `${d.article.id} "${d.article.title}"`).join(' | ')
-            );
+            log.warn(`[AutoBrief] 同源重复正文丢弃 ${dropped.length} 篇 (DUPLICATE_BODY_SAME_SOURCE): ` +
+              dropped.map(d => `${d.article.id} "${d.article.title}"`).join(' | '));
             failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] =
               (failuresByReason['DUPLICATE_BODY_SAME_SOURCE'] || 0) + dropped.length;
             successCount -= dropped.length;
@@ -600,28 +601,28 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           const articles = kept.map(k => k.article);
           const embeddings = kept.map(k => k.embedding);
 
-          console.log(`[AutoBrief] 📊 并行内容获取统计:`);
-          console.log(`  - 成功处理: ${successCount} 篇`);
-          console.log(`  - 失败分布: ${JSON.stringify(failuresByReason, null, 2)}`);
-          console.log(`  - 总体成功率: ${((successCount / validArticles.length) * 100).toFixed(1)}%`);
+          log.info(`[AutoBrief] 📊 并行内容获取统计:`);
+          log.info(`  - 成功处理: ${successCount} 篇`);
+          log.info(`  - 失败分布: ${JSON.stringify(failuresByReason, null, 2)}`);
+          log.info(`  - 总体成功率: ${((successCount / validArticles.length) * 100).toFixed(1)}%`);
 
           // 记录详细的质量控制日志
-          console.log(`[AutoBrief] ✅ 并行内容质量控制完成:`);
-          console.log(`  - 初始文章数: ${validArticles.length}`);
-          console.log(`  - 最终有效文章: ${articles.length}`);
-          console.log(`  - R2获取尝试: ${r2ContentMetrics.r2FetchAttempts}`);
-          console.log(`  - R2获取成功: ${r2ContentMetrics.r2FetchSuccesses}`);
-          console.log(`  - R2获取失败: ${r2ContentMetrics.r2FetchFailures}`);
-          console.log(`  - 质量过滤: ${r2ContentMetrics.qualityFilteredOut}`);
-          console.log(`  - 总过滤数: ${validArticles.length - articles.length}`);
-          console.log(`  - 质量通过率: ${((articles.length / validArticles.length) * 100).toFixed(1)}%`);
-          console.log(`  - 并行批次处理效率: 批量大小${R2_BATCH_SIZE}, 减少网络延迟`);
+          log.info(`[AutoBrief] ✅ 并行内容质量控制完成:`);
+          log.info(`  - 初始文章数: ${validArticles.length}`);
+          log.info(`  - 最终有效文章: ${articles.length}`);
+          log.info(`  - R2获取尝试: ${r2ContentMetrics.r2FetchAttempts}`);
+          log.info(`  - R2获取成功: ${r2ContentMetrics.r2FetchSuccesses}`);
+          log.info(`  - R2获取失败: ${r2ContentMetrics.r2FetchFailures}`);
+          log.info(`  - 质量过滤: ${r2ContentMetrics.qualityFilteredOut}`);
+          log.info(`  - 总过滤数: ${validArticles.length - articles.length}`);
+          log.info(`  - 质量通过率: ${((articles.length / validArticles.length) * 100).toFixed(1)}%`);
+          log.info(`  - 并行批次处理效率: 批量大小${R2_BATCH_SIZE}, 减少网络延迟`);
           
           // 记录具体的失败原因分布，用于监控和优化
-          console.log(`[AutoBrief] 📋 失败原因详细分布:`);
+          log.info(`[AutoBrief] 📋 失败原因详细分布:`);
           Object.entries(failuresByReason).forEach(([reason, count]) => {
             const percentage = ((count / validArticles.length) * 100).toFixed(1);
-            console.log(`  - ${reason}: ${count} 篇 (${percentage}%)`);
+            log.info(`  - ${reason}: ${count} 篇 (${percentage}%)`);
           });
 
           // 卸载 embeddings 到 R2：CF Workflow 把 step 输出存进 SQLite，单 step ~1MB 上限；
@@ -631,11 +632,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           const embeddingsR2Key = datasetEmbeddingsKey(workflowId);
           await this.env.ARTICLES_BUCKET.put(embeddingsR2Key, JSON.stringify(embeddings));
 
-          console.log(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章 (embeddings 卸载至 ${embeddingsR2Key})`);
+          log.info(`[AutoBrief] 成功构建数据集: ${articles.length} 篇文章 (embeddings 卸载至 ${embeddingsR2Key})`);
           return { articles, embeddings: [], embeddingsR2Key, r2ContentMetrics };
           
         } catch (error) {
-          console.error('[AutoBrief] 准备数据集失败:', error);
+          log.error('[AutoBrief] 准备数据集失败:', undefined, error);
           throw new Error(`数据集准备失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       });
@@ -643,7 +644,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 从 R2 读回 embeddings（它们未走 step 输出以避开 1MB 限制），供聚类使用
       if (dataset.embeddingsR2Key && dataset.embeddings.length === 0) {
         dataset.embeddings = await loadRunEmbeddings(this.env.ARTICLES_BUCKET, dataset.embeddingsR2Key);
-        console.log(`[AutoBrief] 从 R2 读回 ${dataset.embeddings.length} 个 embedding`);
+        log.info(`[AutoBrief] 从 R2 读回 ${dataset.embeddings.length} 个 embedding`);
       }
 
       // 计数由 step 返回值带出：step 被缓存重放时闭包不再执行，改外部变量的计数会恒为 0
@@ -674,7 +675,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const effectiveClusteringOptions = clusteringOptions ?? BRIEF_CLUSTERING_OPTIONS;
 
       const clusteringResult = await step.do('执行聚类分析', defaultStepConfig, async (): Promise<ClusteringResult> => {
-        console.log(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
+        log.info(`[AutoBrief] 开始聚类分析，处理 ${dataset.articles.length} 篇文章`);
         
         // 创建 ML 服务客户端
         const mlService = createMLService(this.env, workflowId);
@@ -686,7 +687,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         };
         
         // effectiveClusteringOptions 在 step 外取值（原因见那里的注释）
-        console.log(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'BRIEF_CLUSTERING_OPTIONS'}):`, JSON.stringify(effectiveClusteringOptions));
+        log.info(`[AutoBrief] 使用聚类参数 (${clusteringOptions ? 'user-provided' : 'BRIEF_CLUSTERING_OPTIONS'}):`, { detail: effectiveClusteringOptions });
 
         const response = await mlService.analyzeClusters(clusteringDataset, effectiveClusteringOptions);
         
@@ -695,10 +696,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
 
         const st = response.value.statistics;
-        console.log(
-          `[AutoBrief] 聚类分析完成: ${st.totalClusters} 个真簇 + 1 个噪声组(${st.noisePoints} 篇, ` +
-          `占 ${((st.noisePoints / Math.max(st.totalArticles, 1)) * 100).toFixed(0)}%)，噪声组不进簇判定`
-        );
+        log.info(`[AutoBrief] 聚类分析完成: ${st.totalClusters} 个真簇 + 1 个噪声组(${st.noisePoints} 篇, ` +
+          `占 ${((st.noisePoints / Math.max(st.totalArticles, 1)) * 100).toFixed(0)}%)，噪声组不进簇判定`);
         return response.value;
       });
 
@@ -737,7 +736,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }, null, 2)
         );
       } catch (persistErr) {
-        console.warn(`[AutoBrief] clustering 映射落盘失败 (workflow=${workflowId}):`, persistErr);
+        log.warn(`[AutoBrief] clustering 映射落盘失败 (workflow=${workflowId}):`, undefined, persistErr);
       }
 
       // ── 文章去向表 ────────────────────────────────────────────────────────
@@ -763,9 +762,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               articles: Object.fromEntries(articleJourney),
             }, null, 2)
           );
-          console.log(`[AutoBrief] 文章去向表落盘: ${articleJourney.size} 篇`);
+          log.info(`[AutoBrief] 文章去向表落盘: ${articleJourney.size} 篇`);
         } catch (persistErr) {
-          console.warn(`[AutoBrief] 文章去向表落盘失败 (workflow=${workflowId}):`, persistErr);
+          log.warn(`[AutoBrief] 文章去向表落盘失败 (workflow=${workflowId}):`, undefined, persistErr);
         }
       };
 
@@ -794,7 +793,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       }> => {
         // 整步重跑留痕：2026-09-03 真实 workflow 实测这一步执行了两遍（每个簇的日志都出现两次），
         // 原因未查明。step.do 不暴露 attempt 序号，故用进入时刻区分两次执行。
-        console.log(`[AutoBrief] 簇判定 step 进入 @ ${new Date().toISOString()}`);
+        log.info(`[AutoBrief] 簇判定 step 进入 @ ${new Date().toISOString()}`);
         const titleOf = new Map<number, string>();
         for (const a of dataset.articles) titleOf.set(a.id, a.title ?? '');
 
@@ -854,14 +853,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
 
         // 并发 6：判定实测 1-5 秒/次，6 路约 100-300 rpm，Workers AI 限流 300 rpm 内。
-        // ⚠️ processor 内必须自己接住异常：batchProcessParallel 对 rejected 的项只 console.warn
+        // ⚠️ processor 内必须自己接住异常：batchProcessParallel 对 rejected 的项只记一条 warn 日志
         // 然后**丢弃**，那样这个簇会从结果里整个消失、它的文章静默不进简报。
         const judged = await this.batchProcessParallel(targets, STORYLINE_CONCURRENCY, async (t: Target) => {
           const articles = t.judgeIds.map(id => ({ id, title: titleOf.get(id)! }));
           try {
             let res = await aiw.judgeCluster(articles, t.clusterId);
             if (!res.ok) {
-              console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId} 首次失败，重试一次 — ${res.error}`);
+              log.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId} 首次失败，重试一次 — ${res.error}`);
               res = await aiw.judgeCluster(articles, t.clusterId);
             }
             return { t, res };
@@ -877,11 +876,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
         for (const { t, res } of judged) {
           if (!res.ok) {
-            console.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判定失败，退化成一块 — ${res.error}`);
+            log.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判定失败，退化成一块 — ${res.error}`);
           } else if (res.value.verdict !== 'EVENT') {
-            console.warn(
-              `[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判为 ${res.value.verdict} — ${res.value.reason}`
-            );
+            log.warn(`[AutoBrief] 簇判定：簇 ${t.clusterId}（${t.ids.length} 篇）判为 ${res.value.verdict} — ${res.value.reason}`);
           }
         }
 
@@ -901,12 +898,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         stories.push(...blocks);
         const { cappedBlocks, droppedArticles, crossClusterMerges } = asmStats;
 
-        console.log(
-          `[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +
+        log.info(`[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +
             `判为 NO_EVENT ${pocketFlagged} 簇、UNSURE ${unsureClusters} 簇（均只标记不丢弃），` +
             `判定输入超 ${PLAN_TITLE_CAP} 条被取样 ${judgeTitleCapped} 簇，跨簇同名合并 ${crossClusterMerges} 次，` +
-            `超 ${DEFAULT_ARTICLE_CAP} 篇被截 ${cappedBlocks} 块共丢 ${droppedArticles} 篇）`
-        );
+            `超 ${DEFAULT_ARTICLE_CAP} 篇被截 ${cappedBlocks} 块共丢 ${droppedArticles} 篇）`);
         // 不拒绝整簇：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
         // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。
         return { stories, judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
@@ -928,12 +923,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         : 0;
       const noEventRateDegraded = noEventRate > NO_EVENT_RATE_ALERT;
       if (noEventRateDegraded) {
-        console.error(
-          `[AutoBrief] NO_EVENT 率超阈值：${(noEventRate * 100).toFixed(1)}%` +
+        log.error(`[AutoBrief] NO_EVENT 率超阈值：${(noEventRate * 100).toFixed(1)}%` +
             `（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls} 簇，阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%，正常 2-3%）。` +
             `簇判定大面积判不是单一事件，通常意味着聚类退化或 ml-service 跑的不是预期算法` +
-            `（先核 ml-service 版本与聚类参数，再看本次 R2 observability 的簇篇数分布）。本次 run 记 DEGRADED。`
-        );
+            `（先核 ml-service 版本与聚类参数，再看本次 R2 observability 的簇篇数分布）。本次 run 记 DEGRADED。`);
       }
 
       await observability.logStep('story_validation', noEventRateDegraded ? 'degraded' : 'completed', {
@@ -1004,9 +997,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           timestamp: new Date().toISOString()
         };
 
-        console.log('[AutoBrief] ❌ 工作流终止：未发现有效故事');
-        console.log('[AutoBrief] 📊 详细分析:', JSON.stringify(noStoriesReport.analysis, null, 2));
-        console.log('[AutoBrief] 💡 优化建议:', noStoriesReport.recommendations);
+        log.info('[AutoBrief] ❌ 工作流终止：未发现有效故事');
+        log.info('[AutoBrief] 📊 详细分析:', { detail: noStoriesReport.analysis });
+        log.info('[AutoBrief] 💡 优化建议:', { detail: noStoriesReport.recommendations });
 
         await observability.logStep('workflow_terminated', 'completed', noStoriesReport);
 
@@ -1048,8 +1041,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         totalArticlesInStories: validatedStories.stories.reduce((sum, story) => sum + story.articleIds.length, 0)
       };
 
-      console.log('[AutoBrief] ✅ 故事质量检查通过');
-      console.log(`[AutoBrief] 📈 故事统计: 平均重要性 ${storyQualityMetrics.averageImportance.toFixed(2)}, 分布: ${JSON.stringify(storyQualityMetrics.importanceDistribution)}`);
+      log.info('[AutoBrief] ✅ 故事质量检查通过');
+      log.info(`[AutoBrief] 📈 故事统计: 平均重要性 ${storyQualityMetrics.averageImportance.toFixed(2)}, 分布: ${JSON.stringify(storyQualityMetrics.importanceDistribution)}`);
 
       // =====================================================================
       // 步骤 4: 简报块生成 (AI Worker)
@@ -1127,12 +1120,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         };
       });
       if (llmOrder.failed) {
-        console.warn(`[AutoBrief] ⚠️ LLM 重要性排序未生效，本期退回机械序：${llmOrder.failed}`);
+        log.warn(`[AutoBrief] ⚠️ LLM 重要性排序未生效，本期退回机械序：${llmOrder.failed}`);
       } else {
-        console.log(
-          `[AutoBrief] LLM 重要性排序：${llmOrder.order.length} 条进前列（三轮成功 ${llmOrder.roundsOk}/3，三轮交集 ${llmOrder.intersectionSize}）：` +
-            llmOrder.picks.slice(0, 5).map(p => `${validatedStories.stories[p.id]?.title}(x${p.timesSelected})`).join('，')
-        );
+        log.info(`[AutoBrief] LLM 重要性排序：${llmOrder.order.length} 条进前列（三轮成功 ${llmOrder.roundsOk}/3，三轮交集 ${llmOrder.intersectionSize}）：` +
+            llmOrder.picks.slice(0, 5).map(p => `${validatedStories.stories[p.id]?.title}(x${p.timesSelected})`).join('，'));
       }
       await observability.logStep('story_rank', llmOrder.failed ? 'failed' : 'completed', {
         candidates: validatedStories.stories.length,
@@ -1149,16 +1140,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         llmOrder: llmOrder.order,
       });
       if (capped.length > 0) {
-        console.log(
-          `[AutoBrief] 同事件配额（每事件 ≤${PER_EVENT_BLOCK_CAP} 格）挤掉 ${capped.length} 块：` +
-            capped.map(x => `${x.story.eventKey}/${x.story.title}`).join('，')
-        );
+        log.info(`[AutoBrief] 同事件配额（每事件 ≤${PER_EVENT_BLOCK_CAP} 格）挤掉 ${capped.length} 块：` +
+            capped.map(x => `${x.story.eventKey}/${x.story.title}`).join('，'));
       }
 
-      console.log('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
-      ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => console.log(
-        `  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`
-      ));
+      log.info('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
+      ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => log.info(`  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`));
 
       // 文章去向表的第 3 关 selected 由账本按 ranked / capped 推（见 story-ledger.ts）。
 
@@ -1174,10 +1161,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 每条选中 story 恰好一个主键，故这里是严格相等而非 <。
         if (selectedRowIds.length !== storiesForIntelligence.length) {
           // 对不上说明插入顺序与 stories 顺序错位，标记会漏/错。宁可显式告警也不静默少标。
-          console.warn(
-            `[AutoBrief] mark_selected_for_intel: ${storiesForIntelligence.length} 个选中故事只解析出 ` +
-            `${selectedRowIds.length} 个 brief_stories 主键，selected_for_intel 可能不完整`
-          );
+          log.warn(`[AutoBrief] mark_selected_for_intel: ${storiesForIntelligence.length} 个选中故事只解析出 ` +
+            `${selectedRowIds.length} 个 brief_stories 主键，selected_for_intel 可能不完整`);
         }
         if (selectedRowIds.length > 0) {
           await db
@@ -1201,7 +1186,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       //
       // ⚠️ step 返回值里**不许**带端点响应的 `sentences`（切句表 = 整簇原文，一个簇几百句）：
       // CF Workflow 单 step 输出约 1MB 上限，十几个块就是几 MB。只带写出来的那 3–5 句。
-      console.log(`[AutoBrief] 开始生成简报块（brief-block-v6）：从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
+      log.info(`[AutoBrief] 开始生成简报块（brief-block-v6）：从 ${validatedStories.stories.length} 个候选故事中选取 top-${storiesForIntelligence.length}`);
 
       // 与旧报告层同档（不是与旧写作层同档）：v6 一个簇 4 个窗口实测约 70 秒，大簇更久。
       const briefBlockStepConfig: WorkflowStepConfig = {
@@ -1228,12 +1213,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 旧的重排行为，保持与老链路一致。
       const tierPlan = assignTiers(ledger.tierInputs(), { preserveOrder: llmOrder.order.length > 0 });
       ledger.recordTiers(tierPlan);
-      console.log(
-        `[AutoBrief] 分层（写作前）：头条 ${tierPlan.filter((x) => x.tier === 'lead').length} / ` +
+      log.info(`[AutoBrief] 分层（写作前）：头条 ${tierPlan.filter((x) => x.tier === 'lead').length} / ` +
           `要闻 ${tierPlan.filter((x) => x.tier === 'more').length} / ` +
           `简讯 ${tierPlan.filter((x) => x.tier === 'brief').length}` +
-          `（分 = 源数 × 篇数，篇数取 articleIds：${tierPlan.slice(0, 5).map((x) => `${x.score}`).join(',')}…）`
-      );
+          `（分 = 源数 × 篇数，篇数取 articleIds：${tierPlan.slice(0, 5).map((x) => `${x.score}`).join(',')}…）`);
 
       type WrittenBlock = {
         idx: number;
@@ -1286,10 +1269,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           }
           if (withBody.length < clusterArticles.length) {
             // 取不到正文的被丢掉，而块只能从剩下的里写。不留痕就只剩"这块怎么少了半件事"。
-            console.warn(
-              `[AutoBrief] 块材料不全 (idx=${idx}, "${story.title}"): ` +
-              `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文，失败分因 ${JSON.stringify(failuresByReason)}`
-            );
+            log.warn(`[AutoBrief] 块材料不全 (idx=${idx}, "${story.title}"): ` +
+              `${clusterArticles.length} 篇里只有 ${withBody.length} 篇取到正文，失败分因 ${JSON.stringify(failuresByReason)}`);
           }
           const aiw = createAIServices(this.env, workflowId).aiWorker;
           const plan = ledger.tierOfSelected(idx);
@@ -1303,7 +1284,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             idx
           );
           if (!res.ok) {
-            console.error(`[AutoBrief] 简报块生成失败 (idx=${idx}, "${story.title}"): ${res.error}`);
+            log.error(`[AutoBrief] 简报块生成失败 (idx=${idx}, "${story.title}"): ${res.error}`);
             return { failure: { idx, title: story.title, reason: res.error } };
           }
           const v = res.value;
@@ -1311,7 +1292,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           // （不进正文、进失败清单），与块写作失败同一条路。
           if (v.verdict !== 'written' || !v.block) {
             const reason = `not_a_single_event: ${v.reason ?? '（端点未给原因）'}`;
-            console.warn(`[AutoBrief] 简报块未出块 (idx=${idx}, "${story.title}"): ${reason}`);
+            log.warn(`[AutoBrief] 简报块未出块 (idx=${idx}, "${story.title}"): ${reason}`);
             return { failure: { idx, title: story.title, reason } };
           }
           // renderBriefV3 要一段 text，而端点给的是结构化句子数组。exec 档本来就是一段话，直接拼。
@@ -1346,7 +1327,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           };
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
-          console.warn(`[AutoBrief] 简报块生成异常 (idx=${idx}): ${reason}`);
+          log.warn(`[AutoBrief] 简报块生成异常 (idx=${idx}): ${reason}`);
           return { failure: { idx, title: story.title, reason } };
         }
       };
@@ -1357,11 +1338,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         (story: StoryBlock, idx: number): Promise<BlockOutcome> =>
           step
             .do(`简报块:${idx}`, briefBlockStepConfig, () => writeOneBlock(story, idx))
-            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只 console.warn
+            // 重试耗尽后 step 会 reject，而 batchProcessParallel 用 allSettled 且只记一条 warn 日志
             // ——不接住的话这个故事会静默消失。
             .catch((e: unknown): BlockOutcome => {
               const reason = `step 重试耗尽: ${e instanceof Error ? e.message : String(e)}`;
-              console.error(`[AutoBrief] 简报块 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
+              log.error(`[AutoBrief] 简报块 step 最终失败 (idx=${idx}, "${story.title}"): ${reason}`);
               return { failure: { idx, title: story.title, reason } };
             })
       );
@@ -1387,16 +1368,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       ledger.recordBlocks(writtenBlocks, blockFailures);
       const tiered = ledger.tieredWritten();
       const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
-      console.log(
-        `[AutoBrief] 分层（出块后实际入节）：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}`
-      );
-      console.log(
-        `[AutoBrief] 简报块完成: ${writtenBlocks.length}/${storiesForIntelligence.length}` +
+      log.info(`[AutoBrief] 分层（出块后实际入节）：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}`);
+      log.info(`[AutoBrief] 简报块完成: ${writtenBlocks.length}/${storiesForIntelligence.length}` +
           (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
           `，重点合计 ${writtenBlocks.reduce((n, b) => n + b.anchors, 0)}` +
           `，窗口失败合计 ${writtenBlocks.reduce((n, b) => n + b.windowFailures, 0)}` +
-          `，补出处 ${writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0)} 处`
-      );
+          `，补出处 ${writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0)} 处`);
       // 报告层与写作层合并成一步后，观测也合并成这一条（旧的 intelligence_analysis 随报告层退役）。
       await observability.logStep('brief_blocks', blockFailures.length > 0 ? 'degraded' : 'completed', {
         path: 'brief-block-v6',
@@ -1492,12 +1469,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           )
         );
       } catch (persistErr) {
-        console.warn(`[AutoBrief] v3 记录落盘失败 (workflow=${workflowId}):`, persistErr);
+        log.warn(`[AutoBrief] v3 记录落盘失败 (workflow=${workflowId}):`, undefined, persistErr);
       }
 
-      console.log(
-        `[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符，${rendered.sections} 节）`
-      );
+      log.info(`[AutoBrief] 成功生成简报: ${assembled.title}（${assembled.content.length} 字符，${rendered.sections} 节）`);
 
       // 5d 摘要：读者端展示的散文导语。与拼装分开成 step，
       // 是为了让"简报正文已经生成好了"这件事不被摘要环节的失败拖累。
@@ -1511,7 +1486,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 为它整步失败、丢掉一份已经生成好的简报是不划算的。失败留 null，前端自然不渲染。
         const tldrProse = await aiServices.aiWorker.generateBriefSummary(assembled.title, assembled.content);
         if (!tldrProse.ok) {
-          console.warn(`[AutoBrief] 散文摘要生成失败（不阻断简报）: ${tldrProse.error}`);
+          log.warn(`[AutoBrief] 散文摘要生成失败（不阻断简报）: ${tldrProse.error}`);
         }
         return { tldrProse: tldrProse.ok ? tldrProse.value.tldrProse : null };
       });
@@ -1569,10 +1544,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             tldr_prose: briefResult.tldrProse,
           });
 
-          console.log(`[AutoBrief] 简报已保存到数据库，ID: ${reportId}`);
+          log.info(`[AutoBrief] 简报已保存到数据库，ID: ${reportId}`);
           return reportId;
         } catch (error) {
-          console.error('[AutoBrief] 保存简报失败:', error);
+          log.error('[AutoBrief] 保存简报失败:', undefined, error);
           throw new Error(`数据库保存失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       });
@@ -1589,12 +1564,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         try {
           const db = getDb(this.env.HYPERDRIVE);
           const stats = await assignStoryClustersForWorkflow(db, workflowId);
-          console.log(
-            `[AutoBrief] 事件追踪归并: 入选 ${stats.briefed} 条 → 并入 ${stats.joined} · ` +
-            `新建 ${stats.created} · 候选挂靠 ${stats.attachedCandidates}`
-          );
+          log.info(`[AutoBrief] 事件追踪归并: 入选 ${stats.briefed} 条 → 并入 ${stats.joined} · ` +
+            `新建 ${stats.created} · 候选挂靠 ${stats.attachedCandidates}`);
         } catch (error) {
-          console.warn('[AutoBrief] 事件追踪归并失败（不阻断工作流）:', error);
+          log.warn('[AutoBrief] 事件追踪归并失败（不阻断工作流）:', undefined, error);
         }
       });
 
@@ -1614,7 +1587,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           : []),
       ];
       if (degradedReasons.length > 0) {
-        console.error(`[AutoBrief] 本次 run 记 DEGRADED：${degradedReasons.join('；')}`);
+        log.error(`[AutoBrief] 本次 run 记 DEGRADED：${degradedReasons.join('；')}`);
       }
       await step.do('persist:brief_run_complete', dbStepConfig, async () => {
         const db = getDb(this.env.HYPERDRIVE);
@@ -1647,7 +1620,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 保存可观测性数据到R2存储
       await observability.complete();
 
-      console.log(`[AutoBrief] 端到端简报生成工作流完成! 报告ID: ${reportId}, 标题: ${briefResult.title}`);
+      log.info(`[AutoBrief] 端到端简报生成工作流完成! 报告ID: ${reportId}, 标题: ${briefResult.title}`);
 
       return {
         success: true,
@@ -1660,7 +1633,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       };
 
     } catch (error) {
-      console.error('[AutoBrief] 工作流执行失败:', error);
+      log.error('[AutoBrief] 工作流执行失败:', undefined, error);
       await observability.fail(error instanceof Error ? error.message : String(error));
 
       // 观测性：标记 brief_runs 为 FAILED。step.do 防止本身抖动；失败也不再 throw
@@ -1677,7 +1650,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             .where(eq($brief_runs.workflow_id, workflowId));
         });
       } catch (persistErr) {
-        console.error('[AutoBrief] 标记 brief_runs FAILED 失败:', persistErr);
+        log.error('[AutoBrief] 标记 brief_runs FAILED 失败:', undefined, persistErr);
       }
 
       throw error;

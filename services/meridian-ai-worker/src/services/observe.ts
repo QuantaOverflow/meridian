@@ -18,6 +18,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { MiddlewareHandler } from 'hono';
 import type { CloudflareEnv } from '../types';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger({ component: 'observe' });
 
 const newSpanId = () => crypto.randomUUID();
 
@@ -100,6 +103,6 @@ export const observeMiddleware: MiddlewareHandler<{ Bindings: CloudflareEnv }> =
     headers.delete('content-length');
     c.res = new Response(JSON.stringify({ ...body, observation: { trace_id: scope.traceId, spans } }), { status: c.res.status, headers });
   } catch (e) {
-    console.warn(`[observe] 附加 observation 失败: ${e instanceof Error ? e.message : String(e)}`);
+    logger.warn(`[observe] 附加 observation 失败: ${e instanceof Error ? e.message : String(e)}`);
   }
 };

@@ -12,7 +12,7 @@ import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../core/constants';
 import { Logger } from '../core/logger';
 import type { Env } from '../../index';
 
-const logger = new Logger({ service: 'daily-brief-cron' });
+const logger = new Logger({ component: 'daily-brief-cron' });
 
 export type DailyBriefCronResult =
   | { triggered: true; workflowId: string }

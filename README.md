@@ -220,7 +220,7 @@ Runbook for figuring out what went wrong with a given brief run. Recording code:
 | DB `brief_runs` | one row per run: status (`RUNNING` / `COMPLETED` / `DEGRADED` / `FAILED` / `TERMINATED_NO_STORIES`), per-phase counts, `error` | the workflow's `persist:brief_run_*` steps |
 | DB `brief_stories` | one row per candidate block: title, importance, article ids, whether it was selected (`selected_for_intel`) | `persist:brief_stories_and_rejections` |
 | DB `reports` | the finished brief | the save-brief step |
-| R2 `observability/<workflowId>.json` | `summary` + `detailedMetrics`, rewritten on every step (readable even if the run crashes mid-way) | `WorkflowObservability` |
+| R2 `observability/<workflowId>.json` | `summary` + `detailedMetrics`, read-merged-written on every step (readable even if the run crashes mid-way; when the Workflow replays `run()` after hibernation or a retry, entries already recorded keep their original timestamps and durations) | `WorkflowObservability` |
 | R2 `observability/clustering/<workflowId>.json` | `cluster_id → article_ids` (cluster membership never hits the DB) | the clustering step |
 | R2 `observability/article-journey/<workflowId>.json` | per-article trace: which gate it hit, which block it landed in | end of the brief workflow |
 | R2 `observability/brief-v3/<workflowId>.json` | each block's tier, text, sources and cost; failed blocks kept with `ok:false` | the title step |
@@ -251,6 +251,25 @@ R2 objects with no endpoint (article-journey, brief-v3) need `wrangler r2 object
 5. **Why this ranking**: `detailedMetrics.story_rank` (rounds succeeded, `intersectionSize`, failure reason) and `story_validation` (judge counts: `judgeFailures` / `pocketFlagged` / `unsureClusters`, normally ~0)
 
 **Replaying a run locally**: `pnpm -F @meridian/backend replay <workflowId>` answers with that run's recorded LLM I/O from `llm-calls/` and re-runs the whole workflow locally, diffing the result against production field by field (preconditions and limits in `apps/backend/test/replay/README.md`).
+
+**Logs & traces** (Workers Logs, `observability` block in each `wrangler` config)
+
+- All three Workers (backend, ai-worker, ml `cf-worker`) keep logs **and** traces at `head_sampling_rate = 1`, with invocation logs on. Why no sampling: traffic is tiny and bursty in the wrong places — one brief per day, one DO alarm per source per hour, and a few thousand queue/ai-worker calls a day. Measured 2026-09-19..26 (GraphQL `workersInvocationsAdaptive`): backend 7.3k invocations + 3.0k DO requests, ai-worker 7.9k, ml 0.1k + 0.3k DO — about 80k invocations a month. Spans: ~2.7k invocations/day plus ~2.9k subrequests/day (same query) — at a generous ~10 spans per invocation that is under ~30k spans/day (~0.8M/month). With ~30 log lines per invocation, logs + traces come to ~3M events/month, against 20M included on Workers Paid (overage $0.60/M; the Free-plan cap is 200k/day). A 5% trace rate would drop the daily brief 19 days out of 20. Re-check this if volume grows ~5×.
+- Traces are free during the beta; from 2026-10-01 each span counts as one event in the same quota and price as logs. Docs: [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/), [Traces](https://developers.cloudflare.com/workers/observability/traces/), [Pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers-logs).
+- Every log line is one flat JSON object. Same keys in backend (`apps/backend/src/lib/core/logger.ts`) and ai-worker (`services/meridian-ai-worker/src/utils/logger.ts`):
+
+| Key | Meaning |
+|---|---|
+| `level` | `debug` / `info` / `warn` / `error` (also picks the `console` method, so the dashboard level matches) |
+| `message` | the human-readable line; the old `[AutoBrief] …` prefixes are kept |
+| `timestamp` | ISO time of the log call |
+| `service` | Worker name: `meridian-backend` / `meridian-ai-worker` |
+| `component` / `router` / `durable_object` / `workflow` | where in the Worker the line came from |
+| `workflow_id`, `trace_id`, `source_id`, `request_id` | correlation ids when known (`workflow_id` on every brief-workflow and `WorkflowObservability` line; ai-worker logs `trace_id` once per request on the `[trace]` line) |
+| `error` | only when an exception was passed: `{ message, stack?, cause? }`; a plain error string in context goes under `error_message` |
+| `detail` | a non-object value that used to be the second `console.log` argument |
+
+  Filter in the dashboard with e.g. `workflow_id = cron-brief-<ts>` or `service = meridian-ai-worker AND level = error`. The ml `cf-worker` does not log anything itself (only the platform's invocation logs); the Python container's own stdout is unchanged.
 
 **Other entry points**: production logs via `wrangler tail` (CF Dashboard → Workers → Logs when a local session won't open); cost and usage via CF GraphQL / Dashboard; `*.workers.dev` gets RST'd from mainland China, use a proxy locally.
 

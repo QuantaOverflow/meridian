@@ -41,6 +41,9 @@ import {
   type V6Sentence,
   type V6Source,
 } from '../utils/brief-block-v6';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger({ component: 'brief-block-v6' });
 
 const MODEL = '@cf/zai-org/glm-4.7-flash';
 /** 同时在飞的窗口调用数（原型 DIRECT_RAW_CONCURRENCY 默认值）。 */
@@ -135,18 +138,16 @@ export class BriefBlockV6Service {
           const reasons = !truncated && parsed ? ok(parsed) : null;
           if (reasons && reasons.length === 0) {
             if (!detectRepetition(repetitionTextOf(parsed))) return { ok: true, value: parsed };
-            console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
+            logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
             return { ok: false, reasons: [] };
           }
           if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
-          console.warn(
-            `[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
-              `${truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`
-          );
+          logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
+              `${truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`);
           return { ok: false, reasons: reasons ?? [] };
         },
         retryOnError: (err, attempt) => {
-          console.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：err=${err instanceof Error ? err.message : String(err)}`);
+          logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：err=${err instanceof Error ? err.message : String(err)}`);
           return true;
         },
         backoffMs: attempt => BACKOFF_MS[attempt],
@@ -197,7 +198,7 @@ export class BriefBlockV6Service {
       } catch (e) {
         // 一个窗口丢了不该丢整簇：记账、跳过，其余窗口照跑
         this.windowFailures++;
-        console.warn(`[BriefBlockV6] 窗口 ${w.index + 1}/${windows.length} 三次尝试全失败，跳过：${e instanceof Error ? e.message : String(e)}`);
+        logger.warn(`[BriefBlockV6] 窗口 ${w.index + 1}/${windows.length} 三次尝试全失败，跳过：${e instanceof Error ? e.message : String(e)}`);
         return [] as V6Anchor[];
       }
     });

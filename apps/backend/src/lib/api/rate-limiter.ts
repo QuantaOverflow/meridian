@@ -42,7 +42,7 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
    */
   constructor(options: RateLimiterOptions) {
     this.options = options;
-    this.logger = new Logger({ service: 'DomainRateLimiter' });
+    this.logger = new Logger({ component: 'DomainRateLimiter' });
   }
 
   /**

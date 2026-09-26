@@ -103,15 +103,16 @@ pnpm -F @meridian/database migrate
 ```
 
 Secrets: each Worker reads `.dev.vars` (gitignored). Copy the template next to it and fill it in:
-`apps/backend/.dev.vars.example`, `services/meridian-ai-worker/.dev.vars.example`,
-`services/meridian-ml-service/cf-worker/.dev.vars.example`, `apps/frontend/.env.example`.
+`apps/backend/.dev.vars.example`, `services/meridian-ai-worker/.dev.vars.example`, `apps/frontend/.env.example`
+(the ML service needs no secrets).
 The backend reaches Postgres through Hyperdrive; for local dev it uses `localConnectionString` in `apps/backend/wrangler.jsonc`.
 
 ```bash
 pnpm -F @meridian/backend dev        # backend
 pnpm -F meridian-ai-worker dev       # AI worker
 pnpm -F @meridian/frontend dev       # frontend
-# ML service: see services/meridian-ml-service/README.md
+# ML service: see services/meridian-ml-service/README.md — the backend reaches it through the
+# ML_SERVICE binding; locally add `-c services/meridian-ml-service/dev-shim/wrangler.jsonc`
 ```
 
 Sources created via `POST /admin/sources` start their scraper Durable Object right away. Sources inserted straight into the DB (e.g. the seed script) need a one-time backfill:
@@ -125,7 +126,7 @@ curl -X POST -H "Authorization: Bearer $API_TOKEN" \
 
 Four deployable units, each deployed from its own directory — **never `wrangler deploy` from the repo root**. Variables for each are documented in that directory's `.dev.vars.example`; production secrets are set with `wrangler secret put`.
 
-Deploy in dependency order: DB migration → AI Worker → ML Service → backend → frontend. The backend's service binding points at `meridian-ai-worker`, so backend deploy fails if that isn't live yet.
+Deploy in dependency order: DB migration → AI Worker → ML Service → backend → frontend. The backend's service bindings point at `meridian-ai-worker` and `meridian-ml-service`, so backend deploy fails if those aren't live yet.
 
 1. **DB migration** — `pnpm -F @meridian/database migrate` (`DATABASE_URL` from `packages/database/.env.example`). Schema-change flow (`generate` → review SQL → commit together) is in `CLAUDE.md`; files under `packages/database/migrations/` are historical and must not be edited.
 2. **AI Worker** (`services/meridian-ai-worker`, `wrangler.toml`)
@@ -137,20 +138,19 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 3. **ML Service** (`services/meridian-ml-service/cf-worker`) — one deploy is two things: the Durable Object shell (`cf-worker/src/index.ts`) and the container image built from `wrangler.jsonc`'s `"image": "../Dockerfile"` (the clustering/embedding code lives in the image). Needs Docker locally and a populated `services/meridian-ml-service/model-cache/` (gitignored, ~470MB — the Dockerfile `COPY`s it directly).
    ```bash
    cd services/meridian-ml-service/cf-worker
-   wrangler secret put API_TOKEN     # must match backend's MERIDIAN_ML_SERVICE_API_KEY
    wrangler deploy
    ```
+   No secrets and no public URL: `workers_dev` and `preview_urls` are off, the only way in is the backend's `ML_SERVICE` service binding.
    **A successful shell deploy does not mean the image was updated** (the clustering algorithm once shipped three and a half months late because of this, 2026-06→09). After deploying, run:
    ```bash
    scripts/check-container-deploy.sh    # 0 = image not older than code; 1 = image stale; 2 = tooling error
    ```
-   Production `GET /health`'s `build_identity` (image build time) also shows which build is live.
+   At runtime the backend asserts the image's `build_identity` on every clustering call (`buildIdentityCheck`; a missing field marks the run `DEGRADED`). `GET /health` is no longer reachable from outside.
 4. **Backend** (`apps/backend`, `wrangler.jsonc`)
    ```bash
    cd apps/backend
    wrangler secret put API_TOKEN                     # Bearer token for /admin/* and /observability/*
    wrangler secret put CLOUDFLARE_API_TOKEN          # browser rendering for scraping
-   wrangler secret put MERIDIAN_ML_SERVICE_API_KEY   # = ml-service's API_TOKEN
    wrangler deploy
    ```
    Bindings — see "Configuration" below. Adding a source via `POST /admin/sources` (or the admin UI) starts its DO; `POST /do/admin/initialize-dos` is only a backfill for rows inserted straight into the DB.
@@ -204,11 +204,11 @@ The route tables in `apps/backend/src/app.ts` + `src/routers/`, `services/meridi
 
 The `.dev.vars.example` files listed above are the source of truth for each Worker's variables. Key ones:
 
-- **Backend**: `API_TOKEN`, `CLOUDFLARE_API_TOKEN` (browser rendering), `MERIDIAN_ML_SERVICE_API_KEY` (must equal the ML service's `API_TOKEN`), `MERIDIAN_ML_SERVICE_URL` (var in `wrangler.jsonc`)
+- **Backend**: `API_TOKEN`, `CLOUDFLARE_API_TOKEN` (browser rendering)
 - **AI Worker**: 无 secret（模型走 Workers AI binding）
-- **ML Service**: `API_TOKEN`
+- **ML Service**: 无 secret（只能经 backend 的 `ML_SERVICE` binding 调到）
 
-Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service binding `AI_WORKER`, `HYPERDRIVE`, cron `0 13 * * *`; `MERIDIAN_ML_SERVICE_URL` is a `vars` entry.
+Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service bindings `AI_WORKER` and `ML_SERVICE`, `HYPERDRIVE`, cron `0 13 * * *`.
 
 ## 📈 Monitoring & Observability
 

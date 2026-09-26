@@ -14,6 +14,10 @@ paths:
   service binding 名是 `AI_WORKER`：
   `pnpm wrangler dev -c apps/backend/wrangler.jsonc -c services/meridian-ai-worker/wrangler.toml`。
   backend 配置文件是 `.jsonc` 不是 `.toml`，两种格式混用没问题。
+- **backend 调 ML（binding `ML_SERVICE`）**：本地没有 Container，先起 uvicorn（:8081，见
+  `services/meridian-ml-service/README.md`「本地开发」），再多加一个
+  `-c services/meridian-ml-service/dev-shim/wrangler.jsonc`（同名 Worker `meridian-ml-service`，原样转发到 uvicorn）。
+  没加时启动输出里 `env.ML_SERVICE` 是 `[not connected]`，ML 调用直接报错。
 - **R2 是生产桶，不是模拟桶**：`apps/backend/wrangler.jsonc` 与 `services/meridian-ai-worker/wrangler.toml`
   的 `r2_buckets` 都写了 `remote: true`（bucket 是 `meridian-articles-prod`）。本地 `wrangler dev`
   **直连生产 R2**，本地写入会落进生产桶——调观测/日志类写入前先看第 3 节的 `x-observe: inline`。

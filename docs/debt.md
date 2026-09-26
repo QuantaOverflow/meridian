@@ -13,6 +13,7 @@
 - 现象：`services/meridian-ml-service/src/dependencies.py` 曾在每次请求 `print` 收到的 token **和服务端配置的 `settings.api_token`**。代码已删，但历史日志里已有明文。
 - 待办：重新部署 ml-service（容器镜像）后轮换 `API_TOKEN`（ml cf-worker）与 `MERIDIAN_ML_SERVICE_API_KEY`（backend），两边同步。
 - 待裁决：何时轮换；是否需要清理旧日志。
+- 裁决（2026-09-26）：随 D3 结掉，不轮换、不清旧日志。ml Worker 关了公网口（`workers_dev`/`preview_urls` 均 false），token 校验与两边的 secret 整条删除，泄露的值已不能认证任何东西。旧日志没核实是否已过期（Workers Logs 最多保留 7 天）。
 
 ---
 
@@ -39,6 +40,7 @@
 - 代价：多一跳公网；需自管 token（见 S1）；`*.workers.dev` 在国内会被 RST（影响本地开发）。
 - 选项：改为 service binding（ml cf-worker 已是 Worker，可直接绑）。
 - 待裁决：是否迁；迁后是否仍保留 token 校验。
+- 裁决（2026-09-26）：迁，已解决；token 删除。backend 经 service binding `ML_SERVICE`（HTTP fetch 形式）调 ml Worker，删 `MERIDIAN_ML_SERVICE_URL`；ml Worker 设 `workers_dev: false` + `preview_urls: false`，FastAPI 删 `verify_token`（做法同 ai-worker）。部署后的镜像核对只靠 `scripts/check-container-deploy.sh` 与每期聚类的 `buildIdentityCheck`，不加转发 `/health` 的路由。本地 dev / replay 由 `services/meridian-ml-service/dev-shim/` 顶替 ml Worker。分三次部署：backend 带 token 切 binding → ml 删校验并关公网口 → backend 删 token；最后删两边 secret。
 
 ### D4. ai-worker 用 `(env as any)` 访问 binding
 - 位置（2026-09-25）：`services/meridian-ai-worker/src/services/llm-call-logger.ts:82`、`sensor-log.ts:28`（`ARTICLES_BUCKET` ×2）；`span-log.ts` 与 `CF_VERSION_METADATA` 已删。

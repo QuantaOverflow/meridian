@@ -149,6 +149,29 @@ async function loginCookie(): Promise<string> {
   return res.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
 }
 
+describe('POST /api/admin/login', () => {
+  const login = (body: unknown) =>
+    fetch('/api/admin/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+  it('密码错（等长、不等长）或用户名错：401，不发 cookie', async () => {
+    for (const body of [
+      { ...ADMIN, password: 'x'.repeat(ADMIN.password.length) },
+      { ...ADMIN, password: 'short' },
+      { ...ADMIN, username: 'someone-else' },
+    ]) {
+      const res = await login(body);
+      expect(res.status).toBe(401);
+      expect(res.headers.getSetCookie()).toEqual([]);
+    }
+  });
+
+  it('账号密码对：201 并发会话 cookie', async () => {
+    const res = await login(ADMIN);
+    expect(res.status).toBe(201);
+    expect(res.headers.getSetCookie().length).toBeGreaterThan(0);
+  });
+});
+
 describe('POST /api/admin/sources/:id/init-dos', () => {
   it('backend 初始化失败时如实报错，不回 success', async () => {
     backendStatus = 500;

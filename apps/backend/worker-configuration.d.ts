@@ -14,7 +14,6 @@ declare namespace Cloudflare {
 		HYPERDRIVE: Hyperdrive;
 		PROCESS_ARTICLES: Workflow;
 		AUTO_BRIEF: Workflow;
-		MERIDIAN_ML_SERVICE_API_KEY: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

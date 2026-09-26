@@ -28,8 +28,6 @@ export type Env = {
 
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
-
-  MERIDIAN_ML_SERVICE_API_KEY: string;
 };
 
 // Create a base logger for the queue handler

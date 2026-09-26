@@ -1,4 +1,4 @@
-import { $articles, $sources, eq } from '@meridian/database';
+import { $articles, $sources, and, eq, inArray, isNull, lte } from '@meridian/database';
 import { Env } from '../index';
 import { getDb } from '../lib/database';
 import { Logger } from '../lib/core/logger';
@@ -35,6 +35,14 @@ const DEFAULT_INTERVAL = tierIntervals[2]; // Default to 4 hours if tier is inva
 // --- Retry Configuration ---
 const MAX_STEP_RETRIES = 3; // Max retries for *each* step (fetch, parse, insert)
 const INITIAL_RETRY_DELAY_MS = 500; // Start delay, doubles each time
+
+// 只处理近 48 小时发布的文章：抓取时据此分流，ProcessArticles 的 'get articles' 也按同一窗口过滤
+const PROCESSING_WINDOW_MS = 48 * 60 * 60 * 1000;
+// PENDING_FETCH 超过这么久还没人动，视为卡住（入队失败 / 消费失败进 DLQ / workflow 没跑到第一步）。
+// 生产实测 created→processed p99.9 约 220 秒，1 小时远在正常延迟之外
+const STRANDED_AFTER_MS = 60 * 60 * 1000;
+// 每次 alarm 最多回收这么多行，一条队列消息装得下
+const RECOVERY_BATCH_LIMIT = 100;
 
 /**
  * Executes an operation with exponential backoff retries
@@ -197,6 +205,15 @@ export class SourceScraperDO extends DurableObject<Env> {
 
       const { sourceId, url, scrapeFrequencyTier } = validatedState.data;
 
+      const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
+      const now = Date.now();
+
+      // 先排下一次、再做任何可能抛错的事（查库、抓取）：本次 alarm 已被消费，下面一抛错就被外层
+      // catch 吞掉，没排上的话这个 DO 永久停抓。下面源已删/已暂停的分支由 destroy() 取消这次排的 alarm
+      const nextScheduledAlarmTime = Date.now() + interval;
+      await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
+      alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
+
       // 源已从库里删掉（destroy 修好之前删的源，DO 还在按周期跑）：自行停掉，不再抓
       const sourceRow = await getDb(this.env.HYPERDRIVE).query.$sources.findFirst({
         where: (s, { eq }) => eq(s.id, sourceId),
@@ -214,13 +231,12 @@ export class SourceScraperDO extends DurableObject<Env> {
         return;
       }
 
-      const interval = tierIntervals[scrapeFrequencyTier] || DEFAULT_INTERVAL;
-      const now = Date.now();
-
-      // Schedule next alarm first to ensure continuity
-      const nextScheduledAlarmTime = Date.now() + interval;
-      await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
-      alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
+      // 回收本源卡住的文章。放在抓取前、单独 try：feed 抓不到时也照做；回收失败下次 alarm 再来
+      try {
+        await this.recoverStrandedArticles(sourceId, now, alarmLogger.child({ step: 'Recover stranded' }));
+      } catch (error) {
+        alarmLogger.error('Failed to recover stranded PENDING_FETCH articles', undefined, error as Error);
+      }
 
       // --- Workflow Step 1: Fetch Feed with Retries ---
       const fetchLogger = alarmLogger.child({ step: 'Fetch' });
@@ -255,7 +271,7 @@ export class SourceScraperDO extends DurableObject<Env> {
       );
 
       // --- Filter Articles ---
-      const ageThreshold = now - 48 * 60 * 60 * 1000; // 48 hours ago
+      const ageThreshold = now - PROCESSING_WINDOW_MS;
 
       const articlesToProcess: Omit<typeof $articles.$inferInsert, 'id'>[] = [];
       const articlesToSkip: Omit<typeof $articles.$inferInsert, 'id'>[] = [];
@@ -338,7 +354,9 @@ export class SourceScraperDO extends DurableObject<Env> {
       const urlsToProcess = new Set(articlesToProcess.map(a => a.url));
       const idsToQueue = insertedRows.filter(row => urlsToProcess.has(row.insertedUrl)).map(row => row.insertedId);
 
-      // --- Send to Queue (No Retry here, relies on Queue's built-in retries/DLQ) ---
+      // --- Send to Queue ---
+      // 必须 await 且不吞错：失败就让本轮失败（lastChecked 不前进）。行已插入，
+      // onConflictDoNothing 下次不会再把它们当新文章，由 recoverStrandedArticles 捡回
       if (idsToQueue.length > 0 && this.env.ARTICLE_PROCESSING_QUEUE) {
         const BATCH_SIZE_LIMIT = 100; // Adjust as needed
 
@@ -348,16 +366,7 @@ export class SourceScraperDO extends DurableObject<Env> {
         for (let i = 0; i < idsToQueue.length; i += BATCH_SIZE_LIMIT) {
           const batch = idsToQueue.slice(i, i + BATCH_SIZE_LIMIT);
           queueLogger.debug('Sending batch to queue', { batch_size: batch.length, batch_index: i / BATCH_SIZE_LIMIT });
-
-          this.ctx.waitUntil(
-            this.env.ARTICLE_PROCESSING_QUEUE.send({ articles_id: batch }).catch(queueError => {
-              queueLogger.error(
-                'Failed to send batch to queue',
-                { batch_index: i / BATCH_SIZE_LIMIT, batch_size: batch.length },
-                queueError instanceof Error ? queueError : new Error(String(queueError))
-              );
-            })
-          );
+          await this.env.ARTICLE_PROCESSING_QUEUE.send({ articles_id: batch });
         }
       }
 
@@ -385,6 +394,50 @@ export class SourceScraperDO extends DurableObject<Env> {
     } catch (error) {
       alarmLogger.error('Alarm processing failed', undefined, error as Error);
     }
+  }
+
+  /**
+   * 本源 PENDING_FETCH 超过 STRANDED_AFTER_MS 的行：发布时间还在处理窗口内的重新入队，
+   * 已过窗口的（workflow 会按窗口把它们滤掉、永远不动）直接标成 SKIPPED_TOO_OLD 收尾。
+   * 重复入队无害：workflow 只取 processedAt / failReason 为空的行。
+   */
+  private async recoverStrandedArticles(sourceId: number, now: number, logger: Logger): Promise<void> {
+    const db = getDb(this.env.HYPERDRIVE);
+    const stranded = await db
+      .select({ id: $articles.id, publishDate: $articles.publishDate })
+      .from($articles)
+      .where(
+        and(
+          eq($articles.sourceId, sourceId),
+          eq($articles.status, 'PENDING_FETCH'),
+          isNull($articles.processedAt),
+          isNull($articles.failReason),
+          lte($articles.createdAt, new Date(now - STRANDED_AFTER_MS))
+        )
+      )
+      .orderBy($articles.id)
+      .limit(RECOVERY_BATCH_LIMIT);
+    if (stranded.length === 0) return;
+
+    const windowStart = now - PROCESSING_WINDOW_MS;
+    const expired = stranded.filter(a => !a.publishDate || a.publishDate.getTime() <= windowStart).map(a => a.id);
+    const requeue = stranded.filter(a => a.publishDate && a.publishDate.getTime() > windowStart).map(a => a.id);
+
+    if (expired.length > 0) {
+      await db
+        .update($articles)
+        .set({
+          status: 'SKIPPED_TOO_OLD',
+          processedAt: new Date(now),
+          failReason: 'Stranded in PENDING_FETCH until past the 48-hour processing window',
+        })
+        .where(and(inArray($articles.id, expired), eq($articles.status, 'PENDING_FETCH')));
+    }
+    if (requeue.length > 0) {
+      if (!this.env.ARTICLE_PROCESSING_QUEUE) throw new Error('ARTICLE_PROCESSING_QUEUE binding missing');
+      await this.env.ARTICLE_PROCESSING_QUEUE.send({ articles_id: requeue });
+    }
+    logger.warn('Recovered stranded PENDING_FETCH articles', { requeued: requeue, expired });
   }
 
   /**

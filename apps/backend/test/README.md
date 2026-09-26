@@ -46,7 +46,7 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 前端再与改动前的 `/api/*` 快照逐字节比对——两段接起来即端到端不变。日期换成相对「数据库今天」的记号（`fixtures/reader/dates.ts`）。
 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再跑前端测试确认 `/api/*` 的变化是预期的。
 
-### 数据库（`lib/source-pause.spec.ts`、`lib/sources.spec.ts`、`lib/save-brief-report.spec.ts`、`lib/reader.spec.ts`）
+### 数据库（`lib/source-pause.spec.ts`、`lib/source-scraper-queue.spec.ts`、`lib/sources.spec.ts`、`lib/save-brief-report.spec.ts`、`lib/reader.spec.ts`）
 
 这几个测试走真实路由 + 真实 DO + **本机** Postgres 测试库（测试会清空 `sources`，非 localhost 的地址直接拒绝）。
 没设 `BACKEND_TEST_DATABASE_URL` 时该文件直接报错，不静默跳过。一次性准备：

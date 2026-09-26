@@ -220,7 +220,7 @@ Runbook for figuring out what went wrong with a given brief run. Recording code:
 | DB `brief_runs` | one row per run: status (`RUNNING` / `COMPLETED` / `DEGRADED` / `FAILED` / `TERMINATED_NO_STORIES`), per-phase counts, `error` | the workflow's `persist:brief_run_*` steps |
 | DB `brief_stories` | one row per candidate block: title, importance, article ids, whether it was selected (`selected_for_intel`) | `persist:brief_stories_and_rejections` |
 | DB `reports` | the finished brief | the save-brief step |
-| R2 `observability/<workflowId>.json` | `summary` + `detailedMetrics`, rewritten on every step (readable even if the run crashes mid-way) | `WorkflowObservability` |
+| R2 `observability/<workflowId>.json` | `summary` + `detailedMetrics`, read-merged-written on every step (readable even if the run crashes mid-way; when the Workflow replays `run()` after hibernation or a retry, entries already recorded keep their original timestamps and durations) | `WorkflowObservability` |
 | R2 `observability/clustering/<workflowId>.json` | `cluster_id → article_ids` (cluster membership never hits the DB) | the clustering step |
 | R2 `observability/article-journey/<workflowId>.json` | per-article trace: which gate it hit, which block it landed in | end of the brief workflow |
 | R2 `observability/brief-v3/<workflowId>.json` | each block's tier, text, sources and cost; failed blocks kept with `ok:false` | the title step |

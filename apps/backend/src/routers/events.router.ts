@@ -85,7 +85,7 @@ const route = new Hono<HonoEnv>()
           logger.error('获取文章内容失败', { 
             article_id: article.id, 
             key: article.content_file_key,
-            error: String(error)
+            error_message: String(error)
           });
           content = `[内容加载失败: ${article.content_file_key}]`;
         }
@@ -126,7 +126,7 @@ const route = new Hono<HonoEnv>()
     
   } catch (error) {
     logger.error('获取事件数据失败', { 
-      error: String(error),
+      error_message: String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
     

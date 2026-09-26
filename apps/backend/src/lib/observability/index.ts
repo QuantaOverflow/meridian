@@ -1,5 +1,6 @@
 import type { Env } from '../../index';
 import { workflowObservabilityKey } from '@meridian/contracts';
+import { Logger } from '../core/logger';
 
 // 可观测性指标类型定义
 export interface WorkflowMetrics {
@@ -33,10 +34,12 @@ export class WorkflowObservability {
   /** 本段引擎生命里每个 (stepName, status) 已调用 logStep 的次数 */
   private calls = new Map<string, number>();
   private startTime: number;
+  private log: Logger;
 
   constructor(workflowId: string, env: Env) {
     this.workflowId = workflowId;
     this.env = env;
+    this.log = new Logger({ component: 'WorkflowObservability', workflow_id: workflowId });
     this.startTime = Date.now();
   }
 
@@ -75,12 +78,13 @@ export class WorkflowObservability {
     }
 
     // 记录到控制台（带结构化格式）
-    console.log(`[观测性-${stepName}] ${status.toUpperCase()}`, {
-      工作流ID: this.workflowId,
-      时间戳: metric.timestamp,
-      耗时: metric.duration ? `${metric.duration}ms` : 'N/A',
-      数据摘要: this.summarizeData(data),
-      错误: error || '无'
+    this.log.info(`[观测性-${stepName}] ${status.toUpperCase()}`, {
+      step: stepName,
+      step_status: status,
+      step_timestamp: metric.timestamp,
+      ...(metric.duration ? { duration_ms: metric.duration } : {}),
+      data_summary: this.summarizeData(data),
+      ...(error ? { step_error: error } : {}),
     });
 
     // 每次新记录都持久化，保证 mid-flight 崩溃的 workflow 也能在 R2 中查到。
@@ -98,7 +102,7 @@ export class WorkflowObservability {
       const parsed = JSON.parse(await obj.text());
       return Array.isArray(parsed?.detailedMetrics) ? parsed.detailedMetrics : [];
     } catch (error) {
-      console.error('[可观测性] 读取已有指标失败:', error);
+      this.log.error('[可观测性] 读取已有指标失败:', undefined, error);
       return null;
     }
   }
@@ -145,7 +149,7 @@ export class WorkflowObservability {
         detailedMetrics: this.metrics
       }, null, 2));
     } catch (error) {
-      console.error('[可观测性] 保存指标失败:', error);
+      this.log.error('[可观测性] 保存指标失败:', undefined, error);
     }
   }
 

@@ -35,7 +35,7 @@ export type Env = {
 };
 
 // Create a base logger for the queue handler
-const queueLogger = new Logger({ service: 'article-queue-handler' });
+const queueLogger = new Logger({ component: 'article-queue-handler' });
 
 
 export default {

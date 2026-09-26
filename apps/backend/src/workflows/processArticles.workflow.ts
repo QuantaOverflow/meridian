@@ -188,7 +188,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
         } catch (error) {
           scrapeLogger.error(
             'Failed to scrape article',
-            { error: error instanceof Error ? error.message : String(error) },
+            { error_message: error instanceof Error ? error.message : String(error) },
             error instanceof Error ? error : new Error(String(error))
           );
           // After all retries failed, return a structured error

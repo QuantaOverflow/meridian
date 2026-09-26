@@ -3,6 +3,9 @@ import { parseHTML } from 'linkedom';
 import { XMLParser } from 'fast-xml-parser';
 import { z } from 'zod';
 import { cleanString, cleanUrl } from '../core/utils';
+import { Logger } from '../core/logger';
+
+const logger = new Logger({ component: 'rss-parser' });
 
 const rssFeedSchema = z.object({
   title: z.string().min(1),
@@ -79,7 +82,7 @@ export async function parseRSSFeed(xml: string): Promise<z.infer<typeof rssFeedS
     try {
       cleanedLink = cleanUrl(cleanString(link));
     } catch {
-      console.warn(`[RSS] 跳过链接无法解析的条目: title=${JSON.stringify(title).slice(0, 120)} link=${JSON.stringify(link).slice(0, 200)}`);
+      logger.warn(`[RSS] 跳过链接无法解析的条目: title=${JSON.stringify(title).slice(0, 120)} link=${JSON.stringify(link).slice(0, 200)}`);
       return null;
     }
 

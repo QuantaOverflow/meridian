@@ -182,7 +182,7 @@ app.post('/articles/process', zValidator('json', processArticlesSchema), async (
     const workflowResult = await startProcessArticleWorkflow(c.env, { articles_id: article_ids });
     
     if (!workflowResult.success) {
-      routeLogger.error('工作流启动失败', { error: workflowResult.error });
+      routeLogger.error('工作流启动失败', { error_message: workflowResult.error });
       return c.json(createErrorResponse(`工作流启动失败: ${workflowResult.error}`), 500 as any);
     }
 

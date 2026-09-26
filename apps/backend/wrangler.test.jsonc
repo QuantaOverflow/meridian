@@ -83,7 +83,6 @@
   
   // 测试环境变量
   "vars": {
-    "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
     "API_TOKEN": "test-api-token"
   }
 } 

@@ -99,9 +99,6 @@
       "class_name": "AutoBriefGenerationWorkflow",
     },
   ],
-"vars": {
-  "CLOUDFLARE_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936"
-},
   /**
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings

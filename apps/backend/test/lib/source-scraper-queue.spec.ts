@@ -162,3 +162,19 @@ describe('alarm 回收本源卡在 PENDING_FETCH 的旧文章', () => {
     expect(untouched.processedAt).toBeNull();
   });
 });
+
+describe('源改了地址后的旧 DO', () => {
+  // DO 按 url 命名。改地址时旧 DO 没停掉（改地址会停旧 DO 之前就是这样），它存着旧地址继续每小时抓；
+  // 源还在、没暂停，所以「源已删 / 已暂停」两条自停都拦不住它
+  it('库里该源的地址已不是自己的地址：alarm 自行停掉，不再抓旧地址', async () => {
+    const source = await setupSource();
+    await db.update($sources).set({ url: `${FEED_ORIGIN}/moved-${source.id}.xml` }).where(eq($sources.id, source.id));
+
+    await runAlarm(source.stub, fakeQueue({ fail: false }));
+
+    await runInDurableObject(source.stub, async (_i, state) => {
+      expect(await state.storage.getAlarm()).toBeNull();
+      expect(await state.storage.get('state')).toBeUndefined();
+    });
+  });
+});

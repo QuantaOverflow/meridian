@@ -32,6 +32,33 @@ export async function hasValidAuthToken(c: Context<HonoEnv>): Promise<boolean> {
   return crypto.subtle.timingSafeEqual(provided, expected);
 }
 
+/** 读第三方响应体（RSS、文章网页）的上限。正常的 feed 与网页远小于它，又远低于 Worker 的 128MB 内存上限。 */
+export const MAX_FETCHED_BODY_BYTES = 10 * 1024 * 1024;
+
+/**
+ * 按 UTF-8 读响应体，超过 maxBytes 就中止读取并抛错。
+ * 取代直接 `response.text()`：那会把任意大小的第三方响应整个读进内存（Workers 最佳实践：
+ * 不对大小未知的响应体 await .text()）。
+ */
+export async function readTextCapped(response: Response, maxBytes: number): Promise<string> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let text = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error(`Response body exceeds ${maxBytes} bytes`);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 /**
  * 生成文章搜索文本
  * 从文章分析数据中提取关键信息，生成用于搜索的文本

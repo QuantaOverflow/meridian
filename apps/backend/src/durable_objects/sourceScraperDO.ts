@@ -4,6 +4,7 @@ import { getDb } from '../lib/database';
 import { Logger } from '../lib/core/logger';
 import { parseRSSFeed } from '../lib/api/parsers';
 import { userAgents } from '../lib/core/constants';
+import { MAX_FETCHED_BODY_BYTES, readTextCapped } from '../lib/core/utils';
 import { DurableObject } from 'cloudflare:workers';
 import { z } from 'zod';
 
@@ -237,7 +238,7 @@ export class SourceScraperDO extends DurableObject<Env> {
             throw new Error(`Fetch failed with status: ${response.status} ${response.statusText}`);
           }
           
-          return await response.text();
+          return await readTextCapped(response, MAX_FETCHED_BODY_BYTES);
         },
         MAX_STEP_RETRIES,
         INITIAL_RETRY_DELAY_MS,

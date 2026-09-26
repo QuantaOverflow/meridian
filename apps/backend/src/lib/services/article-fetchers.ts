@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parseArticle } from '../api/parsers';
 import { userAgents } from '../core/constants';
+import { MAX_FETCHED_BODY_BYTES, readTextCapped } from '../core/utils';
 import { Env } from '../../index';
 
 /**
@@ -189,7 +190,7 @@ async function getArticleWithFetch(url: string) {
 
   let html: string;
   try {
-    html = await response.text();
+    html = await readTextCapped(response, MAX_FETCHED_BODY_BYTES);
   } catch (error) {
     throw new Error(`Failed to read response: ${error instanceof Error ? error.message : String(error)}`);
   }

@@ -57,6 +57,7 @@
 ---
 
 ## 命名 / 死代码
+- 裁决（2026-09-26）：接受，暂不加跨厂商兜底。迁到 Workers AI 本就是为了摆脱外部凭证（DashScope key 失效曾让管线静默停摆 12 天）；加兜底等于把凭证风险请回来。触发条件：Workers AI 或 glm-4.7-flash 真出现导致整期简报失败的故障。
 
 ### D6. `AIWorkerService.generateEmbedding` 实际不调 ai-worker
 - 位置：`apps/backend/src/lib/services/ai-services.ts:112`，实际请求 ML `/embeddings`。
@@ -100,6 +101,7 @@
 - 现象：knip 看不到 wrangler binding 与 HTTP 路由，所以 D9、D10 以及已删的 `AI` binding 都没被上一轮死代码清理发现。
 - 选项：写一个脚本比对 `wrangler.*` binding 与 `env.<NAME>` 使用、比对路由与调用方（按「机制优先于 prose」）。
 - 待裁决：是否值得做。
+- 裁决（2026-09-26）：延后。binding 比对可以写脚本，但路由有没有真实调用方判不了，收益有限；清理仍按入口可达性人工追。触发条件：再出现一次 binding 或配置项死了很久才被发现。
 
 ### D13. 报告层退役后遗留的无效读数与死配置（退役前就已存在）
 - `brief_runs.intelligence_analyses`：v6 上线后每次仍写 25，实际已没有情报分析这一步，读数有误导性。
@@ -130,6 +132,7 @@
   `@tailwindcss/vite` 各链到一组。lock 经 `pnpm dedupe` 后 `pnpm install --frozen-lockfile` 重装，nuxt typecheck 为 0；
   但**增量** `pnpm add / remove` 后 node_modules 可能再链错、又红——遇到就 `pnpm install --frozen-lockfile` 重装。
   根治（让依赖图里只有一组 vite 变体，或在 nuxt.config 处理插件类型）未做。
+- 裁决（2026-09-26）：延后根治。现在绿；再红时先 `pnpm install --frozen-lockfile`，同一季度第二次红再根治（依赖图收成一组 vite）。
 
 ### G2. `apps/backend/worker-configuration.d.ts` 与当前 wrangler 严重漂移
 - 现象：跑 `wrangler types` 会改动约 1.3 万行（runtime 类型版本变化），本次只手删了 `AI: Ai;` 一行。

@@ -26,12 +26,12 @@ export type Env = {
   BROWSER: {
     quickAction(action: 'content', options: { url: string } & Record<string, unknown>): Promise<Response>;
   };
+
+  // ML Service Binding - connects to meridian-ml-service（本地由 services/meridian-ml-service/dev-shim 顶替）
+  ML_SERVICE: Fetcher;
   
   // Secrets
   API_TOKEN: string;
-
-  MERIDIAN_ML_SERVICE_URL: string;
-  MERIDIAN_ML_SERVICE_API_KEY: string;
 };
 
 // Create a base logger for the queue handler

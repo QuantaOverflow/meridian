@@ -11,9 +11,6 @@ class Settings:
     def __init__(self):
         # 模型配置
         self.embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/multilingual-e5-small")
-        
-        # API配置
-        self.api_token = os.getenv("API_TOKEN", "")
 
 
 # 全局设置实例

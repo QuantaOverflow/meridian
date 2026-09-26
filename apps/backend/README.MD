@@ -2,7 +2,7 @@
 
 Meridian 的主 Worker（Cloudflare Worker `meridian-backend`）：抓 RSS、处理文章、编排每日简报，
 并提供 admin / 观测 HTTP 路由。LLM 调用交给 `services/meridian-ai-worker`（service binding `AI_WORKER`），
-embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_SERVICE_URL`）。
+embedding 与聚类交给 `services/meridian-ml-service`（service binding `ML_SERVICE`）。
 
 ## 三个入口（`src/index.ts`）
 
@@ -40,12 +40,11 @@ embedding 与聚类交给 `services/meridian-ml-service`（HTTP，`MERIDIAN_ML_S
 | `PROCESS_ARTICLES` / `AUTO_BRIEF` | Workflow | `ProcessArticles` / `AutoBriefGenerationWorkflow` |
 | `AI_WORKER` | Service binding | `meridian-ai-worker` |
 | `BROWSER` | Browser Run（`remote: true`） | 抓取降级到浏览器时调 `quickAction('content')`；无本地模拟，本地 dev 也走真实 Browser Run、产生用量。要求 `compatibility_date >= 2026-03-24` |
-| `CLOUDFLARE_ACCOUNT_ID`、`MERIDIAN_ML_SERVICE_URL` | vars | 明文写在 `wrangler.jsonc` |
+| `ML_SERVICE` | Service binding | `meridian-ml-service`；本地 dev 由 `services/meridian-ml-service/dev-shim` 顶替 |
 
 Secret（本地复制 `.dev.vars.example` 为 `.dev.vars`；生产在本目录 `npx wrangler@4.120.0 secret put <NAME>`）：
 
 - `API_TOKEN`：`/admin/*`、`/observability/*`、`/do/admin/*` 的 Bearer token
-- `MERIDIAN_ML_SERVICE_API_KEY`：发给 ml-service 的 `X-API-Token`，须与 ml-service 的 `API_TOKEN` 一致
 
 ## 命令
 
@@ -61,7 +60,7 @@ cd apps/backend && npx wrangler@4.120.0 deploy
 ```
 
 包名必须写 `@meridian/backend`；写成 `meridian-backend` 时 pnpm 找不到包却静默退出 0。
-backend 与 ai-worker 本地联调、R2 注意事项见 `.claude/rules/workers.md`。
+backend 与 ai-worker / ml-service 本地联调、R2 注意事项见 `.claude/rules/workers.md`。
 
 ## 测试
 

@@ -5,7 +5,6 @@
 # --- 🔐 密钥（生产经 wrangler secret put）---
 API_TOKEN=dev-local-token                       # backend API 鉴权
 CLOUDFLARE_API_TOKEN=your_cloudflare_token      # 仅本地 test/replay 读生产 R2 正文（R2 读权限）；Worker 不读，浏览器抓取走 BROWSER binding
-MERIDIAN_ML_SERVICE_API_KEY=dev-token-123       # 须与 meridian-ml-service 的 API_TOKEN 一致
 
-# --- 非密：本地可覆盖 wrangler.jsonc vars 时才写 ---
-MERIDIAN_ML_SERVICE_URL=http://127.0.0.1:8081   # 本地指向本地 ML；不写则用 wrangler.jsonc 的生产 URL
+# ML 服务走 service binding ML_SERVICE，不在这里配 URL。本地起 uvicorn（:8081）后加
+# `-c services/meridian-ml-service/dev-shim/wrangler.jsonc` 一起 wrangler dev，见 ml-service README「本地开发」。

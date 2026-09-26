@@ -170,15 +170,24 @@ function writeConfig(name, config, devVars) {
 
 const BUCKET = 'meridian-replay-articles'; // 本地模拟桶；名字刻意与生产不同
 
-function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
+function generateConfigs({ replayPort, mlPort, apiToken }) {
   // backend：从仓库里的 wrangler.jsonc 派生，只改三处外部依赖
   const be = parseJsonc(fs.readFileSync(path.join(BACKEND_DIR, 'wrangler.jsonc'), 'utf8'));
   delete be.$schema;
   be.main = path.join(BACKEND_DIR, be.main);
   delete be.triggers; // 不让本地 cron 自己起一期
   be.r2_buckets = be.r2_buckets.map((b) => ({ binding: b.binding, bucket_name: BUCKET })); // 去掉 remote:true
-  be.vars = { ...be.vars, MERIDIAN_ML_SERVICE_URL: `http://127.0.0.1:${mlPort}` };
-  const bePath = writeConfig('backend', be, { API_TOKEN: apiToken, MERIDIAN_ML_SERVICE_API_KEY: mlToken });
+  const bePath = writeConfig('backend', be, { API_TOKEN: apiToken });
+
+  // ml：backend 的 ML_SERVICE binding 按 Worker 名指向 meridian-ml-service；本地由 dev-shim 顶替，转发到本地 uvicorn
+  const shimDir = path.join(ML_DIR, 'dev-shim');
+  const shim = parseJsonc(fs.readFileSync(path.join(shimDir, 'wrangler.jsonc'), 'utf8'));
+  if (!be.services?.some((s) => s.binding === 'ML_SERVICE' && s.service === shim.name)) {
+    throw new Error(`backend wrangler.jsonc 的 ML_SERVICE binding 不再指向 ${shim.name}，更新重放配置`);
+  }
+  shim.main = path.join(shimDir, shim.main);
+  shim.vars = { ...shim.vars, ML_LOCAL_URL: `http://127.0.0.1:${mlPort}` };
+  const mlPath = writeConfig('ml-shim', shim, {});
 
   // ai-worker：wrangler.toml 很小，照抄其形状；唯一的实质改动是 AI binding → 替身
   const toml = fs.readFileSync(path.join(AI_WORKER_DIR, 'wrangler.toml'), 'utf8');
@@ -208,7 +217,7 @@ function generateConfigs({ replayPort, mlPort, apiToken, mlToken }) {
   };
   const raPath = writeConfig('replay-ai', ra, {});
   // 第一个 -c 是唯一暴露 HTTP 的（primary）；替身排第一，其余请求它转给 backend
-  return [raPath, bePath, awPath];
+  return [raPath, bePath, awPath, mlPath];
 }
 
 // ── 子进程 ────────────────────────────────────────────────────────────────
@@ -240,13 +249,13 @@ async function waitFor(desc, fn, timeoutMs) {
   throw new Error(`等待 ${desc} 超时 ${timeoutMs / 1000}s${last ? `：${last.message}` : ''}`);
 }
 
-async function startMlService(port, token) {
+async function startMlService(port) {
   const venv = process.env.ML_SERVICE_VENV || resolveLocalOnly('services/meridian-ml-service/.venv');
   const model = process.env.ML_MODEL_DIR || resolveLocalOnly('services/meridian-ml-service/model-cache');
   if (!venv || !model) throw new Error('找不到 ml-service 的 .venv 或 model-cache（设 ML_SERVICE_VENV / ML_MODEL_DIR）');
   spawnLogged('ml-service', path.join(venv, 'bin/uvicorn'), ['src.main:app', '--host', '127.0.0.1', '--port', String(port)], {
     cwd: ML_DIR, // 用本 checkout 的 ml-service 代码（与被测 HEAD 一致），venv/模型只是运行环境
-    env: { ...process.env, API_TOKEN: token, EMBEDDING_MODEL_NAME: model, HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1' },
+    env: { ...process.env, EMBEDDING_MODEL_NAME: model, HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1' },
   });
   await waitFor('ml-service /health', async () => (await fetch(`http://127.0.0.1:${port}/health`)).ok, 180_000);
 }
@@ -312,9 +321,8 @@ async function main() {
 
   const [replayPort, mlPort, wranglerPort] = [await freePort(), await freePort(), await freePort()];
   const apiToken = crypto.randomBytes(16).toString('hex');
-  const mlToken = crypto.randomBytes(16).toString('hex');
   await startReplayServer(store, replayPort);
-  const configs = generateConfigs({ replayPort, mlPort, apiToken, mlToken });
+  const configs = generateConfigs({ replayPort, mlPort, apiToken });
   const base = `http://127.0.0.1:${wranglerPort}`;
 
   if (SLICE) {
@@ -323,7 +331,7 @@ async function main() {
   }
 
   log('启动 ml-service（真模型，本地）');
-  await startMlService(mlPort, mlToken);
+  await startMlService(mlPort);
   await startWrangler(configs, wranglerPort, cred.databaseUrl);
 
   // 本地 R2 播种：只放这一期需要的文章正文

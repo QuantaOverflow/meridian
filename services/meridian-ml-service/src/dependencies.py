@@ -1,12 +1,8 @@
-import hmac
 from typing import Annotated, Union
 import asyncio
 
-from fastapi import Depends, HTTPException, Security
-from fastapi.security import APIKeyHeader
-from starlette.status import HTTP_403_FORBIDDEN
+from fastapi import Depends
 
-from .config import settings
 from .embeddings import ModelComponents, load_embedding_model
 
 # Global lock for model loading
@@ -38,18 +34,3 @@ async def get_embedding_model() -> ModelComponents:
 
 
 ModelDep = Annotated[ModelComponents, Depends(get_embedding_model)]
-
-api_key_header = APIKeyHeader(name="X-API-Token", auto_error=False)
-
-
-async def verify_token(api_key: Union[str, None] = Security(api_key_header)) -> None:
-    # 恒定时间比较：`!=` 在第一个不同的字符处就返回，响应时间会泄露猜对了几位。
-    # 服务端没配 API_TOKEN（空串）时一律拒绝，不让「空对空」相等。
-    if (
-        not settings.api_token
-        or api_key is None
-        or not hmac.compare_digest(api_key.encode(), settings.api_token.encode())
-    ):
-        raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN, detail="Invalid or missing API token"
-        )

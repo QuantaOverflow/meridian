@@ -13,7 +13,8 @@ Meridian 的 embedding 与聚类服务：Python / FastAPI，生产跑在 **Cloud
 
 ## 路由（`src/main.py`）
 
-除 `/health` 外都要求 `X-API-Token` 头等于 `API_TOKEN`（`src/dependencies.py` 的 `verify_token`）。
+不做鉴权：生产 Worker 关了 `workers_dev` 与 `preview_urls`，没有公网入口，唯一的入口是 backend 的
+service binding `ML_SERVICE`（同账号的 Worker 才能声明）。
 
 | 路由 | 请求 | 响应 |
 |---|---|---|
@@ -29,7 +30,6 @@ backend 在每次聚类时断言它（`ml-service.ts` 的 `assertBuildIdentity`�
 
 | 名称 | 默认 | 说明 |
 |---|---|---|
-| `API_TOKEN` 🔐 | 空 | 须与 backend 的 `MERIDIAN_ML_SERVICE_API_KEY` 一致；生产由 `cf-worker` 注入容器 |
 | `EMBEDDING_MODEL_NAME` | `sentence-transformers/multilingual-e5-small` | 模型名或本地目录；镜像里设为 `/home/appuser/model` |
 | `MERIDIAN_ML_BUILD_STAMP_FILE` | 空 | `build_identity` 的来源（镜像构建戳），由 `Dockerfile` 设置 |
 
@@ -42,12 +42,20 @@ backend 在每次聚类时断言它（`ml-service.ts` 的 `assertBuildIdentity`�
 ```bash
 cd services/meridian-ml-service
 uv sync --extra dev   # 含 dependency-groups 里的 httpx（TestClient 需要）
-API_TOKEN=dev-token-123 EMBEDDING_MODEL_NAME=$PWD/model-cache \
+EMBEDDING_MODEL_NAME=$PWD/model-cache \
   .venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8081
 curl http://127.0.0.1:8081/health
 ```
 
-backend 本地指向它：`apps/backend/.dev.vars` 里设 `MERIDIAN_ML_SERVICE_URL=http://127.0.0.1:8081`。
+backend 经 binding `ML_SERVICE` 找名为 `meridian-ml-service` 的 Worker。本地没有 Container，由零依赖的
+`dev-shim/`（同名 Worker）把请求原样转发到上面的 uvicorn，和 backend 在同一条命令里起（仓库根目录）：
+
+```bash
+pnpm -F @meridian/backend exec wrangler dev -c wrangler.jsonc -c ../../services/meridian-ml-service/dev-shim/wrangler.jsonc
+```
+
+uvicorn 换端口时在 `dev-shim/.dev.vars` 里写 `ML_LOCAL_URL=http://127.0.0.1:<port>`。没起 shim 时启动输出里
+`env.ML_SERVICE` 显示 `[not connected]`，ML 调用直接报错，不会静默降级。replay 自动生成 shim 配置。
 
 ## 测试
 
@@ -65,10 +73,11 @@ cd services/meridian-ml-service
 ```bash
 cd services/meridian-ml-service/cf-worker
 npx wrangler@4.120.0 deploy          # 用 ../Dockerfile 构建镜像并推送，Worker 名 meridian-ml-service
-npx wrangler@4.120.0 secret put API_TOKEN
 ```
 
 - 容器配置在 `cf-worker/wrangler.jsonc`：`standard-1`、最多 3 个实例；`cf-worker/src/index.ts` 里 `sleepAfter = '10m'`。
 - 构建前 `model-cache/` 必须就位，否则镜像里没有模型。
-- 部署后看 `/health` 的 `build_identity.build_time` 是不是刚才的时间，确认新镜像已在运行。
+- 部署后跑仓库根的 `scripts/check-container-deploy.sh`（0 = 镜像不比代码旧）。没有公网口，`/health` 从外面访问不到；
+  运行时由 backend 每次聚类断言 `build_identity`（`buildIdentityCheck`，缺字段记 DEGRADED）。
+- 不要在 dashboard 给这个 Worker 加 custom domain 或 route：服务不做鉴权，加了就是公网无鉴权入口。
 - 永不从仓库根部署。

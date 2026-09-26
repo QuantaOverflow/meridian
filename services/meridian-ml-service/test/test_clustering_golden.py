@@ -30,10 +30,6 @@ from pathlib import Path
 
 import pytest
 
-# 必须在 import src.main 之前设置：src/config.py 的 `settings = Settings()` 是模块级
-# 单例，只在首次 import 时读一次 os.environ，之后再设置环境变量对它无效。
-os.environ["API_TOKEN"] = "golden-test-token"
-
 # build_identity 顶层字段（main.py 的 get_build_identity）读构建戳路径的环境变量；
 # 显式清空而不是假设本地/CI shell 没设置过它，否则 golden 响应会随跑测试的机器漂移。
 os.environ.pop("MERIDIAN_ML_BUILD_STAMP_FILE", None)
@@ -45,8 +41,6 @@ from src.main import app  # noqa: E402
 GOLDEN_DIR = Path(__file__).resolve().parent / "golden"
 REQUEST_PATH = GOLDEN_DIR / "request.json"
 RESPONSE_PATH = GOLDEN_DIR / "response.json"
-
-API_TOKEN = os.environ["API_TOKEN"]
 
 
 def _load_json(path: Path) -> dict:
@@ -66,12 +60,8 @@ def request_body() -> dict:
 
 def _call_clustering(client: TestClient, request_body: dict) -> dict:
     """完全复现 apps/backend/src/lib/services/ml-service.ts 的
-    analyzeClusters()（经 post('/ai-worker/clustering')）：同一路径、同一 header 名。"""
-    response = client.post(
-        "/ai-worker/clustering",
-        json=request_body,
-        headers={"X-API-Token": API_TOKEN},
-    )
+    analyzeClusters()（经 post('/ai-worker/clustering')）：同一路径、同一请求体形状。"""
+    response = client.post("/ai-worker/clustering", json=request_body)
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -98,24 +88,3 @@ def test_clustering_is_deterministic_across_repeated_calls(client, request_body)
     first = _call_clustering(client, request_body)
     second = _call_clustering(client, request_body)
     assert first == second
-
-
-# ---- token 门（dependencies.verify_token）----
-
-def _post_with_token(client: TestClient, request_body: dict, token):
-    headers = {} if token is None else {"X-API-Token": token}
-    return client.post("/ai-worker/clustering", json=request_body, headers=headers)
-
-
-def test_token_gate_rejects_missing_or_wrong_token(client, request_body):
-    assert _post_with_token(client, request_body, None).status_code == 403
-    assert _post_with_token(client, request_body, "x" * len(API_TOKEN)).status_code == 403
-    assert _post_with_token(client, request_body, "short").status_code == 403
-
-
-def test_token_gate_rejects_everything_when_token_unconfigured(client, request_body, monkeypatch):
-    # 服务端没配 API_TOKEN（空串）时，带一个空 X-API-Token 头也不能过门
-    from src.config import settings
-
-    monkeypatch.setattr(settings, "api_token", "")
-    assert _post_with_token(client, request_body, "").status_code == 403

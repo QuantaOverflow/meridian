@@ -1,6 +1,7 @@
 /**
  * ML 服务（services/meridian-ml-service：e5-small embedding + 余弦凝聚聚类）的唯一客户端。
- * backend 直连 ml-service（不经 ai-worker）；URL、X-API-Token、x-trace-id 只在 post() 里拼。
+ * backend 经 service binding `ML_SERVICE` 直连 ml-service 的 Worker（不经 ai-worker、不走公网）；
+ * 请求与 x-trace-id 只在 post() 里拼；不带 token（ml Worker 没有公网入口，只能经 binding 调到）。本地开发由 `services/meridian-ml-service/dev-shim/` 顶替该 Worker。
  * 两个方法都返回 ServiceResult<T>（与 ai-services 同形），调用方施加自己的错误策略。
  *
  * 聚类只给 ml 侧发 {id, embedding}；正文由下游工作流按需从 R2 取。
@@ -10,8 +11,9 @@ import { BRIEF_CLUSTERING_OPTIONS } from '../core/constants';
 import type { ServiceResult } from './ai-services';
 
 export interface MLServiceEnv {
-  MERIDIAN_ML_SERVICE_URL: string;
-  MERIDIAN_ML_SERVICE_API_KEY: string;
+  ML_SERVICE: {
+    fetch(request: Request): Promise<Response>;
+  };
 }
 
 interface EmbeddingData {
@@ -140,18 +142,18 @@ export interface ClusteringResult {
 class MLService {
   constructor(private env: MLServiceEnv, private traceId?: string) {}
 
-  // 传输只写这一处：POST JSON，带 X-API-Token，自动注入 x-trace-id 以贯通跨 service 日志
+  // 传输只写这一处：经 ML_SERVICE binding POST JSON，自动注入 x-trace-id 以贯通跨 service 日志。
+  // binding 的 Request 必须是带主机名的完整 URL，主机名本身不参与路由（写法同 AI_WORKER）。
   private async post(path: string, body: unknown): Promise<Response> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-API-Token': this.env.MERIDIAN_ML_SERVICE_API_KEY,
     };
     if (this.traceId) headers['x-trace-id'] = this.traceId;
-    return await fetch(`${this.env.MERIDIAN_ML_SERVICE_URL}${path}`, {
+    return await this.env.ML_SERVICE.fetch(new Request(`https://meridian-ml-service${path}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-    });
+    }));
   }
 
   /**

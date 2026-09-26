@@ -9,12 +9,11 @@ declare namespace Cloudflare {
 		SOURCE_SCRAPER: DurableObjectNamespace<import("./src/index").SourceScraperDO>;
 		ARTICLES_BUCKET: R2Bucket;
 		AI_WORKER: Fetcher /* meridian-ai-worker */;
+		ML_SERVICE: Fetcher /* meridian-ml-service */;
 		ARTICLE_PROCESSING_QUEUE: Queue;
 		HYPERDRIVE: Hyperdrive;
 		PROCESS_ARTICLES: Workflow;
 		AUTO_BRIEF: Workflow;
-		MERIDIAN_ML_SERVICE_URL: string;
-		MERIDIAN_ML_SERVICE_API_KEY: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

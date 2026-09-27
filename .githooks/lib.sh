@@ -14,7 +14,8 @@ check() {
   log=$(mktemp)
   if "$@" >"$log" 2>&1; then
     echo "✓ ${label}"
-    rm -f "$log"
+    # 调用方设了 KEEP_LOG 就留一份输出（eslint 通过时还要从里面挑警告）
+    if [ -n "${KEEP_LOG:-}" ]; then mv "$log" "$KEEP_LOG"; else rm -f "$log"; fi
   else
     echo "✗ ${label}，报错行（全文 ${log}）："
     grep -E 'error|FAIL|✗|×|AssertionError|Expected|Received' "$log" | grep -vE '^[[:space:]]*(\{|stdout \||stderr \|)|DeprecationWarning' | head -30
@@ -25,3 +26,4 @@ check() {
 # backend 的数据库测试要本机测试库；没设就用本机默认库（测试自己会拒绝非 localhost 地址）
 : "${BACKEND_TEST_DATABASE_URL:=postgresql://$USER:x@localhost:5432/meridian_backend_test}"
 export BACKEND_TEST_DATABASE_URL
+

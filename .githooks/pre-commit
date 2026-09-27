@@ -12,10 +12,17 @@ code=$(git diff --cached --name-only | code_files)
 [ -z "$code" ] && exit 0
 
 # typecheck 与 eslint 互不依赖，并行跑（各约 5 秒；eslint 带类型规则，改了任一文件都要重载 TS 项目，缓存只在全未变时生效）
-check eslint pnpm -s lint &
+lint_log=$(mktemp)
+KEEP_LOG=$lint_log check eslint node .githooks/eslint-commit.mjs &
 lint_pid=$!
 check typecheck pnpm -s typecheck
 wait $lint_pid
+warnings=$(grep '^⚠' "$lint_log" || true)
+rm -f "$lint_log"
+if [ -n "$warnings" ]; then
+  echo "  eslint 在本次改动的行上有警告（不拦提交，但请处理：补日志 / 往上抛 / 确属合理就加 eslint-disable 注释写明原因）："
+  printf '%s\n' "$warnings" | sed 's/^/  /'
+fi
 if touched services/meridian-ai-worker/ || touched packages/; then
   check "ai-worker 测试" pnpm -s -F meridian-ai-worker test
 fi

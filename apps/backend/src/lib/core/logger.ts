@@ -20,6 +20,7 @@ function errorFields(error: unknown): { message: string; stack?: string; cause?:
   try {
     return { message: JSON.stringify(error) ?? String(error) };
   } catch {
+    // eslint-disable-next-line local/no-swallowed-catch -- 序列化失败（如循环引用）退回 String；日志器自己没法再记日志
     return { message: String(error) };
   }
 }

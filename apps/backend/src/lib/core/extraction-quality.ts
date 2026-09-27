@@ -43,6 +43,7 @@ export function looksLikeNonArticleUrl(rawUrl: string): string | null {
     if (h === 'fb.watch' || (h.endsWith('facebook.com') && p.startsWith('/watch'))) return 'social_video';
     return null;
   } catch {
+    // eslint-disable-next-line local/no-swallowed-catch -- URL 解析不了就是「看不出是非新闻页」，交给后面的内容判断
     return null;
   }
 }

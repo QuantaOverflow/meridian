@@ -132,7 +132,7 @@ export class BriefBlockV6Service {
           try {
             parsed = JSON.parse(content);
           } catch {
-            /* retry */
+            // eslint-disable-next-line local/no-swallowed-catch -- 解不出时 parsed 留 null，下面记 warn「JSON 解不出」并重试
           }
           // reasons === null：连 ok() 都没跑到（截断 / JSON 解不出），没有可回传的诊断
           const reasons = !truncated && parsed ? ok(parsed) : null;

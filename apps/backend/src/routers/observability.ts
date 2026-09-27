@@ -42,7 +42,8 @@ app.get('/runs/:workflowId', async (c) => {
       const obj = await c.env.ARTICLES_BUCKET.get(workflowObservabilityKey(workflowId));
       if (obj) observabilitySnapshot = JSON.parse(await obj.text());
     } catch (e) {
-      // 静默：观测性数据缺失不影响其他链路
+      // 观测性数据读不到不影响其他链路，照常返回；但要记下来，否则和「本来就没有快照」分不出来
+      logger.warn('读取观测快照失败', { workflowId }, e);
     }
 
     return c.json({
@@ -268,6 +269,7 @@ app.get('/runs/:workflowId/llm-calls', async (c) => {
             error: data.error || null,
           };
         } catch {
+          // eslint-disable-next-line local/no-swallowed-catch -- 失败标在返回的 error 字段里，列表照常返回
           return { key: obj.key, uploaded: obj.uploaded, size: obj.size, error: 'parse_failed' };
         }
       })

@@ -5,13 +5,39 @@
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
+// catch 既不往上抛、也不记 error/warn：错误悄悄消失（失败静默降级成默认值，生产上已出过四次事故）。
+// 只提示不拦：记了 error/warn 再跳过是合理的，不算吞；确属合理但不记日志的，加 eslint-disable 注释写明原因。
+// 由 pre-commit 在「本次提交的文件」上打出警告（warn 不影响退出码，不打就没人看见）。
+// 用到了捕获的错误对象（装进返回值、交给处理函数、存进诊断字段）就不算吞：错误信息传下去了。
+const noSwallowedCatch = {
+  meta: { type: 'problem', messages: { swallowed: 'catch 丢掉了错误：没用到错误对象，也不 rethrow、不记 error/warn。补日志 / 往上抛 / 把错误带给调用方；确属合理就在 catch 块里单独一行加 eslint-disable-next-line 写明原因。' } },
+  create: (context) => ({
+    'CatchClause:not(:has(ThrowStatement)):not(:has(CallExpression[callee.property.name=/^(error|warn)$/]))'(node) {
+      if (context.sourceCode.getDeclaredVariables(node).some((v) => v.references.length > 0)) return;
+      // 报在 catch 块里第一条语句（空块报在收尾的 }），豁免就能在块内单独一行写 eslint-disable-next-line。
+      // 报在 catch 那一行的话只能用行尾 eslint-disable-line，而 prettier 会把行尾注释挪到下一行、豁免失效。
+      const first = node.body.body[0];
+      context.report({ loc: first ? first.loc : { start: node.body.loc.end, end: node.body.loc.end }, messageId: 'swallowed' });
+    },
+  }),
+};
+
 const rule = {
   plugins: { '@typescript-eslint': tseslint.plugin },
   linterOptions: { reportUnusedDisableDirectives: 'error' },
   rules: { '@typescript-eslint/no-floating-promises': 'error' },
 };
 
+const swallowed = {
+  plugins: { local: { rules: { 'no-swallowed-catch': noSwallowedCatch } } },
+  rules: { 'local/no-swallowed-catch': 'warn' },
+};
+
 export default defineConfig(
+  {
+    ...swallowed,
+    files: ['apps/backend/src/**/*.ts', 'services/meridian-ai-worker/src/**/*.ts', 'services/meridian-ml-service/cf-worker/src/**/*.ts'],
+  },
   {
     ...rule,
     files: [

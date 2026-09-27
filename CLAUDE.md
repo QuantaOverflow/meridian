@@ -28,7 +28,7 @@
 - 分支：`meridian-dev` 是主干（没有 `main`）。主会话的改动直接提交到当前分支；写代码的 subagent 用 `isolation: "worktree"`，由主会话合回。
   `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
-- commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -- <paths>`），不要等用户开口；push 只在用户要求时做。
+- commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -m "…" -- <paths>`，`-m` 要在 `--` 前），不要等用户开口；push 只在用户要求时做。
   `.githooks/pre-commit` 在提交碰到代码时跑 typecheck + eslint（并行）+ 被碰到的轻量包测试（ai-worker、ml-service），约 3–8 秒，没过提交不了；backend 集成测试、frontend 端到端测试启动开销大，放在 pre-push。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
   `pnpm -F @meridian/backend test`（要本机测试库，见 `apps/backend/test/README.md`「数据库」）、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
   前端端到端 `pnpm -F @meridian/frontend test`（不需要数据库，backend 由测试假冒，见 `apps/frontend/README.md`「测试」）；

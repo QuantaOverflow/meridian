@@ -29,6 +29,7 @@ done
 
 check typecheck pnpm -s typecheck
 check knip pnpm -s exec knip --no-progress
+check 路由对账 node scripts/check-routes.mjs
 check eslint pnpm -s lint
 check ruff sh -c 'cd services/meridian-ml-service && uv run --frozen ruff check src test'
 

@@ -27,12 +27,13 @@
 ## 工作规则
 - 分支：`meridian-dev` 是主干（没有 `main`）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
-- 完成前跑 `pnpm typecheck` + 相关测试。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
+- commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -- <paths>`），不要等用户开口；push 只在用户要求时做。
+  `.githooks/pre-commit` 在提交碰到代码时跑 typecheck + eslint（并行）+ 被碰到的轻量包测试（ai-worker、ml-service），约 3–8 秒，没过提交不了；backend 集成测试、frontend 端到端测试启动开销大，放在 pre-push。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
   `pnpm -F @meridian/backend test`（要本机测试库，见 `apps/backend/test/README.md`「数据库」）、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
   前端端到端 `pnpm -F @meridian/frontend test`（不需要数据库，backend 由测试假冒，见 `apps/frontend/README.md`「测试」）；
   整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
 - 报错先 `wrangler tail`，再加 console.log
-- push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip + eslint（no-floating-promises）+ ruff；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
+- push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip + eslint（no-floating-promises）+ ruff + 这次要推的提交碰到的包的测试；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
 
 ## 已知坑
 - `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）
@@ -110,6 +111,6 @@
 | `workers.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | 本地验证（dev 直连生产 R2）、workflow step 规矩、观测、LLM 调用的坑、typecheck 的两个坑 |
 | `prototypes.md` | `apps/*/prototypes/**`、`services/*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
-## 禁区（未明确要求不要碰）
+## 禁区（未明确要求不要碰；`.claude/hooks/forbidden-zones.mjs` 碰到时交用户确认）
 - `packages/database/migrations/` — 历史 migration 不可变
 - `services/meridian-ml-service/model-cache/` — 470MB 模型，gitignored

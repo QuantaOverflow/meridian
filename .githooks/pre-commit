@@ -1,0 +1,24 @@
+#!/bin/sh
+# commit 前：只挡最便宜、最常见的错，控制在几秒内（agent 做完一个工作块就 commit，频率高）。
+#   typecheck + eslint，外加被碰到的轻量包的测试（ai-worker、ml-service 各约 2 秒）。
+# backend 集成测试、frontend 端到端测试有 9–14 秒的固定启动开销，放到 pre-push。
+# 检查跑的是工作区，不是暂存区——工作区里别的会话没提交的改动也会参与，失败时先看是不是自己的文件。
+# 紧急情况绕过：git commit --no-verify（要在 commit message 里说明原因；pre-push 会补跑）。
+set -e
+cd "$(git rev-parse --show-toplevel)"
+. .githooks/lib.sh
+
+code=$(git diff --cached --name-only | code_files)
+[ -z "$code" ] && exit 0
+
+# typecheck 与 eslint 互不依赖，并行跑（各约 5 秒；eslint 带类型规则，改了任一文件都要重载 TS 项目，缓存只在全未变时生效）
+check eslint pnpm -s lint &
+lint_pid=$!
+check typecheck pnpm -s typecheck
+wait $lint_pid
+if touched services/meridian-ai-worker/ || touched packages/; then
+  check "ai-worker 测试" pnpm -s -F meridian-ai-worker test
+fi
+if touched services/meridian-ml-service/; then
+  check "ml-service 测试" sh -c 'cd services/meridian-ml-service && .venv/bin/python -m pytest -q -x test/'
+fi

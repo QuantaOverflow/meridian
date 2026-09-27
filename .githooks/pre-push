@@ -1,20 +1,46 @@
 #!/bin/sh
 # push 前的质量门：任何一项非 0 就拦下这次 push。
 # 由根 package.json 的 prepare 脚本在 pnpm install 时启用（git config core.hooksPath .githooks）。
+# 测试只跑这次要推的提交碰到的包：backend 集成测试、frontend 端到端测试在这里跑（commit 时嫌慢没跑）；
+# ai-worker、ml-service 在 commit 时跑过，这里再跑一遍，兜住 --no-verify 的提交。
 # 紧急情况绕过：git push --no-verify（绕过要在 commit/PR 里说明原因）。
 set -e
 cd "$(git rev-parse --show-toplevel)"
+. .githooks/lib.sh
 
-echo "▶ pre-push 1/4 typecheck（rules 路径校验 + 各包 tsc）"
-pnpm -s typecheck
+# stdin 每行：<本地 ref> <本地 sha> <远端 ref> <远端 sha>；远端 sha 全 0 表示新分支，和主干比
+zero=0000000000000000000000000000000000000000
+code=""
+while read -r _ local_sha _ remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # 删除远端分支
+  if [ "$remote_sha" = "$zero" ]; then
+    base=$(git merge-base origin/meridian-dev "$local_sha" 2>/dev/null || echo "")
+  else
+    base=$remote_sha
+  fi
+  if [ -n "$base" ]; then
+    code="$code$(git diff --name-only "$base" "$local_sha" | code_files)
+"
+  else
+    code="${code}apps/ services/ packages/
+" # 找不到比较起点：按全都碰过处理
+  fi
+done
 
-echo "▶ pre-push 2/4 knip（没人用的文件 / export / 依赖）"
-pnpm -s exec knip --no-progress
+check typecheck pnpm -s typecheck
+check knip pnpm -s exec knip --no-progress
+check eslint pnpm -s lint
+check ruff sh -c 'cd services/meridian-ml-service && uv run --frozen ruff check src test'
 
-echo "▶ pre-push 3/4 eslint（三个 Worker 的 no-floating-promises）"
-pnpm -s lint
-
-echo "▶ pre-push 4/4 ruff（ml-service：未定义名、未用 import/变量）"
-(cd services/meridian-ml-service && uv run --frozen ruff check src test)
-
-echo "✓ pre-push 全部通过"
+if touched apps/backend/ || touched packages/; then
+  check "backend 测试" pnpm -s -F @meridian/backend test
+fi
+if touched apps/frontend/; then
+  check "frontend 测试" pnpm -s -F @meridian/frontend test
+fi
+if touched services/meridian-ai-worker/ || touched packages/; then
+  check "ai-worker 测试" pnpm -s -F meridian-ai-worker test
+fi
+if touched services/meridian-ml-service/; then
+  check "ml-service 测试" sh -c 'cd services/meridian-ml-service && .venv/bin/python -m pytest -q -x test/'
+fi

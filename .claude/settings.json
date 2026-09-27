@@ -11,6 +11,16 @@
             "statusMessage": "push 前检查入口可达性复查清单"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/forbidden-zones.mjs",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }

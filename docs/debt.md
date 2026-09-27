@@ -63,6 +63,15 @@
 - 根治方案：DO 改按 `sources.id` 命名（数据库分配、永不变的代理键；RSS 没有官方的 feed id 可用）。改 url 时 DO 不变，只更新它存的地址。迁移不需要手动操作：alarm 里核对「按 `String(sourceId)` 算出的 DO id 是不是自己」，不是就先 `initialize` 按 id 命名的新 DO、交接 state，再 `destroy` 自己；上线后一小时内 14 个 DO 各自完成交接。测试要覆盖「交接成功」和「新 DO 已存在时不重复初始化」；上线后逐源核对新 DO 在、旧 DO 已停、`last_checked` 继续前进。
 - 裁决（2026-09-26）：延后。改 url 一年没几次，现有两道防护已能管住；迁移靠自动交接，源变多也不会更难，晚做不吃亏。触发条件：改 url 变成常事（例如源常换 feed、后台允许自助改源），或再出现一次「改 url 后 DO 没跟上」的事故。
 
+### D16. 读者接口与后台管理共用一个 `API_TOKEN`（2026-09-26）
+- 现象：前端调 `/reader/*`（只读）与 `/admin/*`（能改源、触发简报）用同一个 `NUXT_WORKER_API_TOKEN` = backend 的 `API_TOKEN`。前端这把钥匙泄露，等于后台管理权限泄露。
+- 选项：给 `/reader/*` 单独一个只读 token（backend 两个 secret、前端按用途选）；或接受。
+- 待裁决。
+
+### D17. 每期的 embedding 数据集只写不删（2026-09-26）
+- 现象：简报 workflow 每期把读回的向量卸到 R2 `datasetEmbeddingsKey(workflowId)`（`auto-brief-generation.ts` 数据集步），之后没有任何代码删它；每期约 2.5MB 量级，只增不减。（删源时 R2 正文已由 `lib/sources.ts` 一并删除，不在此列。）
+- 待裁决：加 R2 lifecycle 规则按前缀过期，还是一期结束时显式删；replay 与观测是否还要读旧期数据集要先确认。
+
 ---
 
 ## 命名 / 死代码

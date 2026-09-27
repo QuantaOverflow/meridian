@@ -4,6 +4,14 @@
 2026-09-18 更新部署状态与实测错误率；2026-09-19 追加 scorer 重建一节；2026-09-20 追加真实分布读数与 eval 重构一节；
 2026-09-24 追加下方「现状」一节。**
 
+## 2026-09-26 · 架构清理全部上线（详见 `docs/adr/0007-architecture-cleanup-2026-09.md`）
+
+- 7 个概念各收进一个负责 module：源的增删改、读者视图、前端 backend 客户端、LLM 调用、故事账本、本期语料、跨服务约定
+- 平台接线：backend → ml 走 service binding（ml 关公网、删 token）；浏览器抓取走 Browser Run binding；三个 Worker compatibility_date 统一 2026-03-24；`wrangler types` 生成 Env；traces 全量、日志统一 JSON
+- 顺带修：B9（入队失败致文章永卡 PENDING_FETCH，生产 14 行已收尾）、改 url 遗留的旧抓取 DO 自停（清掉 2 个）、HN 被拦换 hnrss.org、observability 指标在 workflow 重启时被覆盖
+- 新门禁：pre-push 加 eslint `no-floating-promises`
+- 延后：debt D15（DO 按 id 命名）、D16（读者只读 token）、D17（embedding 数据集清理）
+
 ## 2026-09-24 · 现状（代码层面）
 
 - **简报链路已切到 v6**（`961aeca`，2026-09-21）：簇判定 → LLM 重要性排序（三轮洗牌 + Borda，`86633c5` / `0ae2592`）

@@ -105,6 +105,17 @@ _Avoid_: 尺（临时造的词，指代不清——既可能指 scorer，也可�
 **Metric**:
 把一批 Score 汇总成读数，例如核心层覆盖率、硬错条数、block 级含错比例。
 
+## 简报链路的代码概念（见 ADR 0007）
+
+**本期语料 (Run corpus)**:
+一期简报的输入：时间窗内、过了质量门、同源去重后、带 embedding 的文章集合。cron 与后台手动触发用同一组默认值 `CRON_BRIEF_PARAMS`。代码在 `apps/backend/src/lib/core/run-corpus.ts`。
+
+**故事账本 (Story ledger)**:
+一期里候选故事从选中、分档、写块到落库的记录。每个故事一个 `storyId` 贯穿全程，计数、落库行号与**文章去向**都从账本读，不再各步换下标后事后比对。代码在 `apps/backend/src/lib/core/story-ledger.ts`。
+
+**文章去向 (Article journey)**:
+一期里每篇文章最后到了哪一步（clustered / judged / selected / written）以及在哪一步、因什么被丢下，由故事账本产出，落 R2 `articleJourneyKey`。
+
 ## 写作层 / 事实准确性(见 ADR 0004)
 
 **要点 (Key point)**:

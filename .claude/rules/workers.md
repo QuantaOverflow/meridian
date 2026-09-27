@@ -24,6 +24,9 @@ paths:
 - **浏览器抓取也是真实的**：backend 的 `browser` binding（`BROWSER`）同样 `remote: true`（`quickAction` 没有本地模拟），
   本地触发浏览器降级会产生真实 Browser Run 用量。测试里给 `env.BROWSER` 塞按 Response 契约回包的假对象
   （`apps/backend/test/lib/article-fetchers.spec.ts`），不连真服务。
+- **本地整期跑完先看取正文失败数**：远程 R2 在本机并发高峰会被 loadShed，`fetchBody` 记 `R2_FETCH_ERROR`、只打 warn，
+  文章被静默丢出这期语料（2026-09 实测高峰那小时失败近半）。本地 e2e / 手动整期跑完，看日志
+  `[AutoBrief] 并行获取文章内容完成 ... 取正文失败 N 篇`：**N > 0 这次读数作废**，降并发或重跑，不拿缺文章的语料下结论。replay 用本地模拟桶，不受此影响。
 - **Workflow 本地触发**：`curl -X POST http://localhost:8787/admin/briefs/generate -H 'Authorization: Bearer <API_TOKEN>'`，
   或 `wrangler workflows instances list <WORKFLOW_NAME>` 查实例状态。
 - **typecheck 坑 1**：`pnpm typecheck` 走 turbo 整包缓存，显示 `FULL TURBO` 等于没验；要验证就进包内直接跑

@@ -19,12 +19,14 @@ import { EMBEDDING_DIM } from '@meridian/contracts';
  *   .93-.95 已明显串线——「UK 气候政策」被并到「Starmer 辞职」；且低阈值下出现枢纽效应，
  *           某条大新闻成为一堆无关故事的共同最近邻
  * 故 τ 取 0.95。这是个口味阈值，放配置里而不是写死。
+ * @internal 导出只给 scripts/assign-story-clusters.ts（本地补跑脚本）；生产在本文件内用
  */
 export const CLUSTER_SIMILARITY_THRESHOLD = 0.95;
 
 /**
  * 回看窗口。比「暂无更新」的 7 天判据长一倍，好让停更几天又有新进展的线索**接回原线索**
  * 而不是另起一条。
+ * @internal 导出只给 scripts/assign-story-clusters.ts（本地补跑脚本）；生产在本文件内用
  */
 export const CLUSTER_LOOKBACK_DAYS = 14;
 
@@ -51,6 +53,7 @@ interface Db {
  *
  * 落库而不是每次现算：匹配要拿历史故事的向量比对，现算得把全部 story-article 链路重 join 一遍。
  * 只补 centroid IS NULL 的行，可反复跑。
+ * @internal 导出只给 scripts/assign-story-clusters.ts（本地补跑脚本）；生产在本文件内用
  */
 export async function backfillStoryCentroids(db: Db, workflowId?: string): Promise<number> {
   const rows = (await db.execute(sql`
@@ -85,6 +88,7 @@ export async function backfillStoryCentroids(db: Db, workflowId?: string): Promi
  * 「比利时消防员扑救大火」。取错一篇，整条线索的概要就完全跑题。
  *
  * 落库而不是读时现算：读时跑 lateral 实测 1.7 秒，这里一次算好，读时只剩一个 join。
+ * @internal 导出只给 scripts/assign-story-clusters.ts（本地补跑脚本）；生产在本文件内用
  */
 export async function backfillStoryLeadArticles(db: Db, workflowId?: string): Promise<number> {
   const rows = (await db.execute(sql`

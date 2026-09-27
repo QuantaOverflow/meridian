@@ -8,8 +8,8 @@
     },
 
     "apps/backend": {
-      "entry": ["src/workflows/*.ts!", "src/durable_objects/*.ts!", "scripts/**/*.ts!"],
-      "project": ["src/**/*.ts!", "scripts/**/*.ts!"],
+      "entry": ["src/workflows/*.ts!", "src/durable_objects/*.ts!", "scripts/**/*.ts"],
+      "project": ["src/**/*.ts!", "scripts/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
 

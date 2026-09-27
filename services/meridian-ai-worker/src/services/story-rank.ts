@@ -28,6 +28,7 @@
 import type { RankCandidate, RankedPick, RankRoundDiag, StoryRankResult } from '@meridian/contracts'
 import { getStoryRankPrompt, RANK_TOP_N } from '../prompts/story-rank'
 
+/** 洗牌 + 调用 LLM 排序的轮数，用于下方 Borda 聚合；三轮的理由见文件头注释。 */
 const ROUNDS = 3
 
 /** mulberry32——与离线迭代同一个 PRNG，换实现会换洗牌序，读数就不可比了。 */

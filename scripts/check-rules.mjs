@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 校验 .claude/rules/*.md 的 frontmatter paths 是否匹配到文件，以及规则/CLAUDE.md/AGENTS.md
+// 校验 .claude/rules/*.md 的 frontmatter paths 是否匹配到文件，以及规则/CLAUDE.md/AGENTS.md/docs/agents
 // 里反引号包起来、形似仓库路径的片段是否真的存在。零依赖，只用 node 内置模块。
 // 用法：node scripts/check-rules.mjs（须从仓库根运行）
 // 退出码：0 = 通过，1 = 有问题（逐条打印到 stdout）。
@@ -188,6 +188,12 @@ function checkPathReferences() {
   if (fs.existsSync(rulesDir)) {
     for (const f of fs.readdirSync(rulesDir).filter((f) => f.endsWith('.md')).sort()) {
       targets.push(path.posix.join('.claude/rules', f));
+    }
+  }
+  const agentsDir = path.join(ROOT, 'docs/agents');
+  if (fs.existsSync(agentsDir)) {
+    for (const f of fs.readdirSync(agentsDir).filter((f) => f.endsWith('.md')).sort()) {
+      targets.push(path.posix.join('docs/agents', f));
     }
   }
   for (const f of ['CLAUDE.md', 'AGENTS.md']) {

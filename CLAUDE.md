@@ -30,19 +30,12 @@
 - 不主动新建 eval harness。要建，先在真实输出上做过错误分析、拿到修了 prompt / 代码仍残留的失败类别，并经用户同意（为什么见 `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）。错误分析怎么做照 Hamel Husain 的方法：原文 https://hamel.dev/blog/posts/evals-faq/why-is-error-analysis-so-important-in-llm-evals-and-how-is-it-performed.html ，本仓落点 `docs/engineering-notes/eval-playbook.md` §1（仅本地）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
 - commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -m "…" -- <paths>`，`-m` 要在 `--` 前），不要等用户开口；push 只在用户要求时做。
-  `.githooks/pre-commit` 在提交碰到代码时跑 typecheck + eslint（并行）+ 被碰到的轻量包测试（ai-worker、ml-service），约 3–8 秒，没过提交不了；backend 集成测试、frontend 端到端测试启动开销大，放在 pre-push。测试是 golden 快照（只拦「重构改了行为」，不判对错）：
+  `.githooks/pre-commit`（快检查）与 `pre-push`（全仓检查 + 碰到的包的测试）自动跑，没过就按输出修。测试是 golden 快照（只拦「重构改了行为」，不判对错），手动跑：
   `pnpm -F @meridian/backend test`（要本机测试库，见 `apps/backend/test/README.md`「数据库」）、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
-  前端端到端 `pnpm -F @meridian/frontend test`（不需要数据库，backend 由测试假冒，见 `apps/frontend/README.md`「测试」）；
-  整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量仍靠 eval + 手动验证
+  前端端到端 `pnpm -F @meridian/frontend test`（backend 由测试假冒）；整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量靠上线后读真实输出
 - 报错先 `wrangler tail`，再加 console.log
-- push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip（普通模式 + `--production`：后者不把测试和 `apps/backend/scripts/` 本地脚本算调用方，只剩它们在用的导出会被报出；只为它们导出的加 `@internal`）+ 路由对账（`scripts/check-routes.mjs`：ai-worker 每条路由须有 backend 生产调用方，backend 每条路由须有 frontend 调用或在 `apps/backend/docs/API_GUIDE.md` 标为运维；knip 看不见 HTTP 调用）+ eslint（no-floating-promises）+ ruff + 这次要推的提交碰到的包的测试；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
-
-## 功能开发流程（mattpocock skills）
-- 分流：改动点已知 → 主会话直接做。路清楚的功能 → `/grill-with-docs`（需求不清时）→ `/to-spec` → `/to-tickets` → 每张票派 worktree subagent 按 matt 的 `implement` + `tdd` 做，主会话合并、跑全量验收。路看不清（架构搜索、换链路、治一类 LLM 错）→ `/wayfinder`，终点定为一份能交给 `/to-spec` 的设计
-- LLM 输出质量不写进票的验收条件，上线后读真实输出判断；票里只放确定性部分（接口、守卫、重试），测试接缝优先用 replay
-- 审 spec 额外看两件事（模板里没有）：接口约定写死没有；新链路替换了什么、旧的删不删
-- wayfinder 按「波」推进，不按「一个会话一张票」：一个会话把当前所有未阻塞的票推进完——调研、杂务、原型派 subagent 并行做，要用户回答的问题排队逐个问；一波结束更新地图时，检查这一波的几个决定彼此有没有矛盾；某个决定要等真实数据（cron、多次跑）时停，下个会话接着走下一波
-- 原型读数写进地图前，要来自不挑选的数据、同一配置跑多次（`docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）
+- knip `--production` 报「只剩测试 / 本地脚本在用」的导出：真没用就删；只为测试或 `apps/backend/scripts/` 导出的加 `@internal`
+- push 会被 Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）拦下并列出新增的源码文件、路由、binding/配置，按入口可达性复查后跑 `node .claude/hooks/push-reachability.mjs --mark` 再 push
 
 ## 已知坑
 - `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）
@@ -50,6 +43,9 @@
 - **更多 LLM pipeline 踩坑** → 读 `docs/engineering-notes/llm-pipeline-pitfalls.md`（仅本地）
 
 ## 何时读哪份 docs
+- 开发功能、选流程（matt skills、wayfinder）→ `docs/agents/dev-workflow.md`
+- 开工前查旧尝试、一轮 spike / goal 结束做蒸馏 → `docs/agents/knowledge-distillation.md`
+- 新增任何文件前（放哪、入不入 git）→ `docs/agents/file-placement.md`
 - 链路总览、部署、观测/排错 → 根 `README.md` 的 How It Works / Deployment / Monitoring 三节
 - 改 backend / ai-worker 代码 → `.claude/rules/workers.md` 自动载入（本地验证、workflow、观测、LLM 调用的硬规矩）；编排以 `apps/backend/src/workflows/` 代码为准
 - 跨 service 调用 → 数据类型、R2 key、embedding 维度在 `packages/contracts/src/`（`@meridian/contracts`，两侧共用一份）；客户端在 `apps/backend/src/lib/services/ai-services.ts`（ai-worker）与 `ml-service.ts`（ML）
@@ -58,56 +54,6 @@
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
 - 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `eval/cluster-to-brief/CONTRACTS.md`）
 - 架构决策记录 → `docs/adr/`
-
-## 知识蒸馏（每个 spike / goal 结束时做）
-
-> **开工前先查本地知识库 `docs/knowledge/`**（不入 git，没有就跳过）：说清本轮相对旧尝试的变化、
-> 为什么可能绕过失败、希望获得的唯一新信息。不要把相同机制换措辞当新架构。
-> 什么时候查/写/整理、记录格式，都以本地 `docs/knowledge/README.md` 为准。
-> 搜索必须显式带路径 `docs/knowledge/`：该目录已被 gitignore，不带路径的 ripgrep 类搜索（含内置 Grep 工具）会静默漏掉它。
->
-> **GOAL 节点只在我主动提起时才写。** 不要提议"要不要起个 GOAL"——它不产生任何新信息，
-> 拿它当下一步动作只是用仪式占掉真正该做的事。上面那三个问题照答，但答在对话里，不是先立节点。
-
-调研笔记、原型（2026-09-12 定）和探索记录卡片（2026-09-24 定）都只留本地、不入 git，所以**要让别人看得到的结论必须蒸馏进入库的文档**：
-- 探索记录（一次尝试或一个结论一条，JSON frontmatter + 正文）→ `docs/knowledge/nodes/`（**只留本地**，开发时检索用），详细产物用 `source` 指过去
-- 新决定、证伪路线、实测上限 → 对应的 `docs/adr/`（没有就新开一份）
-- 新形成的术语 → `CONTEXT.md`
-- 进度与下一步 → `docs/ROADMAP.md`
-- 新调研笔记在本地 `docs/engineering-notes/README.md` 补一行索引；原型结论写进它自己的 README（本地）
-
-## 新文件放哪（落位规则）
-
-> 定这套是为了不再"边整理边有人新增"追移动靶：新增文件先对照本表，产物靠 .gitignore
-> 自动归位，不靠人记得别 `git add`。
-
-| 新增什么 | 放哪 | 入 git |
-|---|---|---|
-| 产品代码 | `<package>/src/` | ✅ |
-| 单元/集成测试 | `<package>/test/`（跟包走，**不设顶层 tests/**——monorepo 惯例） | ✅ |
-| eval harness（脚本） | `eval/<domain>/`（`.ts` / `.mjs` + `*.md`） | ✅ |
-| 人工标注金标（标签 + 证据 + rubric + manifest） | `eval/_data/<set>/`，跑 `node eval/_data/check.mjs` 校验 | ✅ |
-| eval 中间产物（worklist / packet / dump） | 留 `eval/<domain>/`，由该目录 `.gitignore` 挡 | ❌ |
-| eval 运行报告 | 该 harness 目录下的 `out/`（`.gitignore` 已挡） | ❌ |
-| 原型 / 探索实验（含 fixtures 与产物） | `<package>/prototypes/<name>/`，**必带 `.gitignore`** | ❌ 只留本地（根 `.gitignore` 整目录挡） |
-| 一次性探测脚本 / 临时输出 | scratchpad，不进 repo | ❌ |
-| 调研笔记（业界/学界调研、原始实测记录） | `docs/engineering-notes/`，按问题索引在其 `README.md` | ❌ 只留本地（根 `.gitignore` 挡） |
-| 探索记录卡片 | `docs/knowledge/nodes/` | ❌ 只留本地（根 `.gitignore` 挡） |
-| 决定与证伪清单 | `docs/adr/` | ✅ |
-| 术语表 | `CONTEXT.md` | ✅ |
-| 链路总览、部署、观测排错（给人读） | 根 `README.md` | ✅ |
-| 写代码时的硬规矩（给 agent） | `.claude/rules/<topic>.md`，`paths:` 写到包一级 | ✅ |
-| 路线图、技术债 | `docs/ROADMAP.md`、`docs/debt.md` | ✅ |
-| 设计交付稿（design handoff） | `docs/design/<name>/`；前端实现后以代码为准 | ❌ 只留本地（根 `.gitignore` 挡） |
-| session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
-| 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |
-
-**判据一句话**：能让别人**复现或验证**的（代码/测试/金标/说明书/输入 fixtures）→ 入 git；
-某次运行的**产物**或某次交接的**流水账**（dump/report/handoff/临时脚本）→ 不入。
-
-原型与 eval harness 都是 pnpm workspace 成员，各目录只留 `package.json`，
-根目录 `pnpm install` 一次装完。原型的目录结构、`.gitignore` 模板与「毕业」约定见
-`.claude/rules/prototypes.md`（改原型时自动载入）。
 
 ## 路径触发的规则（`.claude/rules/`）
 

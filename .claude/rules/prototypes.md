@@ -7,7 +7,7 @@ paths:
 # 原型目录约定
 
 原型只留本地、不入 git（根 `.gitignore` 整目录挡）。所以**结论必须蒸馏进入库的文档**，
-否则等于没有——见 CLAUDE.md 的「知识蒸馏」一节。
+否则等于没有——见 `docs/agents/knowledge-distillation.md`。
 
 ## 三个子目录（2026-09-05 定，新建原型照此摆）
 

@@ -37,6 +37,13 @@
 - 报错先 `wrangler tail`，再加 console.log
 - push 有两道门：git 的 `.githooks/pre-push` 跑 typecheck + knip（普通模式 + `--production`：后者不把测试和 `apps/backend/scripts/` 本地脚本算调用方，只剩它们在用的导出会被报出；只为它们导出的加 `@internal`）+ 路由对账（`scripts/check-routes.mjs`：ai-worker 每条路由须有 backend 生产调用方，backend 每条路由须有 frontend 调用或在 `apps/backend/docs/API_GUIDE.md` 标为运维；knip 看不见 HTTP 调用）+ eslint（no-floating-promises）+ ruff + 这次要推的提交碰到的包的测试；Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）算出本次新增的源码文件、路由、binding/配置改动，拦下 push 要求按入口可达性复查，复查完 `node .claude/hooks/push-reachability.mjs --mark` 再 push
 
+## 功能开发流程（mattpocock skills）
+- 分流：改动点已知 → 主会话直接做。路清楚的功能 → `/grill-with-docs`（需求不清时）→ `/to-spec` → `/to-tickets` → 每张票派 worktree subagent 按 matt 的 `implement` + `tdd` 做，主会话合并、跑全量验收。路看不清（架构搜索、换链路、治一类 LLM 错）→ `/wayfinder`，终点定为一份能交给 `/to-spec` 的设计
+- LLM 输出质量不写进票的验收条件，上线后读真实输出判断；票里只放确定性部分（接口、守卫、重试），测试接缝优先用 replay
+- 审 spec 额外看两件事（模板里没有）：接口约定写死没有；新链路替换了什么、旧的删不删
+- wayfinder 按「波」推进，不按「一个会话一张票」：一个会话把当前所有未阻塞的票推进完——调研、杂务、原型派 subagent 并行做，要用户回答的问题排队逐个问；一波结束更新地图时，检查这一波的几个决定彼此有没有矛盾；某个决定要等真实数据（cron、多次跑）时停，下个会话接着走下一波
+- 原型读数写进地图前，要来自不挑选的数据、同一配置跑多次（`docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）
+
 ## 已知坑
 - `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）
 - `*.workers.dev` 在国内会被 RST，需走代理节点

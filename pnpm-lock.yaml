@@ -284,9 +284,6 @@ importers:
       postgres:
         specifier: ^3.4.5
         version: 3.4.5
-      tsx:
-        specifier: ^4.19.3
-        version: 4.19.3
     devDependencies:
       '@types/node':
         specifier: ^22.13.14
@@ -297,6 +294,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.0
+      tsx:
+        specifier: ^4.19.3
+        version: 4.19.3
       typescript:
         specifier: ^5.8.2
         version: 5.8.2

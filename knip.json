@@ -8,31 +8,31 @@
     },
 
     "apps/backend": {
-      "entry": ["src/workflows/*.ts", "src/durable_objects/*.ts", "scripts/**/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "entry": ["src/workflows/*.ts!", "src/durable_objects/*.ts!", "scripts/**/*.ts!"],
+      "project": ["src/**/*.ts!", "scripts/**/*.ts!"],
       "ignoreDependencies": ["cloudflare"]
     },
 
     "apps/frontend": {
       "entry": [
-        "src/pages/**/*.vue",
-        "src/layouts/*.vue",
-        "src/server/**/*.ts"
+        "src/pages/**/*.vue!",
+        "src/layouts/*.vue!",
+        "src/server/**/*.ts!"
       ],
-      "project": ["src/**/*.{ts,vue}"],
+      "project": ["src/**/*.{ts,vue}!"],
       "ignoreDependencies": ["vue-tsc", "wrangler"]
     },
 
     "services/meridian-ai-worker": {
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts!"]
     },
 
     "packages/database": {
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts!", "!src/seed.ts!"]
     },
 
     "packages/contracts": {
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts!"]
     },
 
     "eval/*": {

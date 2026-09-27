@@ -172,6 +172,7 @@ export function isTransientLLMError(error: any): boolean {
   );
 }
 
+/** @internal 导出只为测试写 accept 回调时标类型 */
 export type AttemptVerdict<T> = { ok: true; value: T } | { ok: false; reasons: string[] };
 
 /**

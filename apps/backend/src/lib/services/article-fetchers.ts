@@ -23,6 +23,7 @@ const articleSchema = z.object({
  * @param env Application environment with the BROWSER binding
  * @param url URL of the article to fetch
  * @returns Object containing the parsed article content or throws an error
+ * @internal 导出只为测试直接调；生产走 getArticleFetchFirst
  */
 export async function getArticleWithBrowser(env: Env, url: string) {
   let response: Response;

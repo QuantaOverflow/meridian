@@ -7,6 +7,7 @@ const logger = new Logger({ component: 'workers-ai' })
 /**
  * Workers AI 支持的模型表。mapResponse 按 model 名查表（不在表里的 model 会被拒）。
  * 价格、上下文长度等以 Cloudflare 模型页为准。
+ * @internal 导出只为测试断言模型表
  */
 export const WORKERS_AI_MODELS: readonly string[] = [
   // 文章分析第一档（index.ts 的 analysisStrategies）

@@ -56,6 +56,13 @@
 - 代价：Workers AI 或该模型不可用时整份简报出不来。
 - 待裁决：接受，还是给简报关键 phase 加兜底。
 
+### D15. 抓取 DO 按 url 命名：拿会变的字段当身份（2026-09-26）
+- 位置：`apps/backend/src/lib/sources.ts` 的 `scraperOf`（`idFromName(url)`）；`apps/backend/src/routers/durableObjects.router.ts` 的 `/do/source/:sourceId/*` 两处（参数名叫 sourceId，实际按 url 取 DO）。
+- 现象：url 是会改的字段，改 url 就等于换了一个 DO。旧 DO 若没停掉，会拿着旧地址继续每小时抓；新地址若没初始化，就没有 DO 在抓。2026-09-26 生产上清出过两个这样的遗留：Initium 旧地址每小时抓 404，ToI 当前地址从没有 DO、一直由旧地址的 DO 代抓。
+- 现有防护（已上线）：① 改 url 只走源 module（`updateSource`），同时停旧 DO、起新 DO；② alarm 发现库里该源的 url 已不是自己存的那个就自行停掉（`0a4f9d2`）。
+- 根治方案：DO 改按 `sources.id` 命名（数据库分配、永不变的代理键；RSS 没有官方的 feed id 可用）。改 url 时 DO 不变，只更新它存的地址。迁移不需要手动操作：alarm 里核对「按 `String(sourceId)` 算出的 DO id 是不是自己」，不是就先 `initialize` 按 id 命名的新 DO、交接 state，再 `destroy` 自己；上线后一小时内 14 个 DO 各自完成交接。测试要覆盖「交接成功」和「新 DO 已存在时不重复初始化」；上线后逐源核对新 DO 在、旧 DO 已停、`last_checked` 继续前进。
+- 裁决（2026-09-26）：延后。改 url 一年没几次，现有两道防护已能管住；迁移靠自动交接，源变多也不会更难，晚做不吃亏。触发条件：改 url 变成常事（例如源常换 feed、后台允许自助改源），或再出现一次「改 url 后 DO 没跟上」的事故。
+
 ---
 
 ## 命名 / 死代码

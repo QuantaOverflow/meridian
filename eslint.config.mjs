@@ -27,6 +27,25 @@ export default defineConfig(
     },
   },
   {
+    // LLM 调用必须经 callLLM → loggedChat 才会挂进 span、落 R2 的 llm-calls/；直接用底层 chat() 或
+    // env.AI.run 调用照样成功、只是悄悄不记。只有 llm-call-logger.ts 能碰底层（workers-ai.ts 自己实现它）。
+    files: ['services/meridian-ai-worker/src/**/*.ts', 'apps/backend/src/**/*.ts'],
+    ignores: ['services/meridian-ai-worker/src/services/llm-call-logger.ts', 'services/meridian-ai-worker/src/services/workers-ai.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/workers-ai'],
+          importNames: ['chat'],
+          message: '直接调 chat() 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。确需绕开（如 eval 透传口）就加 eslint-disable 注释写明原因。',
+        }],
+      }],
+      'no-restricted-syntax': ['error', {
+        selector: "CallExpression[callee.property.name='run'][callee.object.property.name='AI']",
+        message: '直接调 env.AI.run 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。',
+      }],
+    },
+  },
+  {
     ...rule,
     // ai-worker 的测试由 tsconfig.test.json 覆盖，projectService 只认 tsconfig.json，这里显式指定
     files: ['services/meridian-ai-worker/test/**/*.ts'],

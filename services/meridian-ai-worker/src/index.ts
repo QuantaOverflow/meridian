@@ -1,4 +1,7 @@
 import { Hono } from 'hono'
+// 底层 chat() 只给 /meridian/chat（eval 透传口）用：eval 的任意 prompt 没有 LLMCallPhase，
+// 且本地 dev 直连生产 R2，走 loggedChat 会把实验调用写进生产 llm-calls/。生产链路一律走 callLLM。
+// eslint-disable-next-line no-restricted-imports -- 理由见上
 import { chat } from './services/workers-ai'
 import { BriefGenerationService } from './services/brief-generation'
 import { BriefBlockV6Service } from './services/brief-block-v6'

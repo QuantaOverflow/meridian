@@ -58,9 +58,8 @@ paths:
 - **本地调 ai-worker 带 `x-observe: inline`**（不写 R2）：记录随响应 JSON 的 `observation` 字段带回，
   开发/验收脚本用。本地 `wrangler dev` 直连生产桶，不带这个头写了就是污染生产 R2
   （`services/meridian-ai-worker/src/services/observe.ts`）。
-- **LLM 调用必须经 `callLLM` / `loggedChat` 否则不落盘**：`callLLM`（`services/meridian-ai-worker/src/services/call-llm.ts`）经
-  `loggedChat`（`services/meridian-ai-worker/src/services/llm-call-logger.ts`）才会挂进 span / 落 `llm-calls/`。已知漏斗口：`/meridian/chat`
-  直调 `services/meridian-ai-worker/src/services/workers-ai.ts` 的 `chat()`，记不到。
+- **LLM 调用走 `callLLM`**（`services/meridian-ai-worker/src/services/call-llm.ts`），经 `loggedChat` 才会挂进 span / 落 `llm-calls/`。
+  eslint 拦直接 import 底层 `chat()` 与直接调 `env.AI.run`；唯一豁免是 eval 透传口 `/meridian/chat`（不记，理由写在 import 处）。
 
 ## 4. LLM 调用
 

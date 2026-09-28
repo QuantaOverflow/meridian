@@ -7,7 +7,16 @@
  */
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { $articles, $brief_runs, $brief_stories, $reports, $sources, $story_clusters, eq, sql } from '@meridian/database';
+import {
+  $articles,
+  $brief_runs,
+  $brief_stories,
+  $reports,
+  $sources,
+  $story_clusters,
+  eq,
+  sql,
+} from '@meridian/database';
 import { EMBEDDING_DIM } from '@meridian/contracts';
 import { getDb } from '../../src/lib/database';
 import { assignStoryClustersForWorkflow } from '../../src/lib/story-clusters';
@@ -22,42 +31,55 @@ const BASE = new Date('2026-01-01T12:00:00Z').getTime();
 const day = (n: number) => new Date(BASE + n * DAY);
 const axis = (k: number) => Array.from({ length: EMBEDDING_DIM }, (_, i) => (i === k ? 1 : 0));
 
-let nextArticle = 1;
-let nextReport = 1;
+let sourceId = 0;
 
 beforeEach(async () => {
-  await db.execute(sql`truncate reports, brief_runs, brief_stories, story_clusters, articles, sources restart identity cascade`);
-  await db.insert($sources).values({ id: 1, url: 'https://feeds.example.com/clusters.xml', name: 'Cluster Test', category: 'news' });
-  nextArticle = 1;
-  nextReport = 1;
+  await db.execute(
+    sql`truncate reports, brief_runs, brief_stories, story_clusters, articles, sources restart identity cascade`
+  );
+  const [source] = await db
+    .insert($sources)
+    .values({ url: 'https://feeds.example.com/clusters.xml', name: 'Cluster Test', category: 'news' })
+    .returning({ id: $sources.id });
+  sourceId = source.id;
 });
 
 /** 一期简报：一条 run、一份 report、若干入选故事（每个故事一篇文章，落在给定的轴上） */
 async function brief(wf: string, at: Date, published: boolean, storyAxes: number[]) {
-  const reportId = nextReport++;
-  await db.insert($reports).values({
-    id: reportId,
-    title: wf,
-    content: 'body',
-    usedArticles: storyAxes.length,
-    usedSources: 1,
-    createdAt: at,
-    published_at: published ? at : null,
-  });
+  // id 一律由序列分配：truncate … restart identity 之后按固定 id 插入不会推进序列，
+  // 之后别的测试文件（同一个库）不带 id 插入会撞主键
+  const [{ id: reportId }] = await db
+    .insert($reports)
+    .values({
+      title: wf,
+      content: 'body',
+      usedArticles: storyAxes.length,
+      usedSources: 1,
+      createdAt: at,
+      published_at: published ? at : null,
+    })
+    .returning({ id: $reports.id });
   await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED', started_at: at, report_id: reportId });
   const storyIds: number[] = [];
   for (const k of storyAxes) {
-    const articleId = nextArticle++;
-    await db.insert($articles).values({
-      id: articleId,
-      title: `${wf} article ${articleId}`,
-      url: `https://example.com/${wf}/${articleId}`,
-      sourceId: 1,
-      embedding: axis(k),
-    });
+    const [{ id: articleId }] = await db
+      .insert($articles)
+      .values({
+        title: `${wf} article ${k}`,
+        url: `https://example.com/${wf}/${storyIds.length}`,
+        sourceId,
+        embedding: axis(k),
+      })
+      .returning({ id: $articles.id });
     const [row] = await db
       .insert($brief_stories)
-      .values({ workflow_id: wf, title: `${wf} axis ${k}`, article_ids: [articleId], selected_for_intel: true, created_at: at })
+      .values({
+        workflow_id: wf,
+        title: `${wf} axis ${k}`,
+        article_ids: [articleId],
+        selected_for_intel: true,
+        created_at: at,
+      })
       .returning({ id: $brief_stories.id });
     storyIds.push(row.id);
   }

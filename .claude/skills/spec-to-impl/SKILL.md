@@ -33,17 +33,21 @@ matt 的 `to-tickets`、`implement` 只能由用户手动触发，这里按指�
 - 能并行的前提（全局 CLAUDE.md 三条）：块之间不共享状态、每块有自己的可执行判据、接口约定已写死并 commit。不满足就按依赖顺序串行派。
 - 派之前先 commit：worktree 从本地 HEAD 建，未提交的改动带不过去。
 - `.scratch/` 被 gitignore，worktree 里没有：prompt 里的票和 spec 一律写**主仓库的绝对路径**，注明只读。
+- worktree 里没有 `node_modules`：prompt 里让 subagent 开工先跑 `pnpm install --frozen-lockfile --prefer-offline`，否则 typecheck 和 pre-commit 都跑不起来。
 - Agent 调用参数：`isolation: "worktree"`；显式传 `model`——改动点清楚、有测试兜底的用 `"sonnet"`，跨模块、有歧义、涉及并发或状态的用 `"opus"`。
 - 给 subagent 的 prompt 写清：
   - 票与 spec 的绝对路径（只读）
-  - 读 `implement` 原文（上面的路径）照做，但 **`code-review` 那步不做**（它会再派 subagent，由主会话在合并前做）：按 `tdd` skill 在票里定好的接缝上红绿循环，定期跑 typecheck 与单个测试文件，commit 到自己的 worktree 分支
+  - 读 `implement` 原文（上面的路径）照做，但 **`code-review` 那步不做**（它会再派 subagent，由主会话在合并前做），**全量测试也不跑**（主会话合并后统一跑），只跑自己包的测试：按 `tdd` skill 在票里定好的接缝上红绿循环，定期跑 typecheck 与单个测试文件，commit 到自己的 worktree 分支。backend 测试要本机测试库，见 `apps/backend/test/README.md`「数据库」
   - 不许再派 subagent；不许改接口约定，发现约定走不通就停下报告
   - 回报：改了哪些文件、测试命令与退出码、commit hash、分支名
 
 ## 3. 审查、合并与验收（主会话做）
 
 - subagent 自报完成不算数：看 diff、重跑它报的测试命令。
-- 合并前对每张票的分支跑 `mattpocock-skills:code-review`（以票为 spec），有问题先修。
+- 合并前对每张票的分支跑 `mattpocock-skills:code-review`（以票与 spec 为依据）。它默认拿 HEAD 比基准点，审别的分支时把 diff 命令换成 `git diff <契约 commit>...<票分支>`。
+- 审出的问题分两类处理：
+  - **代码偏离了 spec**：修（交回该 subagent 或主会话自己改），修完再合。
+  - **spec 本身错了**（如误伤了 spec 没考虑到的现有链路）：**停下，不合并**，把问题和可选改法交给用户——spec 是用户拍板的，agent 不自己改。
 - 按依赖顺序合回当前分支；冲突用 `resolving-merge-conflicts` skill。
 - 合并后跑全量判据，这是唯一验收：`pnpm typecheck`、`pnpm exec knip`、`pnpm exec knip --production`、`node scripts/check-routes.mjs`、`pnpm lint`，以及碰到的包的测试（命令见 `CLAUDE.md`「工作规则」）。
 - **新旧链路并存期**（删旧票还没做）：路由对账、knip `--production` 只因旧链路没人调而报的项是预期内的，逐条列给用户，**不加白名单或 `@internal` 豁免**；其余报错照常必须修。删旧票做完、判据全绿之前不 push（expand–contract 在本地完成）；用户要在这期间 push 别的东西时，提醒他会被拦，由他决定。

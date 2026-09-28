@@ -12,7 +12,8 @@
  *
  * 覆盖：有 `## top stories` 节的与没有的简报、正文漏出的 prompt 变量、无标题开头与空板块、tldr 为 null /
  * 带行内 markdown；线索 active（升级：连续天数 / 重要度）/ active 不升级 / dormant、只出现一期的簇被门槛挡掉、
- * 没挂 report 的 run 不计；article_ids 为 null / 非数组 / 同一篇重复；源的各状态（新鲜 / 过期 / 暂停未初始化 / 无文章）、
+ * 没挂 report 的 run 不计；未发布的期（手动触发的调试期，published_at 为 null）在归档、最新一期、单期页、线索里都不出现——
+ * 它比最新一期还新、标题命中检索、还给「只出现一期」的簇 5 凑出第二期，漏过滤任何一处快照都会变；article_ids 为 null / 非数组 / 同一篇重复；源的各状态（新鲜 / 过期 / 暂停未初始化 / 无文章）、
  * 文章超过一页（55 篇）、各种 status / completeness / quality。
  */
 import {
@@ -209,6 +210,20 @@ export function buildReaderFixture(anchor: Date) {
     },
   ];
 
+  // 已发布的期：发布时刻 = 保存时刻（与生产回填口径一致）
+  for (const r of reports) r.published_at = r.createdAt;
+  // 未发布的期：手动触发的调试期
+  reports.push({
+    id: 9,
+    createdAt: at(0, 18),
+    published_at: null,
+    title: 'ukraine debug rerun',
+    usedArticles: 1,
+    usedSources: 1,
+    tldr_prose: null,
+    content: ['## top stories', '<u>**ukraine debug**</u>', 'A manual debug run.'].join('\n'),
+  });
+
   const briefRuns: (typeof $brief_runs.$inferInsert)[] = [
     ...reports.map(r => ({ workflow_id: `wf-r${r.id}`, status: 'COMPLETED' as const, report_id: r.id, started_at: r.createdAt })),
     // 没挂 report 的 run：它的故事不进任何读者视图
@@ -263,6 +278,9 @@ export function buildReaderFixture(anchor: Date) {
     story(16, 8, 'Fed holds rates', 0.7, [105], true, 5, 105),
     story(17, 8, 'Fed — dissent', 0.6, [105, 6], true, 5, 105),
     story(18, 'orphan', 'Orphan story', 0.9, [7], true, 1, 101),
+    // 未发布的期里的故事：不出现在线索 1 的条目里，也不让簇 5 凑够两期
+    story(19, 9, 'Gaza — debug rerun', 0.8, [101], true, 1, 101),
+    story(20, 9, 'Fed — debug rerun', 0.8, [105], true, 5, 105),
   ];
 
   return { sources, articles, reports, briefRuns, clusters, briefStories };

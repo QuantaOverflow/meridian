@@ -24,11 +24,14 @@ import { EMBEDDING_DIM } from '@meridian/contracts';
 export const CLUSTER_SIMILARITY_THRESHOLD = 0.95;
 
 /**
- * 回看窗口。比「暂无更新」的 7 天判据长一倍，好让停更几天又有新进展的线索**接回原线索**
- * 而不是另起一条。
+ * 回看窗口：只和最近这么多期（已发布的期，含当期）里出现过的线索比。约等于两周，
+ * 比「暂无更新」的 7 天判据长一倍，好让停更几天又有新进展的线索**接回原线索**而不是另起一条。
+ *
+ * 按期数而不是日历天数算：管线停跑时日历照走，按天算的窗口会把同一条线索断成两截——
+ * 2026-07-19 → 08-12 停跑 24 天，美伊战争、俄乌、刚果埃博拉三条线索因此各断成两条。
  * @internal 导出只给 scripts/assign-story-clusters.ts（本地补跑脚本）；生产在本文件内用
  */
-export const CLUSTER_LOOKBACK_DAYS = 14;
+export const CLUSTER_LOOKBACK_BRIEFS = 14;
 
 export interface ClusterAssignmentStats {
   /** 进了简报、参与归并的 story 数 */
@@ -119,6 +122,19 @@ export async function backfillStoryLeadArticles(db: Db, workflowId?: string): Pr
 }
 
 /**
+ * 回看窗口的下界：`at` 及之前最近第 `lookbackBriefs` 期已发布简报的开跑时刻；不足这么多期时不设下界。
+ * 取 run 的 started_at 而不是 report 的 created_at：该期的 story 都在开跑之后建，下界不会把它们漏掉。
+ */
+function lookbackFloor(at: ReturnType<typeof sql>, lookbackBriefs: number) {
+  return sql`coalesce((
+    SELECT br.started_at FROM brief_runs br JOIN reports r ON r.id = br.report_id
+    WHERE r.published_at IS NOT NULL AND br.started_at <= ${at}
+    ORDER BY br.started_at DESC
+    OFFSET ${lookbackBriefs - 1} LIMIT 1
+  ), '-infinity'::timestamp)`;
+}
+
+/**
  * 一条 story 的归并，压成**单条 SQL**。
  *
  * 拆成「查最近邻 → 判阈值 → 建线索 → 回写」四次往返的写法实测跑不动：Neon 在新加坡，
@@ -131,7 +147,7 @@ async function assignOneBriefedStory(
   db: Db,
   story: { id: number; title: string },
   threshold: number,
-  lookbackDays: number
+  lookbackBriefs: number
 ): Promise<'joined' | 'created' | 'skipped'> {
   const [result] = (await db.execute(sql`
     WITH cur AS (
@@ -143,9 +159,9 @@ async function assignOneBriefedStory(
       FROM cur
       JOIN story_clusters sc
         ON sc.centroid IS NOT NULL
-       -- 回看窗口按线索的最近活动算：停更超过窗口的线索不再吸收新故事
+       -- 回看窗口按线索的最近活动算：最近 N 期都没出现过的线索不再吸收新故事
        AND sc.last_seen_at <= cur.created_at
-       AND sc.last_seen_at >= cur.created_at - ${`${lookbackDays} days`}::interval
+       AND sc.last_seen_at >= ${lookbackFloor(sql`cur.created_at`, lookbackBriefs)}
       ORDER BY sc.centroid <=> cur.centroid
       LIMIT 1
     ),
@@ -204,10 +220,19 @@ async function assignOneBriefedStory(
 export async function assignStoryClustersForWorkflow(
   db: Db,
   workflowId: string,
-  opts: { threshold?: number; lookbackDays?: number } = {}
+  opts: { threshold?: number; lookbackBriefs?: number } = {}
 ): Promise<ClusterAssignmentStats> {
   const threshold = opts.threshold ?? CLUSTER_SIMILARITY_THRESHOLD;
-  const lookbackDays = opts.lookbackDays ?? CLUSTER_LOOKBACK_DAYS;
+  const lookbackBriefs = opts.lookbackBriefs ?? CLUSTER_LOOKBACK_BRIEFS;
+  const stats: ClusterAssignmentStats = { briefed: 0, joined: 0, created: 0, attachedCandidates: 0 };
+
+  // 读者看不到的期（手动触发的调试期、撤回的期）不参与归并，否则它的故事会以条目出现在线索里、
+  // 还会改动线索的质心与标题。它的 story_cluster_id 留空；日后发布了再跑 scripts/assign-story-clusters.ts 补上。
+  const published = (await db.execute(sql`
+    SELECT 1 FROM brief_runs br JOIN reports r ON r.id = br.report_id
+    WHERE br.workflow_id = ${workflowId} AND r.published_at IS NOT NULL
+  `)) as unknown as unknown[];
+  if (published.length === 0) return stats;
 
   await backfillStoryCentroids(db, workflowId);
   // centroid 算完才能挑代表文章
@@ -223,10 +248,8 @@ export async function assignStoryClustersForWorkflow(
     ORDER BY importance DESC NULLS LAST, id
   `)) as unknown as { id: number; title: string }[];
 
-  const stats: ClusterAssignmentStats = { briefed: 0, joined: 0, created: 0, attachedCandidates: 0 };
-
   for (const story of briefedStories) {
-    const outcome = await assignOneBriefedStory(db, story, threshold, lookbackDays);
+    const outcome = await assignOneBriefedStory(db, story, threshold, lookbackBriefs);
     stats.briefed += 1;
     if (outcome === 'joined') stats.joined += 1;
     else if (outcome === 'created') stats.created += 1;
@@ -250,7 +273,7 @@ export async function assignStoryClustersForWorkflow(
       JOIN story_clusters sc
         ON sc.centroid IS NOT NULL
        AND sc.last_seen_at <= c.created_at
-       AND sc.last_seen_at >= c.created_at - ${`${lookbackDays} days`}::interval
+       AND sc.last_seen_at >= ${lookbackFloor(sql`c.created_at`, lookbackBriefs)}
       ORDER BY c.id, sc.centroid <=> c.centroid
     )
     UPDATE brief_stories bs

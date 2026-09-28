@@ -73,6 +73,11 @@ describe('边界', () => {
     expect(res.status).toBe(404);
   });
 
+  it('未发布的期（手动触发的调试期）：单期页 404，与不存在的期一样', async () => {
+    const res = await exports.default.fetch('http://backend/reader/briefs/9', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+    expect(res.status).toBe(404);
+  });
+
   it('不带 token：401', async () => {
     for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);

@@ -94,6 +94,11 @@ export const $reports = pgTable('reports', {
   // 面向读者的散文摘要（2-3 句），读者端简报页头部展示。
   tldr_prose: text('tldr_prose'),
 
+  // 读者能看到这一期的时刻；null = 读者看不到（归档、今日简报、单期页、事件追踪都只认非 null 的期）。
+  // 定时（cron）跑出的期保存时写入；手动触发的期是调试用的，留空（规则在 save-brief-report.ts）。
+  // 撤回一期 = 置空；手动期要给读者看 = 手动写入。
+  published_at: timestamp('published_at', { mode: 'date' }),
+
   createdAt: timestamp('created_at', { mode: 'date' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

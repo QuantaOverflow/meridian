@@ -1,10 +1,13 @@
-import { $articles, $brief_runs, $brief_stories, $reports, $sources, desc, eq, sql } from '@meridian/database';
+import { $articles, $brief_runs, $brief_stories, $reports, $sources, and, desc, eq, isNotNull, sql } from '@meridian/database';
 import type { Db } from './db';
 
 /**
  * 简报的读者视图数据（原在前端 server/api/briefs/* 直连库）。
  * 这里只出领域数据；markdown → HTML、剥行内 markdown、中文日期等展示在前端做。
  */
+
+/** 读者只看得到已发布的期（手动触发的调试期与撤回的期 published_at 为 null，见 schema.ts） */
+const isPublished = isNotNull($reports.published_at);
 
 /**
  * 检索走 ILIKE 子串匹配，不是 Postgres 全文检索。
@@ -39,7 +42,7 @@ export interface BriefList {
 }
 
 export async function listBriefs(db: Db, params: { q?: string; limit: number; offset: number }): Promise<BriefList> {
-  const filter = buildSearchFilter(params.q);
+  const filter = and(isPublished, buildSearchFilter(params.q));
 
   // 三条查询互不依赖。到 Neon（新加坡）单程就要几百毫秒，串行发等于白付三倍往返。
   const [rows, [{ matched }], [overall]] = await Promise.all([
@@ -64,7 +67,8 @@ export async function listBriefs(db: Db, params: { q?: string; limit: number; of
         total: sql<number>`count(*)::int`,
         earliest: sql<Date | null>`min(${$reports.createdAt})`.mapWith($reports.createdAt),
       })
-      .from($reports),
+      .from($reports)
+      .where(isPublished),
   ]);
 
   return {
@@ -168,16 +172,17 @@ export async function loadBrief(
   // 到 Neon（新加坡）单程就要几百毫秒，省下这一趟是实打实的。
   let reportIdExpr;
   if (target.kind === 'id') {
-    where = eq($reports.id, target.id);
+    where = and(eq($reports.id, target.id), isPublished);
     reportIdExpr = sql`${target.id}`;
   } else {
-    reportIdExpr = sql`${db.select({ id: $reports.id }).from($reports).orderBy(desc($reports.createdAt)).limit(1)}`;
+    where = isPublished;
+    reportIdExpr = sql`${db.select({ id: $reports.id }).from($reports).where(isPublished).orderBy(desc($reports.createdAt)).limit(1)}`;
   }
 
   const [report, sourceList] = await Promise.all([
     db.query.$reports.findFirst({
       where,
-      // latest 不带 where，靠排序取最新一期
+      // latest 只按「已发布」过滤，靠排序取最新一期
       orderBy: desc($reports.createdAt),
       columns: {
         id: true,

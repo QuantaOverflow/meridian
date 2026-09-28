@@ -11,7 +11,7 @@
  *   DATABASE_URL=... pnpm -C packages/database exec tsx ../../apps/backend/scripts/assign-story-clusters.ts
  *   ... --reset                 先清空所有线索再重跑（改阈值后用）
  *   ... --threshold 0.96        覆盖相似度阈值
- *   ... --lookback 21           覆盖回看天数
+ *   ... --lookback 21           覆盖回看期数（最近多少期已发布简报）
  */
 
 import { getDb, sql } from '@meridian/database';
@@ -19,7 +19,7 @@ import {
   assignStoryClustersForWorkflow,
   backfillStoryCentroids,
   backfillStoryLeadArticles,
-  CLUSTER_LOOKBACK_DAYS,
+  CLUSTER_LOOKBACK_BRIEFS,
   CLUSTER_SIMILARITY_THRESHOLD,
 } from '../src/lib/story-clusters';
 
@@ -36,7 +36,7 @@ const flag = (name: string) => {
 };
 const reset = args.includes('--reset');
 const threshold = flag('threshold') === undefined ? CLUSTER_SIMILARITY_THRESHOLD : Number(flag('threshold'));
-const lookbackDays = flag('lookback') === undefined ? CLUSTER_LOOKBACK_DAYS : Number(flag('lookback'));
+const lookbackBriefs = flag('lookback') === undefined ? CLUSTER_LOOKBACK_BRIEFS : Number(flag('lookback'));
 
 const db = getDb(DATABASE_URL);
 
@@ -51,7 +51,7 @@ async function main() {
     return;
   }
 
-  console.log(`阈值 ${threshold} · 回看 ${lookbackDays} 天${reset ? ' · 先清空重建' : ''}`);
+  console.log(`阈值 ${threshold} · 回看 ${lookbackBriefs} 期${reset ? ' · 先清空重建' : ''}`);
 
   if (reset) {
     await db.execute(sql`UPDATE brief_stories SET story_cluster_id = NULL`);
@@ -66,6 +66,8 @@ async function main() {
     JOIN reports r ON r.id = br.report_id
     JOIN brief_stories bs ON bs.workflow_id = br.workflow_id
     WHERE bs.story_cluster_id IS NULL
+      -- 读者看不到的期不参与归并（assignStoryClustersForWorkflow 自己也会跳过，这里先滤掉免得刷屏）
+      AND r.published_at IS NOT NULL
     GROUP BY br.workflow_id, r.created_at
     ORDER BY r.created_at ASC
   `)) as unknown as { workflow_id: string; day: Date; stories: number }[];
@@ -74,7 +76,7 @@ async function main() {
 
   const total = { briefed: 0, joined: 0, created: 0, attachedCandidates: 0 };
   for (const run of runs) {
-    const stats = await assignStoryClustersForWorkflow(db, run.workflow_id, { threshold, lookbackDays });
+    const stats = await assignStoryClustersForWorkflow(db, run.workflow_id, { threshold, lookbackBriefs });
     for (const k of Object.keys(total) as (keyof typeof total)[]) total[k] += stats[k];
     console.log(
       `${run.day.toISOString?.().slice(0, 10) ?? run.day}  入选 ${String(stats.briefed).padStart(3)} 条 → ` +

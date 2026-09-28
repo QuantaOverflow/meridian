@@ -6,24 +6,31 @@
 //
 // 幂等：step 在事务提交之后才失败（返回值没落进 workflow）会整步重试。本期 run 已经指向一条 report
 // 就直接返回它，不再插第二条——否则同一期会在列表里出现两次。
+//
+// 发布：只有定时（cron）跑出的期写 published_at，读者才看得到；手动触发的期是调试用的，留空。
+// 触发方以本期 run 的 params.triggeredBy 为准（cron 入口写 'cron'，见 lib/scheduled/daily-brief.ts）。
 import { $brief_runs, $reports, eq } from '@meridian/database';
 import type { getDb } from './database';
 
 export async function saveBriefReport(
   db: ReturnType<typeof getDb>,
   workflowId: string,
-  values: typeof $reports.$inferInsert
+  values: Omit<typeof $reports.$inferInsert, 'published_at'>
 ): Promise<number> {
   return db.transaction(async (tx) => {
     // FOR UPDATE：锁住本期 run 行，并发的第二次执行会等第一次提交后读到已写的 report_id
     const [existing] = await tx
-      .select({ reportId: $brief_runs.report_id })
+      .select({ reportId: $brief_runs.report_id, params: $brief_runs.params })
       .from($brief_runs)
       .where(eq($brief_runs.workflow_id, workflowId))
       .for('update');
     if (existing?.reportId) return existing.reportId;
 
-    const insertResult = await tx.insert($reports).values(values).returning({ id: $reports.id });
+    const triggeredBy = (existing?.params as { triggeredBy?: unknown } | null | undefined)?.triggeredBy;
+    const insertResult = await tx
+      .insert($reports)
+      .values({ ...values, published_at: triggeredBy === 'cron' ? new Date() : null })
+      .returning({ id: $reports.id });
     const reportId = insertResult[0]?.id;
     if (!reportId) {
       throw new Error('简报保存失败：未返回ID');

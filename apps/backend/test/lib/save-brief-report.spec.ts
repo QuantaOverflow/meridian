@@ -31,6 +31,28 @@ describe('saveBriefReport', () => {
     expect(rows.map((r) => r.id)).toEqual([id]);
   });
 
+  it('定时（cron）触发的期写 published_at，读者看得到', async () => {
+    const wf = uniq('wf-cron');
+    await db.insert($brief_runs).values({ workflow_id: wf, params: { triggeredBy: 'cron' } });
+
+    const id = await saveBriefReport(db, wf, report(uniq('cron')));
+
+    const [row] = await db.select().from($reports).where(eq($reports.id, id));
+    expect(row.published_at).toBeInstanceOf(Date);
+  });
+
+  it('手动触发的期不写 published_at，读者看不到', async () => {
+    for (const params of [{ triggeredBy: 'admin' }, { triggeredBy: 'manual-e2e-2026-09-26' }, {}, null]) {
+      const wf = uniq('wf-manual');
+      await db.insert($brief_runs).values({ workflow_id: wf, params });
+
+      const id = await saveBriefReport(db, wf, report(uniq('manual')));
+
+      const [row] = await db.select().from($reports).where(eq($reports.id, id));
+      expect(row.published_at, JSON.stringify(params)).toBeNull();
+    }
+  });
+
   it('关联 brief_runs 失败时 reports 行一并回滚，不留下没有 run 指向的一期', async () => {
     const wf = uniq('wf-missing'); // 不插 brief_runs 行：关联必然命中 0 行
     const title = uniq('orphan');

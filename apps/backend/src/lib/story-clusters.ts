@@ -122,19 +122,6 @@ export async function backfillStoryLeadArticles(db: Db, workflowId?: string): Pr
 }
 
 /**
- * 回看窗口的下界：`at` 及之前最近第 `lookbackBriefs` 期已发布简报的开跑时刻；不足这么多期时不设下界。
- * 取 run 的 started_at 而不是 report 的 created_at：该期的 story 都在开跑之后建，下界不会把它们漏掉。
- */
-function lookbackFloor(at: ReturnType<typeof sql>, lookbackBriefs: number) {
-  return sql`coalesce((
-    SELECT br.started_at FROM brief_runs br JOIN reports r ON r.id = br.report_id
-    WHERE r.published_at IS NOT NULL AND br.started_at <= ${at}
-    ORDER BY br.started_at DESC
-    OFFSET ${lookbackBriefs - 1} LIMIT 1
-  ), '-infinity'::timestamp)`;
-}
-
-/**
  * 一条 story 的归并，压成**单条 SQL**。
  *
  * 拆成「查最近邻 → 判阈值 → 建线索 → 回写」四次往返的写法实测跑不动：Neon 在新加坡，
@@ -147,7 +134,8 @@ async function assignOneBriefedStory(
   db: Db,
   story: { id: number; title: string },
   threshold: number,
-  lookbackBriefs: number
+  /** 回看窗口下界（timestamp 文本），见 assignStoryClustersForWorkflow */
+  floor: string
 ): Promise<'joined' | 'created' | 'skipped'> {
   const [result] = (await db.execute(sql`
     WITH cur AS (
@@ -161,7 +149,7 @@ async function assignOneBriefedStory(
         ON sc.centroid IS NOT NULL
        -- 回看窗口按线索的最近活动算：最近 N 期都没出现过的线索不再吸收新故事
        AND sc.last_seen_at <= cur.created_at
-       AND sc.last_seen_at >= ${lookbackFloor(sql`cur.created_at`, lookbackBriefs)}
+       AND sc.last_seen_at >= ${floor}::timestamp
       ORDER BY sc.centroid <=> cur.centroid
       LIMIT 1
     ),
@@ -228,11 +216,21 @@ export async function assignStoryClustersForWorkflow(
 
   // 读者看不到的期（手动触发的调试期、撤回的期）不参与归并，否则它的故事会以条目出现在线索里、
   // 还会改动线索的质心与标题。它的 story_cluster_id 留空；日后发布了再跑 scripts/assign-story-clusters.ts 补上。
-  const published = (await db.execute(sql`
-    SELECT 1 FROM brief_runs br JOIN reports r ON r.id = br.report_id
+  //
+  // 同时算回看窗口的下界：本期及之前最近第 N 期已发布简报的开跑时刻，不足 N 期时不设下界。
+  // 整期算一次、作为参数传进逐条归并——写成逐行子查询时每个 (故事, 线索) 配对都要重排一遍
+  // brief_runs，一期要几十秒。取 started_at：该期的 story 都在开跑之后建，下界不会把它们漏掉。
+  const [run] = (await db.execute(sql`
+    SELECT coalesce((
+      SELECT b2.started_at FROM brief_runs b2 JOIN reports r2 ON r2.id = b2.report_id
+      WHERE r2.published_at IS NOT NULL AND b2.started_at <= br.started_at
+      ORDER BY b2.started_at DESC
+      OFFSET ${lookbackBriefs - 1} LIMIT 1
+    ), '-infinity'::timestamp)::text AS floor
+    FROM brief_runs br JOIN reports r ON r.id = br.report_id
     WHERE br.workflow_id = ${workflowId} AND r.published_at IS NOT NULL
-  `)) as unknown as unknown[];
-  if (published.length === 0) return stats;
+  `)) as unknown as { floor: string }[];
+  if (run === undefined) return stats;
 
   await backfillStoryCentroids(db, workflowId);
   // centroid 算完才能挑代表文章
@@ -249,7 +247,7 @@ export async function assignStoryClustersForWorkflow(
   `)) as unknown as { id: number; title: string }[];
 
   for (const story of briefedStories) {
-    const outcome = await assignOneBriefedStory(db, story, threshold, lookbackBriefs);
+    const outcome = await assignOneBriefedStory(db, story, threshold, run.floor);
     stats.briefed += 1;
     if (outcome === 'joined') stats.joined += 1;
     else if (outcome === 'created') stats.created += 1;
@@ -273,7 +271,7 @@ export async function assignStoryClustersForWorkflow(
       JOIN story_clusters sc
         ON sc.centroid IS NOT NULL
        AND sc.last_seen_at <= c.created_at
-       AND sc.last_seen_at >= ${lookbackFloor(sql`c.created_at`, lookbackBriefs)}
+       AND sc.last_seen_at >= ${run.floor}::timestamp
       ORDER BY c.id, sc.centroid <=> c.centroid
     )
     UPDATE brief_stories bs

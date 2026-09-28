@@ -71,7 +71,9 @@ export class WorkflowObservability {
           m.stepName === stepName && m.status === 'started'
         );
         if (startMetric) {
-          metric.duration = Date.now() - new Date(startMetric.timestamp).getTime();
+          // 用本条记录的 timestamp 算，不再取 Date.now()：中间隔着 loadPersisted 的 R2 读取，
+          // 两次取时跨过毫秒边界时 duration 会和 timestamp 差 1ms
+          metric.duration = Date.parse(metric.timestamp) - Date.parse(startMetric.timestamp);
         }
       }
       this.metrics.push(metric);

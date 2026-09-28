@@ -16,6 +16,8 @@ matt 的 `to-tickets`、`implement` 只能由用户手动触发，这里按指�
 
 ## 1. 拆票：读 to-tickets 原文照做
 
+`.scratch/<功能名>/issues/` 里已经有票（用户手动跑过 `/to-tickets`）时跳过本步，直接用那些票进第 2 步。
+
 与原文不同的只有两处：
 - **跳过「Quiz the user」那一步**：用户的介入点是审 spec，拆票粒度由 agent 定。
 - 票写到 `.scratch/<功能名>/issues/<NN>-<slug>.md`（原文的本地 tracker 格式）。

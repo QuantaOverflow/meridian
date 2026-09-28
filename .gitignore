@@ -220,3 +220,6 @@ docs/design/
 apps/*/prototypes/
 services/*/prototypes/
 eval/*/prototypes/
+
+# matt skills 的 spec / 票 / wayfinder 地图=工作流水账，结论蒸馏进 ADR（见 docs/agents/file-placement.md）
+.scratch/

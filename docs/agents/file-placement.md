@@ -24,6 +24,7 @@
 | 给 agent 的流程说明（按需读，`CLAUDE.md` 留指针） | `docs/agents/<topic>.md` | ✅ |
 | 路线图、技术债 | `docs/ROADMAP.md`、`docs/debt.md` | ✅ |
 | 设计交付稿（design handoff） | `docs/design/<name>/`；前端实现后以代码为准 | ❌ 只留本地（根 `.gitignore` 挡） |
+| matt skill 的 spec、票、wayfinder 地图 | `.scratch/<功能名>/`；结论蒸馏进 ADR | ❌（根 `.gitignore` 挡） |
 | session 交接记录（`*-handoff.md`） | 工作流水账，不入库（`.gitignore` 挡 `docs/*-handoff.md`） | ❌ |
 | 密钥 | `.dev.vars`（gitignore），只提交 `.dev.vars.example` | 仅模板✅ |
 

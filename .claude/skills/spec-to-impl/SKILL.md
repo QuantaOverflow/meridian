@@ -50,7 +50,7 @@ matt 的 `to-tickets`、`implement` 只能由用户手动触发，这里按指�
   - **spec 本身错了**（如误伤了 spec 没考虑到的现有链路）：**停下，不合并**，把问题和可选改法交给用户——spec 是用户拍板的，agent 不自己改。
 - 按依赖顺序合回当前分支；冲突用 `resolving-merge-conflicts` skill。
 - 合并后跑全量判据，这是唯一验收：`pnpm typecheck`、`pnpm exec knip`、`pnpm exec knip --production`、`node scripts/check-routes.mjs`、`pnpm lint`，以及碰到的包的测试（命令见 `CLAUDE.md`「工作规则」）。
-- **新旧链路并存期**（删旧票还没做）：路由对账、knip `--production` 只因旧链路没人调而报的项是预期内的，逐条列给用户，**不加白名单或 `@internal` 豁免**；其余报错照常必须修。删旧票做完、判据全绿之前不 push（expand–contract 在本地完成）；用户要在这期间 push 别的东西时，提醒他会被拦，由他决定。
+- **新旧链路并存期**（删旧票还没做）：路由对账、knip `--production` 只因旧链路没人调而报的项是预期内的，逐条列给用户，**不加白名单或 `@internal` 豁免**；其余报错照常必须修。删旧票做完、判据全绿之前不 push（expand–contract 在本地完成）；用户要在这期间 push 别的东西时，提醒用户会被拦，由用户决定。
 - 每张票在票文件里记 `Status: resolved`，并附 commit hash。
 
 ## 4. 交回用户

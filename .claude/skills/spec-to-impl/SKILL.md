@@ -37,7 +37,7 @@ matt 的 `to-tickets`、`implement` 只能由用户手动触发，这里按指�
 - Agent 调用参数：`isolation: "worktree"`；显式传 `model`——改动点清楚、有测试兜底的用 `"sonnet"`，跨模块、有歧义、涉及并发或状态的用 `"opus"`。
 - 给 subagent 的 prompt 写清：
   - 票与 spec 的绝对路径（只读）
-  - 读 `implement` 原文（上面的路径）照做，但 **`code-review` 那步不做**（它会再派 subagent，由主会话在合并前做），**全量测试也不跑**（主会话合并后统一跑），只跑自己包的测试：按 `tdd` skill 在票里定好的接缝上红绿循环，定期跑 typecheck 与单个测试文件，commit 到自己的 worktree 分支。backend 测试要本机测试库，见 `apps/backend/test/README.md`「数据库」
+  - 读 `implement` 原文（上面的路径）照做，但 **`code-review` 那步不做**（它会再派 subagent，由主会话在合并前做），**全量测试也不跑**（主会话合并后统一跑），只跑自己包的测试：按 `tdd` skill 在票里定好的接缝上红绿循环，定期跑 typecheck 与单个测试文件，commit 到自己的 worktree 分支。backend 测试要本机测试库：手动跑前先 `. .githooks/lib.sh`（它给 `BACKEND_TEST_DATABASE_URL` 设了默认值，只有 hook 自动带），库的准备见 `apps/backend/test/README.md`「数据库」
   - 不许再派 subagent；不许改接口约定，发现约定走不通就停下报告
   - 回报：改了哪些文件、测试命令与退出码、commit hash、分支名
 

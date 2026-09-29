@@ -124,9 +124,12 @@ const MARKER = /\[\s*\d{3,}\s*:\s*\d+/;
 /**
  * 模型常把引用标签写进句尾（实测 c28 五句全带 [986133:3, 1006787:2]），标签对读者无意义、出处已在 sources。
  * 确定性剥掉整组标签，剥不干净的残留再由 MARKER 拒收重试。
+ * 也会写成几个方括号用逗号隔开（`[a:1],[b:2]`）：连同括号之间的逗号一起剥，否则句尾留下 `,,,,`
+ * （2026-09-23 生产印度选举块 4 句全是这样）。
  */
-const stripMarkers = (t: string): string =>
-  t.replace(/\s*\[\s*\d{3,}\s*:\s*\d+(?:\s*[,;]\s*\d{3,}\s*:\s*\d+)*\s*\]/g, '');
+const MARKER_GROUP = String.raw`\[\s*\d{3,}\s*:\s*\d+(?:\s*[,;]\s*\d{3,}\s*:\s*\d+)*\s*\]`;
+const MARKER_RUN = new RegExp(String.raw`\s*${MARKER_GROUP}(?:\s*[,;]?\s*${MARKER_GROUP})*`, 'g');
+const stripMarkers = (t: string): string => t.replace(MARKER_RUN, '');
 
 export function anchorOk(obj: any, sentences: SentenceTable, allowed: Set<number>): boolean {
   if (!Array.isArray(obj?.anchors) || obj.anchors.length > 12) return false;

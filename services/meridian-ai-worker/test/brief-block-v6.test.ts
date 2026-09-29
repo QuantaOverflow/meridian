@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { getWritePrompt, getWriteSchema, noSentencesHint } from '../src/prompts/briefBlockV6';
 import {
+  cleanWrite,
   retryInstruction,
   writeOk,
   type SentenceTable,
@@ -210,5 +211,27 @@ describe('brief-block-v6 no_sentences 重试提示（B5）', () => {
     expect(noSentencesHint('lead')).not.toContain('3-5');
     expect(noSentencesHint('more')).toContain('3-5 sentences');
     expect(noSentencesHint(undefined)).toContain('3-5 sentences');
+  });
+});
+
+/**
+ * 出处标签剥离：模型有时把几个出处各写一个方括号、用逗号隔开。只剥括号会把逗号留在句尾，
+ * 2026-09-23 生产那期印度选举块 4 句全是 `legally compliant,,,,.` 这样（逗号数 = 出处数 − 1）。
+ */
+describe('brief-block-v6 cleanWrite 出处标签剥离', () => {
+  const clean = (text: string) => cleanWrite({ title: 't', sentences: [{ text, sources: [] }] }).sentences[0].text;
+
+  it('一组方括号里多个出处：整组剥掉', () => {
+    expect(clean('The court ruled on Monday [986133:3, 1006787:2].')).toBe('The court ruled on Monday.');
+  });
+
+  it('多个方括号用逗号隔开：括号和中间的逗号一起剥掉，不留 ,,,,', () => {
+    expect(clean('The poll panel defended its decisions as legally compliant[1108271:7],[1109924:13],[1111038:17],[1108271:4],[1111038:24].'))
+      .toBe('The poll panel defended its decisions as legally compliant.');
+    expect(clean('He said so [1109924:14], [1109924:7], [1109924:8].')).toBe('He said so.');
+  });
+
+  it('正文里本来的逗号不动', () => {
+    expect(clean('Iran, Iraq and Syria met [1108271:7], then left.')).toBe('Iran, Iraq and Syria met, then left.');
   });
 });

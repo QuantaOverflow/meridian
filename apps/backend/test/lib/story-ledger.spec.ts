@@ -7,25 +7,24 @@ import { StoryLedger } from '../../src/lib/core/story-ledger';
 import { assignTiers } from '../../src/lib/core/brief-v3';
 import type { StoryBlock } from '../../src/lib/core/cluster-blocks';
 
-const story = (clusterId: number, articleIds: number[], importance: number, eventKey: string): StoryBlock => ({
+const story = (clusterId: number, articleIds: number[], importance: number): StoryBlock => ({
   title: `story-${clusterId}`,
   importance,
   articleIds,
   storyType: 'event',
   clusterId,
   covers: '',
-  eventKey,
 });
 
 // storyId = 候选数组下标
 const stories: StoryBlock[] = [
-  story(10, [2, 3, 4], 5, 'A'), // 0：分 7，被同事件配额挤掉
-  story(11, [5, 6], 9, 'A'), //    1：分 10，选中第 1
-  story(12, [7, 8], 1, 'B'), //    2：分 2，选中第 3，写块失败
-  story(13, [9, 10], 7, 'A'), //   3：分 8.58，选中第 2
-  story(15, [13, 14], 0, 'C'), //  4：分 1，排第 5，超出 top3
+  story(10, [2, 3, 4], 0), // 0：分 1，排第 4，超出 top3（与 4 同分，按原序在前）
+  story(11, [5, 6], 9), //    1：分 10，选中第 1
+  story(12, [7, 8], 1), //    2：分 2，选中第 3，写块失败
+  story(13, [9, 10], 7), //   3：分 8.58，选中第 2
+  story(15, [13, 14], 0), //  4：分 1，排第 5，超出 top3
 ];
-const coverage = { 0: 3, 1: 1, 2: 1, 3: 2, 4: 1 };
+const coverage = { 0: 1, 1: 1, 2: 1, 3: 2, 4: 1 };
 const datasetIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 const clusters = [
   { clusterId: -1, articleIds: [1] },
@@ -43,7 +42,7 @@ function runThrough() {
   const ledger = new StoryLedger<Block>(stories);
   ledger.recordRowIds([101, 102, 103, 104, 105]);
   ledger.recordSourceCoverage(coverage);
-  const sel = ledger.select({ coverageWeight: 1.0, maxStories: 3, perEventCap: 2 });
+  const sel = ledger.select({ coverageWeight: 1.0, maxStories: 3 });
   const plan = assignTiers(ledger.tierInputs());
   ledger.recordTiers(plan);
   ledger.recordBlocks(
@@ -58,7 +57,6 @@ describe('StoryLedger', () => {
     const { ledger, sel } = runThrough();
     expect(ledger.selectedStoryIds()).toEqual([1, 3, 2]);
     expect(sel.selected).toEqual([stories[1], stories[3], stories[2]]);
-    expect(sel.capped.map((x) => x.story)).toEqual([stories[0]]);
     // 分层按 selected 下标出 idx，源数钳到 [1, 篇数]
     expect(ledger.tierInputs()).toEqual([
       { idx: 0, articles: 2, sources: 1 },
@@ -99,9 +97,9 @@ describe('StoryLedger', () => {
       1: e(-1, 'clustered', 'clustered', 'noise'),
       11: e(null, 'clustered', 'clustered', 'not_in_any_cluster'),
       12: e(14, 'clustered', 'judged', 'block_article_cap'),
-      2: e(10, 'judged', 'selected', 'per_event_cap_2'),
-      3: e(10, 'judged', 'selected', 'per_event_cap_2'),
-      4: e(10, 'judged', 'selected', 'per_event_cap_2'),
+      2: e(10, 'judged', 'selected', 'rank_4_beyond_top3'),
+      3: e(10, 'judged', 'selected', 'rank_4_beyond_top3'),
+      4: e(10, 'judged', 'selected', 'rank_4_beyond_top3'),
       13: e(15, 'judged', 'selected', 'rank_5_beyond_top3'),
       14: e(15, 'judged', 'selected', 'rank_5_beyond_top3'),
       7: e(12, 'selected', 'written', 'block_write_failed'),
@@ -126,7 +124,7 @@ describe('StoryLedger', () => {
     const { ledger } = runThrough();
     expect(() => ledger.recordRowIds([1])).toThrow();
     expect(() => ledger.recordSourceCoverage({})).toThrow();
-    expect(() => ledger.select({ coverageWeight: 1, maxStories: 1, perEventCap: 1 })).toThrow();
+    expect(() => ledger.select({ coverageWeight: 1, maxStories: 1 })).toThrow();
     expect(() => ledger.recordTiers([])).toThrow();
     expect(() => ledger.recordBlocks([], [])).toThrow();
   });

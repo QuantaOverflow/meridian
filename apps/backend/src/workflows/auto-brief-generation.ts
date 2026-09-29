@@ -6,14 +6,13 @@ import { saveBriefReport } from '../lib/save-brief-report';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
   assembleBlocks,
+  meanEmbedding,
   planBlocksFromJudgements,
   type JudgeResult,
   type PendingBlock,
+  type SameEventMerge,
   type StoryBlock,
 } from '../lib/core/cluster-blocks';
-import {
-  PER_EVENT_BLOCK_CAP,
-} from '../lib/core/storyline';
 import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../lib/core/constants';
 import { createWorkflowObservability } from '../lib/observability';
 import { createMLService, type ClusteringResult } from '../lib/services/ml-service';
@@ -789,7 +788,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         cappedBlocks: number;
         droppedArticles: number;
         judgeTitleCapped: number;
-        crossClusterMerges: number;
+        sameEventMerges: number;
+        sameEventMergeList: SameEventMerge[];
       }> => {
         // 整步重跑留痕：2026-09-03 真实 workflow 实测这一步执行了两遍（每个簇的日志都出现两次），
         // 原因未查明。step.do 不暴露 attempt 序号，故用进入时刻区分两次执行。
@@ -815,8 +815,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         let pocketFlagged = 0;
         let unsureClusters = 0;
 
-        // 块的物化（30 篇截断、算分、事件键）与跨簇同名合并都在 lib/core/cluster-blocks.ts，
-        // 抽出去是为了能单测——那两段的失败（判定失败被读成 NO_EVENT、先截后合导致重复采样）
+        // 块的物化（30 篇截断、算分）与期内同事件合并都在 lib/core/cluster-blocks.ts，
+        // 抽出去是为了能单测——那几段的失败（判定失败被读成 NO_EVENT、先截后合导致重复采样）
         // 在生产日志里都不显眼。
         const publishedAt = new Map<number, number>();
         for (const a of dataset.articles) {
@@ -890,22 +890,32 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         pocketFlagged = planStats.pocketFlagged;
         unsureClusters = planStats.unsureClusters;
 
+        // 期内同事件合并的块质心 = 该块**全部**成员文章（截断前）e5 embedding 的算术平均，
+        // 取自 step 外已从 R2 读回的 dataset.embeddings；缺 embedding 的文章跳过。
+        // 注意：门槛 0.935 是在 brief_stories.centroid 上挑的，那是截断后 ≤30 篇的均值，
+        // 超过 30 篇的簇这里的质心会与原型略有差别。
+        const embeddingOf = new Map<number, number[]>(dataset.embeddings.map(e => [e.articleId, e.embedding]));
         const { blocks, stats: asmStats } = assembleBlocks([...soloBlocks, ...judgedBlocks], {
           publishedAt,
-          titleOf,
           distinctSources,
+          centroidOf: (b) => meanEmbedding(b.ids, embeddingOf),
         });
         stories.push(...blocks);
-        const { cappedBlocks, droppedArticles, crossClusterMerges } = asmStats;
+        const { cappedBlocks, droppedArticles, sameEventMerges, merges: sameEventMergeList } = asmStats;
 
         log.info(`[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +
             `判为 NO_EVENT ${pocketFlagged} 簇、UNSURE ${unsureClusters} 簇（均只标记不丢弃），` +
-            `判定输入超 ${PLAN_TITLE_CAP} 条被取样 ${judgeTitleCapped} 簇，跨簇同名合并 ${crossClusterMerges} 次，` +
+            `判定输入超 ${PLAN_TITLE_CAP} 条被取样 ${judgeTitleCapped} 簇，同事件合并 ${sameEventMerges} 次，` +
             `超 ${DEFAULT_ARTICLE_CAP} 篇被截 ${cappedBlocks} 块共丢 ${droppedArticles} 篇）`);
+        for (const m of sameEventMergeList) {
+          log.info(`[AutoBrief] 同事件合并 → 「${m.title}」：` +
+              m.members.map(x => `${x.title}(簇 ${x.clusterId}, ${x.articles} 篇, cos ${x.cosToLead})`).join('，') +
+              `；average link ${m.links.join(' / ')}`);
+        }
         // 不拒绝整簇：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
         // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。
         return { stories, judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
-          cappedBlocks, droppedArticles, judgeTitleCapped, crossClusterMerges };
+          cappedBlocks, droppedArticles, judgeTitleCapped, sameEventMerges, sameEventMergeList };
       });
 
       // NO_EVENT 率断言。簇判定大面积判「不是单一事件」是上游退化的可判别信号，
@@ -940,6 +950,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         judgeTitleCapped: validatedStories.judgeTitleCapped,
         cappedBlocks: validatedStories.cappedBlocks,
         droppedArticles: validatedStories.droppedArticles,
+        sameEventMerges: validatedStories.sameEventMerges,
+        sameEventMergeList: validatedStories.sameEventMergeList,
         stories: validatedStories.stories,
       });
 
@@ -1084,9 +1096,6 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       // 选择分 = LLM importance + 覆盖度加权。打分/排序/取 top-N 抽到 lib/core/story-ranking
       // （纯函数，可独立测）；COVERAGE_WEIGHT 是 NDCG eval 上线前的保守默认，做成参数便于校准。
       const COVERAGE_WEIGHT = 1.0;
-      // 同事件配额：分块层按簇独立工作，同一个事件被聚类分到多个簇时会各占多格
-      // （2026-09-04 实测尼泊尔洪灾 7 格），超过验收目标 ①「一件大事不刷屏」的 4 格。
-      // 超额的**跳过**而不是截断，位置让给后面的其他事件。
       // LLM 重要性排序。**对全部候选跑，不是对选材后的子集**：机械选择分量的是报道热度，
       // 2026-09-20 那期实测最终前 12 里有两条（美批 27 亿乌防空、沙特断供原油）落在机械
       // top-25 之外，接在选材后面就永远看不到它们。
@@ -1133,21 +1142,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         error: llmOrder.failed,
       });
 
-      const { ranked, selected: storiesForIntelligence, capped } = ledger.select({
+      const { ranked, selected: storiesForIntelligence } = ledger.select({
         coverageWeight: COVERAGE_WEIGHT,
         maxStories: maxStoriesToGenerate,
-        perEventCap: PER_EVENT_BLOCK_CAP,
         llmOrder: llmOrder.order,
       });
-      if (capped.length > 0) {
-        log.info(`[AutoBrief] 同事件配额（每事件 ≤${PER_EVENT_BLOCK_CAP} 格）挤掉 ${capped.length} 块：` +
-            capped.map(x => `${x.story.eventKey}/${x.story.title}`).join('，'));
-      }
 
       log.info('[AutoBrief] 选择层(importance + 多源覆盖度) top-N:');
       ranked.slice(0, maxStoriesToGenerate).forEach((x, rank) => log.info(`  ${rank + 1}. imp=${x.story.importance} 源=${x.srcs} → 分=${x.score.toFixed(2)} | ${x.story.title}`));
 
-      // 文章去向表的第 3 关 selected 由账本按 ranked / capped 推（见 story-ledger.ts）。
+      // 文章去向表的第 3 关 selected 由账本按 ranked 推（见 story-ledger.ts）。
 
       // 观测性：标记被选中跑 intel 的 stories
       await step.do('persist:mark_selected_for_intel', dbStepConfig, async () => {

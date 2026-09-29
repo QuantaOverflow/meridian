@@ -37,7 +37,7 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 
 ### 单测（`lib/`）
 
-- `lib/cluster-blocks.spec.ts`：`planBlocksFromJudgements` / `assembleBlocks` 的行为（判定失败不丢块、NO_EVENT 只标记、30 篇上限、跨簇同名合并等）
+- `lib/cluster-blocks.spec.ts`：`planBlocksFromJudgements` / `assembleBlocks` 的行为（判定失败不丢块、NO_EVENT 只标记、30 篇上限、期内同事件合并等）
 
 ### 读者视图快照（`lib/reader.spec.ts`）
 

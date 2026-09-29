@@ -27,7 +27,6 @@ export type ArticleJourneyEntry = {
 export interface SelectOptions {
   coverageWeight: number;
   maxStories: number;
-  perEventCap: number;
   llmOrder?: number[];
 }
 
@@ -41,10 +40,8 @@ export class StoryLedger<W extends { idx: number } = { idx: number }> {
   private selection?: {
     ranked: RankedStory<StoryBlock>[];
     selected: StoryId[];
-    cappedIds: Set<StoryId>;
     rankedIds: StoryId[];
     maxStories: number;
-    perEventCap: number;
   };
   private tiers?: TierPlanEntry[];
   private blocks?: { written: W[]; failedIdx: Set<number> };
@@ -75,25 +72,21 @@ export class StoryLedger<W extends { idx: number } = { idx: number }> {
     this.coverage = cov;
   }
 
-  /** 选择层：rankStoriesForIntelligence 的 ranked / selected / capped，只跑一次。 */
+  /** 选择层：rankStoriesForIntelligence 的 ranked / selected，只跑一次。 */
   select(opts: SelectOptions) {
     this.once(this.selection, '选择');
     const cov = this.need(this.coverage, '源覆盖');
     const res = rankStoriesForIntelligence(this.stories as StoryBlock[], cov, {
       coverageWeight: opts.coverageWeight,
       maxStories: opts.maxStories,
-      perEventCap: opts.perEventCap,
-      eventKeyOf: (story) => String((story as { eventKey?: string }).eventKey ?? ''),
       llmOrder: opts.llmOrder,
     });
     const idOf = (s: StoryBlock) => this.idOf.get(s)!;
     this.selection = {
       ranked: res.ranked,
       selected: res.selected.map(idOf),
-      cappedIds: new Set(res.capped.map((x) => idOf(x.story))),
       rankedIds: res.ranked.map((x) => idOf(x.story)),
       maxStories: opts.maxStories,
-      perEventCap: opts.perEventCap,
     };
     return res;
   }
@@ -210,9 +203,8 @@ export class StoryLedger<W extends { idx: number } = { idx: number }> {
     // 第 2 关 judged：进了某一块 = 过关。
     // ⚠️ 这一关**没有**「被判官毙掉」这条去向：不拒绝整簇，NO_EVENT / UNSURE
     // 只标记不丢弃（见 workflow 簇判定的注释）。所以过了聚类却不在任何块里，只可能是块物化时
-    // 被 DEFAULT_ARTICLE_CAP 截掉或跨簇同名合并时去重掉——两者都发生在「簇判定」step
-    // **内部**（assembleBlocks），步外只拿得到合计数 droppedArticles，分不出是哪一种，
-    // 故合记为 block_article_cap。
+    // 被 DEFAULT_ARTICLE_CAP 截掉——发生在「簇判定」step **内部**（assembleBlocks），
+    // 步外只拿得到合计数 droppedArticles，故记为 block_article_cap。
     const judgedPass = new Set<number>(
       this.stories.flatMap((s) => (Array.isArray(s.articleIds) ? s.articleIds : []))
     );
@@ -230,16 +222,13 @@ export class StoryLedger<W extends { idx: number } = { idx: number }> {
     if (!sel) return journey;
 
     // 第 3 关 selected：排名信息在 ranked 里是完整的（全量候选按分降序），
-    // 所以被截断的能记下**真实名次**，不必记 unknown；被同事件配额挤掉的在 capped 里，
-    // 两种落选原因分开记——「排不进前 N」和「同一件事已经占满格」对读者是两回事。
+    // 所以被截断的能记下**真实名次**，不必记 unknown。
     const selectedArticles = new Set<number>(
       sel.selected.flatMap((id) => (Array.isArray(this.stories[id].articleIds) ? this.stories[id].articleIds : []))
     );
     const rankDropReason = new Map<number, string>();
     sel.rankedIds.forEach((storyId, i) => {
-      const reason = sel.cappedIds.has(storyId)
-        ? `per_event_cap_${sel.perEventCap}`
-        : `rank_${i + 1}_beyond_top${sel.maxStories}`;
+      const reason = `rank_${i + 1}_beyond_top${sel.maxStories}`;
       const ids = Array.isArray(this.stories[storyId].articleIds) ? this.stories[storyId].articleIds : [];
       for (const id of ids) if (!rankDropReason.has(id)) rankDropReason.set(id, reason);
     });

@@ -1,5 +1,4 @@
 {
-  "PER_EVENT_BLOCK_CAP": 4,
   "perCluster": [
     {
       "clusterId": 12,

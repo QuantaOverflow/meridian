@@ -8,7 +8,7 @@
  * spec（golden.spec.ts）在 workers pool 里跑、只比对；update-golden.ts 在 node 里跑、只写盘。
  */
 import fixture from './fixtures/cron-brief-1790168539876.json';
-import { blockImportance, dominantEntity, PER_EVENT_BLOCK_CAP } from '../../src/lib/core/storyline';
+import { blockImportance, dominantEntity } from '../../src/lib/core/storyline';
 import { pickSpreadArticles, DEFAULT_ARTICLE_CAP } from '../../src/lib/core/story-dedup';
 import {
   assembleBlocks,
@@ -49,7 +49,8 @@ const prodOutcomes: JudgeOutcome[] = clusters.map((c) => ({
     : { ok: true, value: { verdict: 'EVENT', title: c.prodTitle, event: '', reason: 'reconstructed' } },
 }));
 
-const assembleDeps = { publishedAt, titleOf, distinctSources };
+// fixture 不含 embedding，生产链路重放里块都没有质心、不走同事件合并；合并由 edge 里的合成质心覆盖
+const assembleDeps = { publishedAt, distinctSources, centroidOf: (): number[] | null => null };
 const prodPlan = () => planBlocksFromJudgements(prodOutcomes, titleOf);
 const prodBlocks = () => assembleBlocks(prodPlan().pending, assembleDeps);
 
@@ -64,14 +65,13 @@ function rank(blocks: StoryBlock[], llmOrder?: number[]) {
   blocks.forEach((s, i) => { coverage[i] = distinctSources(s.articleIds); });
   const ledger = new StoryLedger(blocks);
   ledger.recordSourceCoverage(coverage);
-  const res = ledger.select({ coverageWeight: 1.0, maxStories: 25, perEventCap: PER_EVENT_BLOCK_CAP, llmOrder });
+  const res = ledger.select({ coverageWeight: 1.0, maxStories: 25, llmOrder });
   return { ...res, ledger };
 }
 
 export const GOLDEN_CASES: Record<string, () => unknown> = {
   /** storyline.ts：每个生产簇的事件键与显著性分，外加 blockImportance 的整张小表。 */
   storyline: () => ({
-    PER_EVENT_BLOCK_CAP,
     perCluster: clusters.map((c) => {
       const srcs = distinctSources(c.articleIds);
       return {
@@ -121,7 +121,7 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
     };
   },
 
-  /** cluster-blocks.ts：生产 39 簇原样走一遍，外加失败 / 同名合并 / 超 30 篇截断的场景。 */
+  /** cluster-blocks.ts：生产 39 簇原样走一遍，外加失败 / 同事件合并（合成质心）/ 超 30 篇截断的场景。 */
   clusterBlocks: () => {
     const plan = prodPlan();
     const asm = prodBlocks();
@@ -136,7 +136,20 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
       { clusterId: 109, ids: byCid.get(109)!, res: { ok: true, value: { verdict: 'NO_EVENT', title: 'Trump at the UN', event: 'c', reason: 'r' } } },
     ];
     const edgePlan = planBlocksFromJudgements(edgeOutcomes, titleOf);
-    // 5 个大簇并成 45 篇的一块 → 截到 30；再并一个与它同名、部分重叠的块
+    // 合成质心：4 与 51 余弦 0.97 → 合并；109 与它们同名但余弦 ≤0.8 → 不合（标题不再参与判断）
+    const edgeCentroid: Record<number, number[]> = {
+      12: [0, 0, 1],
+      10: [0, 1, 0],
+      4: [1, 0, 0],
+      51: [0.97, Math.sqrt(1 - 0.97 ** 2), 0],
+      109: [0.8, 0, 0.6],
+    };
+    const edgeDeps = { ...assembleDeps, centroidOf: (b: PendingBlock) => edgeCentroid[b.clusterId] ?? null };
+    // 5 个大簇并成 45 篇的一块 → 截到 30；再并一个质心相同、部分重叠的块；Solo 没有质心
+    const oversizeDeps = {
+      ...assembleDeps,
+      centroidOf: (b: PendingBlock) => (b.clusterId === 902 ? null : [1, 0, 0]),
+    };
     const bigIds = [12, 61, 5, 10, 34].flatMap((cid) => byCid.get(cid)!).sort((x, y) => x - y);
     const oversize: PendingBlock[] = [
       { clusterId: 900, title: 'Oversize block', covers: 'big', ids: bigIds },
@@ -147,9 +160,9 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
       prod: { plan, assembled: asm },
       edge: {
         plan: edgePlan,
-        assembled: assembleBlocks(edgePlan.pending, assembleDeps),
-        oversize: assembleBlocks(oversize, assembleDeps),
-        oversizeCap10: assembleBlocks(oversize, { ...assembleDeps, cap: 10 }),
+        assembled: assembleBlocks(edgePlan.pending, edgeDeps),
+        oversize: assembleBlocks(oversize, oversizeDeps),
+        oversizeCap10: assembleBlocks(oversize, { ...oversizeDeps, cap: 10 }),
       },
     };
   },
@@ -158,16 +171,12 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
   storyRanking: () => {
     const { blocks } = prodBlocks();
     const view = (r: ReturnType<typeof rank>) => ({
-      ranked: r.ranked.map((x) => ({ ...briefRef(x.story), eventKey: x.story.eventKey, srcs: x.srcs, score: x.score })),
+      ranked: r.ranked.map((x) => ({ ...briefRef(x.story), srcs: x.srcs, score: x.score })),
       selected: r.selected.map(briefRef),
-      capped: r.capped.map((x) => briefRef(x.story)),
     });
-    // 同事件配额：全塞同一个 eventKey，看跳过而不是截断
-    const sameKey = blocks.slice(0, 10).map((b) => ({ ...b, eventKey: 'Trump' }));
     return {
       mechanical: view(rank(blocks)),
       withLlmOrder: view(rank(blocks, SYNTHETIC_LLM_ORDER)),
-      allSameEventKey: view(rank(sameKey)),
       noCapNoKey: rankStoriesForIntelligence(
         blocks.slice(0, 8).map((b) => ({ title: b.title, importance: b.importance })),
         { 0: 3, 1: 0, 2: 9, 5: 1 },

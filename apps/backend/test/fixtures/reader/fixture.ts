@@ -36,6 +36,8 @@ export function buildReaderFixture(anchor: Date) {
   /** 锚点日 + day 天，当天 hour 点（UTC）+ minute 分 */
   const at = (day: number, hour = 12, minute = 0) => new Date(anchor.getTime() + day * 24 * HOUR + hour * HOUR + minute * MINUTE);
   const vec = Array.from({ length: 384 }, () => 0.01);
+  /** 第 0 维 a、第 1 维 b、其余维 0.01 的向量（避免零向量），用来摆出离质心近 / 远的成员 */
+  const twoDim = (a: number, b: number) => vec.map((x, i) => (i === 0 ? a : i === 1 ? b : x));
 
   const sources: (typeof $sources.$inferInsert)[] = [
     { id: 1, url: 'https://feeds.example.com/alpha.xml', name: 'Alpha News', category: 'news', scrape_frequency: 1, lastChecked: at(3), do_initialized_at: at(-30) },
@@ -238,6 +240,9 @@ export function buildReaderFixture(anchor: Date) {
     { id: 4, title: 'Ukraine', first_seen_at: at(-25), last_seen_at: at(-20) },
     // 只出现在一期简报里：不到 MIN_BRIEFS，不算线索
     { id: 5, title: 'Fed', first_seen_at: at(0), last_seen_at: at(0) },
+    // 标题取法：成员够多（6 条）、最新那条是串进来的离群故事（离线索质心远），次新那条标题只有一个词——
+    // 读者应看到「最近几条里不是单词、离质心最近」的那条（story 25），而不是最新那条
+    { id: 6, title: 'Avalanche kills two climbers', centroid: twoDim(5, 1), first_seen_at: at(-6), last_seen_at: at(0) },
   ];
 
   const story = (
@@ -248,7 +253,8 @@ export function buildReaderFixture(anchor: Date) {
     article_ids: unknown,
     selected_for_intel: boolean,
     story_cluster_id: number | null,
-    lead_article_id: number | null
+    lead_article_id: number | null,
+    centroid?: number[]
   ): typeof $brief_stories.$inferInsert => ({
     id,
     workflow_id: `wf-${report === 'orphan' ? 'orphan' : `r${report}`}`,
@@ -258,6 +264,7 @@ export function buildReaderFixture(anchor: Date) {
     selected_for_intel,
     story_cluster_id,
     lead_article_id,
+    centroid,
   });
   const briefStories = [
     story(1, 1, 'Ukraine — peace talks', 0.5, [104, 1], true, 4, 104),
@@ -281,6 +288,13 @@ export function buildReaderFixture(anchor: Date) {
     // 未发布的期里的故事：不出现在线索 1 的条目里，也不让簇 5 凑够两期
     story(19, 9, 'Gaza — debug rerun', 0.8, [101], true, 1, 101),
     story(20, 9, 'Fed — debug rerun', 0.8, [105], true, 5, 105),
+    story(21, 3, 'Nepal — glacier collapse floods valley', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(22, 4, 'Nepal — death toll passes 500', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(23, 5, 'Nepal — rescuers reach hydropower tunnel', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(24, 6, 'Nepal — rescue of trapped workers', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(25, 7, 'Nepal — survivors found after ten days', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(26, 8, 'Nepal', 0.5, [104], true, 6, 104, twoDim(1, 0)),
+    story(27, 8, 'Avalanche kills two climbers', 0.9, [102], true, 6, 102, twoDim(0, 1)),
   ];
 
   return { sources, articles, reports, briefRuns, clusters, briefStories };

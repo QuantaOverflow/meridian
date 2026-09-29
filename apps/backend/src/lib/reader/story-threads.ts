@@ -23,6 +23,21 @@ const STORY_THREAD_CONFIG = {
    * 设计交付文档对本页的定义是「列出**跨期存续**的线索」，据此取 2。
    */
   MIN_BRIEFS: 2,
+  /**
+   * 线索标题与概要默认取最新那条成员（说法跟着最近的进展走），只有它明显离群时才退回
+   * 「最近 TITLE_RECENT_MEMBERS 条里离线索质心最近的那条」。
+   *
+   * 为什么要退：门槛 0.94 下偶尔串进一条相邻新闻，它一进来就顶掉标题——2026-09-29 重建后
+   * 「尼泊尔冰川洪水」显示成「Nepal Avalanche Kills 2」、「邮寄投票诉讼」显示成「选民数据库」。
+   * 为什么不一律挑离质心最近的：生产上试过，138 条线索里 112 条标题被换成更旧的说法
+   * （图帕克案「被定罪」退回「审判前瞻」）——两三条成员的线索，质心就在它们中间，谁近几乎随机。
+   * 离群判据（2026-09-29 在生产 138 条线索上看的）：成员 ≥6 条的线索里，最新成员比最近 5 条里
+   * 最贴近质心的低 ≥0.04 的只有 4 条（雪崩、选民数据库、「战后控制伊朗石油」混进美委石油协议，
+   * 和一条边界的「以色列吊销荷兰外交官身份」），其余都 ≤0.026；成员少的线索分不开，不判。
+   */
+  TITLE_RECENT_MEMBERS: 5,
+  TITLE_OUTLIER_MIN_MEMBERS: 6,
+  TITLE_OUTLIER_GAP: 0.03,
 } as const;
 
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */
@@ -131,6 +146,7 @@ const threadStatsQuery = sql`
            ${$brief_stories.importance} AS importance,
            ${$brief_stories.selected_for_intel} AS selected_for_intel,
            ${$brief_stories.lead_article_id} AS lead_article_id,
+           ${$brief_stories.centroid} AS centroid,
            ${$reports.id} AS report_id,
            ${$reports.createdAt} AS created_at
     FROM ${$brief_stories}
@@ -144,6 +160,37 @@ const threadStatsQuery = sql`
   latest AS (
     SELECT DISTINCT ON (cluster_id) cluster_id, title, importance, lead_article_id
     FROM briefed ORDER BY cluster_id, created_at DESC, importance DESC NULLS LAST
+  ),
+  -- 代表成员：标题与概要都取这一行，保证两者讲的是同一件事。
+  -- 先排除单词标题（Delhi / Trump / Nepal 这类上游残缺标题）；其余默认取最新那条，
+  -- 仅当线索够大且最新那条明显离群时改取离质心最近的（判据见 STORY_THREAD_CONFIG.TITLE_*）。
+  recent AS (
+    SELECT b.*,
+           row_number() OVER (PARTITION BY b.cluster_id ORDER BY b.created_at DESC, b.importance DESC NULLS LAST) AS rn,
+           count(*) OVER (PARTITION BY b.cluster_id) AS member_count,
+           1 - (b.centroid <=> ${$story_clusters.centroid}) AS sim,
+           array_length(regexp_split_to_array(btrim(b.title), '[[:space:]]+'), 1) >= 3 AS multiword
+    FROM briefed b
+    JOIN ${$story_clusters} ON ${$story_clusters.id} = b.cluster_id
+  ),
+  shape AS (
+    SELECT cluster_id,
+           max(member_count) AS member_count,
+           max(sim) FILTER (WHERE rn <= ${STORY_THREAD_CONFIG.TITLE_RECENT_MEMBERS}) AS best_sim,
+           max(sim) FILTER (WHERE rn = 1) AS newest_sim
+    FROM recent GROUP BY cluster_id
+  ),
+  rep AS (
+    SELECT DISTINCT ON (r.cluster_id) r.cluster_id, r.title, r.lead_article_id
+    FROM recent r
+    JOIN shape ON shape.cluster_id = r.cluster_id
+    WHERE r.rn <= ${STORY_THREAD_CONFIG.TITLE_RECENT_MEMBERS}
+    ORDER BY r.cluster_id,
+             r.multiword DESC,
+             CASE WHEN shape.member_count >= ${STORY_THREAD_CONFIG.TITLE_OUTLIER_MIN_MEMBERS}
+                   AND shape.best_sim - shape.newest_sim >= ${STORY_THREAD_CONFIG.TITLE_OUTLIER_GAP}
+                  THEN -r.sim ELSE r.rn::float8 END ASC NULLS LAST,
+             r.rn ASC
   ),
   agg AS (
     SELECT cluster_id,
@@ -167,13 +214,13 @@ const threadStatsQuery = sql`
     GROUP BY b.cluster_id
   )
   SELECT ${$story_clusters.id} AS id,
-         -- 标题取**最新那条成员故事**的标题，而不是 story_clusters.title。
+         -- 标题取**代表成员**（rep）的标题，而不是 story_clusters.title。
          -- 后者是归并时逐条写进去的，同一天有多条成员时最后处理的那条会覆盖前面的，
-         -- 于是标题来自「最后处理的（重要度最低的）」、概要却来自 latest（重要度最高的），
+         -- 于是标题来自「最后处理的（重要度最低的）」、概要却来自另一条，
          -- 两者对不上。实测线索 808：48 条成员几乎全是美伊经济施压，标题却是
          -- 「Pakistan's mediation efforts」，概要是 Bessent 的制裁——读者会以为串了话题。
-         -- 从同一行取，这类漂移就不存在了。
-         coalesce(latest.title, ${$story_clusters.title}) AS title,
+         -- 标题与概要从同一行取，这类漂移就不存在了。
+         coalesce(rep.title, ${$story_clusters.title}) AS title,
          ${$story_clusters.first_seen_at} AS first_seen_at,
          ${$story_clusters.last_seen_at} AS last_seen_at,
          agg.entry_count,
@@ -188,10 +235,11 @@ const threadStatsQuery = sql`
   JOIN agg ON agg.cluster_id = ${$story_clusters.id}
   LEFT JOIN streaks ON streaks.cluster_id = ${$story_clusters.id}
   LEFT JOIN latest ON latest.cluster_id = ${$story_clusters.id}
-  -- 概要取该故事的**代表文章**（离故事质心最近的成员，归并时算好落在
+  LEFT JOIN rep ON rep.cluster_id = ${$story_clusters.id}
+  -- 概要取代表成员的**代表文章**（离故事质心最近的成员，归并时算好落在
   -- brief_stories.lead_article_id）。不能拿 article_ids[0]：聚类会把无关文章混进故事，
   -- 数组顺序又是任意的——实测有线索因此把「智力障碍人群预期寿命」当成了野火报道的概要。
-  LEFT JOIN ${$articles} ON ${$articles.id} = latest.lead_article_id
+  LEFT JOIN ${$articles} ON ${$articles.id} = rep.lead_article_id
 `;
 
 function toSummary(row: ThreadRow): StoryThreadSummaryData {

@@ -43,6 +43,7 @@ const CASES: Record<string, string> = {
   'story-3-disputed': '/reader/stories/3',
   'story-4-dormant': '/reader/stories/4',
   'story-5-below-threshold': '/reader/stories/5',
+  'story-6-representative-title': '/reader/stories/6',
   'admin-sources': '/admin/sources',
   'admin-source-1-details': '/admin/sources/1/details',
   'admin-source-1-page-2': '/admin/sources/1/details?page=2',
@@ -76,6 +77,12 @@ describe('边界', () => {
   it('未发布的期（手动触发的调试期）：单期页 404，与不存在的期一样', async () => {
     const res = await exports.default.fetch('http://backend/reader/briefs/9', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
     expect(res.status).toBe(404);
+  });
+
+  it('线索标题：大线里最新但离群的成员抢不走标题，单词标题跳过，退回最近几条里离质心最近的', async () => {
+    const res = await exports.default.fetch('http://backend/reader/stories/6', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { title: string }).title).toBe('Nepal — survivors found after ten days');
   });
 
   it('不带 token：401', async () => {

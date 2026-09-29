@@ -36,6 +36,7 @@
   "provenance": {
     "labeledBy": "第 109 期（2026-09-27）由用户在标注页亲标；其余 7 期由 Claude 按用户判据代标，用户未复核。v2（2026-09-30）：原 9 对 boundary 按用户 09-29 采纳的分组规则判掉——7 对并入 same，2 对（当事方不同）归为不同。",
     "periods": "2026-09-21 至 09-28 已发布的 8 期（report id 101、103–106、108–110），每期全部入选故事（共 195 块）",
-    "readings": "错误分析读数见 memory brief-v6-error-analysis-2026-09；原型读数见 apps/backend/prototypes/block-merge/（仅本地）"
+    "readings": "错误分析读数见 memory brief-v6-error-analysis-2026-09；原型读数见 apps/backend/prototypes/block-merge/（仅本地）",
+    "userReview": "2026-09-30 用户盲评复核 28 条（先答后看 Claude 标注；分层抽样：原 boundary 10、基线合了但标不同 4、高余弦但标不同 6、有把握的 same 4、spill 删句 4，含封存考卷 1 条）：一致 27，说不准 1（103 期 6×12，维持「不同」），不一致 0。"
   }
 }

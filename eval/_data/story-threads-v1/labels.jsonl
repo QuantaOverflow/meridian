@@ -1,0 +1,888 @@
+{"story_id": 831, "period": 1, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 832, "period": 1, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": false, "window": "dev"}
+{"story_id": 833, "period": 1, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": false, "window": "dev"}
+{"story_id": 834, "period": 1, "line": "c1740", "line_name": "Trump reveals Karoline Leavitt to step down as White House press secretary", "unsure": false, "window": "dev"}
+{"story_id": 835, "period": 1, "line": "c1741", "line_name": "Total solar eclipse sweeps across Europe", "unsure": false, "window": "dev"}
+{"story_id": 836, "period": 1, "line": "c1738", "line_name": "Colombia — 7.4 magnitude earthquake strikes western Colombia", "unsure": false, "window": "dev"}
+{"story_id": 837, "period": 1, "line": "c1734", "line_name": "Hong Kong — National Security Department raids independent bookstores, arrests for seditious writing", "unsure": false, "window": "dev"}
+{"story_id": 838, "period": 1, "line": "c1737", "line_name": "Zambians voting as president bids for second term", "unsure": false, "window": "dev"}
+{"story_id": 839, "period": 1, "line": "c1742", "line_name": "Clacton byelection polls open with Farage up against slew of fringe candidates", "unsure": false, "window": "dev"}
+{"story_id": 840, "period": 1, "line": "c1735", "line_name": "Trump administration finalizes rule to end federal support for gender-affirming care", "unsure": false, "window": "dev"}
+{"story_id": 841, "period": 1, "line": "c1739", "line_name": "Three US states to hold executions on same day for first time since 2010", "unsure": false, "window": "dev"}
+{"story_id": 842, "period": 2, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": false, "window": "dev"}
+{"story_id": 843, "period": 2, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": true, "window": "dev"}
+{"story_id": 844, "period": 2, "line": "c1742", "line_name": "Clacton byelection polls open with Farage up against slew of fringe candidates", "unsure": false, "window": "dev"}
+{"story_id": 845, "period": 2, "line": "reform_donations", "line_name": "英国改革党献金丑闻", "unsure": true, "window": "dev"}
+{"story_id": 846, "period": 2, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 847, "period": 2, "line": "c1747", "line_name": "Ryanair engine failure causes window shattering", "unsure": false, "window": "dev"}
+{"story_id": 848, "period": 2, "line": "c1749", "line_name": "UK — Netanyahu calls UK 'Islamic Republic of Britain'", "unsure": false, "window": "dev"}
+{"story_id": 849, "period": 2, "line": "c1738", "line_name": "Colombia — 7.4 magnitude earthquake strikes western Colombia", "unsure": false, "window": "dev"}
+{"story_id": 850, "period": 2, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 851, "period": 2, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 852, "period": 2, "line": "c1753", "line_name": "U.S. missionary who was kidnapped in Niger is released", "unsure": false, "window": "dev"}
+{"story_id": 853, "period": 2, "line": "c1752", "line_name": "Japan — Record-breaking rain in Chiba leaves four dead, thousands stranded", "unsure": false, "window": "dev"}
+{"story_id": 854, "period": 2, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": true, "window": "dev"}
+{"story_id": 855, "period": 2, "line": "c1754", "line_name": "Oman — Oil spill from tanker Caroline Bezengi", "unsure": false, "window": "dev"}
+{"story_id": 856, "period": 2, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "dev"}
+{"story_id": 857, "period": 3, "line": "c1756", "line_name": "South Korea proposes talks to officially end war with North", "unsure": false, "window": "dev"}
+{"story_id": 858, "period": 3, "line": "lincoln_carrier", "line_name": "林肯号航母官兵状况", "unsure": false, "window": "dev"}
+{"story_id": 859, "period": 3, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 860, "period": 3, "line": "lincoln_carrier", "line_name": "林肯号航母官兵状况", "unsure": false, "window": "dev"}
+{"story_id": 861, "period": 3, "line": "c1757", "line_name": "Afghanistan — Taliban rule and global ties five years after US withdrawal", "unsure": false, "window": "dev"}
+{"story_id": 862, "period": 3, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 863, "period": 3, "line": "c1762", "line_name": "Indonesia — 7.7-magnitude earthquake strikes off Flores Island", "unsure": false, "window": "dev"}
+{"story_id": 864, "period": 3, "line": "c1738", "line_name": "Colombia — 7.4 magnitude earthquake strikes western Colombia", "unsure": false, "window": "dev"}
+{"story_id": 865, "period": 3, "line": "c1763", "line_name": "US Supreme Court to rule on Trump's $400m ballroom project", "unsure": false, "window": "dev"}
+{"story_id": 866, "period": 3, "line": "c1758", "line_name": "BBC subpoenas Trump family members in defamation lawsuit", "unsure": false, "window": "dev"}
+{"story_id": 867, "period": 3, "line": "israel_lebanon", "line_name": "以色列打击黎巴嫩", "unsure": false, "window": "dev"}
+{"story_id": 868, "period": 3, "line": "c1765", "line_name": "US — Luigi Mangione pleads guilty to UnitedHealthcare CEO killing", "unsure": false, "window": "dev"}
+{"story_id": 869, "period": 3, "line": "c1767", "line_name": "Tributes paid to Jason Arday after ex-Cambridge professor found dead", "unsure": false, "window": "dev"}
+{"story_id": 871, "period": 3, "line": "venezuela_prisoners", "line_name": "委内瑞拉释放政治犯", "unsure": false, "window": "dev"}
+{"story_id": 875, "period": 3, "line": "c1760", "line_name": "France — Constitutional Council blocks social media ban for under-15s", "unsure": false, "window": "dev"}
+{"story_id": 876, "period": 4, "line": "israel_lebanon", "line_name": "以色列打击黎巴嫩", "unsure": false, "window": "dev"}
+{"story_id": 877, "period": 4, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 878, "period": 4, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "dev"}
+{"story_id": 879, "period": 4, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 880, "period": 4, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 881, "period": 4, "line": "c1770", "line_name": "Australia to begin gun buyback scheme in response to Bondi shooting", "unsure": false, "window": "dev"}
+{"story_id": 882, "period": 4, "line": "c1774", "line_name": "Five injured in shooting at Virginia State University", "unsure": false, "window": "dev"}
+{"story_id": 883, "period": 4, "line": "c1762", "line_name": "Indonesia — 7.7-magnitude earthquake strikes off Flores Island", "unsure": false, "window": "dev"}
+{"story_id": 884, "period": 4, "line": "c1757", "line_name": "Afghanistan — Taliban rule and global ties five years after US withdrawal", "unsure": false, "window": "dev"}
+{"story_id": 886, "period": 4, "line": "c1776", "line_name": "Who killed Tupac? What to know about the trial of Duane ‘Keffe D’ Davis", "unsure": false, "window": "dev"}
+{"story_id": 887, "period": 4, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": false, "window": "dev"}
+{"story_id": 888, "period": 4, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 890, "period": 4, "line": "ceuta", "line_name": "休达移民危机", "unsure": false, "window": "dev"}
+{"story_id": 891, "period": 4, "line": "c1767", "line_name": "Tributes paid to Jason Arday after ex-Cambridge professor found dead", "unsure": false, "window": "dev"}
+{"story_id": 892, "period": 4, "line": "c1775", "line_name": "Hungary — Bus carrying Polish pilgrims crashes on M3 motorway", "unsure": false, "window": "dev"}
+{"story_id": 1174, "period": 5, "line": "c1779", "line_name": "India — Supreme Court rulings on euthanasia and death penalty", "unsure": false, "window": "dev"}
+{"story_id": 1195, "period": 5, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1196, "period": 5, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1197, "period": 5, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1205, "period": 5, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1208, "period": 5, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "dev"}
+{"story_id": 1215, "period": 5, "line": "c1783", "line_name": "India — Real estate sector developments", "unsure": false, "window": "dev"}
+{"story_id": 1216, "period": 5, "line": "c1780", "line_name": "Global — Energy transition and supply chain", "unsure": false, "window": "dev"}
+{"story_id": 1227, "period": 5, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1228, "period": 5, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1231, "period": 5, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1251, "period": 5, "line": "imran_khan", "line_name": "伊姆兰·汗与巴基斯坦政府的对抗", "unsure": false, "window": "dev"}
+{"story_id": 1261, "period": 5, "line": "syria_reactor", "line_name": "叙利亚秘密核反应堆", "unsure": false, "window": "dev"}
+{"story_id": 1262, "period": 5, "line": "c1785", "line_name": "Meta faces landmark trial over youth mental health and platform design", "unsure": false, "window": "dev"}
+{"story_id": 1264, "period": 5, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 1298, "period": 6, "line": "c1791", "line_name": "China — Evergrande founder sentenced to life in prison", "unsure": false, "window": "dev"}
+{"story_id": 1301, "period": 6, "line": "c1790", "line_name": "Global — AI and robotics market surges and regulatory scrutiny", "unsure": false, "window": "dev"}
+{"story_id": 1304, "period": 6, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": true, "window": "dev"}
+{"story_id": 1306, "period": 6, "line": "c1793", "line_name": "US — Trump administration rescinds roadless rule for forests", "unsure": false, "window": "dev"}
+{"story_id": 1308, "period": 6, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1310, "period": 6, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 1320, "period": 6, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1321, "period": 6, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1322, "period": 6, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1323, "period": 6, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1326, "period": 6, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1332, "period": 6, "line": "c1796", "line_name": "US-South Korea alliance — Trump orders reduction of joint military drills", "unsure": false, "window": "dev"}
+{"story_id": 1377, "period": 6, "line": "c1789", "line_name": "Moderna, Merck unveil mRNA-based cancer vaccine that cuts spread", "unsure": false, "window": "dev"}
+{"story_id": 1390, "period": 6, "line": "c1795", "line_name": "US national debt exceeds $40 trillion for first time", "unsure": false, "window": "dev"}
+{"story_id": 1396, "period": 6, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 1419, "period": 7, "line": "c1797", "line_name": "Taiwan — record $35B defense budget proposal for 2027", "unsure": false, "window": "dev"}
+{"story_id": 1423, "period": 7, "line": "c1791", "line_name": "China — Evergrande founder sentenced to life in prison", "unsure": false, "window": "dev"}
+{"story_id": 1430, "period": 7, "line": "c1798", "line_name": "Malaysia — Anwar Ibrahim's comments on Taiwan", "unsure": false, "window": "dev"}
+{"story_id": 1435, "period": 7, "line": "c1789", "line_name": "Moderna, Merck unveil mRNA-based cancer vaccine that cuts spread", "unsure": false, "window": "dev"}
+{"story_id": 1461, "period": 7, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1464, "period": 7, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1465, "period": 7, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1488, "period": 7, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1504, "period": 7, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 1506, "period": 7, "line": "c1795", "line_name": "US national debt exceeds $40 trillion for first time", "unsure": false, "window": "dev"}
+{"story_id": 1509, "period": 7, "line": "israel_lebanon", "line_name": "以色列打击黎巴嫩", "unsure": false, "window": "dev"}
+{"story_id": 1533, "period": 7, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1534, "period": 7, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1538, "period": 7, "line": "c1804", "line_name": "US — Jessica Bowie charged with IS-inspired plot to bomb New York State Capitol", "unsure": false, "window": "dev"}
+{"story_id": 1542, "period": 7, "line": "c1803", "line_name": "US — Trump nominates Dr. Heidi Overton to lead FDA", "unsure": false, "window": "dev"}
+{"story_id": 1552, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1554, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1556, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1557, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1558, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1559, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1562, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1564, "period": 8, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1579, "period": 8, "line": "c1805", "line_name": "Panama Canal — Drought-driven reduction in daily ship transits", "unsure": false, "window": "dev"}
+{"story_id": 1581, "period": 8, "line": "c1806", "line_name": "UK — Met Office forecasts strongest El Niño in over a century", "unsure": false, "window": "dev"}
+{"story_id": 1582, "period": 8, "line": "c1806", "line_name": "UK — Met Office forecasts strongest El Niño in over a century", "unsure": false, "window": "dev"}
+{"story_id": 1594, "period": 8, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1599, "period": 8, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 1604, "period": 8, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1605, "period": 8, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1606, "period": 8, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "dev"}
+{"story_id": 1613, "period": 8, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1615, "period": 8, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1629, "period": 8, "line": "hk_vigil_trial", "line_name": "香港支联会国安案", "unsure": false, "window": "dev"}
+{"story_id": 1643, "period": 8, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1653, "period": 8, "line": "c1810", "line_name": "USA — Texas appeals court reduces Alex Jones' Sandy Hook judgment", "unsure": false, "window": "dev"}
+{"story_id": 1663, "period": 8, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 1669, "period": 8, "line": "c1770", "line_name": "Australia to begin gun buyback scheme in response to Bondi shooting", "unsure": false, "window": "dev"}
+{"story_id": 1682, "period": 8, "line": "c1812", "line_name": "Bangladesh — Mirza Fakhrul Islam Alamgir elected and sworn in as president", "unsure": false, "window": "dev"}
+{"story_id": 1689, "period": 8, "line": "c1815", "line_name": "Cameroon — President Paul Biya returns from long absence", "unsure": false, "window": "dev"}
+{"story_id": 1697, "period": 9, "line": "c1819", "line_name": "BJP announces 65-member national team and holds first meeting", "unsure": false, "window": "dev"}
+{"story_id": 1699, "period": 9, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "dev"}
+{"story_id": 1700, "period": 9, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1703, "period": 9, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1704, "period": 9, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1706, "period": 9, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 1707, "period": 9, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1708, "period": 9, "line": "c1763", "line_name": "US Supreme Court to rule on Trump's $400m ballroom project", "unsure": false, "window": "dev"}
+{"story_id": 1716, "period": 9, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1717, "period": 9, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1719, "period": 9, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1721, "period": 9, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1722, "period": 9, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1723, "period": 9, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1724, "period": 9, "line": "c1823", "line_name": "Myanmar — Military air strike on Buddhist monastery in Myaung township", "unsure": false, "window": "dev"}
+{"story_id": 1726, "period": 9, "line": "c1805", "line_name": "Panama Canal — Drought-driven reduction in daily ship transits", "unsure": false, "window": "dev"}
+{"story_id": 1729, "period": 9, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": true, "window": "dev"}
+{"story_id": 1731, "period": 9, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1733, "period": 9, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1734, "period": 9, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1745, "period": 9, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 1748, "period": 9, "line": "c1825", "line_name": "US — TikTok and ByteDance agree to $400 million settlement over child privacy violations", "unsure": false, "window": "dev"}
+{"story_id": 1754, "period": 9, "line": "cyclospora", "line_name": "美国生菜环孢子虫疫情", "unsure": false, "window": "dev"}
+{"story_id": 1768, "period": 9, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": true, "window": "dev"}
+{"story_id": 1776, "period": 9, "line": "c1770", "line_name": "Australia to begin gun buyback scheme in response to Bondi shooting", "unsure": false, "window": "dev"}
+{"story_id": 1780, "period": 10, "line": "c1833", "line_name": "Hakeem Jeffries meets with Jared Kushner", "unsure": false, "window": "dev"}
+{"story_id": 1788, "period": 10, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1789, "period": 10, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1790, "period": 10, "line": "c1826", "line_name": "France — Macron hosts Saudi Crown Prince MBS in Paris", "unsure": false, "window": "dev"}
+{"story_id": 1791, "period": 10, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1794, "period": 10, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1807, "period": 10, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 1808, "period": 10, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1812, "period": 10, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 1816, "period": 10, "line": "c1835", "line_name": "Australia — First mainland mammal death from H5 bird flu", "unsure": false, "window": "dev"}
+{"story_id": 1817, "period": 10, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1821, "period": 10, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1822, "period": 10, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1823, "period": 10, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1824, "period": 10, "line": "c1829", "line_name": "Hong Kong — Shein stock market debut", "unsure": false, "window": "dev"}
+{"story_id": 1830, "period": 10, "line": "fifa_infantino", "line_name": "FIFA 内斗（欧足联 vs 因凡蒂诺）", "unsure": false, "window": "dev"}
+{"story_id": 1835, "period": 10, "line": "c1831", "line_name": "New Zealand proposes social media ban for under-16s", "unsure": false, "window": "dev"}
+{"story_id": 1841, "period": 10, "line": "c1830", "line_name": "DR Congo, M23 rebels agree on peace talks roadmap", "unsure": false, "window": "dev"}
+{"story_id": 1842, "period": 10, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 1843, "period": 10, "line": "c1837", "line_name": "Nevada — Hawk Fire forces mass evacuation of Reno", "unsure": false, "window": "dev"}
+{"story_id": 1844, "period": 10, "line": "c1841", "line_name": "Guinea — Conakry landfill collapse kills 30", "unsure": false, "window": "dev"}
+{"story_id": 1851, "period": 10, "line": "c1832", "line_name": "Kazakhstan — snap parliamentary election and constitutional changes", "unsure": false, "window": "dev"}
+{"story_id": 1853, "period": 10, "line": "c1838", "line_name": "Indonesia — Borneo wildfire troop deployment", "unsure": false, "window": "dev"}
+{"story_id": 1854, "period": 10, "line": "c1839", "line_name": "Indonesia — arrests of 72 forest fire suspects", "unsure": false, "window": "dev"}
+{"story_id": 1871, "period": 10, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1884, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1885, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1886, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1887, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1891, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1893, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 1903, "period": 11, "line": "c1829", "line_name": "Hong Kong — Shein stock market debut", "unsure": false, "window": "dev"}
+{"story_id": 1908, "period": 11, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1910, "period": 11, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 1916, "period": 11, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 1921, "period": 11, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1922, "period": 11, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1923, "period": 11, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1924, "period": 11, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 1931, "period": 11, "line": "fifa_infantino", "line_name": "FIFA 内斗（欧足联 vs 因凡蒂诺）", "unsure": false, "window": "dev"}
+{"story_id": 1934, "period": 11, "line": "syria_sanctions", "line_name": "美国解除对叙利亚制裁", "unsure": false, "window": "dev"}
+{"story_id": 1936, "period": 11, "line": "c1849", "line_name": "France and Saudi Arabia plan $7bn theme park project near Paris", "unsure": false, "window": "dev"}
+{"story_id": 1941, "period": 11, "line": "c1850", "line_name": "USA — Lindsay Clancy murder trial testimony on mental state", "unsure": false, "window": "dev"}
+{"story_id": 1944, "period": 11, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1956, "period": 11, "line": "c1845", "line_name": "Colombia — President orders immigration raids and deportations", "unsure": false, "window": "dev"}
+{"story_id": 1957, "period": 11, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 1967, "period": 11, "line": "c1831", "line_name": "New Zealand proposes social media ban for under-16s", "unsure": false, "window": "dev"}
+{"story_id": 1972, "period": 11, "line": "c1851", "line_name": "US — Judge postpones trial of Libyan man in 1988 Lockerbie bombing", "unsure": false, "window": "dev"}
+{"story_id": 1973, "period": 11, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "dev"}
+{"story_id": 1994, "period": 11, "line": "c1847", "line_name": "India — UPI payment system celebrates 10th anniversary", "unsure": false, "window": "dev"}
+{"story_id": 2156, "period": 12, "line": "c1853", "line_name": "Bill Gates seeks meeting with Xi Jinping to discuss AI risks", "unsure": false, "window": "dev"}
+{"story_id": 2157, "period": 12, "line": "c1854", "line_name": "Bill Gates calls for global AI cooperation and 'human reserved' jobs", "unsure": false, "window": "dev"}
+{"story_id": 2158, "period": 12, "line": "c1855", "line_name": "US — Disruption of Chinese state-sponsored hacking operation targeting US agencies", "unsure": false, "window": "dev"}
+{"story_id": 2159, "period": 12, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2160, "period": 12, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2161, "period": 12, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2163, "period": 12, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2167, "period": 12, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2176, "period": 12, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2181, "period": 12, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2182, "period": 12, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2183, "period": 12, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2199, "period": 12, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "dev"}
+{"story_id": 2203, "period": 12, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2204, "period": 12, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2216, "period": 12, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 2217, "period": 12, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 2220, "period": 12, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 2222, "period": 12, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": false, "window": "dev"}
+{"story_id": 2241, "period": 12, "line": "c1860", "line_name": "Haiti — Gang attack in Kenscoff leaves at least 47 dead and over 50 kidnapped", "unsure": false, "window": "dev"}
+{"story_id": 2242, "period": 12, "line": "c1861", "line_name": "Fire at Islamabad PIMS hospital nursery kills 14 newborns", "unsure": false, "window": "dev"}
+{"story_id": 2245, "period": 12, "line": "c1862", "line_name": "Syrian Kurdish SDF dissolves and integrates into Syrian army", "unsure": false, "window": "dev"}
+{"story_id": 2249, "period": 12, "line": "c1785", "line_name": "Meta faces landmark trial over youth mental health and platform design", "unsure": false, "window": "dev"}
+{"story_id": 2250, "period": 12, "line": "c1863", "line_name": "Brazil — ANPD fines TikTok $30 million for child data privacy violations", "unsure": false, "window": "dev"}
+{"story_id": 2265, "period": 12, "line": "kennedy_center", "line_name": "特朗普与肯尼迪中心", "unsure": false, "window": "dev"}
+{"story_id": 2340, "period": 13, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2341, "period": 13, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2345, "period": 13, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2350, "period": 13, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2352, "period": 13, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2353, "period": 13, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2354, "period": 13, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2357, "period": 13, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2358, "period": 13, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2363, "period": 13, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2366, "period": 13, "line": "syria_sanctions", "line_name": "美国解除对叙利亚制裁", "unsure": false, "window": "dev"}
+{"story_id": 2368, "period": 13, "line": "c1862", "line_name": "Syrian Kurdish SDF dissolves and integrates into Syrian army", "unsure": false, "window": "dev"}
+{"story_id": 2375, "period": 13, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": true, "window": "dev"}
+{"story_id": 2387, "period": 13, "line": "c1785", "line_name": "Meta faces landmark trial over youth mental health and platform design", "unsure": false, "window": "dev"}
+{"story_id": 2389, "period": 13, "line": "c1785", "line_name": "Meta faces landmark trial over youth mental health and platform design", "unsure": false, "window": "dev"}
+{"story_id": 2391, "period": 13, "line": "c1785", "line_name": "Meta faces landmark trial over youth mental health and platform design", "unsure": false, "window": "dev"}
+{"story_id": 2395, "period": 13, "line": "c1870", "line_name": "US — Pentagon review of European troop deployments and NATO burden-sharing", "unsure": false, "window": "dev"}
+{"story_id": 2396, "period": 13, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 2416, "period": 13, "line": "fifa_infantino", "line_name": "FIFA 内斗（欧足联 vs 因凡蒂诺）", "unsure": false, "window": "dev"}
+{"story_id": 2422, "period": 13, "line": "c1872", "line_name": "Norway's King Harald V dies, succeeded by son Haakon VIII", "unsure": false, "window": "dev"}
+{"story_id": 2423, "period": 13, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 2424, "period": 13, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 2430, "period": 13, "line": "c1866", "line_name": "Netherlands — Dutch court convicts Rwandan man for 1994 genocide", "unsure": false, "window": "dev"}
+{"story_id": 2452, "period": 13, "line": "c1861", "line_name": "Fire at Islamabad PIMS hospital nursery kills 14 newborns", "unsure": false, "window": "dev"}
+{"story_id": 2469, "period": 13, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": false, "window": "dev"}
+{"story_id": 2711, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2712, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2713, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2714, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2718, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2720, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2723, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2725, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2726, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2727, "period": 14, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2728, "period": 14, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "dev"}
+{"story_id": 2731, "period": 14, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2732, "period": 14, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2734, "period": 14, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "dev"}
+{"story_id": 2736, "period": 14, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 2740, "period": 14, "line": "c1879", "line_name": "RSS chief Mohan Bhagwat's New York event and protests", "unsure": false, "window": "dev"}
+{"story_id": 2756, "period": 14, "line": "china_property", "line_name": "中国楼市新政", "unsure": false, "window": "dev"}
+{"story_id": 2772, "period": 14, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 2779, "period": 14, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2794, "period": 14, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2797, "period": 14, "line": "niger_mutiny", "line_name": "尼日尔兵变", "unsure": false, "window": "dev"}
+{"story_id": 2801, "period": 14, "line": "c1861", "line_name": "Fire at Islamabad PIMS hospital nursery kills 14 newborns", "unsure": false, "window": "dev"}
+{"story_id": 2802, "period": 14, "line": "c1880", "line_name": "Trump announces US Space Academy and awards Artemis II astronauts", "unsure": false, "window": "dev"}
+{"story_id": 2808, "period": 14, "line": "c1876", "line_name": "US — Fed Chair Kevin Warsh signals need for rate hikes amid inflation", "unsure": false, "window": "dev"}
+{"story_id": 2815, "period": 14, "line": "c1877", "line_name": "California — $8.1 million stolen checks scheme arrests", "unsure": false, "window": "dev"}
+{"story_id": 2909, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2910, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2911, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2913, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2914, "period": 15, "line": "sco_summit", "line_name": "上合比什凯克峰会", "unsure": false, "window": "dev"}
+{"story_id": 2916, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 2918, "period": 15, "line": "india_uzbek", "line_name": "莫迪访乌兹别克斯坦", "unsure": false, "window": "dev"}
+{"story_id": 2920, "period": 15, "line": "india_uzbek", "line_name": "莫迪访乌兹别克斯坦", "unsure": false, "window": "dev"}
+{"story_id": 2922, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2923, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2924, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2925, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2927, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2929, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2931, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2932, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2933, "period": 15, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 2936, "period": 15, "line": "china_property", "line_name": "中国楼市新政", "unsure": false, "window": "dev"}
+{"story_id": 2955, "period": 15, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 2961, "period": 15, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 2962, "period": 15, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 2963, "period": 15, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2964, "period": 15, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2965, "period": 15, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 2966, "period": 15, "line": "c1882", "line_name": "Nicolás Maduro shares photos from US detention", "unsure": false, "window": "dev"}
+{"story_id": 2967, "period": 15, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2968, "period": 15, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2969, "period": 15, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2970, "period": 15, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 2973, "period": 15, "line": "c1892", "line_name": "Ferry capsizes off northern Cyprus, killing at least eight", "unsure": false, "window": "dev"}
+{"story_id": 2976, "period": 15, "line": "c1896", "line_name": "Switzerland — Aarau rave shooting", "unsure": false, "window": "dev"}
+{"story_id": 2977, "period": 15, "line": "c1896", "line_name": "Switzerland — Aarau rave shooting", "unsure": false, "window": "dev"}
+{"story_id": 2979, "period": 15, "line": "c1901", "line_name": "Iceland rejects EU accession talks in referendum", "unsure": false, "window": "dev"}
+{"story_id": 2982, "period": 15, "line": "c1888", "line_name": "USA — NASA launches Nancy Grace Roman Space Telescope", "unsure": false, "window": "dev"}
+{"story_id": 2983, "period": 15, "line": "niger_mutiny", "line_name": "尼日尔兵变", "unsure": false, "window": "dev"}
+{"story_id": 2984, "period": 15, "line": "niger_mutiny", "line_name": "尼日尔兵变", "unsure": false, "window": "dev"}
+{"story_id": 2985, "period": 15, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "dev"}
+{"story_id": 2987, "period": 15, "line": "ceuta", "line_name": "休达移民危机", "unsure": false, "window": "dev"}
+{"story_id": 2990, "period": 15, "line": "c1889", "line_name": "South Korea — Unification Church leader Han Hak-ja sentenced to 2 years in prison", "unsure": false, "window": "dev"}
+{"story_id": 2994, "period": 15, "line": "c1890", "line_name": "UN — Committee issues legal guidance on slavery reparations", "unsure": false, "window": "dev"}
+{"story_id": 2996, "period": 15, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "dev"}
+{"story_id": 2999, "period": 15, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "dev"}
+{"story_id": 3003, "period": 16, "line": "c1763", "line_name": "US Supreme Court to rule on Trump's $400m ballroom project", "unsure": false, "window": "dev"}
+{"story_id": 3007, "period": 16, "line": "c1829", "line_name": "Hong Kong — Shein stock market debut", "unsure": false, "window": "dev"}
+{"story_id": 3011, "period": 16, "line": "china_property", "line_name": "中国楼市新政", "unsure": false, "window": "dev"}
+{"story_id": 3012, "period": 16, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3020, "period": 16, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3027, "period": 16, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3030, "period": 16, "line": "sco_summit", "line_name": "上合比什凯克峰会", "unsure": false, "window": "dev"}
+{"story_id": 3032, "period": 16, "line": "sco_summit", "line_name": "上合比什凯克峰会", "unsure": false, "window": "dev"}
+{"story_id": 3033, "period": 16, "line": "c1902", "line_name": "Indonesia — U.S. and allies launch Super Garuda Shield military exercises", "unsure": false, "window": "dev"}
+{"story_id": 3035, "period": 16, "line": "india_uzbek", "line_name": "莫迪访乌兹别克斯坦", "unsure": false, "window": "dev"}
+{"story_id": 3037, "period": 16, "line": "c1909", "line_name": "New York — Times Square stabbing and police shooting", "unsure": false, "window": "dev"}
+{"story_id": 3046, "period": 16, "line": "c1903", "line_name": "India — Supreme Court quashes FIRs against NEET protesters", "unsure": false, "window": "dev"}
+{"story_id": 3052, "period": 16, "line": "c1890", "line_name": "UN — Committee issues legal guidance on slavery reparations", "unsure": false, "window": "dev"}
+{"story_id": 3067, "period": 16, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 3068, "period": 16, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3071, "period": 16, "line": "c1882", "line_name": "Nicolás Maduro shares photos from US detention", "unsure": false, "window": "dev"}
+{"story_id": 3076, "period": 16, "line": "c1776", "line_name": "Who killed Tupac? What to know about the trial of Duane ‘Keffe D’ Davis", "unsure": false, "window": "dev"}
+{"story_id": 3085, "period": 16, "line": "c1904", "line_name": "Libya — rival factions sign UN-backed 4+4 agreement for elections", "unsure": false, "window": "dev"}
+{"story_id": 3086, "period": 16, "line": "c1908", "line_name": "Greece — Israel multi-billion dollar air defense deal", "unsure": false, "window": "dev"}
+{"story_id": 3087, "period": 16, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3092, "period": 16, "line": "c1905", "line_name": "India rejects Court of Arbitration's ruling on Indus Waters Treaty", "unsure": false, "window": "dev"}
+{"story_id": 3096, "period": 16, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "dev"}
+{"story_id": 3102, "period": 16, "line": "c1888", "line_name": "USA — NASA launches Nancy Grace Roman Space Telescope", "unsure": false, "window": "dev"}
+{"story_id": 3103, "period": 16, "line": "c1889", "line_name": "South Korea — Unification Church leader Han Hak-ja sentenced to 2 years in prison", "unsure": false, "window": "dev"}
+{"story_id": 3116, "period": 16, "line": "c1906", "line_name": "FTC and states sue Amazon over rigged ad auctions", "unsure": false, "window": "dev"}
+{"story_id": 3128, "period": 17, "line": "c1915", "line_name": "US health officials remove Pennsylvania measles deaths from national tally", "unsure": false, "window": "dev"}
+{"story_id": 3129, "period": 17, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 3132, "period": 17, "line": "c1763", "line_name": "US Supreme Court to rule on Trump's $400m ballroom project", "unsure": false, "window": "dev"}
+{"story_id": 3136, "period": 17, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3139, "period": 17, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3156, "period": 17, "line": "c1903", "line_name": "India — Supreme Court quashes FIRs against NEET protesters", "unsure": false, "window": "dev"}
+{"story_id": 3157, "period": 17, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3160, "period": 17, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3161, "period": 17, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3162, "period": 17, "line": "syria_reactor", "line_name": "叙利亚秘密核反应堆", "unsure": false, "window": "dev"}
+{"story_id": 3170, "period": 17, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "dev"}
+{"story_id": 3171, "period": 17, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 3177, "period": 17, "line": "c1912", "line_name": "China — Xi Jinping's state visit to Egypt", "unsure": false, "window": "dev"}
+{"story_id": 3178, "period": 17, "line": "sco_summit", "line_name": "上合比什凯克峰会", "unsure": false, "window": "dev"}
+{"story_id": 3179, "period": 17, "line": "sco_summit", "line_name": "上合比什凯克峰会", "unsure": false, "window": "dev"}
+{"story_id": 3190, "period": 17, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 3210, "period": 17, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 3215, "period": 17, "line": "c1917", "line_name": "Keir Starmer resigns as UK Prime Minister and MP", "unsure": false, "window": "dev"}
+{"story_id": 3222, "period": 17, "line": "c1918", "line_name": "Guinea-Bissau — constitutional referendum expands presidential powers", "unsure": false, "window": "dev"}
+{"story_id": 3226, "period": 17, "line": "c1914", "line_name": "US Army Secretary Dan Driscoll resigns amid Pentagon leadership turmoil", "unsure": false, "window": "dev"}
+{"story_id": 3229, "period": 17, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3244, "period": 17, "line": "c1920", "line_name": "Hong Kong — Joshua Wong pleads guilty to foreign collusion charge", "unsure": false, "window": "dev"}
+{"story_id": 3249, "period": 17, "line": "c1919", "line_name": "United States — Apple leadership transition from Tim Cook to John Ternus", "unsure": false, "window": "dev"}
+{"story_id": 3251, "period": 17, "line": "ebola_drc", "line_name": "刚果（金）埃博拉疫情", "unsure": false, "window": "dev"}
+{"story_id": 3261, "period": 17, "line": "c1906", "line_name": "FTC and states sue Amazon over rigged ad auctions", "unsure": false, "window": "dev"}
+{"story_id": 3269, "period": 18, "line": "c1912", "line_name": "China — Xi Jinping's state visit to Egypt", "unsure": false, "window": "dev"}
+{"story_id": 3272, "period": 18, "line": "c1921", "line_name": "Canada — Tumbler Ridge mass shooting victims file new lawsuits against OpenAI", "unsure": false, "window": "dev"}
+{"story_id": 3281, "period": 18, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 3282, "period": 18, "line": "c1923", "line_name": "USA — Patagonia sues Trump over reduction of Utah national monuments", "unsure": false, "window": "dev"}
+{"story_id": 3284, "period": 18, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "dev"}
+{"story_id": 3289, "period": 18, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3294, "period": 18, "line": "syria_reactor", "line_name": "叙利亚秘密核反应堆", "unsure": false, "window": "dev"}
+{"story_id": 3296, "period": 18, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 3297, "period": 18, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 3299, "period": 18, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "dev"}
+{"story_id": 3304, "period": 18, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3321, "period": 18, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 3328, "period": 18, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3332, "period": 18, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3335, "period": 18, "line": "c1928", "line_name": "UK PM Andy Burnham faces first House of Commons grilling", "unsure": false, "window": "dev"}
+{"story_id": 3344, "period": 18, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "dev"}
+{"story_id": 3348, "period": 18, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "dev"}
+{"story_id": 3349, "period": 18, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "dev"}
+{"story_id": 3354, "period": 18, "line": "lincoln_carrier", "line_name": "林肯号航母官兵状况", "unsure": false, "window": "dev"}
+{"story_id": 3358, "period": 18, "line": "c1806", "line_name": "UK — Met Office forecasts strongest El Niño in over a century", "unsure": false, "window": "dev"}
+{"story_id": 3359, "period": 18, "line": "c1922", "line_name": "UN warns global heating will reach at least 1.8°C, 1.5°C goal now unavoidable", "unsure": false, "window": "dev"}
+{"story_id": 3361, "period": 18, "line": "c1914", "line_name": "US Army Secretary Dan Driscoll resigns amid Pentagon leadership turmoil", "unsure": false, "window": "dev"}
+{"story_id": 3372, "period": 18, "line": "c1931", "line_name": "Premier League breaks summer transfer spending record", "unsure": false, "window": "dev"}
+{"story_id": 3387, "period": 18, "line": "ceuta", "line_name": "休达移民危机", "unsure": false, "window": "dev"}
+{"story_id": 3390, "period": 18, "line": "c1932", "line_name": "Malta — Yorgen Fenech acquitted in Daphne Caruana Galizia murder trial", "unsure": false, "window": "dev"}
+{"story_id": 3418, "period": 19, "line": "c1912", "line_name": "China — Xi Jinping's state visit to Egypt", "unsure": false, "window": "dev"}
+{"story_id": 3421, "period": 19, "line": "c1921", "line_name": "Canada — Tumbler Ridge mass shooting victims file new lawsuits against OpenAI", "unsure": false, "window": "dev"}
+{"story_id": 3422, "period": 19, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3423, "period": 19, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3428, "period": 19, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3432, "period": 19, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "dev"}
+{"story_id": 3443, "period": 19, "line": "c1806", "line_name": "UK — Met Office forecasts strongest El Niño in over a century", "unsure": false, "window": "dev"}
+{"story_id": 3445, "period": 19, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": true, "window": "dev"}
+{"story_id": 3449, "period": 19, "line": "c1935", "line_name": "USA — Gloria Steinem dies at 92", "unsure": false, "window": "dev"}
+{"story_id": 3458, "period": 19, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3464, "period": 19, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "dev"}
+{"story_id": 3473, "period": 19, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 3474, "period": 19, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "dev"}
+{"story_id": 3476, "period": 19, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "dev"}
+{"story_id": 3484, "period": 19, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "dev"}
+{"story_id": 3487, "period": 19, "line": "c1940", "line_name": "Norway — seizure of Russian ship Professor Molchanov in Svalbard", "unsure": false, "window": "dev"}
+{"story_id": 3489, "period": 19, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 3490, "period": 19, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "dev"}
+{"story_id": 3499, "period": 19, "line": "c1941", "line_name": "UK and Argentina clash over Falkland Islands", "unsure": false, "window": "dev"}
+{"story_id": 3508, "period": 19, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3509, "period": 19, "line": "venezuela_oil", "line_name": "美委石油协议", "unsure": false, "window": "dev"}
+{"story_id": 3511, "period": 19, "line": "c1923", "line_name": "USA — Patagonia sues Trump over reduction of Utah national monuments", "unsure": false, "window": "dev"}
+{"story_id": 3516, "period": 19, "line": "c1932", "line_name": "Malta — Yorgen Fenech acquitted in Daphne Caruana Galizia murder trial", "unsure": false, "window": "dev"}
+{"story_id": 3517, "period": 19, "line": "c1938", "line_name": "Volkswagen announces 100,000 job cuts by 2030", "unsure": false, "window": "dev"}
+{"story_id": 3518, "period": 19, "line": "c1939", "line_name": "Canary Islands — Migrant boat adrift with dozens of deaths", "unsure": false, "window": "dev"}
+{"story_id": 3554, "period": 20, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3557, "period": 20, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3559, "period": 20, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3566, "period": 20, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3570, "period": 20, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3575, "period": 20, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 3590, "period": 20, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 3593, "period": 20, "line": "c1943", "line_name": "Tunisia — Court of Cassation upholds opposition convictions", "unsure": false, "window": "holdout"}
+{"story_id": 3601, "period": 20, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 3602, "period": 20, "line": "c1951", "line_name": "Missouri — Supreme Court blocks Trump-backed congressional map", "unsure": false, "window": "holdout"}
+{"story_id": 3606, "period": 20, "line": "reform_donations", "line_name": "英国改革党献金丑闻", "unsure": false, "window": "holdout"}
+{"story_id": 3615, "period": 20, "line": "c1944", "line_name": "Air India Phuket-Delhi flight hydraulic failure and pilot drug test", "unsure": false, "window": "holdout"}
+{"story_id": 3618, "period": 20, "line": "c1952", "line_name": "Trump threatens trade restrictions on countries with trade deficits if Fed does not cut rates", "unsure": false, "window": "holdout"}
+{"story_id": 3620, "period": 20, "line": "c1938", "line_name": "Volkswagen announces 100,000 job cuts by 2030", "unsure": false, "window": "holdout"}
+{"story_id": 3621, "period": 20, "line": "c1945", "line_name": "US — Tesla Cybercab safety probe and Austin launch", "unsure": false, "window": "holdout"}
+{"story_id": 3622, "period": 20, "line": "c1946", "line_name": "OpenAI releases GPT-6 Astra amid cyber security and safety concerns", "unsure": false, "window": "holdout"}
+{"story_id": 3623, "period": 20, "line": "c1806", "line_name": "UK — Met Office forecasts strongest El Niño in over a century", "unsure": false, "window": "holdout"}
+{"story_id": 3624, "period": 20, "line": "europe_heat_drought", "line_name": "欧洲热浪与干旱", "unsure": true, "window": "holdout"}
+{"story_id": 3631, "period": 20, "line": "c1955", "line_name": "UN — General Assembly adopts Equal Earth world map projection", "unsure": false, "window": "holdout"}
+{"story_id": 3636, "period": 20, "line": "c1947", "line_name": "Indonesia — mass food poisoning from state-issued free meals", "unsure": false, "window": "holdout"}
+{"story_id": 3637, "period": 20, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3639, "period": 20, "line": "c1956", "line_name": "Philippines — Arrest and bail for Sara Duterte over threats against Marcos", "unsure": false, "window": "holdout"}
+{"story_id": 3643, "period": 20, "line": "c1949", "line_name": "India — NSE IPO approved by Sebi", "unsure": false, "window": "holdout"}
+{"story_id": 3645, "period": 20, "line": "c1935", "line_name": "USA — Gloria Steinem dies at 92", "unsure": false, "window": "holdout"}
+{"story_id": 3651, "period": 20, "line": "c1950", "line_name": "EU — Five nations agree on plan for non-EU migrant return hubs", "unsure": false, "window": "holdout"}
+{"story_id": 3660, "period": 21, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 3665, "period": 21, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 3666, "period": 21, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3673, "period": 21, "line": "c1850", "line_name": "USA — Lindsay Clancy murder trial testimony on mental state", "unsure": false, "window": "holdout"}
+{"story_id": 3675, "period": 21, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3677, "period": 21, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3688, "period": 21, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 3695, "period": 21, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 3696, "period": 21, "line": "c1958", "line_name": "Europe — Central banks move gold reserves from US to Europe", "unsure": false, "window": "holdout"}
+{"story_id": 3697, "period": 21, "line": "c1955", "line_name": "UN — General Assembly adopts Equal Earth world map projection", "unsure": false, "window": "holdout"}
+{"story_id": 3700, "period": 21, "line": "c1965", "line_name": "Greek air force jet crash at Athens air show", "unsure": false, "window": "holdout"}
+{"story_id": 3702, "period": 21, "line": "c1952", "line_name": "Trump threatens trade restrictions on countries with trade deficits if Fed does not cut rates", "unsure": false, "window": "holdout"}
+{"story_id": 3706, "period": 21, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3708, "period": 21, "line": "c1961", "line_name": "Indonesia volcano eruption disrupts Jakarta airport flights", "unsure": false, "window": "holdout"}
+{"story_id": 3712, "period": 21, "line": "c1966", "line_name": "Bolivia — Viacha military base pyrotechnic storage explosion", "unsure": false, "window": "holdout"}
+{"story_id": 3713, "period": 21, "line": "c1967", "line_name": "Colombia — Drone attack on military post in Ocaña", "unsure": false, "window": "holdout"}
+{"story_id": 3724, "period": 21, "line": "c1962", "line_name": "UK — Masked protesters block road at Port of Dover", "unsure": false, "window": "holdout"}
+{"story_id": 3726, "period": 21, "line": "c1968", "line_name": "Egypt — Cairo court sentences TV presenter Sarah Khalifa to death in major drug case", "unsure": false, "window": "holdout"}
+{"story_id": 3730, "period": 21, "line": "c1941", "line_name": "UK and Argentina clash over Falkland Islands", "unsure": false, "window": "holdout"}
+{"story_id": 3732, "period": 21, "line": "c1950", "line_name": "EU — Five nations agree on plan for non-EU migrant return hubs", "unsure": false, "window": "holdout"}
+{"story_id": 3733, "period": 21, "line": "c1963", "line_name": "Romania — Andrew Tate indicted on human trafficking and money laundering charges", "unsure": false, "window": "holdout"}
+{"story_id": 3734, "period": 21, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 3736, "period": 21, "line": "c1960", "line_name": "Germany — Isar Aerospace rocket reaches space from Norway", "unsure": false, "window": "holdout"}
+{"story_id": 3737, "period": 21, "line": "c1956", "line_name": "Philippines — Arrest and bail for Sara Duterte over threats against Marcos", "unsure": false, "window": "holdout"}
+{"story_id": 3744, "period": 21, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3760, "period": 22, "line": "c1973", "line_name": "China — $54bn financial sector stimulus", "unsure": false, "window": "holdout"}
+{"story_id": 3768, "period": 22, "line": "c1978", "line_name": "Australia — proposed law to allow opt-out of social media algorithms", "unsure": false, "window": "holdout"}
+{"story_id": 3769, "period": 22, "line": "reform_donations", "line_name": "英国改革党献金丑闻", "unsure": false, "window": "holdout"}
+{"story_id": 3771, "period": 22, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3775, "period": 22, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3778, "period": 22, "line": "israel_lebanon", "line_name": "以色列打击黎巴嫩", "unsure": false, "window": "holdout"}
+{"story_id": 3779, "period": 22, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 3787, "period": 22, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 3790, "period": 22, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 3791, "period": 22, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3792, "period": 22, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3794, "period": 22, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3795, "period": 22, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3800, "period": 22, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 3803, "period": 22, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 3809, "period": 22, "line": "c1980", "line_name": "Amazon cargo plane crashes at Miami International Airport", "unsure": false, "window": "holdout"}
+{"story_id": 3817, "period": 22, "line": "c1961", "line_name": "Indonesia volcano eruption disrupts Jakarta airport flights", "unsure": false, "window": "holdout"}
+{"story_id": 3829, "period": 22, "line": "c1970", "line_name": "India — Isro clarifies it will not be privatised and will lead national space ecosystem", "unsure": false, "window": "holdout"}
+{"story_id": 3830, "period": 22, "line": "c1960", "line_name": "Germany — Isar Aerospace rocket reaches space from Norway", "unsure": false, "window": "holdout"}
+{"story_id": 3832, "period": 22, "line": "nk_military", "line_name": "朝鲜军力展示", "unsure": false, "window": "holdout"}
+{"story_id": 3835, "period": 22, "line": "c1955", "line_name": "UN — General Assembly adopts Equal Earth world map projection", "unsure": false, "window": "holdout"}
+{"story_id": 3836, "period": 22, "line": "c1971", "line_name": "Jamaica — Delegation presents slavery reparations petition to King Charles", "unsure": false, "window": "holdout"}
+{"story_id": 3839, "period": 22, "line": "c1977", "line_name": "Ratko Mladic funeral and state honors in Belgrade", "unsure": false, "window": "holdout"}
+{"story_id": 3850, "period": 22, "line": "fifa_infantino", "line_name": "FIFA 内斗（欧足联 vs 因凡蒂诺）", "unsure": false, "window": "holdout"}
+{"story_id": 3853, "period": 22, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3860, "period": 23, "line": "c1982", "line_name": "India — New Delhi building collapse in Satya Niketan", "unsure": false, "window": "holdout"}
+{"story_id": 3867, "period": 23, "line": "c1983", "line_name": "UK — Jaguar Land Rover announces 4,000 job cuts and cost-saving plan", "unsure": false, "window": "holdout"}
+{"story_id": 3871, "period": 23, "line": "c1973", "line_name": "China — $54bn financial sector stimulus", "unsure": false, "window": "holdout"}
+{"story_id": 3873, "period": 23, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 3875, "period": 23, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 3878, "period": 23, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3879, "period": 23, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 3883, "period": 23, "line": "syria_reactor", "line_name": "叙利亚秘密核反应堆", "unsure": false, "window": "holdout"}
+{"story_id": 3887, "period": 23, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3888, "period": 23, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 3901, "period": 23, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 3913, "period": 23, "line": "nk_military", "line_name": "朝鲜军力展示", "unsure": false, "window": "holdout"}
+{"story_id": 3919, "period": 23, "line": "c1980", "line_name": "Amazon cargo plane crashes at Miami International Airport", "unsure": false, "window": "holdout"}
+{"story_id": 3923, "period": 23, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 3927, "period": 23, "line": "c1985", "line_name": "Trump’s unpopularity and its impact on the 2024 midterm campaign", "unsure": false, "window": "holdout"}
+{"story_id": 3929, "period": 23, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 3939, "period": 23, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 3944, "period": 23, "line": "c1977", "line_name": "Ratko Mladic funeral and state honors in Belgrade", "unsure": false, "window": "holdout"}
+{"story_id": 3946, "period": 23, "line": "c1988", "line_name": "Serbia — government proposes snap parliamentary election", "unsure": false, "window": "holdout"}
+{"story_id": 3950, "period": 23, "line": "c1978", "line_name": "Australia — proposed law to allow opt-out of social media algorithms", "unsure": false, "window": "holdout"}
+{"story_id": 3952, "period": 23, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 3956, "period": 23, "line": "c1971", "line_name": "Jamaica — Delegation presents slavery reparations petition to King Charles", "unsure": false, "window": "holdout"}
+{"story_id": 3965, "period": 23, "line": "c1986", "line_name": "Russia and North Korea open first road bridge across Tumen River", "unsure": false, "window": "holdout"}
+{"story_id": 3972, "period": 23, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 3979, "period": 23, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": true, "window": "holdout"}
+{"story_id": 4007, "period": 24, "line": "c1990", "line_name": "Hong Kong — Death of Tung Chee-hwa", "unsure": false, "window": "holdout"}
+{"story_id": 4013, "period": 24, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 4014, "period": 24, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 4016, "period": 24, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4017, "period": 24, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4022, "period": 24, "line": "c1991", "line_name": "Sudan — Funding cuts force closure of healthcare facilities", "unsure": false, "window": "holdout"}
+{"story_id": 4025, "period": 24, "line": "syria_reactor", "line_name": "叙利亚秘密核反应堆", "unsure": false, "window": "holdout"}
+{"story_id": 4026, "period": 24, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 4033, "period": 24, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4035, "period": 24, "line": "c1992", "line_name": "Ukraine's prosecutor general resigns amid corruption scandal", "unsure": false, "window": "holdout"}
+{"story_id": 4040, "period": 24, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4044, "period": 24, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 4050, "period": 24, "line": "c1989", "line_name": "Israel — Intelligence failure and warnings regarding October 7 Hamas attack", "unsure": false, "window": "holdout"}
+{"story_id": 4051, "period": 24, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 4053, "period": 24, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 4065, "period": 24, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": true, "window": "holdout"}
+{"story_id": 4079, "period": 24, "line": "c1980", "line_name": "Amazon cargo plane crashes at Miami International Airport", "unsure": false, "window": "holdout"}
+{"story_id": 4092, "period": 24, "line": "c1977", "line_name": "Ratko Mladic funeral and state honors in Belgrade", "unsure": false, "window": "holdout"}
+{"story_id": 4097, "period": 24, "line": "c1978", "line_name": "Australia — proposed law to allow opt-out of social media algorithms", "unsure": false, "window": "holdout"}
+{"story_id": 4098, "period": 24, "line": "c1978", "line_name": "Australia — proposed law to allow opt-out of social media algorithms", "unsure": false, "window": "holdout"}
+{"story_id": 4114, "period": 24, "line": "c1994", "line_name": "US — Marco Rubio's tour of Colombia, Ecuador, and Peru", "unsure": false, "window": "holdout"}
+{"story_id": 4121, "period": 24, "line": "c1986", "line_name": "Russia and North Korea open first road bridge across Tumen River", "unsure": false, "window": "holdout"}
+{"story_id": 4126, "period": 24, "line": "c1995", "line_name": "Hungary expels 10 Russian diplomats and Moscow's response", "unsure": false, "window": "holdout"}
+{"story_id": 4127, "period": 24, "line": "c1996", "line_name": "Brazil Supreme Court removes federal police chief", "unsure": false, "window": "holdout"}
+{"story_id": 4128, "period": 24, "line": "c1971", "line_name": "Jamaica — Delegation presents slavery reparations petition to King Charles", "unsure": false, "window": "holdout"}
+{"story_id": 4142, "period": 25, "line": "c2004", "line_name": "India — Supreme Court to examine marital rape exception", "unsure": false, "window": "holdout"}
+{"story_id": 4152, "period": 25, "line": "c1990", "line_name": "Hong Kong — Death of Tung Chee-hwa", "unsure": false, "window": "holdout"}
+{"story_id": 4160, "period": 25, "line": "c2005", "line_name": "US — 20 states sue Trump over weakened Endangered Species Act", "unsure": false, "window": "holdout"}
+{"story_id": 4165, "period": 25, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 4169, "period": 25, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 4186, "period": 25, "line": "c1997", "line_name": "US — Trump promises $5,000 'Trump dividend' to every US adult if Republicans win midterms", "unsure": false, "window": "holdout"}
+{"story_id": 4193, "period": 25, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4204, "period": 25, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4205, "period": 25, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4214, "period": 25, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4223, "period": 25, "line": "nepal_floods", "line_name": "尼泊尔冰川洪水", "unsure": false, "window": "holdout"}
+{"story_id": 4225, "period": 25, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4232, "period": 25, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": true, "window": "holdout"}
+{"story_id": 4247, "period": 25, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 4248, "period": 25, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 4250, "period": 25, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 4252, "period": 25, "line": "c1999", "line_name": "US designation of Los Tiguerones and security aid to Ecuador", "unsure": false, "window": "holdout"}
+{"story_id": 4254, "period": 25, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4262, "period": 25, "line": "c2000", "line_name": "India — Red Fort car bomb explosion and investigation", "unsure": false, "window": "holdout"}
+{"story_id": 4272, "period": 25, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "holdout"}
+{"story_id": 4274, "period": 25, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 4288, "period": 25, "line": "c2010", "line_name": "US — Smithsonian Institution secretary Lonnie Bunch announces retirement amid Trump administration pressure", "unsure": false, "window": "holdout"}
+{"story_id": 4290, "period": 25, "line": "ceuta", "line_name": "休达移民危机", "unsure": false, "window": "holdout"}
+{"story_id": 4291, "period": 25, "line": "c2008", "line_name": "France — Macron calls for European space ambition at Paris summit", "unsure": false, "window": "holdout"}
+{"story_id": 4292, "period": 25, "line": "c2003", "line_name": "LIV Golf files for Chapter 11 bankruptcy protection", "unsure": false, "window": "holdout"}
+{"story_id": 4305, "period": 26, "line": "c2004", "line_name": "India — Supreme Court to examine marital rape exception", "unsure": false, "window": "holdout"}
+{"story_id": 4306, "period": 26, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4309, "period": 26, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4317, "period": 26, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4322, "period": 26, "line": "c2013", "line_name": "US records hottest summer in 132 years", "unsure": false, "window": "holdout"}
+{"story_id": 4336, "period": 26, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 4339, "period": 26, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 4341, "period": 26, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 4343, "period": 26, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": true, "window": "holdout"}
+{"story_id": 4344, "period": 26, "line": "sept11", "line_name": "9/11：审判与 25 周年", "unsure": false, "window": "holdout"}
+{"story_id": 4349, "period": 26, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4359, "period": 26, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4377, "period": 26, "line": "ceuta", "line_name": "休达移民危机", "unsure": false, "window": "holdout"}
+{"story_id": 4383, "period": 26, "line": "hk_vigil_trial", "line_name": "香港支联会国安案", "unsure": false, "window": "holdout"}
+{"story_id": 4384, "period": 26, "line": "c2019", "line_name": "Hong Kong — Dow Jones publisher convicted for deterring reporter from union role", "unsure": false, "window": "holdout"}
+{"story_id": 4386, "period": 26, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 4387, "period": 26, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 4405, "period": 26, "line": "c1999", "line_name": "US designation of Los Tiguerones and security aid to Ecuador", "unsure": false, "window": "holdout"}
+{"story_id": 4414, "period": 26, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 4416, "period": 26, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 4424, "period": 26, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "holdout"}
+{"story_id": 4430, "period": 26, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "holdout"}
+{"story_id": 4433, "period": 26, "line": "c2018", "line_name": "China — Qingdao cargo ship fire kills at least 25", "unsure": false, "window": "holdout"}
+{"story_id": 4436, "period": 26, "line": "c2021", "line_name": "Algeria severs diplomatic ties with UAE", "unsure": false, "window": "holdout"}
+{"story_id": 4443, "period": 26, "line": "c2000", "line_name": "India — Red Fort car bomb explosion and investigation", "unsure": false, "window": "holdout"}
+{"story_id": 4444, "period": 27, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4445, "period": 27, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4449, "period": 27, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4458, "period": 27, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4466, "period": 27, "line": "c1997", "line_name": "US — Trump promises $5,000 'Trump dividend' to every US adult if Republicans win midterms", "unsure": false, "window": "holdout"}
+{"story_id": 4474, "period": 27, "line": "cyclospora", "line_name": "美国生菜环孢子虫疫情", "unsure": false, "window": "holdout"}
+{"story_id": 4477, "period": 27, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4478, "period": 27, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4483, "period": 27, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4485, "period": 27, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4503, "period": 27, "line": "c2029", "line_name": "Southeast Asia — Singapore weighs joining U.S.-led Pax Silica vs. China-led WAICO", "unsure": false, "window": "holdout"}
+{"story_id": 4504, "period": 27, "line": "hk_vigil_trial", "line_name": "香港支联会国安案", "unsure": false, "window": "holdout"}
+{"story_id": 4506, "period": 27, "line": "hk_vigil_trial", "line_name": "香港支联会国安案", "unsure": false, "window": "holdout"}
+{"story_id": 4508, "period": 27, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4512, "period": 27, "line": "c2031", "line_name": "Brazil — Flavio Bolsonaro investigated for Banco Master corruption", "unsure": false, "window": "holdout"}
+{"story_id": 4513, "period": 27, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 4516, "period": 27, "line": "israel_lebanon", "line_name": "以色列打击黎巴嫩", "unsure": false, "window": "holdout"}
+{"story_id": 4517, "period": 27, "line": "c2021", "line_name": "Algeria severs diplomatic ties with UAE", "unsure": false, "window": "holdout"}
+{"story_id": 4519, "period": 27, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4521, "period": 27, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4523, "period": 27, "line": "sweden_election", "line_name": "瑞典大选", "unsure": false, "window": "holdout"}
+{"story_id": 4524, "period": 27, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 4532, "period": 27, "line": "c2036", "line_name": "Ireland — Trump's state visit and protests", "unsure": false, "window": "holdout"}
+{"story_id": 4547, "period": 27, "line": "c2033", "line_name": "US — Huawei racketeering trial in Brooklyn", "unsure": false, "window": "holdout"}
+{"story_id": 4552, "period": 27, "line": "c2027", "line_name": "Spain — Parliament approves citizenship bill for Western Saharans", "unsure": false, "window": "holdout"}
+{"story_id": 4555, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4556, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4557, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4558, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4559, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4560, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4564, "period": 28, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4575, "period": 28, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4579, "period": 28, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4585, "period": 28, "line": "hk_vigil_trial", "line_name": "香港支联会国安案", "unsure": false, "window": "holdout"}
+{"story_id": 4597, "period": 28, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 4599, "period": 28, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4600, "period": 28, "line": "ai_safety_debate", "line_name": "AI 发展速度之争", "unsure": false, "window": "holdout"}
+{"story_id": 4601, "period": 28, "line": "ai_safety_debate", "line_name": "AI 发展速度之争", "unsure": false, "window": "holdout"}
+{"story_id": 4610, "period": 28, "line": "c2036", "line_name": "Ireland — Trump's state visit and protests", "unsure": false, "window": "holdout"}
+{"story_id": 4615, "period": 28, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4618, "period": 28, "line": "c1997", "line_name": "US — Trump promises $5,000 'Trump dividend' to every US adult if Republicans win midterms", "unsure": false, "window": "holdout"}
+{"story_id": 4619, "period": 28, "line": "c2042", "line_name": "Calls for violence against Democrats at Republican convention", "unsure": false, "window": "holdout"}
+{"story_id": 4621, "period": 28, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 4622, "period": 28, "line": "c2045", "line_name": "Indonesian passenger ship Virgo Transport 8 sinks in Java Sea", "unsure": false, "window": "holdout"}
+{"story_id": 4625, "period": 28, "line": "c2043", "line_name": "US Open 2026 — Elena Rybakina defeats Aryna Sabalenka in women's singles final", "unsure": false, "window": "holdout"}
+{"story_id": 4628, "period": 28, "line": "c2038", "line_name": "Philippines — M/V June Aster ferry fire in Palawan", "unsure": false, "window": "holdout"}
+{"story_id": 4637, "period": 28, "line": "c2044", "line_name": "UK — MPs vote against legalising assisted dying in England and Wales", "unsure": false, "window": "holdout"}
+{"story_id": 4639, "period": 28, "line": "cyclospora", "line_name": "美国生菜环孢子虫疫情", "unsure": false, "window": "holdout"}
+{"story_id": 4643, "period": 28, "line": "c2031", "line_name": "Brazil — Flavio Bolsonaro investigated for Banco Master corruption", "unsure": false, "window": "holdout"}
+{"story_id": 4651, "period": 29, "line": "ai_safety_debate", "line_name": "AI 发展速度之争", "unsure": false, "window": "holdout"}
+{"story_id": 4653, "period": 29, "line": "ai_safety_debate", "line_name": "AI 发展速度之争", "unsure": false, "window": "holdout"}
+{"story_id": 4656, "period": 29, "line": "c2048", "line_name": "Trump downplays AI safety concerns amid China competition", "unsure": false, "window": "holdout"}
+{"story_id": 4659, "period": 29, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4664, "period": 29, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4665, "period": 29, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 4677, "period": 29, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4688, "period": 29, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4690, "period": 29, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4692, "period": 29, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4693, "period": 29, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4703, "period": 29, "line": "c2049", "line_name": "One Nation unveils net-negative migration policy", "unsure": false, "window": "holdout"}
+{"story_id": 4707, "period": 29, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 4711, "period": 29, "line": "sweden_election", "line_name": "瑞典大选", "unsure": false, "window": "holdout"}
+{"story_id": 4716, "period": 29, "line": "c2045", "line_name": "Indonesian passenger ship Virgo Transport 8 sinks in Java Sea", "unsure": false, "window": "holdout"}
+{"story_id": 4722, "period": 29, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 4726, "period": 29, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 4731, "period": 29, "line": "c2043", "line_name": "US Open 2026 — Elena Rybakina defeats Aryna Sabalenka in women's singles final", "unsure": false, "window": "holdout"}
+{"story_id": 4732, "period": 29, "line": "mail_in_voting", "line_name": "特朗普限制邮寄投票的诉讼", "unsure": false, "window": "holdout"}
+{"story_id": 4735, "period": 29, "line": "iran_war", "line_name": "美伊战争", "unsure": true, "window": "holdout"}
+{"story_id": 4737, "period": 29, "line": "brics_summit", "line_name": "金砖新德里峰会", "unsure": false, "window": "holdout"}
+{"story_id": 4739, "period": 29, "line": "reform_donations", "line_name": "英国改革党献金丑闻", "unsure": false, "window": "holdout"}
+{"story_id": 4745, "period": 29, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 4761, "period": 29, "line": "c2051", "line_name": "USA — Women's Basketball World Cup final", "unsure": false, "window": "holdout"}
+{"story_id": 4762, "period": 29, "line": "c2052", "line_name": "Chile — Nursing home fire in Pitrufquen kills 16", "unsure": false, "window": "holdout"}
+{"story_id": 5118, "period": 30, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 5119, "period": 30, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5120, "period": 30, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5121, "period": 30, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5122, "period": 30, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5123, "period": 30, "line": "c2062", "line_name": "Diana's Brother vs. King Charles", "unsure": false, "window": "holdout"}
+{"story_id": 5124, "period": 30, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5125, "period": 30, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 5126, "period": 30, "line": "kennedy_center", "line_name": "特朗普与肯尼迪中心", "unsure": false, "window": "holdout"}
+{"story_id": 5127, "period": 30, "line": "c1990", "line_name": "Hong Kong — Death of Tung Chee-hwa", "unsure": false, "window": "holdout"}
+{"story_id": 5128, "period": 30, "line": "c2048", "line_name": "Trump downplays AI safety concerns amid China competition", "unsure": false, "window": "holdout"}
+{"story_id": 5130, "period": 30, "line": "c2061", "line_name": "Cuba Nationwide Blackout", "unsure": false, "window": "holdout"}
+{"story_id": 5133, "period": 30, "line": "c2064", "line_name": "Asian Games 2026 in Nagoya", "unsure": false, "window": "holdout"}
+{"story_id": 5136, "period": 30, "line": "nk_military", "line_name": "朝鲜军力展示", "unsure": false, "window": "holdout"}
+{"story_id": 5137, "period": 30, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 5138, "period": 30, "line": "c2065", "line_name": "Far-right protest in The Hague", "unsure": false, "window": "holdout"}
+{"story_id": 5139, "period": 30, "line": "c2066", "line_name": "Nigerian Detention Deaths and Protests", "unsure": false, "window": "holdout"}
+{"story_id": 5140, "period": 30, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5141, "period": 30, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "holdout"}
+{"story_id": 5142, "period": 30, "line": "c2069", "line_name": "Google's Gemini AI Hacks Three Companies", "unsure": false, "window": "holdout"}
+{"story_id": 5143, "period": 30, "line": "pakistan_attacks", "line_name": "巴基斯坦开普省自杀袭击", "unsure": false, "window": "holdout"}
+{"story_id": 5144, "period": 30, "line": "c2071", "line_name": "Trump defends Don Jr.'s wedding debt repayment", "unsure": false, "window": "holdout"}
+{"story_id": 5146, "period": 30, "line": "c1850", "line_name": "USA — Lindsay Clancy murder trial testimony on mental state", "unsure": false, "window": "holdout"}
+{"story_id": 5148, "period": 30, "line": "c2072", "line_name": "Heirs of Holocaust victims sue California museums", "unsure": false, "window": "holdout"}
+{"story_id": 5150, "period": 30, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5215, "period": 31, "line": "afd_elections", "line_name": "德国州选举与 AfD", "unsure": false, "window": "holdout"}
+{"story_id": 5216, "period": 31, "line": "c2073", "line_name": "Russia's wartime parliamentary election and aftermath", "unsure": false, "window": "holdout"}
+{"story_id": 5217, "period": 31, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5218, "period": 31, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5219, "period": 31, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5220, "period": 31, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 5221, "period": 31, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5222, "period": 31, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5223, "period": 31, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5224, "period": 31, "line": "c2074", "line_name": "Trump's DC Arch Military Complex Plan", "unsure": false, "window": "holdout"}
+{"story_id": 5225, "period": 31, "line": "us_canada_trade", "line_name": "美加贸易战", "unsure": false, "window": "holdout"}
+{"story_id": 5226, "period": 31, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5227, "period": 31, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 5229, "period": 31, "line": "c2048", "line_name": "Trump downplays AI safety concerns amid China competition", "unsure": false, "window": "holdout"}
+{"story_id": 5230, "period": 31, "line": "c2077", "line_name": "Meloni's School Burqa Ban and Foreign Student Cap", "unsure": false, "window": "holdout"}
+{"story_id": 5231, "period": 31, "line": "c2076", "line_name": "Extradition of 18 suspects in Haitian president's killing", "unsure": false, "window": "holdout"}
+{"story_id": 5232, "period": 31, "line": "c1990", "line_name": "Hong Kong — Death of Tung Chee-hwa", "unsure": false, "window": "holdout"}
+{"story_id": 5233, "period": 31, "line": "nk_military", "line_name": "朝鲜军力展示", "unsure": false, "window": "holdout"}
+{"story_id": 5236, "period": 31, "line": "imran_khan", "line_name": "伊姆兰·汗与巴基斯坦政府的对抗", "unsure": false, "window": "holdout"}
+{"story_id": 5237, "period": 31, "line": "c1850", "line_name": "USA — Lindsay Clancy murder trial testimony on mental state", "unsure": false, "window": "holdout"}
+{"story_id": 5239, "period": 31, "line": "c2079", "line_name": "US Navy Strike on Drug Trafficking Vessel", "unsure": false, "window": "holdout"}
+{"story_id": 5240, "period": 31, "line": "c2065", "line_name": "Far-right protest in The Hague", "unsure": false, "window": "holdout"}
+{"story_id": 5242, "period": 31, "line": "c2080", "line_name": "US Sanctions on International Criminal Court", "unsure": false, "window": "holdout"}
+{"story_id": 5243, "period": 31, "line": "c2081", "line_name": "DMZ Landmine Blast Injures South Korean Soldiers", "unsure": false, "window": "holdout"}
+{"story_id": 5244, "period": 31, "line": "c2082", "line_name": "Poisoned Lions in Tanzania", "unsure": false, "window": "holdout"}
+{"story_id": 5297, "period": 32, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5298, "period": 32, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5299, "period": 32, "line": "c2083", "line_name": "Turkey School Shooting in Manisa", "unsure": false, "window": "holdout"}
+{"story_id": 5300, "period": 32, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5301, "period": 32, "line": "c2085", "line_name": "Typhoon Dujuan hits Japan", "unsure": false, "window": "holdout"}
+{"story_id": 5302, "period": 32, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5303, "period": 32, "line": "c2086", "line_name": "US East Coast Air Travel Disruption", "unsure": false, "window": "holdout"}
+{"story_id": 5304, "period": 32, "line": "c2087", "line_name": "UK Charges over 1994 Rwanda Genocide", "unsure": false, "window": "holdout"}
+{"story_id": 5305, "period": 32, "line": "us_immigration", "line_name": "特朗普收紧移民", "unsure": false, "window": "holdout"}
+{"story_id": 5306, "period": 32, "line": "c2088", "line_name": "UN Summit: Leaders Gather Amid Global Crises", "unsure": false, "window": "holdout"}
+{"story_id": 5307, "period": 32, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5308, "period": 32, "line": "c2048", "line_name": "Trump downplays AI safety concerns amid China competition", "unsure": false, "window": "holdout"}
+{"story_id": 5310, "period": 32, "line": "nk_military", "line_name": "朝鲜军力展示", "unsure": false, "window": "holdout"}
+{"story_id": 5311, "period": 32, "line": "imran_khan", "line_name": "伊姆兰·汗与巴基斯坦政府的对抗", "unsure": false, "window": "holdout"}
+{"story_id": 5312, "period": 32, "line": "c2089", "line_name": "Vermont Shooting of Palestinian Students", "unsure": false, "window": "holdout"}
+{"story_id": 5313, "period": 32, "line": "c2073", "line_name": "Russia's wartime parliamentary election and aftermath", "unsure": false, "window": "holdout"}
+{"story_id": 5314, "period": 32, "line": "c1921", "line_name": "Canada — Tumbler Ridge mass shooting victims file new lawsuits against OpenAI", "unsure": false, "window": "holdout"}
+{"story_id": 5315, "period": 32, "line": "c2090", "line_name": "Mamdani and Trump at Gracie Mansion", "unsure": false, "window": "holdout"}
+{"story_id": 5318, "period": 32, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 5319, "period": 32, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5320, "period": 32, "line": "c2092", "line_name": "Brazilian serial killer 'Mosquito' arrested", "unsure": false, "window": "holdout"}
+{"story_id": 5323, "period": 32, "line": "c2093", "line_name": "Paramount-Warner Bros Merger Settlement", "unsure": false, "window": "holdout"}
+{"story_id": 5324, "period": 32, "line": "c2094", "line_name": "Trump's Approval Rating Hits Record Low", "unsure": false, "window": "holdout"}
+{"story_id": 5325, "period": 32, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5326, "period": 32, "line": "c2096", "line_name": "SpaceX land swap with US government approved", "unsure": false, "window": "holdout"}
+{"story_id": 5331, "period": 33, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5332, "period": 33, "line": "greenland", "line_name": "特朗普要格陵兰", "unsure": false, "window": "holdout"}
+{"story_id": 5333, "period": 33, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5334, "period": 33, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5335, "period": 33, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5336, "period": 33, "line": "c2098", "line_name": "Durban Mass Shooting Leaves 11 Dead", "unsure": false, "window": "holdout"}
+{"story_id": 5337, "period": 33, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5338, "period": 33, "line": "c2099", "line_name": "Trump and Burnham's First Meeting in New York", "unsure": false, "window": "holdout"}
+{"story_id": 5339, "period": 33, "line": "c2100", "line_name": "Sri Lanka Easter Bombings Verdict", "unsure": false, "window": "holdout"}
+{"story_id": 5340, "period": 33, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5341, "period": 33, "line": "c2111", "line_name": "India's EC voter roll revision row", "unsure": false, "window": "holdout"}
+{"story_id": 5342, "period": 33, "line": "c2101", "line_name": "US F-16 crash near Spangdahlem Air Base", "unsure": false, "window": "holdout"}
+{"story_id": 5343, "period": 33, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5345, "period": 33, "line": "c2071", "line_name": "Trump defends Don Jr.'s wedding debt repayment", "unsure": false, "window": "holdout"}
+{"story_id": 5346, "period": 33, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5347, "period": 33, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5349, "period": 33, "line": "c2103", "line_name": "Hurricane Polo intensifies to Cat 5 off Mexico", "unsure": false, "window": "holdout"}
+{"story_id": 5350, "period": 33, "line": "c2104", "line_name": "Hayden Panettiere's Cause of Death Confirmed", "unsure": false, "window": "holdout"}
+{"story_id": 5351, "period": 33, "line": "c2105", "line_name": "German amateur archaeologist finds massive Roman silver hoard", "unsure": false, "window": "holdout"}
+{"story_id": 5352, "period": 33, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5355, "period": 33, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "holdout"}
+{"story_id": 5362, "period": 33, "line": "ceuta", "line_name": "休达移民危机", "unsure": true, "window": "holdout"}
+{"story_id": 5364, "period": 33, "line": "c2108", "line_name": "Looksmaxxing influencer Clavicular charged with rape", "unsure": false, "window": "holdout"}
+{"story_id": 5365, "period": 33, "line": "c2109", "line_name": "DoorDash $131M Settlement for NYC Workers", "unsure": false, "window": "holdout"}
+{"story_id": 5367, "period": 33, "line": "c2110", "line_name": "UK Chagos Archipelago Deal Controversy", "unsure": false, "window": "holdout"}
+{"story_id": 5370, "period": 34, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5371, "period": 34, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5372, "period": 34, "line": "c2113", "line_name": "OpenAI Agent Hacks Australian Health Portal", "unsure": false, "window": "holdout"}
+{"story_id": 5373, "period": 34, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5374, "period": 34, "line": "c2111", "line_name": "India's EC voter roll revision row", "unsure": false, "window": "holdout"}
+{"story_id": 5375, "period": 34, "line": "c2115", "line_name": "Al-Sharaa's UN Speech on Golan Heights", "unsure": false, "window": "holdout"}
+{"story_id": 5376, "period": 34, "line": "c2114", "line_name": "Harvey Weinstein Sentenced to 15 Years", "unsure": false, "window": "holdout"}
+{"story_id": 5377, "period": 34, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5378, "period": 34, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5380, "period": 34, "line": "c2118", "line_name": "Venezuela's Delcy Rodriguez at UN", "unsure": false, "window": "holdout"}
+{"story_id": 5381, "period": 34, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 5382, "period": 34, "line": "lincoln_carrier", "line_name": "林肯号航母官兵状况", "unsure": false, "window": "holdout"}
+{"story_id": 5383, "period": 34, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5384, "period": 34, "line": "c2103", "line_name": "Hurricane Polo intensifies to Cat 5 off Mexico", "unsure": false, "window": "holdout"}
+{"story_id": 5385, "period": 34, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5386, "period": 34, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "holdout"}
+{"story_id": 5387, "period": 34, "line": "c1941", "line_name": "UK and Argentina clash over Falkland Islands", "unsure": false, "window": "holdout"}
+{"story_id": 5388, "period": 34, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5389, "period": 34, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5391, "period": 34, "line": "c2120", "line_name": "Turkey's Handover of Bashiqa Base to Iraq", "unsure": false, "window": "holdout"}
+{"story_id": 5393, "period": 34, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "holdout"}
+{"story_id": 5394, "period": 34, "line": "c2122", "line_name": "RAF Hawk T2 crash in Wales", "unsure": false, "window": "holdout"}
+{"story_id": 5398, "period": 34, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5399, "period": 34, "line": "c2123", "line_name": "MV Cape Dao attack off Oman", "unsure": false, "window": "holdout"}
+{"story_id": 5402, "period": 34, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5407, "period": 35, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5408, "period": 35, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 5409, "period": 35, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5410, "period": 35, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5411, "period": 35, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5412, "period": 35, "line": "c2113", "line_name": "OpenAI Agent Hacks Australian Health Portal", "unsure": false, "window": "holdout"}
+{"story_id": 5413, "period": 35, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5414, "period": 35, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 5415, "period": 35, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5416, "period": 35, "line": "c2111", "line_name": "India's EC voter roll revision row", "unsure": false, "window": "holdout"}
+{"story_id": 5417, "period": 35, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5418, "period": 35, "line": "c2077", "line_name": "Meloni's School Burqa Ban and Foreign Student Cap", "unsure": false, "window": "holdout"}
+{"story_id": 5419, "period": 35, "line": "c2126", "line_name": "Pakistani airstrikes kill civilians, Taliban fighters", "unsure": false, "window": "holdout"}
+{"story_id": 5420, "period": 35, "line": "s5420", "line_name": "Nepal PM's UN Climate Warning", "unsure": false, "window": "holdout"}
+{"story_id": 5422, "period": 35, "line": "c2127", "line_name": "Trump rally shooting victim James Copenhaver dies", "unsure": false, "window": "holdout"}
+{"story_id": 5423, "period": 35, "line": "russia_hybrid_eu", "line_name": "俄罗斯在欧洲的破坏活动", "unsure": false, "window": "holdout"}
+{"story_id": 5424, "period": 35, "line": "c2103", "line_name": "Hurricane Polo intensifies to Cat 5 off Mexico", "unsure": false, "window": "holdout"}
+{"story_id": 5429, "period": 35, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5430, "period": 35, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5431, "period": 35, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5433, "period": 35, "line": "c2131", "line_name": "Athens Building Collapse After Explosion", "unsure": false, "window": "holdout"}
+{"story_id": 5434, "period": 35, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 5435, "period": 35, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5436, "period": 35, "line": "c2133", "line_name": "Madrid Eviction Sparks Protests", "unsure": false, "window": "holdout"}
+{"story_id": 5439, "period": 35, "line": "c2134", "line_name": "Knife attack at Polish abbey", "unsure": false, "window": "holdout"}
+{"story_id": 5473, "period": 36, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5474, "period": 36, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5475, "period": 36, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5476, "period": 36, "line": "c2136", "line_name": "Bangkok Floods: Disaster Declared, Thousands Evacuated", "unsure": false, "window": "holdout"}
+{"story_id": 5477, "period": 36, "line": "c2135", "line_name": "US Supreme Court allows Trump to use controversial voter database", "unsure": false, "window": "holdout"}
+{"story_id": 5478, "period": 36, "line": "c2113", "line_name": "OpenAI Agent Hacks Australian Health Portal", "unsure": false, "window": "holdout"}
+{"story_id": 5479, "period": 36, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5480, "period": 36, "line": "c2138", "line_name": "Man City found guilty of 115 Premier League charges", "unsure": false, "window": "holdout"}
+{"story_id": 5481, "period": 36, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5482, "period": 36, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5484, "period": 36, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5485, "period": 36, "line": "c2131", "line_name": "Athens Building Collapse After Explosion", "unsure": false, "window": "holdout"}
+{"story_id": 5487, "period": 36, "line": "c2140", "line_name": "Charlie Kirk Utah Security Controversy", "unsure": false, "window": "holdout"}
+{"story_id": 5488, "period": 36, "line": "gaza_war", "line_name": "加沙战争", "unsure": false, "window": "holdout"}
+{"story_id": 5489, "period": 36, "line": "c2141", "line_name": "US Military Prepares for Potential Action in Cuba", "unsure": false, "window": "holdout"}
+{"story_id": 5490, "period": 36, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5493, "period": 36, "line": "imran_khan", "line_name": "伊姆兰·汗与巴基斯坦政府的对抗", "unsure": false, "window": "holdout"}
+{"story_id": 5498, "period": 36, "line": "c2143", "line_name": "Congo Plane Crash Kills 14", "unsure": false, "window": "holdout"}
+{"story_id": 5499, "period": 36, "line": "c2144", "line_name": "Michigan CEO loses job over viral AI family photo", "unsure": false, "window": "holdout"}
+{"story_id": 5500, "period": 36, "line": "c2145", "line_name": "TikTok Alabama Teen Addiction Settlement", "unsure": false, "window": "holdout"}
+{"story_id": 5501, "period": 36, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5502, "period": 36, "line": "c2146", "line_name": "Tasia Fortune Hanging Case", "unsure": false, "window": "holdout"}
+{"story_id": 5503, "period": 36, "line": "c2147", "line_name": "Morocco's Authenticity and Modernity Party wins parliamentary election", "unsure": false, "window": "holdout"}
+{"story_id": 5504, "period": 36, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": false, "window": "holdout"}
+{"story_id": 5506, "period": 36, "line": "c2149", "line_name": "Brazil's Lula Bans Online Betting", "unsure": false, "window": "holdout"}
+{"story_id": 5507, "period": 37, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5508, "period": 37, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5509, "period": 37, "line": "c2098", "line_name": "Durban Mass Shooting Leaves 11 Dead", "unsure": false, "window": "holdout"}
+{"story_id": 5510, "period": 37, "line": "c2150", "line_name": "Nor'easter Storm Hits Northeast US", "unsure": false, "window": "holdout"}
+{"story_id": 5511, "period": 37, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5512, "period": 37, "line": "c2151", "line_name": "RAF Fairford Explosives Incident", "unsure": false, "window": "holdout"}
+{"story_id": 5513, "period": 37, "line": "c2136", "line_name": "Bangkok Floods: Disaster Declared, Thousands Evacuated", "unsure": false, "window": "holdout"}
+{"story_id": 5514, "period": 37, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5515, "period": 37, "line": "c2152", "line_name": "Orange Order March in Belfast", "unsure": false, "window": "holdout"}
+{"story_id": 5516, "period": 37, "line": "c2133", "line_name": "Madrid Eviction Sparks Protests", "unsure": false, "window": "holdout"}
+{"story_id": 5517, "period": 37, "line": "c2153", "line_name": "South Africa Serial Killer Probe", "unsure": false, "window": "holdout"}
+{"story_id": 5518, "period": 37, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5519, "period": 37, "line": "media_ban", "line_name": "特朗普与媒体（白宫封禁 CNN 等）", "unsure": false, "window": "holdout"}
+{"story_id": 5520, "period": 37, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5521, "period": 37, "line": "venezuela_prisoners", "line_name": "委内瑞拉释放政治犯", "unsure": false, "window": "holdout"}
+{"story_id": 5522, "period": 37, "line": "c2155", "line_name": "Helicopter crash near Montreal kills 4", "unsure": false, "window": "holdout"}
+{"story_id": 5523, "period": 37, "line": "pakistan_attacks", "line_name": "巴基斯坦开普省自杀袭击", "unsure": false, "window": "holdout"}
+{"story_id": 5524, "period": 37, "line": "c2146", "line_name": "Tasia Fortune Hanging Case", "unsure": false, "window": "holdout"}
+{"story_id": 5525, "period": 37, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5526, "period": 37, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5527, "period": 38, "line": "c2151", "line_name": "RAF Fairford Explosives Incident", "unsure": false, "window": "holdout"}
+{"story_id": 5528, "period": 38, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}
+{"story_id": 5529, "period": 38, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": false, "window": "holdout"}
+{"story_id": 5530, "period": 38, "line": "c2158", "line_name": "Serbia's President Vucic Resigns", "unsure": false, "window": "holdout"}
+{"story_id": 5531, "period": 38, "line": "c2159", "line_name": "Swiss voters reject stricter neutrality rules", "unsure": false, "window": "holdout"}
+{"story_id": 5532, "period": 38, "line": "c2160", "line_name": "France's far-right National Rally in Senate elections", "unsure": false, "window": "holdout"}
+{"story_id": 5533, "period": 38, "line": "ukraine_war", "line_name": "俄乌战争", "unsure": true, "window": "holdout"}
+{"story_id": 5534, "period": 38, "line": "s5534", "line_name": "Nepal", "unsure": false, "window": "holdout"}
+{"story_id": 5535, "period": 38, "line": "c2152", "line_name": "Orange Order March in Belfast", "unsure": false, "window": "holdout"}
+{"story_id": 5536, "period": 38, "line": "c2098", "line_name": "Durban Mass Shooting Leaves 11 Dead", "unsure": false, "window": "holdout"}
+{"story_id": 5537, "period": 38, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5538, "period": 38, "line": "c2162", "line_name": "Nepal Avalanche Kills 2, 12 Missing", "unsure": false, "window": "holdout"}
+{"story_id": 5539, "period": 38, "line": "c2103", "line_name": "Hurricane Polo intensifies to Cat 5 off Mexico", "unsure": false, "window": "holdout"}
+{"story_id": 5540, "period": 38, "line": "venezuela_prisoners", "line_name": "委内瑞拉释放政治犯", "unsure": false, "window": "holdout"}
+{"story_id": 5541, "period": 38, "line": "yemen_war", "line_name": "也门战争（胡塞 vs 沙特与政府军）", "unsure": false, "window": "holdout"}
+{"story_id": 5542, "period": 38, "line": "c2163", "line_name": "Detroit Strip Club Shooting", "unsure": false, "window": "holdout"}
+{"story_id": 5543, "period": 38, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5544, "period": 38, "line": "c2150", "line_name": "Nor'easter Storm Hits Northeast US", "unsure": false, "window": "holdout"}
+{"story_id": 5545, "period": 38, "line": "pope_france", "line_name": "教皇访法", "unsure": false, "window": "holdout"}
+{"story_id": 5546, "period": 38, "line": "gaza_war", "line_name": "加沙战争", "unsure": true, "window": "holdout"}
+{"story_id": 5547, "period": 38, "line": "us_china", "line_name": "中美关系（特习峰会）", "unsure": false, "window": "holdout"}
+{"story_id": 5548, "period": 38, "line": "west_bank", "line_name": "约旦河西岸定居点与国际制裁", "unsure": true, "window": "holdout"}
+{"story_id": 5549, "period": 38, "line": "c2136", "line_name": "Bangkok Floods: Disaster Declared, Thousands Evacuated", "unsure": false, "window": "holdout"}
+{"story_id": 5550, "period": 38, "line": "tigray", "line_name": "埃塞俄比亚提格雷战事", "unsure": false, "window": "holdout"}
+{"story_id": 5551, "period": 38, "line": "iran_war", "line_name": "美伊战争", "unsure": false, "window": "holdout"}

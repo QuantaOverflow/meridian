@@ -59,6 +59,9 @@ node eval/_data/check.mjs
 | `scorer-recall-v1` | judge | 15 | retired_intermediate | 语料已丢，只能读不能跑 |
 | `ctb-citation-support-v1` | judge | 60 | retired_intermediate | 29 pass / 31 fail，带完整对齐读数 |
 | `ctb-practice-risk-v1` | judge | 60 | raw_source | 练习集，不作验收 |
+| `story-threads-v1` | product | 888 故事 | retired_intermediate | 事件追踪线索归并；dev 已耗尽，holdout 看过错例 |
+| `story-threads-exam-v1` | product | 148 故事 | retired_intermediate | 同上的考卷（旧期），用过一次 |
+| `story-thread-pairs-v1` | judge | 56 对 | retired_intermediate | 「两故事该不该同线」难例；30 同 / 26 不同 |
 
 ## 不在这里的：cluster-to-brief 的 datasets/
 

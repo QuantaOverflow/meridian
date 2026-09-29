@@ -1,0 +1,24 @@
+{
+  "id": "story-thread-pairs-v1",
+  "version": 1,
+  "created": "2026-09-29",
+  "targetOf": "judge",
+  "split": "test",
+  "consumed": "用过一次（codex 与 glm-4.7-flash，2026-09-29）；样本小（56 对），误并率 ±1 对就过线/不过线",
+  "labels": "labels.jsonl",
+  "labelField": "gold",
+  "cases": 56,
+  "labelBalance": {
+    "same": 30,
+    "different": 26
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "evidence.jsonl",
+    "kind": "retired_intermediate",
+    "note": "单位是现行管线的 brief_stories；判定依据（标题、代表文章 URL、事件要点）可追到原文。"
+  },
+  "provenance": {
+    "labeledBy": "由 story-threads-v1 / story-threads-exam-v1 的金标派生（见 rubric.md 来历）"
+  }
+}

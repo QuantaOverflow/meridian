@@ -1,0 +1,36 @@
+{
+  "id": "story-threads-v1",
+  "version": 1,
+  "created": "2026-09-29",
+  "targetOf": "product",
+  "split": "dev",
+  "consumed": "已耗尽：第 1–19 期（窗口 dev）多轮调参；第 20–38 期（窗口 holdout）已被看过错例。整份不再是未见过的数据。",
+  "labels": "labels.jsonl",
+  "labelField": null,
+  "labelBalanceSource": "由 labels.jsonl 直接统计：故事数、故事线数、跨 ≥2 期的故事线数、unsure 故事数。单位是故事→故事线的归属（聚类），不是逐条分类，没有类别分布可对账。",
+  "cases": 888,
+  "labelBalance": {
+    "stories": 888,
+    "lines": 287,
+    "multi_period_lines": 112,
+    "unsure_stories": 42
+  },
+  "evidence": {
+    "mode": "snapshot",
+    "file": "evidence.jsonl",
+    "kind": "retired_intermediate",
+    "note": "单位 brief_stories 是现行管线的产物（上游聚类出的故事）；换故事切分方式后 story_id 失效，但判定依据（标题、代表文章 URL、事件要点）可追到原文。"
+  },
+  "window": [
+    "2026-08-13",
+    "2026-09-28"
+  ],
+  "provenance": {
+    "labeledBy": "Claude 按 rubric.md 的规则标注；用户裁决边界（见 rubric.md 裁决记录）",
+    "readings": "2026-09-29 读数见 docs/adr/0008-story-thread-grouping-threshold.md"
+  },
+  "windows": {
+    "dev": "第 1–19 期",
+    "holdout": "第 20–38 期（评测时仍要回放第 1–19 期作上下文：线索归并是在线的）"
+  }
+}

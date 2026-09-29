@@ -37,7 +37,10 @@ check ruff sh -c 'cd services/meridian-ml-service && uv run --frozen ruff check 
 if touched apps/backend/ || touched packages/; then
   check "backend 测试" pnpm -s -F @meridian/backend test
 fi
-if touched apps/frontend/; then
+# 前端测试回放 backend 的读接口快照，所以 backend 读接口这一侧（reader 查询、路由、fixture、它依赖的 schema）
+# 变了也要跑，否则 backend 单独改了响应形状时前端不会有人发现
+if touched apps/frontend/ || touched apps/backend/src/lib/reader/ || touched apps/backend/src/routers/reader.router.ts \
+  || touched apps/backend/src/routers/admin.ts || touched apps/backend/test/fixtures/reader/ || touched packages/database/; then
   check "frontend 测试" pnpm -s -F @meridian/frontend test
 fi
 if touched services/meridian-ai-worker/ || touched packages/; then

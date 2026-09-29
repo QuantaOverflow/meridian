@@ -1233,9 +1233,14 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       type WrittenBlock = {
         idx: number;
         clusterId: number | null;
-        /** 渲染用标题：继续用 story.title，与管理页/验收的对账口径不变 */
+        /**
+         * 渲染用标题：v6 照着自己写出的正文起的标题，空时退回 story.title（簇判定起的名字）。
+         * 2026-09-30 从 story.title 改过来：错误分析 8 期里 7 块「标题与正文对不上」，全因两者出自两步
+         * （簇判定只看标题、v6 读全文）；期内同事件合并之后块由几个簇合写，旧名字只代表最大那个簇。
+         * brief_stories.title（事件追踪等读者页在用）不变，仍是簇判定起的名字。
+         */
         blockTitle: string;
-        /** v6 自己起的块标题，只进观测，不进正文 */
+        /** v6 自己起的块标题原样（未退回），进观测 */
         v6Title: string;
         /** 真正喂进端点的篇数（R2 取到正文的那些） */
         articles: number;
@@ -1317,7 +1322,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             block: {
               idx,
               clusterId: typeof story.clusterId === 'number' ? story.clusterId : null,
-              blockTitle: String(story.title ?? ''),
+              blockTitle: String(v.block.title ?? '').trim() || String(story.title ?? ''),
               v6Title: String(v.block.title ?? ''),
               articles: withBody.length,
               // 分层（写作前）算出来的三元组，原样带下来——不要再按 withBody 重算，
@@ -1448,7 +1453,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                   clusterId: b.clusterId,
                   storyIdx: b.idx,
                   title: displayTitle(b.blockTitle),
-                  /** v6 自己起的标题，与上面那个渲染用标题并排存，便于回看两者差多少 */
+                  /** v6 自己起的标题原样；上面的 title 正常就是它（小写化），v6 没给标题时才是 story.title */
                   v6Title: b.v6Title,
                   tier: b.tier,
                   articles: b.articles,

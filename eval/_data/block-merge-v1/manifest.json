@@ -1,22 +1,31 @@
 {
   "id": "block-merge-v1",
-  "version": 1,
+  "version": 2,
   "created": "2026-09-29",
   "targetOf": "product",
   "split": "dev",
   "consumed": "2026-09-29 首次用于 apps/backend/prototypes/block-merge（期内一事多块的合并原型）。tune 4 期可看错例调参；check 4 期只看汇总数、每看一次留痕。",
   "labels": "labels.jsonl",
   "labelField": "kind",
-  "cases": 32,
+  "cases": 30,
   "labelBalance": {
-    "same": 10,
-    "boundary": 9,
+    "same": 17,
     "spill": 7,
     "tail": 6
   },
   "splits": {
-    "tune": [101, 103, 104, 105],
-    "check": [106, 108, 109, 110]
+    "tune": [
+      101,
+      103,
+      104,
+      105
+    ],
+    "check": [
+      106,
+      108,
+      109,
+      110
+    ]
   },
   "evidence": {
     "mode": "snapshot",
@@ -25,7 +34,7 @@
     "note": "单位是现行管线的入选故事（brief_stories.id）与 v6 写出的简报块（按句切好）。聚类或写作层一换，sid 与句号即失效；判定依据（块正文、成员文章标题与 URL）可追到原文。"
   },
   "provenance": {
-    "labeledBy": "第 109 期（2026-09-27）由用户在标注页亲标；其余 7 期由 Claude 按用户判据代标，用户未复核。boundary 9 对待用户裁决。",
+    "labeledBy": "第 109 期（2026-09-27）由用户在标注页亲标；其余 7 期由 Claude 按用户判据代标，用户未复核。v2（2026-09-30）：原 9 对 boundary 按用户 09-29 采纳的分组规则判掉——7 对并入 same，2 对（当事方不同）归为不同。",
     "periods": "2026-09-21 至 09-28 已发布的 8 期（report id 101、103–106、108–110），每期全部入选故事（共 195 块）",
     "readings": "错误分析读数见 memory brief-v6-error-analysis-2026-09；原型读数见 apps/backend/prototypes/block-merge/（仅本地）"
   }

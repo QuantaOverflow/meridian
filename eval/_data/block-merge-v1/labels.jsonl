@@ -1,20 +1,18 @@
 {"period": 101, "split": "tune", "kind": "same", "sids": [5223, 5221], "ns": [7, 8], "note": "胡塞对沙特升级：袭击利雅得"}
-{"period": 101, "split": "tune", "kind": "boundary", "sids": [5216, 5226], "ns": [2, 10], "note": "俄议会选举 vs 选举最后一天乌克兰无人机袭击莫斯科"}
+{"period": 101, "split": "tune", "kind": "same", "sids": [5216, 5226], "ns": [2, 10], "note": "俄议会选举 / 选举日乌克兰无人机袭莫斯科"}
 {"period": 101, "split": "tune", "kind": "spill", "from": 5221, "to": 5218, "sentences": [4], "ns": [8, 6], "note": "也门块结尾复述伊朗停战条件"}
-{"period": 103, "split": "tune", "kind": "boundary", "sids": [5298, 5302], "ns": [3, 4], "note": "也门战事升级 vs 英国为沙特战机空中加油（后果）"}
-{"period": 103, "split": "tune", "kind": "boundary", "sids": [5319, 5307], "ns": [9, 12], "note": "伊朗总统访联大 vs 特朗普联大讲话前瞻"}
-{"period": 103, "split": "tune", "kind": "boundary", "sids": [5306, 5307], "ns": [6, 12], "note": "联大开幕综述 vs 特朗普联大讲话前瞻"}
+{"period": 103, "split": "tune", "kind": "same", "sids": [5298, 5302], "ns": [3, 4], "note": "也门战事升级 / 英国为沙特加油（后果并进大事）"}
 {"period": 103, "split": "tune", "kind": "spill", "from": 5306, "to": 5308, "sentences": [4], "ns": [6, 18], "note": "联大综述结尾复述特朗普称 AI 担忧是骗局"}
 {"period": 103, "split": "tune", "kind": "spill", "from": 5307, "to": 5324, "sentences": [2], "ns": [12, 25], "note": "特朗普联大前瞻复述支持率民调"}
 {"period": 103, "split": "tune", "kind": "tail", "sid": 5310, "sentences": [3], "ns": [7], "note": "朝鲜导弹块结尾混入 DMZ 爆炸"}
 {"period": 103, "split": "tune", "kind": "tail", "sid": 5300, "sentences": [6], "ns": [2], "note": "结尾混入立陶宛撤离计划"}
 {"period": 104, "split": "tune", "kind": "same", "sids": [5331, 5334, 5340, 5352], "ns": [1, 9, 14, 20], "note": "特朗普在联大对伊朗：讲话威胁「消灭」+ 场边美伊会谈"}
 {"period": 104, "split": "tune", "kind": "same", "sids": [5337, 5347], "ns": [11, 18], "note": "白宫封杀 CNN 等三家媒体"}
-{"period": 104, "split": "tune", "kind": "boundary", "sids": [5338, 5367], "ns": [13, 25], "note": "特朗普—伯纳姆会面批评查戈斯协议 vs 英国暂停查戈斯付款（后果）"}
+{"period": 104, "split": "tune", "kind": "same", "sids": [5338, 5367], "ns": [13, 25], "note": "特朗普–伯纳姆会面批查戈斯 / 英国暂停查戈斯付款（后果）"}
 {"period": 104, "split": "tune", "kind": "spill", "from": 5335, "to": 5355, "sentences": [5], "ns": [4, 21], "note": "泽连斯基块复述欧盟解除两名寡头制裁"}
 {"period": 104, "split": "tune", "kind": "tail", "sid": 5335, "sentences": [6], "ns": [4], "note": "结尾混入基辅空袭"}
 {"period": 105, "split": "tune", "kind": "same", "sids": [5370, 5383, 5398], "ns": [1, 8, 23], "note": "习近平国事访问美国（抵达 / 峰会前瞻 / 中方确认行程）"}
-{"period": 105, "split": "tune", "kind": "boundary", "sids": [5377, 5389], "ns": [4, 9], "note": "泽连斯基在联大：与特朗普谈能源停火 vs 联大演讲"}
+{"period": 105, "split": "tune", "kind": "same", "sids": [5377, 5389], "ns": [4, 9], "note": "泽连斯基在联大：与特朗普谈能源停火 / 联大演讲（同一方）"}
 {"period": 105, "split": "tune", "kind": "spill", "from": 5377, "to": 5386, "sentences": [6], "ns": [4, 15], "note": "俄乌块结尾提到朝鲜战俘移交韩国"}
 {"period": 106, "split": "check", "kind": "same", "sids": [5407, 5409, 5411, 5430], "ns": [1, 13, 15, 19], "note": "习近平访美：峰会 / 国宴 / 欢迎仪式 / 赠熊猫"}
 {"period": 106, "split": "check", "kind": "same", "sids": [5408, 5414], "ns": [2, 8], "note": "内塔尼亚胡联大演讲 + 场外抗议"}
@@ -23,10 +21,10 @@
 {"period": 108, "split": "check", "kind": "tail", "sid": 5485, "sentences": [4], "ns": [8], "note": "结尾混入米科诺斯渡轮起火"}
 {"period": 109, "split": "check", "kind": "same", "sids": [5507, 5511], "ns": [13, 14], "note": "教宗访法：卢尔德 / 巴黎弥撒（用户标）"}
 {"period": 109, "split": "check", "kind": "same", "sids": [5520, 5526], "ns": [2, 3], "note": "俄乌同日两块：德俄会谈+空袭 / 空袭（用户标）"}
-{"period": 109, "split": "check", "kind": "boundary", "sids": [5509, 5517], "ns": [5, 16], "note": "南非酒吧枪击 vs 南非连环杀害女性案（用户认为同案，来源显示两案）"}
+{"period": 109, "split": "check", "kind": "same", "sids": [5509, 5517], "ns": [5, 16], "note": "南非：酒吧枪击 / 连环杀害女性案（同一方同类事）"}
 {"period": 109, "split": "check", "kind": "tail", "sid": 5514, "sentences": [4], "ns": [7], "note": "结尾混入国宴宾客、共和党批评与民调"}
 {"period": 110, "split": "check", "kind": "same", "sids": [5543, 5545], "ns": [17, 23], "note": "教宗访法：卢尔德会见受害者 / 梅斯收尾"}
-{"period": 110, "split": "check", "kind": "boundary", "sids": [5534, 5538], "ns": [12, 15], "note": "尼泊尔洪灾（块尾提到雪崩）vs 尼泊尔雪崩"}
-{"period": 110, "split": "check", "kind": "boundary", "sids": [5528, 5551], "ns": [1, 24], "note": "美伊：特朗普拒停火（含水下无人机）vs 伊朗称扣押美国水下无人机"}
+{"period": 110, "split": "check", "kind": "same", "sids": [5534, 5538], "ns": [12, 15], "note": "尼泊尔洪灾 / 尼泊尔雪崩（同一方同类事）"}
+{"period": 110, "split": "check", "kind": "same", "sids": [5528, 5551], "ns": [1, 24], "note": "美伊：拒停火 / 伊朗称扣押美国水下无人机（同一方同类事）"}
 {"period": 110, "split": "check", "kind": "spill", "from": 5534, "to": 5538, "sentences": [4], "ns": [12, 15], "note": "尼泊尔洪灾块结尾提到雪崩"}
 {"period": 110, "split": "check", "kind": "spill", "from": 5528, "to": 5551, "sentences": [5], "ns": [1, 24], "note": "美伊块复述水下无人机之争"}

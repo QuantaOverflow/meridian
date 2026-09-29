@@ -62,8 +62,14 @@ class WorkersAI:
         outs = llm.map(prompts, max_tokens=300)                     # 并发跑一批，保持顺序；失败的位置是异常对象
     """
 
-    def __init__(self, cache_dir=None, model=DEFAULT_MODEL, concurrency=DEFAULT_CONCURRENCY):
-        self.model, self.concurrency = model, concurrency
+    def __init__(self, cache_dir=None, model=DEFAULT_MODEL, concurrency=DEFAULT_CONCURRENCY, backend='local'):
+        """backend='local'：经本地 ai-worker（只放行生产白名单里的模型：glm-4.7-flash、qwen3-30b）。
+        backend='rest'：直连 Workers AI REST，任何本账号可用的模型都能试（2026-09-29 可用：gpt-oss-120b、
+        llama-3.3-70b-instruct-fp8-fast；kimi-k2 无权限）。需要环境变量 CF_ACCOUNT_ID、CF_API_TOKEN
+        （从 services/meridian-ai-worker/.dev.vars、apps/backend/.dev.vars 读进环境，不写文件、不打印）。"""
+        self.model, self.concurrency, self.backend = model, concurrency, backend
+        if cache_dir:
+            os.makedirs(cache_dir, exist_ok=True)  # 日志先于缓存写；目录不在会让成功的调用被当失败重试（09-29 白调 ~450 次）
         self.cache = _Cache(os.path.join(cache_dir, 'llm-cache.jsonl') if cache_dir else None)
         self.log_path = os.path.join(cache_dir, 'llm-calls.jsonl') if cache_dir else None
         self.lock = threading.Lock()
@@ -112,6 +118,8 @@ class WorkersAI:
             return list(ex.map(one, prompts))
 
     def _post(self, prompt, max_tokens, temperature):
+        if self.backend == 'rest':
+            return self._post_rest(prompt, max_tokens, temperature)
         body = json.dumps({'messages': [{'role': 'user', 'content': prompt}],
                            'options': {'model': self.model, 'temperature': temperature, 'max_tokens': max_tokens}}).encode()
         req = urllib.request.Request(AI_WORKER_URL, data=body, headers={'content-type': 'application/json'})
@@ -123,6 +131,24 @@ class WorkersAI:
         # 关 thinking 后正文落哪个字段各家不同（glm 在 content，qwen3 在 reasoning_content）
         msg = ch['message']
         return msg.get('content') or msg.get('reasoning_content') or '', ch.get('finish_reason')
+
+
+    def _post_rest(self, prompt, max_tokens, temperature):
+        acct, tok = os.environ.get('CF_ACCOUNT_ID'), os.environ.get('CF_API_TOKEN')
+        if not acct or not tok:
+            raise SystemExit('backend=rest 需要环境变量 CF_ACCOUNT_ID、CF_API_TOKEN')
+        body = json.dumps({'messages': [{'role': 'user', 'content': prompt}],
+                           'max_tokens': max_tokens, 'temperature': temperature}).encode()
+        req = urllib.request.Request(f'https://api.cloudflare.com/client/v4/accounts/{acct}/ai/run/{self.model}', data=body,
+                                     headers={'Authorization': f'Bearer {tok}', 'content-type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            d = json.loads(r.read())
+        res = d.get('result') or {}
+        if 'choices' in res:
+            ch = res['choices'][0]
+            return ch['message'].get('content') or '', ch.get('finish_reason')
+        resp = res.get('response')
+        return (resp if isinstance(resp, str) else json.dumps(resp, ensure_ascii=False)), None
 
 
 class Codex:

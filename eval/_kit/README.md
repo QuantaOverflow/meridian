@@ -18,8 +18,11 @@ Python，无第三方依赖。用法：`sys.path.insert(0, '<仓库>/eval/_kit')
 ## 模块
 
 - `llm.py`
-  - `WorkersAI(cache_dir, model, concurrency=16)`：按 prompt 缓存、重试、截断/复读检测；`.map()` 并发跑一批。
+  - `WorkersAI(cache_dir, model, concurrency=16, backend='local')`：按 prompt 缓存、重试、截断/复读检测；`.map()` 并发跑一批。
     实测（2026-09-29，短输出）：并发 4 → 5 次/秒，16 → 19 次/秒，32 → 26 次/秒，零失败。
+    `backend='local'` 经本地 ai-worker，只放行生产白名单模型（glm-4.7-flash、qwen3-30b）；
+    `backend='rest'` 直连 Workers AI REST，可试其他模型（可用：gpt-oss-120b、llama-3.3-70b-instruct-fp8-fast），
+    需要环境变量 `CF_ACCOUNT_ID`、`CF_API_TOKEN`（从两个 `.dev.vars` 读进环境，别写文件）。REST 并发 8 实测正常。
   - `Codex(cache_dir, model=None, concurrency=2)`：本地 `codex exec` 只读沙箱 + JSON schema。单次 20–80 秒；并发 6 会连续超时。开发期判官，生产不可用。
 - `data.py`
   - `load_gold(set_id)` / `load_evidence(set_id)`：读 `eval/_data/<set>/` 的标签与证据快照。

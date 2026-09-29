@@ -790,6 +790,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         judgeTitleCapped: number;
         sameEventMerges: number;
         sameEventMergeList: SameEventMerge[];
+        noCentroidBlocks: number;
       }> => {
         // 整步重跑留痕：2026-09-03 真实 workflow 实测这一步执行了两遍（每个簇的日志都出现两次），
         // 原因未查明。step.do 不暴露 attempt 序号，故用进入时刻区分两次执行。
@@ -901,7 +902,13 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           centroidOf: (b) => meanEmbedding(b.ids, embeddingOf),
         });
         stories.push(...blocks);
-        const { cappedBlocks, droppedArticles, sameEventMerges, merges: sameEventMergeList } = asmStats;
+        const { cappedBlocks, droppedArticles, sameEventMerges, merges: sameEventMergeList, noCentroidBlocks } = asmStats;
+        if (noCentroidBlocks > 0) {
+          // 进聚类的文章都有 embedding，正常为 0。非 0 = embedding 没读回来（R2 失败或 datasets/ 已过期），
+          // 这些块没参与同事件合并，读者会重新看到一事多块。
+          log.error(`[AutoBrief] 同事件合并：${noCentroidBlocks}/${blocks.length} 块没有质心、未参与合并` +
+              `（dataset.embeddings ${dataset.embeddings.length} 条）。本次 run 记 DEGRADED。`);
+        }
 
         log.info(`[AutoBrief] 簇判定完成：${stories.length} 块（判定调用 ${judgeCalls} 次，判定失败退化 ${judgeFailures} 簇，` +
             `判为 NO_EVENT ${pocketFlagged} 簇、UNSURE ${unsureClusters} 簇（均只标记不丢弃），` +
@@ -915,7 +922,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         // 不拒绝整簇：整簇拒绝随 story-validation 一起退役，垃圾簇由选择层的
         // 显著性排序自然沉底（源数少、篇数少 → blockScore 低）。
         return { stories, judgeCalls, judgeFailures, pocketFlagged, unsureClusters,
-          cappedBlocks, droppedArticles, judgeTitleCapped, sameEventMerges, sameEventMergeList };
+          cappedBlocks, droppedArticles, judgeTitleCapped, sameEventMerges, sameEventMergeList, noCentroidBlocks };
       });
 
       // NO_EVENT 率断言。簇判定大面积判「不是单一事件」是上游退化的可判别信号，
@@ -939,7 +946,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             `（先核 ml-service 版本与聚类参数，再看本次 R2 observability 的簇篇数分布）。本次 run 记 DEGRADED。`);
       }
 
-      await observability.logStep('story_validation', noEventRateDegraded ? 'degraded' : 'completed', {
+      await observability.logStep('story_validation', noEventRateDegraded || validatedStories.noCentroidBlocks > 0 ? 'degraded' : 'completed', {
         noEventRate: Number(noEventRate.toFixed(4)),
         noEventRateThreshold: NO_EVENT_RATE_ALERT,
         validStoriesCount: validatedStories.stories.length,
@@ -952,6 +959,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         droppedArticles: validatedStories.droppedArticles,
         sameEventMerges: validatedStories.sameEventMerges,
         sameEventMergeList: validatedStories.sameEventMergeList,
+        noCentroidBlocks: validatedStories.noCentroidBlocks,
         stories: validatedStories.stories,
       });
 
@@ -1583,6 +1591,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         ...(blockFailures.length > 0 ? [`块生成失败 ${blockFailures.length} 个（选中 ${storiesForIntelligence.length}）`] : []),
         ...(noEventRateDegraded
           ? [`NO_EVENT 率 ${(noEventRate * 100).toFixed(1)}%（${validatedStories.pocketFlagged}/${validatedStories.judgeCalls}）超阈值 ${(NO_EVENT_RATE_ALERT * 100).toFixed(0)}%`]
+          : []),
+        ...(validatedStories.noCentroidBlocks > 0
+          ? [`同事件合并缺质心 ${validatedStories.noCentroidBlocks} 块（embedding 没读回，这些块没参与合并）`]
           : []),
         // ml 镜像身份：missing = 跑的是旧镜像（2026-09-15~19 连续五天跑旧算法、status 全程 COMPLETED
         // 的那种）。not_injected 是本地直起服务（replay 即此），不算降级。

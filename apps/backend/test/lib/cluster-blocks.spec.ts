@@ -278,11 +278,24 @@ describe('mergeSameEventBlocks', () => {
   it('质心为 null 的块不参与合并，原样保留在原位置', () => {
     const all = [blk(1, 2), blk(2, 2), blk(3, 2)];
     // 3 没有质心：哪怕 1、2 合并了，3 也原样留着
-    const { blocks, merges } = run(all, { 1: 0, 2: 0, 3: null });
+    const { blocks, merges, noCentroid } = run(all, { 1: 0, 2: 0, 3: null });
     expect(blocks).toHaveLength(2);
     expect(blocks[1]).toEqual(all[2]);
     expect(merges).toHaveLength(1);
     expect(merges[0].members.map((m) => m.clusterId)).toEqual([1, 2]);
+    expect(noCentroid).toBe(1);
+  });
+
+  it('没质心的块数要报出来：embedding 全没读回时合并会整期失效，不能静默', () => {
+    const all = [blk(1, 2), blk(2, 2)];
+    const { blocks, stats } = assembleBlocks(all, {
+      publishedAt: new Map(),
+      distinctSources: (ids) => ids.length,
+      centroidOf: () => null,
+    });
+    expect(blocks).toHaveLength(2);
+    expect(stats.sameEventMerges).toBe(0);
+    expect(stats.noCentroidBlocks).toBe(2);
   });
 
   it('没有可合的：原样返回、顺序不变', () => {

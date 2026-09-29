@@ -994,7 +994,8 @@
         "cappedBlocks": 0,
         "droppedArticles": 0,
         "sameEventMerges": 0,
-        "merges": []
+        "merges": [],
+        "noCentroidBlocks": 39
       }
     }
   },
@@ -1172,7 +1173,8 @@
               0.97
             ]
           }
-        ]
+        ],
+        "noCentroidBlocks": 0
       }
     },
     "oversize": {
@@ -1253,7 +1255,8 @@
               1
             ]
           }
-        ]
+        ],
+        "noCentroidBlocks": 1
       }
     },
     "oversizeCap10": {
@@ -1314,7 +1317,8 @@
               1
             ]
           }
-        ]
+        ],
+        "noCentroidBlocks": 1
       }
     }
   }

@@ -152,7 +152,7 @@ export function meanEmbedding(ids: number[], embeddingOf: ReadonlyMap<number, nu
 export function mergeSameEventBlocks(
   pending: PendingBlock[],
   centroidOf: (block: PendingBlock) => number[] | null
-): { blocks: PendingBlock[]; merges: SameEventMerge[] } {
+): { blocks: PendingBlock[]; merges: SameEventMerge[]; noCentroid: number } {
   const canon = (a: PendingBlock, b: PendingBlock) => a.clusterId - b.clusterId || (a.ids[0] ?? 0) - (b.ids[0] ?? 0);
   const withC = pending
     .map((block) => ({ block, c: centroidOf(block) }))
@@ -219,7 +219,7 @@ export function mergeSameEventBlocks(
     if (!replaced.has(b)) blocks.push(b);
     else if (replaced.get(b)) blocks.push(replaced.get(b)!);
   }
-  return { blocks, merges };
+  return { blocks, merges, noCentroid: pending.length - n };
 }
 
 export interface StoryBlock {
@@ -241,6 +241,11 @@ export interface AssembleStats {
   sameEventMerges: number;
   /** 同事件合并清单：各成员标题与余弦 */
   merges: SameEventMerge[];
+  /**
+   * 没有质心、没参与合并的块数。正常为 0（进聚类的文章都有 embedding）；
+   * 非 0 说明 embedding 没读回来，同事件合并对这些块静默失效。
+   */
+  noCentroidBlocks: number;
 }
 
 /**
@@ -263,12 +268,13 @@ export function assembleBlocks(
   }
 ): { blocks: StoryBlock[]; stats: AssembleStats } {
   const cap = deps.cap ?? DEFAULT_ARTICLE_CAP;
-  const { blocks: merged, merges } = mergeSameEventBlocks(pending, deps.centroidOf);
+  const { blocks: merged, merges, noCentroid } = mergeSameEventBlocks(pending, deps.centroidOf);
   const stats: AssembleStats = {
     cappedBlocks: 0,
     droppedArticles: 0,
     sameEventMerges: merges.reduce((n, m) => n + m.members.length - 1, 0),
     merges,
+    noCentroidBlocks: noCentroid,
   };
 
   const blocks = merged.map((b): StoryBlock => {

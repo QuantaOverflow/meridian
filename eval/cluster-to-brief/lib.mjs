@@ -23,7 +23,7 @@ export function splitSentences(text) {
   let t = text;
   t = t.replace(new RegExp(`\\b(${ABBREVIATIONS.join('|')})\\.`, 'g'), (_, w) => `${w}${PLACEHOLDER}`);
   t = t.replace(/\b([A-Z])\./g, (_, c) => `${c}${PLACEHOLDER}`);
-  t = t.replace(/([.!?]+)(\s*)(?=["'“‘]?[A-Z])/g, (_, punct, ws) => `${punct}${ws}${SPLIT}`);
+  t = t.replace(/([.!?]+["'”’]*)(\s*)(?=["'“‘]?[A-Z])/g, (_, punct, ws) => `${punct}${ws}${SPLIT}`);
   return t
     .split(SPLIT)
     .map(s => s.replace(new RegExp(PLACEHOLDER, 'g'), '.').replace(/\s+/g, ' ').trim())

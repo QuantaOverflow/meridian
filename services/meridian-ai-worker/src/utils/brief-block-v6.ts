@@ -334,9 +334,36 @@ function normQuote(s: unknown): string {
     .trim();
 }
 
+// ── 实词覆盖（补出处第三轮用）─────────────────────────────────────
+const STOPWORDS = new Set(
+  ('the and for that with was were has have had this from are but not his her its their they them been will would ' +
+    'said says say also after before over into about than more most some such who what when where which while other ' +
+    'there these those being because could should including against between during under amid since then only just ' +
+    'very told according percent').split(' ')
+);
+
+/** 句中实词：小写、≥3 字母、去停用词、粗剥 -ing/-ed/-es/-s。只用来比「覆盖了多少」，不求语言学准确。 */
+function contentWords(text: unknown): Set<string> {
+  return new Set(
+    (String(text ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [])
+      .filter(w => w.length >= 3 && !STOPWORDS.has(w))
+      .map(w => w.replace(/(ing|ed|es|s)$/, ''))
+  );
+}
+
+/** 所引原句缺 ≥ 这么多实词才去补 */
+const REPAIR_MIN_UNCOVERED = 2;
+/** 候选原句至少覆盖这么多缺失实词才补 */
+const REPAIR_MIN_GAIN = 3;
+
 /**
  * 补出处：句中的数字/引语不在所引原句里，就在材料池里找**字面包含**它的原句补进 sources。
  * 只补不删、只认字面包含，所以不会把出处改错；找不到就原样留着，由快档报读数。
+ *
+ * 第三轮补实词：句中 ≥2 个实词不在所引原句里，就补**一条**覆盖其中 ≥3 个的池内原句。
+ * 2026-09-30 事实核对：「出处挂错」的正确原句 30/35 条就在材料池里，是模型指偏了；
+ * 这组门槛在 100 块上补回 30/48 条，干净句里被补的约八成补的正是原出处漏掉的部分
+ * （探测脚本在会话 scratchpad，未入库）。
  */
 export function repairCitations(
   sentences: V6Sentence[],
@@ -367,6 +394,27 @@ export function repairCitations(
       const hit = pool.find(r => normQuote(sentenceOf(table, r.articleId, r.sentence) ?? '').includes(normQuote(q)));
       if (hit) {
         sources.push(hit);
+        added++;
+      }
+    }
+    const covered = contentWords(have());
+    const uncovered = [...contentWords(s.text)].filter(w => !covered.has(w));
+    if (uncovered.length >= REPAIR_MIN_UNCOVERED) {
+      const key = (r: V6Source) => `${r.articleId}:${r.sentence}`;
+      const cited = new Set(sources.map(key));
+      let best: V6Source | undefined;
+      let bestGain = 0;
+      for (const r of pool) {
+        if (cited.has(key(r))) continue;
+        const words = contentWords(sentenceOf(table, r.articleId, r.sentence));
+        const gain = uncovered.filter(w => words.has(w)).length;
+        if (gain > bestGain) {
+          best = r;
+          bestGain = gain;
+        }
+      }
+      if (best && bestGain >= REPAIR_MIN_GAIN) {
+        sources.push(best);
         added++;
       }
     }

@@ -60,14 +60,14 @@ export interface RenderBlock {
 
 /**
  * 三节 markdown。块按传入顺序渲染（= 分层顺序），空节不出现——留一个空标题比少一节更糟。
- * 标题小写是本简报的 house style。
+ * 标题原样保留大小写（2026-10-01 取消了「标题全小写」的 house style：它把 US / AI / OpenAI 这类缩写和专名吃坏）。
  */
 export function renderBriefV3(blocks: RenderBlock[]): { content: string; sections: number } {
   const parts: string[] = [];
   for (const tier of TIERS) {
     const inTier = blocks.filter(b => b.tier === tier && b.text.trim());
     if (!inTier.length) continue;
-    const items = inTier.map(b => `<u>**${b.title.trim().toLowerCase()}**</u>\n${b.text.trim()}`);
+    const items = inTier.map(b => `<u>**${b.title.trim()}**</u>\n${b.text.trim()}`);
     parts.push(`## ${SECTION_HEADINGS[tier]}\n\n${items.join('\n\n')}`);
   }
   return { content: parts.join('\n\n'), sections: parts.length };

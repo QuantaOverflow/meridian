@@ -195,12 +195,12 @@ export const GOLDEN_CASES: Record<string, () => unknown> = {
     const tiersMech = assignTiers(mech.ledger.tierInputs());
     const tiersLlm = assignTiers(llm.ledger.tierInputs(), { preserveOrder: true });
 
-    // 渲染输入与 workflow 同口径：按分层顺序、标题小写后传入。第 3 块正文为空白，应被跳过。
+    // 渲染输入与 workflow 同口径：按分层顺序、标题去首尾空白后传入。第 3 块正文为空白，应被跳过。
     const renderInput = (sel: StoryBlock[], plan: typeof tiersMech) =>
       plan.map((p, k) => {
         const s = sel[p.idx];
         return {
-          title: s.title.trim().toLowerCase(),
+          title: s.title.trim(),
           text: k === 2 ? '   ' : `  Placeholder for "${s.title}": ${p.articles} articles, ${p.sources} sources.\n`,
           tier: p.tier,
         };

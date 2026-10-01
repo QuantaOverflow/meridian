@@ -1418,9 +1418,9 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         retries: { limit: 1, delay: '5 seconds', backoff: 'linear' },
         timeout: '10 minutes',
       };
-      // 条目标题小写是本简报的 house style（renderBriefV3 里做）。记录里存的必须是**读者看到的那个**，
+      // 记录里存的标题必须是**读者看到的那个**（与 renderBriefV3 同口径：原样保留大小写，只去首尾空白），
       // 否则管理页/验收拿记录去对正文会对不上（2026-09-12 M3 就挂在这里）。
-      const displayTitle = (t: string) => t.trim().toLowerCase();
+      const displayTitle = (t: string) => t.trim();
       const rendered = renderBriefV3(
         tiered.map((b) => ({ title: displayTitle(b.blockTitle), text: b.text, tier: b.tier }))
       );
@@ -1453,7 +1453,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                   clusterId: b.clusterId,
                   storyIdx: b.idx,
                   title: displayTitle(b.blockTitle),
-                  /** v6 自己起的标题原样；上面的 title 正常就是它（小写化），v6 没给标题时才是 story.title */
+                  /** v6 自己起的标题原样；上面的 title 正常就是它，v6 没给标题时才是 story.title */
                   v6Title: b.v6Title,
                   tier: b.tier,
                   articles: b.articles,

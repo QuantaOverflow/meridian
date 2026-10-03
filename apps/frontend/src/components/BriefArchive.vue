@@ -59,7 +59,7 @@ async function loadMore() {
 
 const subtitle = computed(() => {
   if (data.value === null) return '';
-  const coverage = data.value.earliestDateCN === null ? '' : ` · 覆盖 ${data.value.earliestDateCN}至今`;
+  const coverage = data.value.earliestDateLabel === null ? '' : ` · 覆盖 ${data.value.earliestDateLabel}至今`;
   return `${data.value.total} 期${coverage}`;
 });
 </script>
@@ -108,7 +108,7 @@ const subtitle = computed(() => {
       <li v-for="brief in items" :key="brief.id" class="border-rule-soft border-b">
         <NuxtLink :to="`/briefs/${brief.slug}`" class="group block py-7">
           <p class="mb-[9px] text-[12.5px] text-ink3">
-            {{ brief.dateShortCN }} · 第 {{ brief.id }} 期 · {{ brief.storyCount }} 条 ·
+            {{ brief.dateShortLabel }} · 第 {{ brief.id }} 期 · {{ brief.storyCount }} 条 ·
             {{ brief.readingMinutes }} 分钟
           </p>
 

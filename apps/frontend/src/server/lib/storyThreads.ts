@@ -47,11 +47,11 @@ export async function getStoryThread(id: number): Promise<StoryThreadDetail> {
   const thread = await readFromBackend<BackendStoryThreadDetail>(`/reader/stories/${id}`, 'Story thread not found');
   return {
     ...toSummary(thread),
-    firstSeenCN: formatReportDateCN(ensureDate(thread.firstSeenAt)),
-    lastSeenCN: formatReportDateCN(ensureDate(thread.lastSeenAt)),
+    firstSeenLabel: formatReportDateCN(ensureDate(thread.firstSeenAt)),
+    lastSeenLabel: formatReportDateCN(ensureDate(thread.lastSeenAt)),
     entries: thread.entries.map(entry => ({
       id: entry.id,
-      dateShortCN: formatReportDateShortCN(ensureDate(entry.createdAt)),
+      dateShortLabel: formatReportDateShortCN(ensureDate(entry.createdAt)),
       title: entry.title,
       description: entry.description,
       briefSlug: String(entry.reportId),

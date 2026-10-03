@@ -26,7 +26,7 @@ export async function loadBriefDetail(
     slug: String(report.id),
     title: report.title,
     createdAt,
-    dateCN: formatReportDateCN(createdAt),
+    dateLabel: formatReportDateCN(createdAt),
     tldrProse: report.tldrProse === null ? null : stripInlineMarkdown(report.tldrProse),
     sections: parsed.sections,
     storyCount: parsed.storyCount,

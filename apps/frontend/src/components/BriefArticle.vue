@@ -53,7 +53,7 @@ const showAllArticles = ref(false);
         <div
           class="border-rule-soft mb-[42px] flex flex-wrap gap-[11px] border-b pb-5 text-[13.5px] text-ink3"
         >
-          <span>{{ brief.dateCN }}</span>
+          <span>{{ brief.dateLabel }}</span>
           <span aria-hidden="true">·</span>
           <span>{{ brief.storyCount }} 条事件</span>
           <span aria-hidden="true">·</span>

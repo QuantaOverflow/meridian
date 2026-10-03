@@ -11,7 +11,7 @@ export function useBriefSeo(brief: Ref<BriefDetail | null | undefined>) {
   const origin = useRequestURL().origin;
 
   const summary = computed(() =>
-    brief.value ? (brief.value.tldrProse ?? `${brief.value.dateCN}的每日情报简报`) : '每日情报简报'
+    brief.value ? (brief.value.tldrProse ?? `${brief.value.dateLabel}的每日情报简报`) : '每日情报简报'
   );
 
   useSeoMeta({

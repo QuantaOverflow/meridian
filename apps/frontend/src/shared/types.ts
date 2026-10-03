@@ -9,7 +9,7 @@ export interface BriefDetail {
   title: string;
   createdAt: Date;
   /** 「2026 年 8 月 25 日」 */
-  dateCN: string;
+  dateLabel: string;
   /** 面向读者的散文摘要；历史期在回填前为 null */
   tldrProse: string | null;
   sections: BriefSection[];
@@ -27,7 +27,7 @@ export interface BriefSummary {
   slug: string;
   title: string;
   /** 「8 月 25 日」 */
-  dateShortCN: string;
+  dateShortLabel: string;
   excerpt: string | null;
   storyCount: number;
   readingMinutes: number;
@@ -42,7 +42,7 @@ export interface BriefListResponse {
   /** 全部期数，与检索条件无关，用于副标题 */
   total: number;
   /** 最早一期的日期，用于副标题「覆盖 X 至今」 */
-  earliestDateCN: string | null;
+  earliestDateLabel: string | null;
 }
 
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */
@@ -65,7 +65,7 @@ export interface StoryThreadSummary {
 
 interface StoryThreadEntry {
   id: number;
-  dateShortCN: string;
+  dateShortLabel: string;
   title: string;
   description: string;
   briefSlug: string;
@@ -75,8 +75,8 @@ interface StoryThreadEntry {
 }
 
 export interface StoryThreadDetail extends StoryThreadSummary {
-  firstSeenCN: string;
-  lastSeenCN: string;
+  firstSeenLabel: string;
+  lastSeenLabel: string;
   entries: StoryThreadEntry[];
 }
 

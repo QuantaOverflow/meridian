@@ -34,7 +34,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
     </p>
 
     <p class="border-rule-soft mb-11 border-b pb-7 text-[13px] text-ink3">
-      首次出现 {{ thread.firstSeenCN }} · 最近更新 {{ thread.lastSeenCN }} · {{ thread.entryCount }} 条记录 ·
+      首次出现 {{ thread.firstSeenLabel }} · 最近更新 {{ thread.lastSeenLabel }} · {{ thread.entryCount }} 条记录 ·
       {{ thread.briefCount }} 期简报
     </p>
 
@@ -51,7 +51,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
           aria-hidden="true"
         />
 
-        <time class="pt-[6px] text-[12.5px] text-ink3">{{ entry.dateShortCN }}</time>
+        <time class="pt-[6px] text-[12.5px] text-ink3">{{ entry.dateShortLabel }}</time>
 
         <!-- 存疑条目：当天识别出来但没进简报。整块套引文块样式，标题降级 -->
         <div v-if="entry.disputed" class="bg-quote border-rule border-l-2 px-5 py-4">

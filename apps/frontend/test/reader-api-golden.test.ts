@@ -88,6 +88,7 @@ const READER_CASES: Record<string, string> = {
   'brief-2-artifacts': '/api/briefs/2',
   'brief-404': '/api/briefs/999',
   'brief-invalid-slug': '/api/briefs/abc',
+  'brief-8-map': '/api/briefs/8/map',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',

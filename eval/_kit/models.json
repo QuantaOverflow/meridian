@@ -1,0 +1,69 @@
+{
+  "note": "Workers AI models for development and debugging, checked before every call by eval/_kit/llm.py (backend=rest) and the writer-faithfulness prototype. Set 2026-10-04 from the Cloudflare model catalog and pricing page plus our own readings (the sentence-check agent on dev-1 / dev-2). Tiers: dev = the default for iteration; cheap-weak = fast and cheap, judgement too weak to check a sentence alone, keep for narrow sub-tasks; paid-cheap = cheap but a paid model, 20 requests/min per model; core = expensive, only for core capability nodes, needs ALLOW_CORE=1; production = what production calls today, fine for replaying production steps, not as an agent; blocked = refused. A model not listed needs ALLOW_UNLISTED=1 (qualification runs only). price = USD per million tokens [input, cached input, output].",
+  "models": {
+    "@cf/qwen/qwen3.8-27b": {
+      "tier": "dev",
+      "rpm": 300,
+      "price": [0.45, null, 3.2],
+      "measured": "sentence check v2, text protocol: dev-1 26/32 caught, 0-2/40 false alarms; dev-2 25/28, 1/26; $0.009 and 50 s per sentence"
+    },
+    "@cf/google/gemma-4-26b-a4b-it": {
+      "tier": "cheap-weak",
+      "rpm": 300,
+      "price": [0.1, 0.05, 0.3],
+      "measured": "native tool calling only (the text protocol degenerates at step 2); v2: dev-1 12/32, 2/40; dev-2 15/28, 0/26; $0.001 and 8 s per sentence"
+    },
+    "@cf/openai/gpt-oss-20b": {
+      "tier": "cheap-weak",
+      "rpm": 300,
+      "price": [0.2, null, 0.3],
+      "measured": "native tool calling only (text replies land in the reasoning field); v2: dev-1 11/32, 2/40; dev-2 17/28, 1/26; $0.002 per sentence"
+    },
+    "@cf/openai/gpt-oss-120b": {
+      "tier": "cheap-weak",
+      "rpm": 300,
+      "price": [0.35, null, 0.75],
+      "measured": "native tool calling only; v2: dev-1 17/32, 1/40; dev-2 15/28, 1/26; $0.004-0.006 per sentence"
+    },
+    "@cf/deepseek-ai/deepseek-v4-flash-0731": {
+      "tier": "paid-cheap",
+      "rpm": 20,
+      "price": [0.44, 0.014, 1.32],
+      "measured": "v2: dev-1 26/32, 2/40; dev-2 21/28, 1/26; $0.003 per sentence, about 75 s under the 20/min limit"
+    },
+    "@cf/zai-org/glm-5.3-flash": {
+      "tier": "paid-cheap",
+      "rpm": 20,
+      "price": [0.15, 0.03, 0.5],
+      "measured": "v1: dev-1 25/32, 1/40; dev-2 22/28, 0/26; $0.008 and about 140 s per sentence"
+    },
+    "@cf/deepseek-ai/deepseek-v4-pro-0813": {
+      "tier": "core",
+      "rpm": 20,
+      "price": [1.32, 0.044, 3.96],
+      "measured": "v2: dev-1 32/32, 2/40; dev-2 26/28, 1/26; $0.018-0.020 per sentence; best writer on the holdout (8/135 distorted sentences vs 17 for glm-4.7-flash)"
+    },
+    "@cf/zai-org/glm-5.3": { "tier": "core", "rpm": 20, "price": [1.4, 0.26, 4.4], "measured": "not tested" },
+    "@cf/zai-org/glm-5.2": { "tier": "core", "rpm": 20, "price": [1.4, 0.26, 4.4], "measured": "not tested" },
+    "@cf/moonshotai/kimi-k2.6": { "tier": "core", "rpm": 20, "price": [0.95, 0.16, 4.0], "measured": "wrote 28/30 dev blocks in an early round, not judged" },
+    "@cf/moonshotai/kimi-k2.7-code": { "tier": "core", "rpm": 20, "price": [0.95, 0.19, 4.0], "measured": "not tested" },
+    "@cf/zai-org/glm-4.7-flash": {
+      "tier": "production",
+      "rpm": 300,
+      "price": [0.06, null, 0.4],
+      "measured": "production anchors and write step; as an agent it repeats one lookup until the step budget runs out, with the text protocol and with native tool calls (v1: dev-1 10/32, dev-2 13/28)"
+    },
+    "@cf/qwen/qwen3-30b-a3b-fp8": {
+      "tier": "production",
+      "rpm": 300,
+      "price": [0.051, null, 0.335],
+      "measured": "production article analysis; 32k context; with thinking off the reply lands in reasoning_content; returned no tool call in the 2026-10-04 probe"
+    },
+    "@cf/nvidia/nemotron-3-120b-a12b": {
+      "tier": "blocked",
+      "rpm": 300,
+      "price": [0.5, null, 1.5],
+      "measured": "sentence check v1: dev-1 10/32, dev-2 13/28; v2 dev-2 5/26 false alarms; costs as much as qwen3.8"
+    }
+  }
+}

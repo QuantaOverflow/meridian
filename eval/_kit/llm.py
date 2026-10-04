@@ -11,6 +11,7 @@ import hashlib, json, os, re, subprocess, tempfile, threading, time, urllib.requ
 from concurrent.futures import ThreadPoolExecutor
 
 AI_WORKER_URL = os.environ.get('AI_WORKER_URL', 'http://localhost:8787/meridian/chat')
+MODELS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.json')
 DEFAULT_MODEL = '@cf/zai-org/glm-4.7-flash'
 # 2026-09-29 实测（短输出、48 次）：并发 4 → 5/s，16 → 19/s，32 → 26/s，零失败。长输出另测。
 DEFAULT_CONCURRENCY = 16
@@ -31,6 +32,20 @@ def repetitive(text):
         return False
     segs = [text[i:i + 20] for i in range(0, len(text) - 20, 10)]
     return any(segs.count(s) >= 5 for s in set(segs))
+
+
+def check_model(model):
+    """开发调试的模型白名单（同目录 models.json，档位说明见其 note）：blocked 直接拒绝；core 档（贵，只给核心节点）
+    要 ALLOW_CORE=1；名单外的模型要 ALLOW_UNLISTED=1（只用于资格测试）。原型 writer-faithfulness 的 lib.mts 读同一份文件。"""
+    entry = json.load(open(MODELS_FILE))['models'].get(model)
+    if entry is None:
+        if os.environ.get('ALLOW_UNLISTED') != '1':
+            raise SystemExit(f'{model} 不在 eval/_kit/models.json 白名单里；资格测试请设 ALLOW_UNLISTED=1')
+        return
+    if entry['tier'] == 'blocked':
+        raise SystemExit(f'{model} 在 eval/_kit/models.json 里是 blocked：{entry.get("measured", "")}')
+    if entry['tier'] == 'core' and os.environ.get('ALLOW_CORE') != '1':
+        raise SystemExit(f'{model} 是 core 档（贵，只给核心节点）；确要用请设 ALLOW_CORE=1')
 
 
 class _Cache:
@@ -68,6 +83,8 @@ class WorkersAI:
         llama-3.3-70b-instruct-fp8-fast；kimi-k2 无权限）。需要环境变量 CF_ACCOUNT_ID、CF_API_TOKEN
         （从 services/meridian-ai-worker/.dev.vars、apps/backend/.dev.vars 读进环境，不写文件、不打印）。"""
         self.model, self.concurrency, self.backend = model, concurrency, backend
+        if backend == 'rest':
+            check_model(model)  # local 后端由 ai-worker 只放行生产模型，不用再查
         if cache_dir:
             os.makedirs(cache_dir, exist_ok=True)  # 日志先于缓存写；目录不在会让成功的调用被当失败重试（09-29 白调 ~450 次）
         self.cache = _Cache(os.path.join(cache_dir, 'llm-cache.jsonl') if cache_dir else None)

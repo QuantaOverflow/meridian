@@ -15,6 +15,14 @@ Python，无第三方依赖。用法：`sys.path.insert(0, '<仓库>/eval/_kit')
 | 生产库（`data.fetch_centroids` / `dump_published_stories`） | 环境变量 `DATABASE_URL`（Neon 连接串，只放环境变量，不写文件） |
 | R2 正文（`data.fetch_r2_texts`） | `npx wrangler login` |
 
+## 模型白名单（`models.json`）
+
+开发调试能用哪些 Workers AI 模型、各在哪一档，写在 `models.json`（2026-10-04 定，依据 Cloudflare 模型目录、定价页和我们的实测）。
+`llm.WorkersAI(backend='rest')` 构造时调 `check_model()` 检查：`blocked` 拒绝；`core` 档（贵，只给核心节点）要 `ALLOW_CORE=1`；
+名单外的模型要 `ALLOW_UNLISTED=1`，只用于资格测试。原型 `writer-faithfulness/lib.mts` 读同一份文件、做同样的检查。
+付费模型（`rpm: 20`）每账号每模型限 20 次/分钟（报错 3021），同一模型上并行开多个实验不会更快。
+新模型过了资格测试再写进来，`measured` 写清在哪份数据上测的什么。
+
 ## 模块
 
 - `llm.py`

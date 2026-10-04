@@ -5,9 +5,9 @@
  * 1. fixture 的每个时间戳都写成「锚点日 + 偏移」（fixture.ts 的 `at()`），锚点日取数据库的 CURRENT_DATE
  *    （线索的 days_since_update 就是按它算的），所以哪天跑相对关系都一样；
  * 2. 存快照前把响应里的日期换成相对锚点的记号（`tokenizeDates`）：ISO 日期 `2026-09-24T…` → `{D-2}T…`，
- *    中文长日期「2026 年 9 月 24 日」→ `{D-2 年月日}`，短日期「9 月 24 日」→ `{D-2 月日}`（年份取离锚点最近的那年）；
+ *    英文长日期「September 24, 2026」→ `{D-2 long}`，短日期「Sep 24」→ `{D-2 short}`（年份取离锚点最近的那年）；
  * 3. 前端测试回放 backend 快照时反过来（`detokenizeDates`）把 `{D±k}T` 还原成某个锚点下的真实日期。
- *    backend 只回 ISO 日期（中文日期是前端的展示），所以只需要还原这一种。
+ *    backend 只回 ISO 日期（英文日期是前端的展示），所以只需要还原这一种。
  *
  * fixture 的时间都在当天 12:00 UTC 前后，离「今天 / 7 天前 / 过期」这些边界至少隔几小时，
  * 一天里什么时刻跑、数据库时区是不是 UTC 都不影响结果（fixture.ts 顶部逐条说明）。
@@ -25,16 +25,21 @@ function offsetOf(anchor: Date, y: number, m: number, d: number): string {
   return k >= 0 ? `+${k}` : String(k);
 }
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const LONG_RE = new RegExp(`\\b(${MONTHS.join('|')}) (\\d{1,2}), (\\d{4})\\b`, 'g');
+const SHORT_RE = new RegExp(`\\b(${MONTHS.map(m => m.slice(0, 3)).join('|')}) (\\d{1,2})\\b`, 'g');
+const monthOf = (name: string) => MONTHS.findIndex(m => m.startsWith(name)) + 1;
+
 export function tokenizeDates(text: string, anchor: Date): string {
   const anchorYear = anchor.getUTCFullYear();
   return text
     .replace(/(\d{4})-(\d{2})-(\d{2})T/g, (_, y, m, d) => `{D${offsetOf(anchor, +y, +m, +d)}}T`)
-    .replace(/(\d{4}) 年 (\d{1,2}) 月 (\d{1,2}) 日/g, (_, y, m, d) => `{D${offsetOf(anchor, +y, +m, +d)} 年月日}`)
-    .replace(/(\d{1,2}) 月 (\d{1,2}) 日/g, (_, m, d) => {
+    .replace(LONG_RE, (_, m, d, y) => `{D${offsetOf(anchor, +y, monthOf(m), +d)} long}`)
+    .replace(SHORT_RE, (_, m, d) => {
       // 短日期没有年份：取离锚点最近的那一年
-      const candidates = [anchorYear - 1, anchorYear, anchorYear + 1].map(y => offsetOf(anchor, y, +m, +d));
+      const candidates = [anchorYear - 1, anchorYear, anchorYear + 1].map(y => offsetOf(anchor, y, monthOf(m), +d));
       const nearest = candidates.reduce((a, b) => (Math.abs(+a) <= Math.abs(+b) ? a : b));
-      return `{D${nearest} 月日}`;
+      return `{D${nearest} short}`;
     });
 }
 

@@ -1,2 +1,2 @@
 {"status":200,"cache-control":null}
-{"items":[{"id":3,"slug":"3","title":"gaza, markets, ai, elections, fires, rates, extra topic","dateShortLabel":"Jan 4","excerpt":"A quiet day. Markets beat 100% of the forecast.","storyCount":4,"readingMinutes":1,"topics":["gaza","markets","ai","elections","fires","rates"]}],"matched":1,"total":8,"earliestDateLabel":"December 16, 2025"}
+{"items":[{"id":3,"slug":"3","title":"gaza, markets, ai, elections, fires, rates, extra topic","dateShortLabel":"{D-6 short}","excerpt":"A quiet day. Markets beat 100% of the forecast.","storyCount":4,"readingMinutes":1,"topics":["gaza","markets","ai","elections","fires","rates"]}],"matched":1,"total":8,"earliestDateLabel":"{D-25 long}"}

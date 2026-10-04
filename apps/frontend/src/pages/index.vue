@@ -56,7 +56,7 @@ const events = computed(() => {
   const leads = new Map(brief.value?.sections.flatMap(s => s.stories).map(s => [s.id, leadSentences(s.leadHtml)]));
   return (data.value?.map?.events ?? []).map(e => {
     const anchor = `story-${e.blockIndex + 1}`;
-    const placed = place(e.places);
+    const placed = place(e.places, e.mentions);
     // 卡片锁定哪个国家：主国家；跨地区的故事取占比最高的国家；一个国家都没有的只当普通链接
     const lockKey = placed.primary ?? e.places[0]?.country ?? null;
     return { ...e, ...placed, anchor, lockKey, lead: leads.get(anchor) ?? '' };

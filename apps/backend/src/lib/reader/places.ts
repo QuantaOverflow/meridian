@@ -118,3 +118,13 @@ export function normalizePlace(raw: string | null): Place {
   if (CODES.has(key.toUpperCase())) return { kind: 'country', country: key.toUpperCase() };
   return { kind: 'unmapped' };
 }
+
+/** 关键实体里有歧义的名字：Georgia 在实体里多半是美国的州，不是国家（2026-10 实测把 FBI 新闻连到了格鲁吉亚） */
+const AMBIGUOUS_ENTITY_NAMES = new Set(['georgia']);
+
+/** 关键实体（人名、机构、地名混在一起）→ 国家代码；不是国家、只是地区或有歧义时为 null */
+export function countryOfEntity(raw: string): string | null {
+  if (AMBIGUOUS_ENTITY_NAMES.has(raw.trim().toLowerCase())) return null;
+  const place = normalizePlace(raw);
+  return place.kind === 'country' ? place.country : null;
+}

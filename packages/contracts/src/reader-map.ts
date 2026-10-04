@@ -19,6 +19,11 @@ export interface BriefMapEvent {
   articleCount: number;
   /** 成员文章按国家的占比，降序；country 是 ISO 3166-1 alpha-2，联合国为 `UN`。只写了地区的成员不进这里 */
   places: { country: string; share: number }[];
+  /**
+   * 成员文章里提到各国的比例（每篇的地点与关键实体里能归一成国家的各算一次，分母是全部成员），降序，至多 5 个。
+   * 一事的报道几乎都填同一个地点，第二个国家只在关键实体里，所以连线看这里（规则在前端，见 ADR 0009）
+   */
+  mentions: { country: string; share: number }[];
   /** 至多两个，按命中多少降序 */
   topics: MapTopic[];
   /** 只有出现在 ≥2 期简报里的线索才给，否则 null */

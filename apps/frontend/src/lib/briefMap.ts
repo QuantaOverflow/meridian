@@ -150,9 +150,11 @@ export const formatTopicCounts = (counts: [MapTopic, number][]) =>
 export const countrySummary = (stories: number, articles: number) =>
   `${stories ? `${stories} in the brief` : 'No story here'} · ${pluralize(articles, 'article')} that day`;
 
-// 与原型 places.py 的 place() 同口径
+// 落点与原型 places.py 的 place() 同口径；连线的第二个国家改看 mentions（ADR 0009 决定 4）
 const PLACE_MIN = 0.3; // 头号国家占比达到它 → 标在这个国家
-const LINK_MIN = 0.15; // 标在一国时，第二国家占比达到它 → 画关联线
+// 标在一国时，另一国被至少 2/3 的成员提到、且不与下一名并列 → 画关联线。原型按地点占比 ≥15% 连，
+// 但一事的报道几乎都填同一个地点，几乎连不出线；111–115 期量过这条规则：连出 30 条，无强行关联
+const MENTION_LINK_MIN = 2 / 3;
 const SPREAD_MIN = 0.1; // 没有国家达到 PLACE_MIN 时，占比达到它的国家两两连线
 
 export interface Placement {
@@ -162,11 +164,12 @@ export interface Placement {
   spread: string[];
 }
 
-/** places 已按占比降序（契约保证），占比的分母含只写了地区的成员 */
-export function place(places: BriefMapEvent['places']): Placement {
-  const [first, second] = places;
+/** places、mentions 都已按占比降序（契约保证）；mentions 的占比是三位小数，2/3 给的是 0.667 */
+export function place(places: BriefMapEvent['places'], mentions: BriefMapEvent['mentions']): Placement {
+  const [first] = places;
   const primary = first && first.share >= PLACE_MIN ? first.country : null;
-  const secondary = primary && second && second.share >= LINK_MIN ? second.country : null;
+  const [top, next] = primary ? mentions.filter(m => m.country !== primary) : [];
+  const secondary = top && top.share >= MENTION_LINK_MIN - 0.001 && next?.share !== top.share ? top.country : null;
   const spread = primary ? [] : places.filter(p => p.share >= SPREAD_MIN).slice(0, 4).map(p => p.country);
   return { primary, secondary, spread: spread.length >= 2 ? spread : [] };
 }

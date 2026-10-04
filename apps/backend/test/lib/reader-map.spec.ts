@@ -52,10 +52,15 @@ beforeAll(async () => {
     selected_for_intel: false,
   });
   await db.update($brief_stories).set({ cluster_id: 8 }).where(eq($brief_stories.id, 14));
-  // 第 6 期再加一条只有它自己一块的故事：两篇英国、一篇空串、一篇 null
-  const gbMembers: [number, string | null][] = [[205, 'UK'], [206, 'United Kingdom'], [207, ' '], [208, null]];
+  // 第 6 期再加一条只有它自己一块的故事：两篇英国、一篇空串、一篇 null；关键实体里提到别的国家（Georgia 有歧义不算）
+  const gbMembers: [number, string | null, string[]][] = [
+    [205, 'UK', ['Russia', 'Georgia', 'Kyiv']],
+    [206, 'United Kingdom', ['russia', 'Georgia']],
+    [207, ' ', ['Georgia', 'Moscow']],
+    [208, null, ['France']],
+  ];
   await db.insert($articles).values(
-    gbMembers.map(([id, loc]) => ({
+    gbMembers.map(([id, loc, entities]) => ({
       id,
       title: `delta article ${id}`,
       url: `https://delta.example.com/${id}`,
@@ -63,6 +68,7 @@ beforeAll(async () => {
       createdAt: old,
       status: 'PROCESSED' as const,
       primary_location: loc,
+      key_entities: entities,
     }))
   );
   await db.insert($brief_stories).values({
@@ -157,6 +163,17 @@ describe('地图：故事的地点', () => {
     expect(event.places).toEqual([
       { country: 'IL', share: 0.25 },
       { country: 'PS', share: 0.25 },
+    ]);
+  });
+});
+
+describe('地图：故事提到的国家（连线用）', () => {
+  it('每篇成员的地点与关键实体里能归一成国家的都算一次，按全部成员数算占比；有歧义的名字（Georgia）不算', async () => {
+    const event = (await getMap(6)).events.find(e => e.storyId === 29);
+    expect(event?.mentions).toEqual([
+      { country: 'GB', share: 0.5 },
+      { country: 'RU', share: 0.5 },
+      { country: 'FR', share: 0.25 },
     ]);
   });
 });

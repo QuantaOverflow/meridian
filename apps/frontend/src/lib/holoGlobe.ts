@@ -201,9 +201,10 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       stroke({ type: 'LineString', coordinates: [[a.lon, a.lat], [b.lon, b.lat]] });
       const spread = l.kind === 'spread';
       ctx.strokeStyle = l.focus ? COLORS.lock : spread ? COLORS.probe : COLORS.mk;
-      ctx.globalAlpha = l.focus ? 0.9 : spread ? 0.55 : 0.3;
-      ctx.lineWidth = l.focus ? 1.8 : spread ? 1.3 : 1;
-      ctx.setLineDash(l.focus ? [] : spread ? [6, 4] : [3, 3]);
+      // 第二国家的连线原先 0.3 透明度的细虚线，开了开关也几乎看不见
+      ctx.globalAlpha = l.focus ? 0.9 : spread ? 0.55 : 0.7;
+      ctx.lineWidth = l.focus ? 1.8 : spread ? 1.3 : 1.5;
+      ctx.setLineDash(l.focus ? [] : spread ? [6, 4] : [5, 3]);
       ctx.shadowColor = ctx.strokeStyle;
       ctx.shadowBlur = l.focus ? 8 : 4;
       ctx.stroke();

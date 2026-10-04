@@ -13,7 +13,7 @@ import { runWindowWhere, type RunWindow } from '../core/run-corpus';
 import type { BriefGenerationParams } from '../../workflows/auto-brief-generation';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { normalizePlace } from './places';
+import { countryOfEntity, normalizePlace } from './places';
 import { threadStatsByIds } from './story-threads';
 import { articleTopics, assignTopics, normalizeTags } from './topics';
 
@@ -70,6 +70,31 @@ function placesOf(members: number[], locationOf: Map<number, string | null>, unm
   return [...counts]
     .map(([country, n]) => ({ country, share: Math.round((n / located) * 1000) / 1000 }))
     .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country));
+}
+
+/**
+ * 成员文章提到各国的比例：每篇的地点与关键实体里能归一成国家的各算一次，分母是全部成员；降序（同占比按代码），至多 5 个。
+ * 一事的报道几乎都填同一个地点（115 期 21 个故事里 20 个地点 100% 同一国），第二个国家只出现在关键实体里。
+ */
+function mentionsOf(
+  members: number[],
+  locationOf: Map<number, string | null>,
+  entitiesOf: Map<number, string[]>
+): BriefMapEvent['mentions'] {
+  const counts = new Map<string, number>();
+  for (const id of members) {
+    const located = normalizePlace(locationOf.get(id) ?? null);
+    const countries = new Set(located.kind === 'country' ? [located.country] : []);
+    for (const entity of entitiesOf.get(id) ?? []) {
+      const country = countryOfEntity(entity);
+      if (country !== null) countries.add(country);
+    }
+    for (const country of countries) counts.set(country, (counts.get(country) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([country, n]) => ({ country, share: Math.round((n / members.length) * 1000) / 1000 }))
+    .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country))
+    .slice(0, 5);
 }
 
 /** 故事的主题：按成员逐个标签计数后交给 assignTopics */
@@ -141,13 +166,16 @@ async function loadEvents(
     allMembers.length === 0
       ? []
       : db
-          .select({ id: $articles.id, location: $articles.primary_location, tags: $articles.topic_tags })
+          .select({ id: $articles.id, location: $articles.primary_location, tags: $articles.topic_tags, entities: $articles.key_entities })
           .from($articles)
           .where(inArray($articles.id, allMembers)),
     threadStatsByIds(db, threadIds),
   ]);
   const locationOf = new Map(memberRows.map(a => [a.id, a.location]));
   const tagsOf = new Map(memberRows.map(a => [a.id, normalizeTags(a.tags)]));
+  const entitiesOf = new Map(
+    memberRows.map(a => [a.id, Array.isArray(a.entities) ? a.entities.filter((e): e is string => typeof e === 'string') : []])
+  );
   const byCluster = new Map(stories.filter(s => s.clusterId !== null).map(s => [s.clusterId as number, s]));
 
   // blockIndex = 在写出来的块里的位置（= 正文里的位置，阅读页锚点 story-{n+1}），对不上故事的块也占位
@@ -174,6 +202,7 @@ async function loadEvents(
       title: block.title,
       articleCount: ids.length,
       places: placesOf(ids, locationOf, unmapped),
+      mentions: mentionsOf(ids, locationOf, entitiesOf),
       topics: topicsOf(ids, tagsOf),
       thread: stats === undefined ? null : { id: story.threadId as number, ...stats },
     });

@@ -132,7 +132,8 @@ interface CheckQuery {
 }
 interface Script {
   epochs?: string
-  anchors?: Reply
+  /** 标重点的回复；给数组就按调用先后逐个用 */
+  anchors?: Reply | Reply[]
   write: Reply[]
   revise?: Reply[]
   check?: (q: CheckQuery) => Reply
@@ -142,6 +143,7 @@ function fakeEnv(script: Script) {
   const seen: Seen[] = []
   const puts: string[] = []
   const unscripted: string[] = []
+  let anchorCalls = 0
   let writes = 0
   let revises = 0
   const arrivals = new Map<string, number>()
@@ -150,7 +152,7 @@ function fakeEnv(script: Script) {
       seen.push({ model, inputs: structuredClone(inputs) })
       const msgs = inputs.messages as Msg[]
       let r: Reply | undefined
-      if (model === GLM) r = script.anchors ?? ANCHORS
+      if (model === GLM) r = Array.isArray(script.anchors) ? script.anchors[anchorCalls++] : script.anchors ?? ANCHORS
       else if (model === V4PRO) r = msgs.length === 1 ? script.write[writes++] : script.revise?.[revises++]
       else if (model === QWEN38) {
         const m = /^Check S(\d+): (.*)$/m.exec(msgs[1].content)
@@ -568,6 +570,170 @@ ${FINDINGS_CLOSING}`
       expect(sent).not.toContain(JSON.stringify(draftNoTitle).slice(1, -1))
       expect(sent).not.toContain('101,\\"sentence\\":3')
     }
+    expect(f.unscripted).toEqual([])
+  })
+
+  it('核查出错或动作用完：句子记成没核到、照发草稿，整块按降级记录并打 warn', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    const f = fakeEnv({
+      write: [DRAFT_REPLY],
+      check: q =>
+        q.text === S1
+          ? new Error('3040: Capacity temporarily exceeded, please try again.')
+          : q.step === 1
+            ? 'I think this sentence is fine.' // 读不懂的回复：不算动作
+            : act('search', { query: `storm ${q.step}` }), // 每步换一个检索，永远不给结论
+    })
+    const r = await settle(service(f, 5).generate(INPUT))
+
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    expect(r.trace.check).toEqual({
+      epochs: 1, outcome: 'clean', revisions: 0, unchecked: [1, 2], stillFlagged: [], draft: null,
+      rounds: [{ round: 0, flagged: [], noVerdict: [1, 2] }],
+      // S1：一步三次调用都失败；S2：1 条读不懂 + 21 个动作
+      calls: 25, neurons: 2200, ms: expect.any(Number),
+    })
+    const s2 = checkCalls(f).filter(c => userOf(c).includes(`Check S2: ${S2}`))
+    expect(s2).toHaveLength(22)
+    const lastUser = (c: Seen) => (c.inputs.messages as Msg[]).at(-1)!.content
+    expect(lastUser(s2[1])).toBe(
+      'Observation:\nYour reply did not follow the format. Reply with exactly three parts: Thought: …, Action: <tool>, Args: {…}.'
+    )
+    expect(lastUser(s2[20]).endsWith('\n\nYou have one action left: give your verdict now.')).toBe(true)
+    expect(lastUser(s2[21]).endsWith('\n\nNo actions left: give your verdict now.')).toBe(true)
+
+    const lines = warn.mock.calls.map(c => JSON.parse(String(c[0]))).filter(l => l.component === 'brief-block-v6' && l.sentences)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatchObject({ block: 5, outcome: 'clean', sentences: [1, 2] })
+    expect(lines[0].reason).toContain('error: Workers AI binding failed: 3040: Capacity temporarily exceeded')
+    expect(lines[0].reason).toContain('out of actions')
+  })
+
+  it('epochs 2：每句两次独立核查，只要一次判有问题就算被标出', async () => {
+    const flag = { ok: false, type: 'number', problem: 'The toll rose to 15 in a later report.', evidence: [[101, 2]], fix: S1_FIXED }
+    const f = fakeEnv({
+      epochs: '2',
+      write: [DRAFT_REPLY],
+      revise: [R1_REPLY],
+      // S1 的两个 agent 拿到的 prompt 一样，按到达先后分：一个说没问题，一个判有问题
+      check: q => (q.text === S1 && q.arrival === 1 ? act('verdict', flag) : OK),
+    })
+    const r = await settle(service(f).generate(INPUT))
+
+    const s1 = checkCalls(f).filter(c => userOf(c).includes(`Check S1: ${S1}`))
+    expect(s1).toHaveLength(2)
+    expect(s1[0].inputs.messages).toEqual(s1[1].inputs.messages)
+    expect(r.block).toEqual(R1_BLOCK)
+    const check = r.trace.check!
+    expect(check).toMatchObject({ epochs: 2, outcome: 'fixed', revisions: 1, unchecked: [], stillFlagged: [] })
+    expect(check.rounds[0].flagged).toEqual([
+      { sentence: 1, text: S1, findings: [{ type: 'number', problem: 'The toll rose to 15 in a later report.', evidence: [[101, 2]], fix: S1_FIXED }] },
+    ])
+    // 核查：草稿 2 句 × 2 + 改过的 1 句 × 2；改写 1
+    expect(check.calls).toBe(7)
+    expect(f.unscripted).toEqual([])
+  })
+
+  it('请求里没有带日期的文章：检查清单去掉「简报发布于…」那一句，其余照留', async () => {
+    const f = fakeEnv({ write: [DRAFT_REPLY], check: () => OK })
+    await settle(service(f).generate({ articles: [{ ...A1, publishDate: undefined }, { ...A2, publishDate: undefined }] }))
+
+    const system = systemOf(checkCalls(f)[0])
+    expect(system).not.toContain('This brief was published on')
+    expect(system).toContain('   - Time: when did the event happen? An\n     event from before that must be dated or marked as earlier in the sentence; otherwise it reads as new.\n')
+    expect(userOf(checkCalls(f)[0])).toContain('[101] published time unknown: Storm hits coast')
+  })
+
+  it('限流：v4-pro 与 qwen3.8 报限流（3021 / rate limit）就等 15s、25s… 后原样重发，不占尝试、不占步数；glm 照旧算一次失败', async () => {
+    const f = fakeEnv({
+      anchors: [new Error('3021: Rate limit exceeded'), ANCHORS],
+      write: [new Error('AiError: 3021: too many requests'), new Error('Rate Limit reached for this model'), DRAFT_REPLY],
+      // S1 的第一步第一次被限流；重发的那次是同一个请求，按到达先后是第 2 个
+      check: q => (q.text === S1 && q.arrival === 0 ? new Error('3021: too many requests') : OK),
+    })
+    const writes = () => f.seen.filter(s => s.model === V4PRO).length
+    const p = service(f).generate(INPUT)
+
+    await flush()
+    expect(f.seen.map(s => s.model)).toEqual([GLM])
+    // glm 不等限流：这次算失败的尝试，按原来的 3s 退避进第 2 次（温度 0.3）
+    await vi.advanceTimersByTimeAsync(3000); await flush()
+    expect(f.seen.map(s => s.model)).toEqual([GLM, GLM, V4PRO])
+    await vi.advanceTimersByTimeAsync(14_999); await flush()
+    expect(writes()).toBe(1)
+    await vi.advanceTimersByTimeAsync(1); await flush()
+    expect(writes()).toBe(2)
+    await vi.advanceTimersByTimeAsync(24_999); await flush()
+    expect(writes()).toBe(2)
+    await vi.advanceTimersByTimeAsync(1); await flush()
+    expect(writes()).toBe(3)
+    const r = await settle(p)
+
+    expect(f.seen.filter(s => s.model === GLM).map(s => s.inputs.temperature)).toEqual([0.1, 0.3])
+    const sends = f.seen.filter(s => s.model === V4PRO)
+    expect(sends.map(s => s.inputs.temperature)).toEqual([0.1, 0.1, 0.1])
+    expect(sends[1].inputs).toEqual(sends[0].inputs)
+    expect(sends[2].inputs).toEqual(sends[0].inputs)
+    expect(r.trace.writeRejects).toEqual([])
+    // 核查：S1 被限流的那步重发后照样给了结论，一步就完
+    const s1 = checkCalls(f).filter(c => userOf(c).includes(`Check S1: ${S1}`))
+    expect(s1).toHaveLength(2)
+    expect(s1[1].inputs).toEqual(s1[0].inputs)
+    expect(r.trace.check).toMatchObject({ outcome: 'clean', unchecked: [], calls: 2 })
+    // 一次逻辑调用一条日志：等待重发的不另记
+    expect(r.trace.llmCalls).toBe(5)
+    expect([...f.puts].sort()).toEqual(
+      ['brief_block_v6-600', 'brief_block_v6-601', 'brief_block_v6-602', 'brief_block_v6_check-000', 'brief_block_v6_check-001'].map(
+        k => `llm-calls/trace-loop/${k}.json`
+      )
+    )
+  })
+
+  it('限流等满 8 次（共 400s）还被限流：照原来的报错处理，写作这一次尝试算失败、退避后进下一次', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    const limited = Array.from({ length: 9 }, () => new Error('3021: Rate limit exceeded'))
+    const f = fakeEnv({ epochs: '0', write: [...limited, DRAFT_REPLY] })
+    const writes = () => f.seen.filter(s => s.model === V4PRO).length
+    const p = service(f).generate(INPUT)
+
+    await flush()
+    expect(writes()).toBe(1)
+    // 第 n 次等待 15 + 10(n-1) 秒：重发时刻 15、40、75、120、175、240、315、400
+    await vi.advanceTimersByTimeAsync(399_999); await flush()
+    expect(writes()).toBe(8)
+    await vi.advanceTimersByTimeAsync(1); await flush()
+    expect(writes()).toBe(9)
+    await vi.advanceTimersByTimeAsync(2_999); await flush()
+    expect(writes()).toBe(9)
+    await vi.advanceTimersByTimeAsync(1); await flush()
+    expect(writes()).toBe(10)
+    const r = await settle(p)
+
+    expect(f.seen.filter(s => s.model === V4PRO).map(s => s.inputs.temperature)).toEqual([...Array(9).fill(0.1), 0.3])
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    const waits = warn.mock.calls.map(c => JSON.parse(String(c[0]))).filter(l => l.component === 'workers-ai')
+    expect(waits).toHaveLength(8)
+    expect(waits[0]).toMatchObject({ model: V4PRO })
+  })
+
+  it('R2 key 在一次 run 里不撞：两块同时在飞，写作 / 改写在各自 100 槽位里连号，核查调用按块 × 1000 另编号', async () => {
+    // 同一个 trace、同一个桶；两块各自一轮改写（写作、改写的回复按到达先后两块共用）
+    const f = fakeEnv({
+      write: [DRAFT_REPLY, DRAFT_REPLY],
+      revise: [R1_REPLY, R1_REPLY],
+      check: q => (q.text === S1 ? flagS1Steps(q.step) : OK),
+    })
+    const [a, b] = await settle(Promise.all([service(f, 3).generate(INPUT), service(f, 4).generate(INPUT)]))
+    expect([a.trace.check!.outcome, b.trace.check!.outcome]).toEqual(['fixed', 'fixed'])
+
+    expect(new Set(f.puts).size).toBe(f.puts.length)
+    const keys = f.puts.map(k => /^llm-calls\/trace-loop\/(.+)\.json$/.exec(k)![1]).sort()
+    // 每块：标重点 1 + 写作 1 + 改写 1；核查 S1 三步 + S2 一步 + 改过的 S1 一步
+    expect(keys).toEqual([
+      'brief_block_v6-1000', 'brief_block_v6-1001', 'brief_block_v6-1002',
+      'brief_block_v6-900', 'brief_block_v6-901', 'brief_block_v6-902',
+      ...[3000, 3001, 3002, 3003, 3004, 4000, 4001, 4002, 4003, 4004].map(i => `brief_block_v6_check-${i}`),
+    ])
     expect(f.unscripted).toEqual([])
   })
 })

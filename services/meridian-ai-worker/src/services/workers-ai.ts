@@ -20,6 +20,17 @@ export const WORKERS_AI_MODELS: readonly string[] = [
   '@cf/qwen/qwen3.8-27b',
 ]
 
+/**
+ * 限流等待（写作–核查循环，ADR 0010）：只对这两个模型。v4-pro 每账号每模型 20 次/分钟、qwen3.8 300 次/分钟，
+ * 一期 6 块在飞时撞得到。报错里带 3021 或 "rate limit"（不分大小写）就等一会儿、原样重发同一个请求：
+ * 不算调用方的一次尝试，也不算核查 agent 的一步。等 15s，之后每次多 10s，最多等 8 次（原型 lib.mts 的取值）；
+ * 第 8 次之后照旧抛错。glm 等其他模型不变。
+ */
+const RATE_LIMIT_WAIT_MODELS: readonly string[] = ['@cf/deepseek-ai/deepseek-v4-pro-0813', '@cf/qwen/qwen3.8-27b']
+const RATE_LIMIT_MAX_WAITS = 8
+const rateLimitWaitMs = (wait: number) => 15_000 + 10_000 * wait
+const isRateLimited = (error: unknown) => /3021|rate limit/i.test(error instanceof Error ? error.message : String(error))
+
 function logDebug(message: string, metadata: Record<string, unknown>): void {
   logger.debug(message, { request_id: metadata.requestId || 'unknown', metadata })
 }
@@ -141,9 +152,24 @@ export async function chat(ai: Ai, request: ChatRequest): Promise<ChatResponse> 
   })
 
   try {
-    // model 名以运行时字符串驱动（模型表见 WORKERS_AI_MODELS），Ai.run 的类型签名要求
-    // 具体字面量的 keyof——用真实 Ai 类型就必须在这一处转型，换不掉。
-    const body = await ai.run(modelName as keyof AiModels, inputs as any)
+    let body: unknown
+    for (let wait = 0; ; wait++) {
+      try {
+        // model 名以运行时字符串驱动（模型表见 WORKERS_AI_MODELS），Ai.run 的类型签名要求
+        // 具体字面量的 keyof——用真实 Ai 类型就必须在这一处转型，换不掉。
+        body = await ai.run(modelName as keyof AiModels, inputs as any)
+        break
+      } catch (error) {
+        if (!RATE_LIMIT_WAIT_MODELS.includes(modelName) || wait >= RATE_LIMIT_MAX_WAITS || !isRateLimited(error)) throw error
+        const ms = rateLimitWaitMs(wait)
+        logger.warn(`Workers AI 限流，${ms / 1000}s 后原样重发（第 ${wait + 1}/${RATE_LIMIT_MAX_WAITS} 次等待）`, {
+          request_id: request.metadata?.requestId || 'unknown',
+          model: modelName,
+          error_message: error instanceof Error ? error.message : String(error),
+        })
+        await new Promise(r => setTimeout(r, ms))
+      }
+    }
     const response = mapResponse(body, modelName)
     response.processingTime = Date.now() - startTime
     return response

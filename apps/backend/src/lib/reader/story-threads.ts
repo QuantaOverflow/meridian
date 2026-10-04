@@ -1,4 +1,4 @@
-import { $articles, $brief_runs, $brief_stories, $reports, $story_clusters, and, desc, eq, isNotNull, sql } from '@meridian/database';
+import { $articles, $brief_runs, $brief_stories, $reports, $story_clusters, and, desc, eq, inArray, isNotNull, sql } from '@meridian/database';
 import { pgTimestamp, type Db } from './db';
 
 /**
@@ -275,6 +275,21 @@ export async function listStoryThreads(db: Db): Promise<StoryThreadListData> {
     activeWindowDays: STORY_THREAD_CONFIG.ACTIVE_WINDOW_DAYS,
     minBriefs: STORY_THREAD_CONFIG.MIN_BRIEFS,
   };
+}
+
+/**
+ * 地图首页（brief-map.ts）用：这几条线索里过了门槛的，期数与跨度。
+ * 与列表页同一条 threadStatsQuery，门槛与算法不会分叉；没过门槛的不在结果里。
+ */
+export async function threadStatsByIds(db: Db, ids: number[]): Promise<Map<number, { briefCount: number; durationDays: number }>> {
+  if (ids.length === 0) return new Map();
+  const rows = (await db.execute(sql`
+    ${threadStatsQuery}
+    WHERE ${inArray($story_clusters.id, ids)}
+  `)) as unknown as ThreadRow[];
+  return new Map(
+    rows.map(toSummary).map(t => [t.id, { briefCount: t.briefCount, durationDays: t.durationDays }])
+  );
 }
 
 export async function getStoryThread(db: Db, id: number): Promise<StoryThreadDetailData | null> {

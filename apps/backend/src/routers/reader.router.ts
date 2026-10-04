@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { getDb } from '../lib/database';
 import { listBriefs, loadBrief } from '../lib/reader/briefs';
+import { loadBriefMap } from '../lib/reader/brief-map';
 import { getStoryThread, listStoryThreads } from '../lib/reader/story-threads';
 import type { Env } from '../index';
 
@@ -35,6 +36,13 @@ app.get('/briefs/:id', zValidator('param', idParamSchema), async c => {
   const brief = await loadBrief(getDb(c.env.HYPERDRIVE), { kind: 'id', id: c.req.valid('param').id });
   if (brief === null) return c.json({ error: 'Report not found' }, 404);
   return c.json(brief);
+});
+
+// 地图首页的数据（形状见 @meridian/contracts 的 BriefMap）。只有 :id 一种形式：首页先取 latest 再按期号取地图，两者不会指向不同的期
+app.get('/briefs/:id/map', zValidator('param', idParamSchema), async c => {
+  const map = await loadBriefMap(getDb(c.env.HYPERDRIVE), c.env.ARTICLES_BUCKET, c.req.valid('param').id);
+  if (map === null) return c.json({ error: 'Report not found' }, 404);
+  return c.json(map);
 });
 
 app.get('/stories', async c => {

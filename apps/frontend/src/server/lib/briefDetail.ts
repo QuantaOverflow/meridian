@@ -6,7 +6,7 @@ import { ensureDate, formatReportDate } from './utils';
 /**
  * 一期简报的读者视图。被 /api/briefs/:slug 与 /api/briefs/latest 共用——
  * 首页只发一次请求就能拿到正文，不必先问「最新是第几期」再取一次。
- * 数据（报告本体 + 来源清单）来自 backend 的 /reader/briefs/*，这里只做展示：正文解析成板块 / 条目、中文日期。
+ * 数据（报告本体 + 来源清单）来自 backend 的 /reader/briefs/*，这里只做展示：正文解析成板块 / 条目、英文日期。
  */
 export async function loadBriefDetail(
   target: { kind: 'id'; id: number } | { kind: 'latest' },

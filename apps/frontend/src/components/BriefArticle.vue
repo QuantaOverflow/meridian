@@ -55,7 +55,7 @@ const showAllArticles = ref(false);
         >
           <span>{{ brief.dateLabel }}</span>
           <span aria-hidden="true">·</span>
-          <span>{{ brief.storyCount }} stories</span>
+          <span>{{ pluralize(brief.storyCount, 'story', 'stories') }}</span>
           <span aria-hidden="true">·</span>
           <span>{{ brief.readingMinutes }} min read</span>
         </div>
@@ -115,7 +115,7 @@ const showAllArticles = ref(false);
             :aria-expanded="showAllArticles"
             @click="showAllArticles = !showAllArticles"
           >
-            {{ showAllArticles ? 'Hide source articles' : `View all ${brief.sourceArticleCount} source articles →` }}
+            {{ showAllArticles ? 'Hide source articles' : `View all ${pluralize(brief.sourceArticleCount, 'source article')} →` }}
           </button>
         </div>
 

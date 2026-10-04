@@ -9,7 +9,7 @@ import { ensureDate, formatReportDate, formatReportDateShort } from './utils';
 
 /**
  * 事件追踪（跨期线索）的读者视图。线索的查询、阈值（STORY_THREAD_CONFIG）、进行中 / 暂无更新与升级中的判定
- * 都在 backend 的 lib/reader/story-threads.ts；这里只拼展示文案与中文日期。
+ * 都在 backend 的 lib/reader/story-threads.ts；这里只拼展示文案与英文日期。
  */
 
 function updateLabel(daysSinceUpdate: number): string {

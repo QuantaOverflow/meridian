@@ -7,7 +7,7 @@ const props = defineProps<{ thread: StoryThreadDetail }>();
 const lead = computed(() => props.thread.entries.find(entry => !entry.disputed && entry.description !== '')?.description ?? '');
 
 const statusLine = computed(() => {
-  const parts = ['Story thread', `${props.thread.durationDays} days running`];
+  const parts = ['Story thread', `${pluralize(props.thread.durationDays, 'day')} running`];
   if (props.thread.escalating) parts.push('Escalating');
   else if (props.thread.status === 'dormant') parts.push('No recent updates');
   return parts.join(' · ');
@@ -34,8 +34,8 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
     </p>
 
     <p class="border-rule-soft mb-11 border-b pb-7 text-[13px] text-ink3">
-      First seen {{ thread.firstSeenLabel }} · Last updated {{ thread.lastSeenLabel }} · {{ thread.entryCount }} entries ·
-      {{ thread.briefCount }} issues
+      First seen {{ thread.firstSeenLabel }} · Last updated {{ thread.lastSeenLabel }} ·
+      {{ pluralize(thread.entryCount, 'entry', 'entries') }} · {{ pluralize(thread.briefCount, 'issue') }}
     </p>
 
     <ol>

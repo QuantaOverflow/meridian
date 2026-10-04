@@ -111,7 +111,7 @@ export function estimateReadingMinutes(content: string): number {
  */
 function stripPromptArtifacts(text: string): string {
   return text
-    .replace(/<\/?curated_news_data>/g, "this issue's collected data")
+    .replace(/<\/?curated_news_data>/g, 'data')
     .replace(/<\/?final_brief>/g, '');
 }
 

@@ -51,8 +51,8 @@ const threads = computed(() => {
 
     <!-- 两个阈值都要对读者可见：数字来自接口，改配置时这行会跟着变 -->
     <p class="mt-3 text-[12px] text-ink3">
-      A thread needs to appear in at least {{ data?.minBriefs ?? 2 }} issues · active means new progress within
-      {{ data?.activeWindowDays ?? 7 }} days
+      A thread needs to appear in at least {{ pluralize(data?.minBriefs ?? 2, 'issue') }} · active means new progress
+      within {{ pluralize(data?.activeWindowDays ?? 7, 'day') }}
     </p>
 
     <div v-if="status === 'pending' && threads.length === 0" class="pt-7" aria-busy="true">
@@ -66,7 +66,7 @@ const threads = computed(() => {
     <p v-else-if="threads.length === 0" class="pt-[46px] text-[15px] leading-[1.8] text-ink2">
       <template v-if="filter === 'active'">
         No active story threads right now — none have had new progress in the last
-        {{ data?.activeWindowDays ?? 7 }} days.
+        {{ pluralize(data?.activeWindowDays ?? 7, 'day') }}.
       </template>
       <template v-else>No story threads yet.</template>
     </p>
@@ -85,7 +85,8 @@ const threads = computed(() => {
           <p v-if="thread.summary" class="mb-3 text-[15.5px] leading-[1.78] text-ink2">{{ thread.summary }}</p>
 
           <p class="text-[12.5px] text-ink3">
-            {{ thread.durationDays }} days running · {{ thread.briefCount }} issues · {{ thread.updateLabel }}
+            {{ pluralize(thread.durationDays, 'day') }} running · {{ pluralize(thread.briefCount, 'issue') }} ·
+            {{ thread.updateLabel }}
           </p>
         </NuxtLink>
       </li>

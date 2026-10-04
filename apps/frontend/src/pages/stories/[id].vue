@@ -19,7 +19,9 @@ if (error.value) {
 useSeoMeta({
   title: () => (thread.value ? `${thread.value.title} | Story threads` : 'Story threads | Meridian'),
   description: () =>
-    thread.value ? `Running ${thread.value.durationDays} days, across ${thread.value.briefCount} issues` : '',
+    thread.value
+      ? `Running ${pluralize(thread.value.durationDays, 'day')}, across ${pluralize(thread.value.briefCount, 'issue')}`
+      : '',
   ogLocale: 'en_US',
 });
 </script>

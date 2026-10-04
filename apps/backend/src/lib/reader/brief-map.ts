@@ -39,17 +39,22 @@ function noteUnmapped(log: UnmappedLog, raw: string | null) {
   log.set(key, (log.get(key) ?? 0) + 1);
 }
 
-/** 成员按国家的占比，分母是全部成员（只写了地区、空值、表里没有的成员不进分子）；降序，同占比按代码 */
+/**
+ * 成员按国家的占比；降序，同占比按代码。与原型 build.py / places.py 的 place() 同口径：
+ * 分母是地点非空的成员数（只写了地区、表里没有的值在分母里、不进分子），空值成员不进分母；没有非空地点时为 []。
+ */
 function placesOf(members: number[], locationOf: Map<number, string | null>, unmapped: UnmappedLog): BriefMapEvent['places'] {
   const counts = new Map<string, number>();
+  let located = 0;
   for (const id of members) {
     const raw = locationOf.get(id) ?? null;
+    if (raw !== null && raw.trim() !== '') located++;
     const place = normalizePlace(raw);
     if (place.kind === 'country') counts.set(place.country, (counts.get(place.country) ?? 0) + 1);
     else if (place.kind === 'unmapped') noteUnmapped(unmapped, raw);
   }
   return [...counts]
-    .map(([country, n]) => ({ country, share: Math.round((n / members.length) * 1000) / 1000 }))
+    .map(([country, n]) => ({ country, share: Math.round((n / located) * 1000) / 1000 }))
     .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country));
 }
 

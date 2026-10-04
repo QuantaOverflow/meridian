@@ -50,6 +50,28 @@ beforeAll(async () => {
     selected_for_intel: false,
   });
   await db.update($brief_stories).set({ cluster_id: 8 }).where(eq($brief_stories.id, 14));
+  // 第 6 期再加一条只有它自己一块的故事：两篇英国、一篇空串、一篇 null
+  const gbMembers: [number, string | null][] = [[205, 'UK'], [206, 'United Kingdom'], [207, ' '], [208, null]];
+  await db.insert($articles).values(
+    gbMembers.map(([id, loc]) => ({
+      id,
+      title: `delta article ${id}`,
+      url: `https://delta.example.com/${id}`,
+      sourceId: 4,
+      createdAt: old,
+      status: 'PROCESSED' as const,
+      primary_location: loc,
+    }))
+  );
+  await db.insert($brief_stories).values({
+    id: 29,
+    workflow_id: 'wf-r6',
+    cluster_id: 9,
+    title: 'UK story',
+    article_ids: gbMembers.map(([id]) => id),
+    selected_for_intel: false,
+  });
+  await putBriefV3Record(env.ARTICLES_BUCKET, 'wf-r6', [writtenBlock(9, 'UK story', 'lead')]);
   // story 14 的成员（Beta 102 / 111）
   await db.update($articles).set({ topic_tags: ['Economy', 'Security', 'Technology'] }).where(eq($articles.id, 102));
   await db.update($articles).set({ topic_tags: ['economy', 'Conflict', 'Technology', 'security'] }).where(eq($articles.id, 111));
@@ -107,6 +129,11 @@ describe('地图：正文块 → 故事', () => {
 });
 
 describe('地图：故事的地点', () => {
+  it('地点为空的成员不进分母（与原型 place() 同口径），articleCount 仍是全部成员', async () => {
+    const [event] = (await getMap(6)).events;
+    expect({ articleCount: event.articleCount, places: event.places }).toEqual({ articleCount: 4, places: [{ country: 'GB', share: 1 }] });
+  });
+
   it('成员按国家的占比（分母是全部成员）；别名归一，地区值与表里没有的值不进 places', async () => {
     const [event] = (await getMap(7)).events;
     expect(event.places).toEqual([

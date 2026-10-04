@@ -8,7 +8,7 @@ export interface BriefDetail {
   /** 由模型产出的关键词串，不是一句标题 */
   title: string;
   createdAt: Date;
-  /** 「2026 年 8 月 25 日」 */
+  /** "August 25, 2026" */
   dateLabel: string;
   /** 面向读者的散文摘要；历史期在回填前为 null */
   tldrProse: string | null;
@@ -26,7 +26,7 @@ export interface BriefSummary {
   id: number;
   slug: string;
   title: string;
-  /** 「8 月 25 日」 */
+  /** "Aug 25" */
   dateShortLabel: string;
   excerpt: string | null;
   storyCount: number;
@@ -59,7 +59,7 @@ export interface StoryThreadSummary {
   /** 出现在几期简报里 */
   briefCount: number;
   entryCount: number;
-  /** 「今日更新」「3 天前更新」 */
+  /** "Updated today" / "Updated 3 days ago" */
   updateLabel: string;
 }
 

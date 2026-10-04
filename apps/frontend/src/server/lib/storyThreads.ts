@@ -5,18 +5,18 @@ import {
   type BackendStoryThreadList,
   type BackendStoryThreadSummary,
 } from './backend';
-import { ensureDate, formatReportDateCN, formatReportDateShortCN } from './utils';
+import { ensureDate, formatReportDate, formatReportDateShort } from './utils';
 
 /**
  * 事件追踪（跨期线索）的读者视图。线索的查询、阈值（STORY_THREAD_CONFIG）、进行中 / 暂无更新与升级中的判定
- * 都在 backend 的 lib/reader/story-threads.ts；这里只拼展示文案与中文日期。
+ * 都在 backend 的 lib/reader/story-threads.ts；这里只拼展示文案与英文日期。
  */
 
 function updateLabel(daysSinceUpdate: number): string {
   const days = Number(daysSinceUpdate);
-  if (days <= 0) return '今日更新';
-  if (days === 1) return '昨日更新';
-  return `${days} 天前更新`;
+  if (days <= 0) return 'Updated today';
+  if (days === 1) return 'Updated yesterday';
+  return `Updated ${days} days ago`;
 }
 
 function toSummary(thread: BackendStoryThreadSummary): StoryThreadSummary {
@@ -47,11 +47,11 @@ export async function getStoryThread(id: number): Promise<StoryThreadDetail> {
   const thread = await readFromBackend<BackendStoryThreadDetail>(`/reader/stories/${id}`, 'Story thread not found');
   return {
     ...toSummary(thread),
-    firstSeenLabel: formatReportDateCN(ensureDate(thread.firstSeenAt)),
-    lastSeenLabel: formatReportDateCN(ensureDate(thread.lastSeenAt)),
+    firstSeenLabel: formatReportDate(ensureDate(thread.firstSeenAt)),
+    lastSeenLabel: formatReportDate(ensureDate(thread.lastSeenAt)),
     entries: thread.entries.map(entry => ({
       id: entry.id,
-      dateShortLabel: formatReportDateShortCN(ensureDate(entry.createdAt)),
+      dateShortLabel: formatReportDateShort(ensureDate(entry.createdAt)),
       title: entry.title,
       description: entry.description,
       briefSlug: String(entry.reportId),

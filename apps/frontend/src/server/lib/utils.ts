@@ -3,16 +3,16 @@ export function ensureDate(dateInput: Date | string | null | undefined): Date {
 }
 
 /**
- * 中文长日期，如「2026 年 8 月 25 日」。
+ * 长日期，如「August 25, 2026」。
  *
  * 取 UTC 字段：旧的日期 slug（如 august-25-2026）按 UTC 日期解析，展示若换成本地时区，
- * 跨零点的那几个小时会出现「页面写 8 月 26 日、URL 却是 august-25」的错位。
+ * 跨零点的那几个小时会出现「页面写 August 26、URL 却是 august-25」的错位。
  */
-export function formatReportDateCN(date: Date): string {
-  return `${date.getUTCFullYear()} 年 ${date.getUTCMonth() + 1} 月 ${date.getUTCDate()} 日`;
+export function formatReportDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/** 短日期，如「8 月 25 日」，用于归档列表 */
-export function formatReportDateShortCN(date: Date): string {
-  return `${date.getUTCMonth() + 1} 月 ${date.getUTCDate()} 日`;
+/** 短日期，如「Aug 25」，用于归档列表 */
+export function formatReportDateShort(date: Date): string {
+  return date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 }

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { BriefListResponse, BriefSummary } from '~/shared/types';
 import { readFromBackend, type BackendBriefList } from '~/server/lib/backend';
 import { stripInlineMarkdown } from '~/server/lib/briefContent';
-import { ensureDate, formatReportDateCN, formatReportDateShortCN } from '~/server/lib/utils';
+import { ensureDate, formatReportDate, formatReportDateShort } from '~/server/lib/utils';
 
 const querySchema = z.object({
   q: z.string().trim().max(200).optional(),
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event): Promise<BriefListResponse> => {
       // 期号而不是日期：同一天可能有多期，日期 slug 会点到别的期上去
       slug: String(row.id),
       title: row.title,
-      dateShortLabel: formatReportDateShortCN(createdAt),
+      dateShortLabel: formatReportDateShort(createdAt),
       excerpt: toExcerpt(row.tldrProse),
       storyCount: row.storyCount,
       readingMinutes: Math.max(1, Math.ceil(row.wordCount / WORDS_PER_MINUTE)),
@@ -58,6 +58,6 @@ export default defineEventHandler(async (event): Promise<BriefListResponse> => {
     items,
     matched: list.matched,
     total: list.total,
-    earliestDateLabel: list.earliest === null ? null : formatReportDateCN(ensureDate(list.earliest)),
+    earliestDateLabel: list.earliest === null ? null : formatReportDate(ensureDate(list.earliest)),
   };
 });

@@ -7,7 +7,7 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 
 | 路径 | 内容 |
 |---|---|
-| `/` | 最新一期的地图首页（全息外观，`layouts/holo.vue`）：顶部摘要与阅读入口、地球（`components/HoloGlobe.client.vue` + `lib/holoGlobe.ts`，浏览器里懒加载）、右侧面板。落点阈值与国家 / 主题展示表在 `lib/briefMap.ts` |
+| `/` | 最新一期的地图首页（全息外观，`layouts/holo.vue`）：顶部摘要与阅读入口、地球（`components/HoloGlobe.client.vue` + `lib/holoGlobe.ts`，浏览器里懒加载；与页面的约定只有 `lib/globeScene.ts`）、右侧面板。落点阈值与国家 / 主题展示表在 `lib/briefMap.ts` |
 | `/briefs`、`/briefs/[slug]` | 简报归档与单期 |
 | `/stories`、`/stories/[id]` | 跨期故事线索 |
 | `/admin/login`、`/admin`、`/admin/feed/[id]` | 源管理后台（`nuxt-auth-utils` 会话登录） |

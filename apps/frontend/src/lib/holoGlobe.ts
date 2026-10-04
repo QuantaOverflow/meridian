@@ -2,8 +2,8 @@
  * 全息地球的 canvas 绘制核心（d3-geo 正射投影），从原型 prototypes/globe/src/globe.js 搬来，只留 holo 皮肤。
  * 只在浏览器里由 components/HoloGlobe.client.vue 动态 import；SSR 不碰这里。
  *
- * 外面只给场景（点、连线、国家底色）和锁定 / 悬停的国家，收回指针悬停与点击锁定；
- * 绘制、拾取、旋转、缩放、配色都在这里。换 three.js 渲染器时整个替换这个文件与那个组件。
+ * 外面只给场景（lib/globeScene.ts）和锁定 / 悬停的国家，收回指针悬停与点击锁定；
+ * 绘制、拾取、旋转、缩放都在这里。换 three.js 渲染器时整个替换这个文件与那个组件。
  */
 import { geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
 import type { GeoPermissibleObjects } from 'd3-geo';
@@ -11,33 +11,7 @@ import { easeCubicInOut } from 'd3-ease';
 import { feature, mesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import type { Country } from '~/lib/briefMap';
-
-export interface GlobeDot {
-  key: string;
-  /** 缩放为 1 时的半径 */
-  r: number;
-  /** 头条所在国：外圈脉动 */
-  pulse: boolean;
-  label: string;
-  /** 不在当前主题筛选里：淡出 */
-  fade: boolean;
-}
-
-export interface GlobeLink {
-  a: string;
-  b: string;
-  /** second = 主国家到第二国家；spread = 没有主国家时占比 ≥10% 的国家两两相连 */
-  kind: 'second' | 'spread';
-  /** 牵涉锁定国家的连线：实线高亮 */
-  focus: boolean;
-}
-
-export interface GlobeScene {
-  dots: GlobeDot[];
-  links: GlobeLink[];
-  /** 国家 → 0..1 的底色深浅；null = 关掉底色 */
-  shaded: Map<string, number> | null;
-}
+import type { GlobeScene } from '~/lib/globeScene';
 
 export interface HoloGlobeOptions {
   stage: HTMLElement;
@@ -50,23 +24,29 @@ export interface HoloGlobeOptions {
   onLock: (key: string | null) => void;
 }
 
-// 全息皮肤：颜色只表示状态——青 = 基础，绿 = 探测中，琥珀 = 已锁定
-const COLORS = {
-  ink: '#cdefff',
-  land: 'rgba(70, 190, 230, 0.10)',
-  landHi: 'rgba(255, 179, 71, 0.22)',
-  coast: '#5fd4ff',
-  border: '#2d8fb5',
-  grat: 'rgba(95, 212, 255, 0.13)',
-  mk: '#5fd4ff',
-  probe: '#7dffb0',
-  lock: '#ffb347',
-  heat: '#5fd4ff',
-};
-const FONT = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace";
+// 配色只有一处来源：layouts/holo.vue 里 html[data-skin='holo'] 的 CSS 变量，建地球时读一次。
+// canvas 吃不了 var()，所以读成字符串；球体渐变与扫描线的半透明色是派生色，留在下面的绘制代码里。
+function readColors(el: Element) {
+  const cs = getComputedStyle(el);
+  const v = (name: string) => cs.getPropertyValue(`--${name}`).trim();
+  return {
+    ink: v('ink'),
+    land: v('land'),
+    landHi: v('land-hi'),
+    coast: v('coast'),
+    border: v('border'),
+    grat: v('grat'),
+    mk: v('mk'),
+    probe: v('probe'),
+    lock: v('lock'),
+    heat: v('heat'),
+    font: v('mono'),
+  };
+}
 
 export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLock }: HoloGlobeOptions) {
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const COLORS = readColors(stage);
   const objects = world.objects as Record<string, GeometryCollection>;
   const land = feature(world, objects.land);
   const countriesGeo = feature(world, objects.countries).features;
@@ -280,7 +260,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       }
 
       if (!faded) {
-        ctx.font = `${isLock ? 600 : 500} 11px ${FONT}`;
+        ctx.font = `${isLock ? 600 : 500} 11px ${COLORS.font}`;
         ctx.textBaseline = 'middle';
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(4,9,14,0.85)';
@@ -361,6 +341,11 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     if (down && !down.moved) onLock(pick(...local(e)));
     down = null;
   }
+  // 触屏上手势被系统接管（滚动、多指）时只有 pointercancel、没有 pointerup：不复位的话下次移动还当成在拖
+  function onPointerCancel() {
+    canvas.classList.remove('dragging');
+    down = null;
+  }
   function onPointerLeave(e: PointerEvent) {
     if (!down) hoverAt(null, ...local(e));
   }
@@ -390,6 +375,8 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerCancel);
+  canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('wheel', onWheel, { passive: false });
   const ro = new ResizeObserver(resize);
@@ -438,6 +425,8 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
+      canvas.removeEventListener('lostpointercapture', onPointerCancel);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('wheel', onWheel);
     },

@@ -11,7 +11,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { fetch, setup } from '@nuxt/test-utils/e2e';
-import type { BriefMap } from '@meridian/contracts';
 import { anchorFromDate, detokenizeDates, tokenizeDates } from '../../backend/test/fixtures/reader/dates';
 
 // 回放用的「今天」取一个固定日期：前端不再依赖当前时间（天数由 backend 算好）。
@@ -138,47 +137,58 @@ describe('后台源读接口快照', () => {
 });
 
 // ── 地图首页：服务端渲染出来的顶部与右侧面板 ──────────────────────────
-// 只断言链接与结构，期望值从同一份 backend 快照读出来，所以 02 换上真实快照后仍成立
+// 期望值写死自 backend 的 brief-8-map / briefs-latest 快照：story 15 是头条（块 0、线索 1 出现在 3 期），
+// story 16 不是头条；正文 2 条；主题 security、economy 各 1 条
 describe('地图首页（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
   /** 页面里每个 <a> 的 href 与去标签后的文字 */
-  function anchors(html: string): { href: string; text: string }[] {
-    return [...html.matchAll(/<a\b[^>]*?href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, inner]) => ({
+  const anchors = (html: string) =>
+    [...html.matchAll(/<a\b[^>]*?href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, inner]) => ({
       href: href.replace(/&amp;/g, '&'),
-      text: inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+      text: text(inner),
     }));
-  }
 
-  it('首屏：阅读入口、头条卡片、线索、其余条数、主题标签、往期入口', async () => {
+  it('首屏：阅读入口、头条卡片、线索、其余条数、主题标签、往期入口、规范地址', async () => {
     const res = await fetch('/');
     expect(res.status).toBe(200);
     const html = await res.text();
     const links = anchors(html);
-    const map = (await (await fetch('/api/briefs/8/map')).json()) as BriefMap;
-    const leads = map.events.filter(e => e.tier === 'lead');
-    expect(leads.length).toBeGreaterThan(0);
 
-    expect(links).toContainEqual({ href: '/briefs/8', text: expect.stringContaining('Read today’s brief') });
+    expect(links).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
     expect(links).toContainEqual({ href: '/briefs', text: 'Past briefs' });
-    for (const e of leads) {
-      expect(links).toContainEqual({ href: `/briefs/8#story-${e.blockIndex + 1}`, text: expect.stringContaining('Read this part') });
-      if (e.thread) {
-        expect(links).toContainEqual({ href: `/stories/${e.thread.id}`, text: `Tracking · issue ${e.thread.briefCount}` });
-      }
-    }
-    expect(html).toContain(`${map.events.length - leads.length} more in the brief`);
+    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · issue 3' });
+    // 头条卡片只有 story 15；不是头条的 story 16 不出卡片，算进「其余 1 条」
+    expect(links.filter(l => l.text === 'Read this part →').map(l => l.href)).toEqual(['/briefs/8#story-1']);
+    expect(links).toContainEqual({ href: '/briefs/8#story-2', text: '1 more in the brief →' });
 
-    // 主题标签：每个出现过的主题一个，带它的故事条数
-    const tags = [...html.matchAll(/<button\b[^>]*data-topic="([a-z]+)"[^>]*>([\s\S]*?)<\/button>/g)].map(([, key, inner]) => ({
+    const tags = [...html.matchAll(/<button\b[^>]*data-topic="([a-z]+)"[^>]*>([\s\S]*?)<\/button>/g)].map(([, key, inner]) => [
       key,
-      text: inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim(),
-    }));
-    const counts = new Map<string, number>();
-    for (const e of map.events) for (const t of e.topics) counts.set(t, (counts.get(t) ?? 0) + 1);
-    expect(tags.map(t => t.key).sort()).toEqual([...counts.keys()].sort());
-    for (const t of tags) expect(t.text).toMatch(new RegExp(`^\\S.* ${counts.get(t.key)}$`));
-    if (counts.has('security')) expect(tags.find(t => t.key === 'security')?.text).toBe(`Conflict & Security ${counts.get('security')}`);
+      text(inner),
+    ]);
+    expect(tags.sort()).toEqual([
+      ['economy', 'Economy 1'],
+      ['security', 'Conflict & Security 1'],
+    ]);
 
+    // 首页有自己的规范地址，不指向某一期的阅读页
+    expect(html).toMatch(/<link[^>]*rel="canonical"[^>]*href="http:\/\/[^"]+\/"/);
+    expect(html).not.toMatch(/rel="canonical"[^>]*\/briefs\//);
     expect(unexpected).toEqual([]);
+  });
+
+  it('地图数据取不到：顶部与阅读入口照常，面板处写明', async () => {
+    const saved = replies.get('/reader/briefs/8/map')!;
+    replies.set('/reader/briefs/8/map', { status: 500, body: '{"error":"boom"}' });
+    try {
+      const res = await fetch('/');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(anchors(html)).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
+      expect(html).toContain('Map data is unavailable right now.');
+      expect(html).not.toContain('data-topic=');
+    } finally {
+      replies.set('/reader/briefs/8/map', saved);
+    }
   });
 });
 

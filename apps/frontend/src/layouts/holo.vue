@@ -12,7 +12,7 @@ useHead({
     <header class="mast">
       <NuxtLink to="/" class="brand">Meridian</NuxtLink>
       <nav class="nav">
-        <NuxtLink to="/" aria-current="page">Today</NuxtLink>
+        <NuxtLink to="/">Today</NuxtLink>
         <NuxtLink to="/briefs">Archive</NuxtLink>
         <NuxtLink to="/stories">Stories</NuxtLink>
       </nav>
@@ -22,7 +22,8 @@ useHead({
 </template>
 
 <style>
-/* 颜色只表示状态——青 = 基础，绿 = 探测中，琥珀 = 已锁定。html 上的属性选择器比 main.css 的 [data-theme] 更具体 */
+/* 颜色只表示状态——青 = 基础，绿 = 探测中，琥珀 = 已锁定。html 上的属性选择器比 main.css 的 [data-theme] 更具体。
+ * 地球的 canvas 也从这里取色（lib/holoGlobe.ts 的 readColors），全息配色只改这一处 */
 html[data-skin='holo'] {
   color-scheme: dark;
   --bg: #04090e;
@@ -39,6 +40,9 @@ html[data-skin='holo'] {
   --probe: #7dffb0;
   --lock: #ffb347;
   --heat: #5fd4ff;
+  --land: rgba(70, 190, 230, 0.1);
+  --land-hi: rgba(255, 179, 71, 0.22);
+  --grat: rgba(95, 212, 255, 0.13);
   --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --text: var(--ink);
 }

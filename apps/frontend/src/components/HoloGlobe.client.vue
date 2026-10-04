@@ -2,25 +2,14 @@
 /**
  * 地图首页的地球（只在浏览器里渲染，页面用 <LazyHoloGlobe> 懒加载）。
  *
- * 对页面的接口就这些：进来的是点、连线、国家底色（含主题筛选的淡出）与锁定 / 悬停的国家，
+ * 对页面的接口就这些（类型在 lib/globeScene.ts）：进来的是点、连线、国家底色（含主题筛选的淡出）与锁定 / 悬停的国家，
  * 出去的是锁定与悬停的变化（v-model:locked / v-model:hovered）。绘制、拾取、旋转、缩放、悬停提示的定位、
  * HUD 与皮肤都在这个组件和 lib/holoGlobe.ts 里，将来换 three.js 渲染器只换这两处。
  */
 import type { Topology } from 'topojson-specification';
 import { COUNTRIES } from '~/lib/briefMap';
-import type { GlobeDot, GlobeLink, HoloGlobe } from '~/lib/holoGlobe';
-
-export interface GlobeTip {
-  title: string;
-  topics: { name: string; on: boolean }[];
-  /** 至多 3 条故事标题 */
-  titles: string[];
-  /** 「N more」，没有更多时为 null */
-  more: string | null;
-  /** 没有故事的国家：当天报道在谈什么 */
-  loose: string | null;
-  footer: string;
-}
+import type { GlobeDot, GlobeLink, GlobeTip } from '~/lib/globeScene';
+import type { HoloGlobe } from '~/lib/holoGlobe';
 
 const props = defineProps<{
   dots: GlobeDot[];

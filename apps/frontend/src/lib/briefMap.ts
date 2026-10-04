@@ -4,6 +4,7 @@
  * 表从原型 prototypes/globe 的 places.py（C + EN_NAME）与 topics.py（EN）搬来。
  */
 import type { BriefMapEvent, MapTopic } from '@meridian/contracts';
+import { pluralize } from '~/utils/format';
 
 export interface Country {
   name: string;
@@ -83,6 +84,21 @@ export const TOPIC_NAMES: Record<MapTopic, string> = {
   sports: 'Sports',
   politics: 'Politics',
 };
+
+/** 每个主题有几条故事，按条数降序 */
+export function countTopics(events: { topics: MapTopic[] }[]): [MapTopic, number][] {
+  const n = new Map<MapTopic, number>();
+  for (const e of events) for (const t of e.topics) n.set(t, (n.get(t) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1]);
+}
+
+/** 「Crime & Justice 4 · Economy 3」：主题计数的展示（悬停提示与锁定面板共用） */
+export const formatTopicCounts = (counts: [MapTopic, number][]) =>
+  counts.map(([t, n]) => `${TOPIC_NAMES[t]} ${n}`).join(' · ');
+
+/** 「2 in the brief · 9 articles that day」：一个国家的故事数与当天文章数（悬停提示与锁定面板共用） */
+export const countrySummary = (stories: number, articles: number) =>
+  `${stories ? `${stories} in the brief` : 'No story here'} · ${pluralize(articles, 'article')} that day`;
 
 // 与原型 places.py 的 place() 同口径
 const PLACE_MIN = 0.3; // 头号国家占比达到它 → 标在这个国家

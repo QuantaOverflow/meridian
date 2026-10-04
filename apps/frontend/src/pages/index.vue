@@ -1,40 +1,65 @@
 <script setup lang="ts">
 import type { BriefMap, BriefMapCountryCoverage, BriefTier, MapTopic } from '@meridian/contracts';
-import type { GlobeTip } from '~/components/HoloGlobe.client.vue';
-import { COUNTRIES, TOPIC_NAMES, countryName, leadSentences, place } from '~/lib/briefMap';
-import type { GlobeDot, GlobeLink } from '~/lib/holoGlobe';
+import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, place } from '~/lib/briefMap';
+import type { GlobeDot, GlobeLink, GlobeTip } from '~/lib/globeScene';
 import type { BriefDetail } from '~/shared/types';
 
 // 首页 = 最新一期的地图。先拿最新一期（顶部文案与各块导语都从这里来），再按它的期号取地图数据，
 // 两份必然是同一期。顶部与右侧面板在服务端渲染，地球在浏览器里懒加载。
 definePageMeta({ layout: 'holo' });
 
-const { data, error } = await useAsyncData('home-map', async () => {
-  const brief = await $fetch<BriefDetail>('/api/briefs/latest');
-  // 地图数据取不到时仍给出顶部与阅读入口，不让整页挂掉
-  const map = await $fetch<BriefMap>(`/api/briefs/${brief.id}/map`).catch((err: unknown) => {
-    console.error('Failed to load brief map', err);
-    return null;
-  });
-  return { brief, map };
-});
+// lazy: 不阻塞路由切换。默认行为是等数据回来才换页，旧页面原地不动，点击后 1-2 秒毫无反馈；
+// lazy 下先换页、显示加载态。服务端渲染不受影响，照样等数据拿齐再出首屏。
+const { data, error, status } = await useAsyncData(
+  'home-map',
+  async () => {
+    const brief = await $fetch<BriefDetail>('/api/briefs/latest');
+    // 地图数据取不到时仍给出顶部与阅读入口（面板处写明），不让整页挂掉
+    const map = await $fetch<BriefMap>(`/api/briefs/${brief.id}/map`).catch((err: unknown) => {
+      console.error('Failed to load brief map', err);
+      return null;
+    });
+    return { brief, map };
+  },
+  { lazy: true }
+);
 
-if (error.value || !data.value) {
+if (error.value) {
   throw createError({ statusCode: 500, statusMessage: 'Failed to load the brief', fatal: true });
 }
 
 const brief = computed(() => data.value?.brief ?? null);
-useBriefSeo(brief);
-
 const slug = computed(() => brief.value?.slug ?? '');
 const SECTION: Record<BriefTier, string> = { lead: 'Top stories', more: 'More news', brief: 'In brief' };
+
+// 首页不是某一期的阅读页：规范地址是 / 自己，标题与描述也是首页的
+const origin = useRequestURL().origin;
+const config = useRuntimeConfig();
+const seoTitle = 'Meridian · Today’s brief on a map';
+const seoDescription = computed(
+  () => brief.value?.tldrProse ?? 'Where today’s stories happened, with a way into each one in the daily brief.'
+);
+useSeoMeta({
+  title: seoTitle,
+  description: () => seoDescription.value,
+  ogTitle: seoTitle,
+  ogDescription: () => seoDescription.value,
+  ogUrl: `${origin}/`,
+  ogImage: `${config.public.WORKER_API}/openGraph/default`,
+  ogLocale: 'en_US',
+  twitterCard: 'summary_large_image',
+});
+useHead({ link: [{ rel: 'canonical', href: `${origin}/` }] });
 
 // ── 数据：故事落点、按国家聚合 ───────────────────────────────
 const events = computed(() => {
   const leads = new Map(brief.value?.sections.flatMap(s => s.stories).map(s => [s.id, leadSentences(s.leadHtml)]));
   return (data.value?.map?.events ?? []).map(e => {
     const anchor = `story-${e.blockIndex + 1}`;
-    return { ...e, ...place(e.places), anchor, lead: leads.get(anchor) ?? '' };
+    const placed = place(e.places);
+    // 卡片锁定哪个国家：主国家；跨地区的故事取占比最高的国家；一个国家都没有的只当普通链接
+    const lockKey = placed.primary ?? e.places[0]?.country ?? null;
+    return { ...e, ...placed, anchor, lockKey, lead: leads.get(anchor) ?? '' };
   });
 });
 type HomeEvent = (typeof events.value)[number];
@@ -61,13 +86,13 @@ const heatMap = computed(() => {
 });
 
 const topStories = computed(() => events.value.filter(e => e.tier === 'lead'));
-const firstRest = computed(() => events.value.find(e => e.tier !== 'lead'));
-const topicTags = computed(() =>
-  (Object.keys(TOPIC_NAMES) as MapTopic[])
-    .map(t => ({ key: t, name: TOPIC_NAMES[t], count: events.value.filter(e => e.topics.includes(t)).length }))
-    .filter(t => t.count > 0)
-    .sort((a, b) => b.count - a.count)
-);
+// 「其余 N 条」按正文的真实条数算（对不上故事的块不在 events 里，但仍在正文里）
+const restCount = computed(() => Math.max(0, (brief.value?.storyCount ?? 0) - topStories.value.length));
+const restAnchor = computed(() => {
+  const first = events.value.find(e => e.tier !== 'lead');
+  return first ? `/briefs/${slug.value}#${first.anchor}` : `/briefs/${slug.value}`;
+});
+const topicTags = computed(() => countTopics(events.value).map(([key, count]) => ({ key, name: TOPIC_NAMES[key], count })));
 
 // ── 交互状态 ────────────────────────────────────────────────
 const locked = ref<string | null>(null);
@@ -76,9 +101,6 @@ const topic = ref<MapTopic | null>(null);
 const showHeat = ref(true);
 const showLinks = ref(false);
 
-function lock(key: string | null) {
-  locked.value = key;
-}
 function setTopic(t: MapTopic | null) {
   topic.value = topic.value === t ? null : t;
   if (topic.value) locked.value = null;
@@ -124,18 +146,13 @@ const stats = computed(() => ({
 function tipFor(key: string): GlobeTip {
   const list = byCountry.value.get(key)?.events ?? [];
   const cov = coverage.value.get(key);
-  const topicN = new Map<MapTopic, number>();
-  for (const e of list) for (const t of e.topics) topicN.set(t, (topicN.get(t) ?? 0) + 1);
   return {
     title: countryName(key),
-    topics: [...topicN].sort((a, b) => b[1] - a[1]).map(([t]) => ({ name: TOPIC_NAMES[t], on: topic.value === t })),
+    topics: countTopics(list).map(([t]) => ({ name: TOPIC_NAMES[t], on: topic.value === t })),
     titles: list.slice(0, 3).map(e => e.title),
     more: list.length > 3 ? `${list.length - 3} more` : null,
-    loose:
-      !list.length && cov?.otherTopics.length
-        ? `These articles are about: ${cov.otherTopics.map(([t, n]) => `${TOPIC_NAMES[t]} ${n}`).join(' · ')}`
-        : null,
-    footer: [list.length ? `${list.length} in the brief` : 'No story here', `${cov?.count ?? 0} articles that day`].join(' · '),
+    loose: !list.length && cov?.otherTopics.length ? `These articles are about: ${formatTopicCounts(cov.otherTopics)}` : null,
+    footer: countrySummary(list.length, cov?.count ?? 0),
   };
 }
 
@@ -145,24 +162,33 @@ const alsoInvolves = (e: HomeEvent) =>
   [e.secondary, ...e.spread].filter((k): k is string => !!k && k !== locked.value).map(countryName).join(', ');
 const topicEvents = computed(() => (topic.value ? events.value.filter(e => e.topics.includes(topic.value!)) : []));
 
+function onCardClick(e: HomeEvent, ev: MouseEvent) {
+  if (e.lockKey && !(ev.target as HTMLElement).closest('a')) locked.value = e.lockKey;
+}
+
 const lockedView = computed(() => {
   const key = locked.value;
   if (!key) return null;
   const cov = coverage.value.get(key);
   const others = (cov?.others ?? []).map(o => ({ ...o, url: /^https?:\/\//.test(o.url) ? o.url : undefined }));
+  const main = byCountry.value.get(key)?.events ?? [];
   return {
     name: countryName(key),
-    main: byCountry.value.get(key)?.events ?? [],
+    main,
     related: events.value.filter(e => e.primary !== key && (e.secondary === key || e.spread.includes(key))),
-    count: cov?.count ?? 0,
+    summary: countrySummary(main.length, cov?.count ?? 0),
     othersHead: others.slice(0, 6),
     othersRest: others.slice(6),
-    otherTopics: (cov?.otherTopics ?? []).map(([t, n]) => `${TOPIC_NAMES[t]} ${n}`).join(' · '),
+    otherTopics: formatTopicCounts(cov?.otherTopics ?? []),
   };
 });
 </script>
 
 <template>
+  <!-- 客户端换页过来时数据还在路上：先给轻量的加载态 -->
+  <div v-if="!brief && status === 'pending'" class="loading" aria-busy="true" aria-live="polite">Loading today’s map…</div>
+  <ErrorState v-else-if="!brief" :status-code="500" message="Failed to load the brief" />
+
   <section v-if="brief" class="hero">
     <div class="eyebrow">Daily Intelligence Brief · No. {{ brief.id }} · {{ brief.dateLabel }}</div>
     <p v-if="brief.tldrProse" class="tldr">{{ brief.tldrProse }}</p>
@@ -172,6 +198,8 @@ const lockedView = computed(() => {
       <NuxtLink class="cta-alt" to="/briefs">Past briefs</NuxtLink>
     </div>
   </section>
+
+  <p v-if="brief && !data?.map" class="unavailable">Map data is unavailable right now.</p>
 
   <template v-if="data?.map">
     <div class="bar">
@@ -208,12 +236,9 @@ const lockedView = computed(() => {
             <div class="eyebrow">Locked</div>
             <div class="p-title">
               <h2>{{ lockedView.name }}</h2>
-              <button type="button" class="linkish" @click="lock(null)">Back to all of today</button>
+              <button type="button" class="linkish" @click="locked = null">Back to all of today</button>
             </div>
-            <div class="p-sub">
-              {{ lockedView.main.length ? `${lockedView.main.length} in the brief` : 'No story mainly happened here' }}
-              · {{ lockedView.count }} articles that day
-            </div>
+            <div class="p-sub">{{ lockedView.summary }}</div>
           </div>
           <div v-for="group in [
             { list: lockedView.main, title: 'In today’s brief', note: null },
@@ -280,12 +305,12 @@ const lockedView = computed(() => {
               v-for="e in topic ? topicEvents : topStories"
               :key="e.storyId"
               class="hcard"
-              :class="{ hover: !!e.primary && e.primary === hovered }"
-              tabindex="0"
-              @click="!($event.target as HTMLElement).closest('a') && e.primary && lock(e.primary)"
-              @keydown.enter.self="e.primary && lock(e.primary)"
-              @mouseenter="hovered = e.primary"
-              @mouseleave="hovered = null"
+              :class="{ hover: !!e.lockKey && e.lockKey === hovered, lockable: !!e.lockKey }"
+              :tabindex="e.lockKey ? 0 : undefined"
+              @click="onCardClick(e, $event)"
+              @keydown.enter.self="e.lockKey && (locked = e.lockKey)"
+              @mouseenter="e.lockKey && (hovered = e.lockKey)"
+              @mouseleave="e.lockKey && (hovered = null)"
             >
               <div class="hmeta">
                 <span>{{ where(e) }}{{ topic ? ` · ${SECTION[e.tier]}` : '' }}</span>
@@ -297,8 +322,8 @@ const lockedView = computed(() => {
             </div>
           </div>
 
-          <NuxtLink v-if="!topic && firstRest" class="rest" :to="`/briefs/${slug}#${firstRest.anchor}`">
-            {{ events.length - topStories.length }} more in the brief →
+          <NuxtLink v-if="!topic && restCount > 0" class="rest" :to="restAnchor">
+            {{ restCount }} more in the brief →
           </NuxtLink>
 
           <div class="sec">
@@ -324,6 +349,8 @@ const lockedView = computed(() => {
 </template>
 
 <style scoped>
+.loading, .unavailable { color: var(--ink3); font-size: 13px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.loading { padding-block: 40px; letter-spacing: 0.14em; text-transform: uppercase; }
 .hero { display: flex; flex-direction: column; gap: 14px; padding-block: 8px 4px; }
 .eyebrow { font-size: 12px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.14em; }
 .hero .eyebrow { font-size: 12.5px; }
@@ -364,9 +391,10 @@ const lockedView = computed(() => {
 .chip.act { border-color: var(--ink2); color: var(--ink); }
 
 .hcards { display: flex; flex-direction: column; }
-.hcard { padding: 12px 0 14px; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.hcard { padding: 12px 0 14px; border-bottom: 1px solid var(--rule); }
+.hcard.lockable { cursor: pointer; }
 .hcard:first-child { padding-top: 2px; }
-.hcard:hover h3, .hcard.hover h3 { color: var(--accent); }
+.hcard.lockable:hover h3, .hcard.hover h3 { color: var(--accent); }
 .hcard .hmeta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink3); }
 .hcard h3 { font: 500 15px/1.45 var(--mono); margin: 5px 0 6px; text-wrap: balance; }
 .hcard p, .event p { color: var(--ink2); font-size: 14px; line-height: 1.55; margin: 0 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -395,5 +423,4 @@ const lockedView = computed(() => {
 .more { font-size: 13px; }
 .more summary { cursor: pointer; color: var(--ink3); padding: 6px 0; }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>

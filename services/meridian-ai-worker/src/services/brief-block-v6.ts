@@ -188,7 +188,8 @@ export class BriefBlockV6Service {
     tag: string,
     prompt: string,
     schema: Record<string, unknown>,
-    ok: (x: any) => string[],
+    /** 校验，返回失败原因（空 = 通过）。attempt 从 0 起：写作步据它在最后一次收下拒写 */
+    ok: (x: any, attempt: number) => string[],
     repetitionTextOf: (x: any) => string,
     o: {
       model: string;
@@ -233,7 +234,7 @@ export class BriefBlockV6Service {
             // eslint-disable-next-line local/no-swallowed-catch -- 解不出时 parsed 留 null，下面记 warn「JSON 解不出」并重试
           }
           // reasons === null：连 ok() 都没跑到（截断 / JSON 解不出），没有可回传的诊断
-          const reasons = !truncated && parsed ? ok(parsed) : null;
+          const reasons = !truncated && parsed ? ok(parsed, attempt) : null;
           if (reasons && reasons.length === 0) {
             if (!detectRepetition(repetitionTextOf(parsed))) return { ok: true, value: { parsed, raw: content } };
             logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
@@ -323,7 +324,10 @@ export class BriefBlockV6Service {
       'write',
       getWritePrompt(anchors, sentences, tier),
       getWriteSchema(tier) as unknown as Record<string, unknown>,
-      x => writeOk(x, cited),
+      // 回 not_a_single_event 先不收：前两次带 not_written 的提示再写，第三次还拒才收下（块不出，与原来一样）。
+      // ADR 0010 决定 7：v4-pro 会把通讯社稿里大段大选背景当成「杂烩」，拒写一件明明是一件事的新闻
+      // （10-03 期第 14 块不带提示 5/5 拒写、带提示 3/3 写出正事）；glm 近 13 期 316 块一次没拒过。
+      (x, attempt) => (x?.verdict === 'not_a_single_event' && attempt < TEMPERATURES.length - 1 ? ['not_written'] : writeOk(x, cited)),
       sentencesText,
       {
         model: WRITER_MODEL,

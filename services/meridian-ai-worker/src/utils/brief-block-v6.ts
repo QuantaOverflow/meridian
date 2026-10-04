@@ -233,6 +233,10 @@ const REASON_HINTS: Record<string, string> = {
   no_terminal_punct:
     'the text ended without terminal punctuation; every sentence must be complete and end with a full stop.',
   at_length_limit: `the text reached the ${SENTENCE_MAX_CHARS}-character limit and was cut off there; write this sentence shorter.`,
+  // 写作回 not_a_single_event 时先不收、带这句再写（services/brief-block-v6.ts 的写作步；ADR 0010 决定 7）。
+  // 文字是 2026-10-05 对 10-03 期第 14 块实测过的那句：带上它 3/3 写出了正事，不带 5/5 拒写
+  not_written:
+    'these articles were already judged to be one news story: keep verdict "written" and write the item about its most important development.',
   // 改写的数字检查（numberCheck）。它会按句给一条列出缺的数字的提示，这条只是兜底
   number_not_in_sources:
     'a figure in it appears in no source sentence it cites; write each figure as a source sentence gives it, without adding up or converting numbers, and cite that sentence.',

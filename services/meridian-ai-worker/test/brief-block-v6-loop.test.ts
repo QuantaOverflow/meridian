@@ -211,13 +211,36 @@ describe('写作–核查循环：块接口', () => {
     expect(f.unscripted).toEqual([])
   })
 
-  it('草稿是 not_a_single_event：没有句子可核，不进循环，trace 里没有 check', async () => {
-    const f = fakeEnv({ write: [JSON.stringify({ verdict: 'not_a_single_event', reason: 'Two storms', title: '', sentences: [] })] })
+  it('写作三次都回 not_a_single_event：收下最后一次（块不出），没有句子可核，不进循环，trace 里没有 check', async () => {
+    const refuse = (reason: string) => JSON.stringify({ verdict: 'not_a_single_event', reason, title: '', sentences: [] })
+    const f = fakeEnv({ write: [refuse('A topic bag'), refuse('Still a topic bag'), refuse('Two storms')] })
     const r = await settle(service(f).generate(INPUT))
 
     expect(r).toMatchObject({ verdict: 'not_a_single_event', reason: 'Two storms', block: null })
     expect(r.trace.check).toBeUndefined()
-    expect(f.seen.map(s => s.model)).toEqual([GLM, V4PRO])
+    expect(r.trace.writeRejects).toEqual(['#1 not_written', '#2 not_written'])
+    expect(f.seen.map(s => s.model)).toEqual([GLM, V4PRO, V4PRO, V4PRO])
+  })
+
+  it('写作回 not_a_single_event：先不收，下一次在写作 prompt 后接「这几篇已判定是同一件新闻」的提示；再写出来就照常进循环', async () => {
+    // 10-03 期第 14 块：4 篇都讲美澳暂停驻巴西领事服务，v4-pro 却判「杂烩」；带上这句提示后 3/3 写出了正事
+    const f = fakeEnv({
+      write: [JSON.stringify({ verdict: 'not_a_single_event', reason: 'A topic bag', title: '', sentences: [] }), DRAFT_REPLY],
+      check: () => OK,
+    })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(r.verdict).toBe('written')
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    expect(r.trace.writeRejects).toEqual(['#1 not_written'])
+    expect(r.trace.check).toMatchObject({ outcome: 'clean' })
+    const writes = f.seen.filter(s => s.model === V4PRO).map(s => s.inputs.messages[0].content as string)
+    expect(writes[1]).toBe(`${writes[0]}
+
+Your previous answer was rejected by a mechanical check. Fix these and answer again in full:
+- these articles were already judged to be one news story: keep verdict "written" and write the item about its most important development.
+Do not repeat the rejected wording; write the item again from the material above.`)
+    expect(f.unscripted).toEqual([])
   })
 
   it.each([undefined, '1', 'two', '-1'])('clean（BRIEF_CHECK_EPOCHS=%s 按 1 次）：草稿没有句子被标出 → 照发草稿', async epochs => {

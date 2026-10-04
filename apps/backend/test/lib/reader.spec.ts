@@ -11,7 +11,7 @@ import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
 import { anchorFromDate, tokenizeDates } from '../fixtures/reader/dates';
-import { dbToday, seedReaderFixture } from '../fixtures/reader/fixture';
+import { dbToday, putBrief8Record, seedReaderFixture } from '../fixtures/reader/fixture';
 
 if (!env.BACKEND_TEST_DB) {
   throw new Error('缺 BACKEND_TEST_DATABASE_URL（本机测试库，见 apps/backend/test/README.md「数据库」）');
@@ -23,6 +23,7 @@ let anchor: Date;
 beforeAll(async () => {
   anchor = anchorFromDate(await dbToday(db));
   await seedReaderFixture(db, anchor);
+  await putBrief8Record(env.ARTICLES_BUCKET);
 });
 
 /** golden 名 → 请求路径（= 前端转发时拼出的路径，改了前端的拼法这里要跟着改） */
@@ -37,6 +38,8 @@ const CASES: Record<string, string> = {
   'brief-1-legacy': '/reader/briefs/1',
   'brief-2-artifacts': '/reader/briefs/2',
   'brief-404': '/reader/briefs/999',
+  // 地图首页的数据；边界情况在 reader-map.spec.ts
+  'brief-8-map': '/reader/briefs/8/map',
   'stories-list': '/reader/stories',
   'story-1-streak': '/reader/stories/1',
   'story-2-importance': '/reader/stories/2',
@@ -85,6 +88,14 @@ describe('边界', () => {
     expect(((await res.json()) as { title: string }).title).toBe('Nepal — survivors found after ten days');
   });
 
+  it('地图：不存在的期与未发布的期 404，回「Report not found」', async () => {
+    for (const path of ['/reader/briefs/999/map', '/reader/briefs/9/map']) {
+      const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      expect(res.status, path).toBe(404);
+      expect(await res.json(), path).toEqual({ error: 'Report not found' });
+    }
+  });
+
   it('不带 token：401', async () => {
     for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
@@ -92,7 +103,7 @@ describe('边界', () => {
   });
 
   it('参数不合法：400', async () => {
-    for (const path of ['/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/stories/1.5', '/admin/sources/abc/details']) {
+    for (const path of ['/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/briefs/abc/map', '/reader/stories/1.5', '/admin/sources/abc/details']) {
       const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       expect(res.status, path).toBe(400);
     }

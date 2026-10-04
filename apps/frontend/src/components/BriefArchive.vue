@@ -34,7 +34,7 @@ const { data, status, error } = await useAsyncData<BriefListResponse>(
 );
 
 if (error.value) {
-  throw createError({ statusCode: 500, statusMessage: '归档加载失败', fatal: true });
+  throw createError({ statusCode: 500, statusMessage: 'Failed to load archive', fatal: true });
 }
 
 // 「加载更多」要在首页结果后面追加，所以列表单独存一份
@@ -59,15 +59,15 @@ async function loadMore() {
 
 const subtitle = computed(() => {
   if (data.value === null) return '';
-  const coverage = data.value.earliestDateLabel === null ? '' : ` · 覆盖 ${data.value.earliestDateLabel}至今`;
-  return `${data.value.total} 期${coverage}`;
+  const coverage = data.value.earliestDateLabel === null ? '' : ` · since ${data.value.earliestDateLabel}`;
+  return `${pluralize(data.value.total, 'issue')}${coverage}`;
 });
 </script>
 
 <template>
   <div class="mx-auto max-w-[740px] px-5 pt-[70px] pb-[140px] md:px-8">
     <h1 class="font-serif text-[30px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[38px] mb-2">
-      归档
+      Archive
     </h1>
     <p class="mb-[34px] text-[14px] text-ink3">{{ subtitle }}</p>
 
@@ -76,15 +76,15 @@ const subtitle = computed(() => {
       <input
         v-model="searchInput"
         type="search"
-        placeholder="搜索事件、人物、地区…"
-        aria-label="搜索简报"
+        placeholder="Search events, people, places…"
+        aria-label="Search briefs"
         class="text-ink placeholder:text-ink3 w-full bg-transparent text-[13.5px] focus:outline-none"
       />
     </div>
 
     <div class="border-rule-soft mt-[6px] border-b" :class="query === '' ? '' : 'py-[14px]'">
       <p v-if="query !== '' && data" class="text-[13px] text-ink3">
-        {{ data.matched }} 期匹配「{{ query }}」
+        {{ pluralize(data.matched, 'issue') }} match "{{ query }}"
       </p>
     </div>
 
@@ -97,19 +97,19 @@ const subtitle = computed(() => {
     </div>
 
     <p v-else-if="items.length === 0" class="pt-[46px] text-[15px] leading-[1.8] text-ink2">
-      没有匹配「{{ query }}」的简报。换个说法，或者
+      No briefs match "{{ query }}". Try different words, or
       <button type="button" class="border-rule border-b cursor-pointer text-ink" @click="searchInput = ''">
-        清空检索
+        clear the search
       </button>
-      看看全部。
+      to see everything.
     </p>
 
     <ul v-else>
       <li v-for="brief in items" :key="brief.id" class="border-rule-soft border-b">
         <NuxtLink :to="`/briefs/${brief.slug}`" class="group block py-7">
           <p class="mb-[9px] text-[12.5px] text-ink3">
-            {{ brief.dateShortLabel }} · 第 {{ brief.id }} 期 · {{ brief.storyCount }} 条 ·
-            {{ brief.readingMinutes }} 分钟
+            {{ brief.dateShortLabel }} · Issue {{ brief.id }} · {{ pluralize(brief.storyCount, 'story', 'stories') }} ·
+            {{ brief.readingMinutes }} min
           </p>
 
           <h3
@@ -140,7 +140,7 @@ const subtitle = computed(() => {
         :disabled="loadingMore"
         @click="loadMore"
       >
-        {{ loadingMore ? '加载中…' : '加载更多' }}
+        {{ loadingMore ? 'Loading…' : 'Load more' }}
       </button>
     </div>
   </div>

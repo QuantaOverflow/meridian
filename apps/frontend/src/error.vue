@@ -4,11 +4,11 @@ import type { NuxtError } from '#app';
 const props = defineProps<{ error: NuxtError }>();
 
 const message = computed(() => {
-  if (props.error.statusCode === 404) return '这个页面不存在';
-  return props.error.statusMessage || '出了点问题';
+  if (props.error.statusCode === 404) return "This page doesn't exist";
+  return props.error.statusMessage || 'Something went wrong';
 });
 
-useSeoMeta({ title: () => `${props.error.statusCode} | Meridian`, ogLocale: 'zh_CN' });
+useSeoMeta({ title: () => `${props.error.statusCode} | Meridian`, ogLocale: 'en_US' });
 </script>
 
 <template>

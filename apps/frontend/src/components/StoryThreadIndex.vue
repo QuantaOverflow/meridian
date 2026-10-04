@@ -6,17 +6,17 @@ type Filter = StoryThreadStatus | 'all';
 // lazy 见 pages/index.vue 的说明
 const { data, error, status } = await useFetch<StoryThreadListResponse>('/api/stories', { lazy: true });
 if (error.value) {
-  throw createError({ statusCode: 500, statusMessage: '事件追踪加载失败', fatal: true });
+  throw createError({ statusCode: 500, statusMessage: 'Failed to load story threads', fatal: true });
 }
 
 const filter = ref<Filter>('active');
 
-// ⚠️「暂无更新」不是「已平息」：系统只知道最近没有新报道并入这条线索，
-// 不知道现实中的冲突是否平息。用后者是替世界下判断，会误导读者。别改回去。
+// ⚠️「Dormant」不是「已平息」：系统只知道最近没有新报道并入这条线索，
+// 不知道现实中的冲突是否平息。用「resolved」这类说法是替世界下判断，会误导读者。别改回去。
 const tabs = computed(() => [
-  { key: 'active' as const, label: '进行中', count: data.value?.counts.active ?? 0 },
-  { key: 'dormant' as const, label: '暂无更新', count: data.value?.counts.dormant ?? 0 },
-  { key: 'all' as const, label: '全部', count: data.value?.counts.all ?? 0 },
+  { key: 'active' as const, label: 'Active', count: data.value?.counts.active ?? 0 },
+  { key: 'dormant' as const, label: 'Dormant', count: data.value?.counts.dormant ?? 0 },
+  { key: 'all' as const, label: 'All', count: data.value?.counts.all ?? 0 },
 ]);
 
 const threads = computed(() => {
@@ -28,11 +28,11 @@ const threads = computed(() => {
 <template>
   <div class="mx-auto max-w-[740px] px-5 pt-[70px] pb-[140px] md:px-8">
     <h1 class="font-serif text-[30px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[38px] mb-3">
-      事件追踪
+      Story threads
     </h1>
 
     <p class="font-serif text-[17px] leading-[1.85] tracking-[0.01em] text-ink2 md:text-[19px] mb-9">
-      同一条事件往往横跨很多期简报。这里把散落各期的报道合成一条线索，不必每天从零读起。
+      The same story often spans many issues. This combines scattered coverage into one thread, so you don't have to start from zero every day.
     </p>
 
     <div class="border-rule-soft flex gap-6 border-b text-[14px]">
@@ -51,8 +51,8 @@ const threads = computed(() => {
 
     <!-- 两个阈值都要对读者可见：数字来自接口，改配置时这行会跟着变 -->
     <p class="mt-3 text-[12px] text-ink3">
-      至少出现在 {{ data?.minBriefs ?? 2 }} 期简报里才成为线索 · {{ data?.activeWindowDays ?? 7 }}
-      天内有新进展的列为进行中
+      A thread needs to appear in at least {{ pluralize(data?.minBriefs ?? 2, 'issue') }} · active means new progress
+      within {{ pluralize(data?.activeWindowDays ?? 7, 'day') }}
     </p>
 
     <div v-if="status === 'pending' && threads.length === 0" class="pt-7" aria-busy="true">
@@ -65,9 +65,10 @@ const threads = computed(() => {
 
     <p v-else-if="threads.length === 0" class="pt-[46px] text-[15px] leading-[1.8] text-ink2">
       <template v-if="filter === 'active'">
-        目前没有进行中的线索——最近 {{ data?.activeWindowDays ?? 7 }} 天内没有新进展并入任何一条。
+        No active story threads right now — none have had new progress in the last
+        {{ pluralize(data?.activeWindowDays ?? 7, 'day') }}.
       </template>
-      <template v-else>还没有线索。</template>
+      <template v-else>No story threads yet.</template>
     </p>
 
     <ul v-else>
@@ -78,13 +79,14 @@ const threads = computed(() => {
               {{ thread.title }}
             </h3>
             <!-- 不满足升级判据时什么都不显示，不要「平稳」这类填充词 -->
-            <span v-if="thread.escalating" class="text-accent shrink-0 text-[12.5px]">升级中</span>
+            <span v-if="thread.escalating" class="text-accent shrink-0 text-[12.5px]">Escalating</span>
           </div>
 
           <p v-if="thread.summary" class="mb-3 text-[15.5px] leading-[1.78] text-ink2">{{ thread.summary }}</p>
 
           <p class="text-[12.5px] text-ink3">
-            持续 {{ thread.durationDays }} 天 · {{ thread.briefCount }} 期简报 · {{ thread.updateLabel }}
+            {{ pluralize(thread.durationDays, 'day') }} running · {{ pluralize(thread.briefCount, 'issue') }} ·
+            {{ thread.updateLabel }}
           </p>
         </NuxtLink>
       </li>

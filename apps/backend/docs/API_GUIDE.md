@@ -18,6 +18,7 @@
 | `GET /events?date&pagination&page&limit` | 需要 | 运维 | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
 | `GET /reader/briefs?q&limit&offset` | token | 前端 | 简报归档：`q` ILIKE 子串检索（≤200 字），`limit` 1–50 默认 20，`offset` ≥0。回 `{items, matched, total, earliest}`（前端 `/api/briefs` 的数据源，下同） |
 | `GET /reader/briefs/latest`、`GET /reader/briefs/:id` | token | 前端 | 一期简报：正文 markdown 原文 + 简报级来源清单；不存在回 404 |
+| `GET /reader/briefs/:id/map` | token | 前端 | 地图首页数据（形状见 `@meridian/contracts` 的 `BriefMap`）：正文块按 brief-v3 记录的 clusterId 对回故事，带国家占比、主题、过门槛的线索，以及当期窗口按国家的文章统计；只有 `:id` 形式，可见性同单期页，不存在回 404 |
 | `GET /reader/stories`、`GET /reader/stories/:id` | token | 前端 | 跨期线索列表 / 单条（含各期条目）；状态与「升级中」在这里判定，不到门槛的簇回 404 |
 | `GET /admin/sources` | token | 前端 | 后台源总览：每个源近 7 天的文章数与健康度、全局的今日计数与过期源数 |
 | `GET /admin/sources/:id/details?page&status&completeness&quality&sortBy&sortOrder` | token | 前端 | 单个源的文章列表，每页 50；不认识的筛选值等于不筛选；源不存在回 404 |

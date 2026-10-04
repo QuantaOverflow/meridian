@@ -6,8 +6,8 @@ import type { Db } from './db';
  * 这里只出领域数据；markdown → HTML、剥行内 markdown、中文日期等展示在前端做。
  */
 
-/** 读者只看得到已发布的期（手动触发的调试期与撤回的期 published_at 为 null，见 schema.ts） */
-const isPublished = isNotNull($reports.published_at);
+/** 读者只看得到已发布的期（手动触发的调试期与撤回的期 published_at 为 null，见 schema.ts）。地图（brief-map.ts）共用 */
+export const isPublished = isNotNull($reports.published_at);
 
 /**
  * 检索走 ILIKE 子串匹配，不是 Postgres 全文检索。

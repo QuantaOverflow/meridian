@@ -15,7 +15,13 @@
  * 没挂 report 的 run 不计；未发布的期（手动触发的调试期，published_at 为 null）在归档、最新一期、单期页、线索里都不出现——
  * 它比最新一期还新、标题命中检索、还给「只出现一期」的簇 5 凑出第二期，漏过滤任何一处快照都会变；article_ids 为 null / 非数组 / 同一篇重复；源的各状态（新鲜 / 过期 / 暂停未初始化 / 无文章）、
  * 文章超过一页（55 篇）、各种 status / completeness / quality。
+ *
+ * 地图（/reader/briefs/8/map）另用到几个别的读者 golden 都不读的字段（Beta 101 / 105 / 112 的 primary_location 例外，
+ * 它只出现在 admin-source-2-details 里）：文章的 content_file_key 与 topic_tags、
+ * brief_stories.cluster_id、wf-r8 的 params（时间窗放到 4 天，让第 -3 天的 Alpha 文章落进当期窗口），
+ * 以及 R2 里 wf-r8 的 brief-v3 记录（putBrief8Record）。改这些不动其它 golden。
  */
+import { briefV3RecordKey, type BriefTier, type BriefV3Record, type BriefV3WrittenBlock } from '@meridian/contracts';
 import {
   $articles,
   $brief_runs,
@@ -67,6 +73,11 @@ export function buildReaderFixture(anchor: Date) {
       language: processed ? 'en' : null,
       primary_location: processed ? (i % 4 === 0 ? 'GB' : 'US') : null,
       embedding: processed && i % 2 === 0 ? vec : null,
+      contentFileKey: processed ? `articles/alpha-${n}.txt` : null,
+      // 主题标签大小写混着写（生产也是），地图比对前转小写；i % 8 === 0 的多带一个 Crime
+      topic_tags: processed
+        ? [...(i % 3 === 0 ? ['Economy', 'Business'] : i % 3 === 1 ? ['Politics', 'World Affairs'] : ['Technology', 'politics']), ...(i % 8 === 0 ? ['Crime'] : [])]
+        : null,
     });
   }
   // Beta：简报与线索引用的文章，带事件要点
@@ -78,6 +89,7 @@ export function buildReaderFixture(anchor: Date) {
     105: ['Fed held rates.'],
     109: ['Smoke reached Italy.'],
   };
+  const locations: Record<number, string> = { 101: 'Israel', 112: 'Gaza', 105: 'United States' };
   for (let id = 101; id <= 112; id++) {
     articles.push({
       id,
@@ -91,6 +103,9 @@ export function buildReaderFixture(anchor: Date) {
       completeness: id === 109 ? null : 'COMPLETE',
       content_quality: id === 109 ? null : id === 110 ? 'LOW_QUALITY' : 'OK',
       event_summary_points: points[id] ?? null,
+      topic_tags: id === 101 || id === 112 ? ['Security', 'Conflict', 'World Affairs'] : id === 105 ? ['Economy', 'Politics'] : null,
+      // 第 8 期正文故事的成员：story 15 = Israel + Gaza（落在一国、第二国过连线门槛），story 16 = 美国
+      primary_location: locations[id] ?? null,
     });
   }
 
@@ -227,7 +242,13 @@ export function buildReaderFixture(anchor: Date) {
   });
 
   const briefRuns: (typeof $brief_runs.$inferInsert)[] = [
-    ...reports.map(r => ({ workflow_id: `wf-r${r.id}`, status: 'COMPLETED' as const, report_id: r.id, started_at: r.createdAt })),
+    ...reports.map(r => ({
+      workflow_id: `wf-r${r.id}`,
+      status: 'COMPLETED' as const,
+      report_id: r.id,
+      started_at: r.createdAt,
+      params: r.id === 8 ? { timeRangeDays: 4 } : null,
+    })),
     // 没挂 report 的 run：它的故事不进任何读者视图
     { workflow_id: 'wf-orphan', status: 'FAILED' as const, report_id: null, started_at: at(0, 6) },
   ];
@@ -296,6 +317,9 @@ export function buildReaderFixture(anchor: Date) {
     story(26, 8, 'Nepal', 0.5, [104], true, 6, 104, twoDim(1, 0)),
     story(27, 8, 'Avalanche kills two climbers', 0.9, [102], true, 6, 102, twoDim(0, 1)),
   ];
+  // 聚类时的簇号（brief-v3 记录的块按它对回故事），只有 wf-r8 的几条用得到
+  const clusterIds: Record<number, number> = { 15: 0, 16: 1, 17: 2, 26: 3, 27: 4 };
+  for (const s of briefStories) s.cluster_id = clusterIds[s.id as number] ?? null;
 
   return { sources, articles, reports, briefRuns, clusters, briefStories };
 }
@@ -317,6 +341,29 @@ export async function seedReaderFixture(db: Db, anchor: Date) {
       sql`select setval(pg_get_serial_sequence(${table}, 'id'), coalesce((select max(id) from ${sql.identifier(table)}), 0) + 1, false)`
     );
   }
+}
+
+/** 写出来的块：地图只读 clusterId / title / tier，其余字段填零 */
+export function writtenBlock(clusterId: number | null, title: string, tier: BriefTier): BriefV3WrittenBlock {
+  return {
+    clusterId, storyIdx: 0, title, v6Title: title, tier, articles: 0, tierArticles: 0, sources: 0, score: 0, ok: true,
+    text: '', sentences: [], anchors: 0, windows: 0, windowFailures: 0, citationsRepaired: 0, writeRejects: [], llmCalls: 0, neurons: 0,
+  };
+}
+
+/** 把一期的 brief-v3 记录放进测试环境的 ARTICLES_BUCKET（本地模拟桶），key 与生产同一个 briefV3RecordKey */
+export async function putBriefV3Record(bucket: R2Bucket, workflowId: string, blocks: BriefV3Record['blocks']) {
+  const record: BriefV3Record = { workflowId, createdAt: '2026-01-01T00:00:00.000Z', title: workflowId, sections: 0, blocks };
+  await bucket.put(briefV3RecordKey(workflowId), JSON.stringify(record));
+}
+
+/** 第 8 期（最新一期）的 brief-v3 记录：两块与正文一致（lead 是簇 0 = story 15，more 是簇 1 = story 16），外加一个没写出来的块 */
+export async function putBrief8Record(bucket: R2Bucket) {
+  await putBriefV3Record(bucket, 'wf-r8', [
+    writtenBlock(0, 'gaza ceasefire holds', 'lead'),
+    writtenBlock(1, 'fed holds rates', 'more'),
+    { storyIdx: 2, title: 'fed dissent', ok: false, error: 'write failed' },
+  ]);
 }
 
 /** 数据库的「今天」，作为 fixture 与快照日期记号的锚点 */

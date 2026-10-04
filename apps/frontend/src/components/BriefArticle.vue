@@ -42,7 +42,7 @@ const showAllArticles = ref(false);
     <!-- 正文列在视口正中，侧栏是绝对定位浮在左侧留白里的，不占文档流也就不会把正文推偏 -->
     <div class="mx-auto max-w-[668px] pt-[70px] pb-[140px]">
       <header>
-        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">每日情报简报 · 第 {{ brief.id }} 期</p>
+        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Daily intelligence brief · Issue {{ brief.id }}</p>
 
         <h1
           class="font-serif text-[28px] leading-[1.24] font-semibold tracking-[-0.01em] text-ink md:text-[44px] mb-[18px]"
@@ -55,9 +55,9 @@ const showAllArticles = ref(false);
         >
           <span>{{ brief.dateLabel }}</span>
           <span aria-hidden="true">·</span>
-          <span>{{ brief.storyCount }} 条事件</span>
+          <span>{{ pluralize(brief.storyCount, 'story', 'stories') }}</span>
           <span aria-hidden="true">·</span>
-          <span>{{ brief.readingMinutes }} 分钟阅读</span>
+          <span>{{ brief.readingMinutes }} min read</span>
         </div>
 
         <p
@@ -103,7 +103,7 @@ const showAllArticles = ref(false);
 
       <div v-if="brief.sources.length > 0" class="deep-only border-rule-soft mb-[44px] border-t pt-[28px]">
         <div class="flex flex-wrap items-center gap-[10px] text-[13px] text-ink3">
-          <span>来源</span>
+          <span>Sources</span>
           <span v-for="source in visibleSources" :key="source.name" class="border-rule border-b">
             {{ source.name }}
           </span>
@@ -115,7 +115,7 @@ const showAllArticles = ref(false);
             :aria-expanded="showAllArticles"
             @click="showAllArticles = !showAllArticles"
           >
-            {{ showAllArticles ? '收起原文' : `查看全部 ${brief.sourceArticleCount} 篇原文 →` }}
+            {{ showAllArticles ? 'Hide source articles' : `View all ${pluralize(brief.sourceArticleCount, 'source article')} →` }}
           </button>
         </div>
 

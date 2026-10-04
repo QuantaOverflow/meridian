@@ -6,13 +6,13 @@ const colorMode = useColorMode();
 const { mode, setMode } = useReaderMode();
 const { readingProgress } = useReadingProgress();
 
-// 「今日简报」= 首页与任意一期简报详情；「归档」只认列表页本身
-// 375px 视口装不下三个四字导航 + 分段控件 + 主题按钮，实测会折成两行。
+// 「Today's brief」= 首页与任意一期简报详情；「Archive」只认列表页本身
+// 375px 视口装不下三个导航词 + 分段控件 + 主题按钮，实测会折成两行。
 // 移动端换短标签（语义不丢），md 以上恢复完整文案。
 const navItems = computed(() => [
-  { label: '今日简报', short: '今日', to: '/', active: route.path === '/' || route.path.startsWith('/briefs/') },
-  { label: '归档', short: '归档', to: '/briefs', active: route.path === '/briefs' },
-  { label: '事件追踪', short: '追踪', to: '/stories', active: route.path.startsWith('/stories') },
+  { label: "Today's brief", short: 'Today', to: '/', active: route.path === '/' || route.path.startsWith('/briefs/') },
+  { label: 'Archive', short: 'Archive', to: '/briefs', active: route.path === '/briefs' },
+  { label: 'Story threads', short: 'Threads', to: '/stories', active: route.path.startsWith('/stories') },
 ]);
 
 function toggleTheme() {
@@ -52,13 +52,13 @@ function toggleTheme() {
         <ClientOnly>
           <div
             role="radiogroup"
-            aria-label="阅读模式"
+            aria-label="Reading mode"
             class="border-rule flex shrink-0 overflow-hidden rounded-full border text-[12px] md:text-[13px]"
           >
             <button
               v-for="opt in [
-                { value: 'skim' as const, label: '速读' },
-                { value: 'deep' as const, label: '深读' },
+                { value: 'skim' as const, label: 'Quick read' },
+                { value: 'deep' as const, label: 'Deep read' },
               ]"
               :key="opt.value"
               type="button"
@@ -77,7 +77,7 @@ function toggleTheme() {
           <button
             type="button"
             class="text-ink2 hover:text-ink flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors md:h-[30px] md:w-[30px]"
-            :aria-label="colorMode.value === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+            :aria-label="colorMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
             @click="toggleTheme"
           >
             <SunIcon v-if="colorMode.value === 'dark'" class="h-[17px] w-[17px]" :stroke-width="1.5" />
@@ -99,7 +99,7 @@ function toggleTheme() {
     <footer class="border-rule-soft mx-auto max-w-[1160px] border-t px-5 py-7 text-[12.5px] text-ink3 md:px-8">
       <p>
         <NuxtLink to="https://github.com/QuantaOverflow/meridian" target="_blank" rel="noopener noreferrer" class="border-rule border-b">
-          在 GitHub 开源
+          Open source on GitHub
         </NuxtLink>
       </p>
     </footer>

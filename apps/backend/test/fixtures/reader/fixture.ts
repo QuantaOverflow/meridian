@@ -16,7 +16,8 @@
  * 它比最新一期还新、标题命中检索、还给「只出现一期」的簇 5 凑出第二期，漏过滤任何一处快照都会变；article_ids 为 null / 非数组 / 同一篇重复；源的各状态（新鲜 / 过期 / 暂停未初始化 / 无文章）、
  * 文章超过一页（55 篇）、各种 status / completeness / quality。
  *
- * 地图（/reader/briefs/8/map）另用到几个现有读者 golden 都不读的字段：文章的 content_file_key 与 topic_tags、
+ * 地图（/reader/briefs/8/map）另用到几个别的读者 golden 都不读的字段（Beta 101 / 105 / 112 的 primary_location 例外，
+ * 它只出现在 admin-source-2-details 里）：文章的 content_file_key 与 topic_tags、
  * brief_stories.cluster_id、wf-r8 的 params（时间窗放到 4 天，让第 -3 天的 Alpha 文章落进当期窗口），
  * 以及 R2 里 wf-r8 的 brief-v3 记录（putBrief8Record）。改这些不动其它 golden。
  */
@@ -88,6 +89,7 @@ export function buildReaderFixture(anchor: Date) {
     105: ['Fed held rates.'],
     109: ['Smoke reached Italy.'],
   };
+  const locations: Record<number, string> = { 101: 'Israel', 112: 'Gaza', 105: 'United States' };
   for (let id = 101; id <= 112; id++) {
     articles.push({
       id,
@@ -102,6 +104,8 @@ export function buildReaderFixture(anchor: Date) {
       content_quality: id === 109 ? null : id === 110 ? 'LOW_QUALITY' : 'OK',
       event_summary_points: points[id] ?? null,
       topic_tags: id === 101 || id === 112 ? ['Security', 'Conflict', 'World Affairs'] : id === 105 ? ['Economy', 'Politics'] : null,
+      // 第 8 期正文故事的成员：story 15 = Israel + Gaza（落在一国、第二国过连线门槛），story 16 = 美国
+      primary_location: locations[id] ?? null,
     });
   }
 

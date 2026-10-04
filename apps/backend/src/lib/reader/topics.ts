@@ -16,8 +16,6 @@ const TOPIC_TAGS: [Exclude<MapTopic, 'politics'>, string[]][] = [
   ['culture', ['religion', 'culture', 'ethics', 'arts', 'art', 'music', 'entertainment', 'history', 'film']],
   ['sports', ['sports', 'sport', 'football', 'international competitions', 'athletics', 'tennis']],
 ];
-/** 至少三分之二的成员带这个主题的某个标签 */
-const TOPIC_MIN = 0.67;
 const TOPIC_MAX = 2;
 
 /** topic_tags 是 jsonb：只取字符串，去空白转小写、去重 */
@@ -28,16 +26,18 @@ export function normalizeTags(raw: unknown): Set<string> {
 
 /**
  * 一条故事的主题：tagCounts 是「带这个标签的成员数」，members 是成员数。
- * 主题的得分取它名下标签里命中最多的那个（不是并集），≥ TOPIC_MIN 才算；按得分降序取前两个，同分按上表顺序。
+ * 主题的命中数取它名下标签里命中最多的那个（不是并集），至少三分之二的成员才算（整数比较，正好 2/3 也算；
+ * 原型写的是 0.67，会把 2/3 挡在外面）；按命中数降序取前两个，同数按上表顺序。没有成员时为 []，不兜底。
  */
 export function assignTopics(tagCounts: Map<string, number>, members: number): MapTopic[] {
-  const scored: { share: number; topic: MapTopic }[] = [];
+  if (members === 0) return [];
+  const scored: { hits: number; topic: MapTopic }[] = [];
   for (const [topic, tags] of TOPIC_TAGS) {
-    const share = Math.max(0, ...tags.map(t => tagCounts.get(t) ?? 0)) / members;
-    if (share >= TOPIC_MIN) scored.push({ share, topic });
+    const hits = Math.max(0, ...tags.map(t => tagCounts.get(t) ?? 0));
+    if (hits * 3 >= members * 2) scored.push({ hits, topic });
   }
-  // Array.prototype.sort 是稳定排序，同分保持上表顺序（与原型 Python 的 sort 一致）
-  scored.sort((a, b) => b.share - a.share);
+  // Array.prototype.sort 是稳定排序，同数保持上表顺序（与原型 Python 的 sort 一致）
+  scored.sort((a, b) => b.hits - a.hits);
   const topics = scored.slice(0, TOPIC_MAX).map(s => s.topic);
   return topics.length > 0 ? topics : ['politics'];
 }

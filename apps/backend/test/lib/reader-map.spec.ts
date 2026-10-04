@@ -3,7 +3,7 @@
  * 这里在同一份 fixture 上再加几行只给地图看的数据（Delta 源的旧文章、wf-r7 里一条未入选的故事、改几篇文章的地点），
  * 其中有的会改动其它读者 golden，所以不放进共用 fixture。走真实路由 + 本机测试库 + 测试环境的 R2 binding。
  */
-import type { BriefMap } from '@meridian/contracts';
+import { briefV3RecordKey, type BriefMap } from '@meridian/contracts';
 import { $articles, $brief_runs, $brief_stories, eq, inArray } from '@meridian/database';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
@@ -17,9 +17,11 @@ if (!env.BACKEND_TEST_DB) {
 
 const db = getDb(env.HYPERDRIVE);
 const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+let anchor: Date;
 
 beforeAll(async () => {
-  const anchor = anchorFromDate(await dbToday(db));
+  anchor = anchorFromDate(await dbToday(db));
   await seedReaderFixture(db, anchor);
   const old = new Date(anchor.getTime() - 10 * DAY);
   // Delta（tech 源）的旧文章：只当故事成员，不进任何一期的当期窗口
@@ -71,16 +73,32 @@ beforeAll(async () => {
     article_ids: gbMembers.map(([id]) => id),
     selected_for_intel: false,
   });
-  await putBriefV3Record(env.ARTICLES_BUCKET, 'wf-r6', [writtenBlock(9, 'UK story', 'lead')]);
-  // story 14 的成员（Beta 102 / 111）
+  // 同一期再加一条没有成员的故事
+  await db.insert($brief_stories).values({ id: 30, workflow_id: 'wf-r6', cluster_id: 10, title: 'Empty story', article_ids: [], selected_for_intel: false });
+  await putBriefV3Record(env.ARTICLES_BUCKET, 'wf-r6', [writtenBlock(9, 'UK story', 'lead'), writtenBlock(10, 'Empty story', 'more')]);
+  // story 14 的成员（Beta 102 / 111）再加一篇不带标签的 209：每个主题都正好 2/3
+  await db.insert($articles).values({
+    id: 209, title: 'delta article 209', url: 'https://delta.example.com/209', sourceId: 4, createdAt: old, status: 'PROCESSED', topic_tags: [],
+  });
+  await db.update($brief_stories).set({ article_ids: [102, 111, 209] }).where(eq($brief_stories.id, 14));
   await db.update($articles).set({ topic_tags: ['Economy', 'Security', 'Technology'] }).where(eq($articles.id, 102));
   await db.update($articles).set({ topic_tags: ['economy', 'Conflict', 'Technology', 'security'] }).where(eq($articles.id, 111));
   // 当期窗口里的 Alpha 文章（偶数号、已处理、有 embedding：US 2 14 18 22 34 38 42 54，GB 4 8 12 24 28 32 44 48 52）改几个地点
   for (const [id, loc] of [[2, 'Atlantis'], [14, ''], [18, 'Europe'], [22, 'United States']] as const) {
     await db.update($articles).set({ primary_location: loc }).where(eq($articles.id, id));
   }
-  // 第 8 期的 story 16 多一篇窗口里的成员（Alpha 4，GB）：它不该再出现在 GB 的 others 里
-  await db.update($brief_stories).set({ article_ids: [105, 4] }).where(eq($brief_stories.id, 16));
+  // 第 8 期的 story 16 多两篇窗口里的成员：Alpha 4（GB）不该再出现在 GB 的 others 里；Alpha 2（Atlantis）的地点日志只记一次
+  await db.update($brief_stories).set({ article_ids: [105, 4, 2] }).where(eq($brief_stories.id, 16));
+  // 第 4 期按显式日期区间跑（run 本身开始于第 -4 天，区间在第 -3 天 06:00–10:00）
+  const iso = (ms: number) => new Date(ms).toISOString();
+  await db
+    .update($brief_runs)
+    .set({ params: { dateFrom: iso(anchor.getTime() - 3 * DAY + 6 * HOUR), dateTo: iso(anchor.getTime() - 3 * DAY + 10 * HOUR) } })
+    .where(eq($brief_runs.workflow_id, 'wf-r4'));
+  // 第 3 期按显式文章 id 跑：时间窗与源类别都不限，PROCESSED / 有正文 / 有 embedding 照样要；记录是坏的
+  await db.update($brief_runs).set({ params: { article_ids: [2, 4, 101, 5] } }).where(eq($brief_runs.workflow_id, 'wf-r3'));
+  await env.ARTICLES_BUCKET.put(briefV3RecordKey('wf-r3'), JSON.stringify({ workflowId: 'wf-r3', blocks: 'nope' }));
+  await env.ARTICLES_BUCKET.put(briefV3RecordKey('wf-r2'), 'not json {');
   // 第 1 期没有 run
   await db.update($brief_runs).set({ report_id: null }).where(inArray($brief_runs.workflow_id, ['wf-r1']));
   await putBrief8Record(env.ARTICLES_BUCKET);
@@ -108,7 +126,7 @@ describe('地图：正文块 → 故事', () => {
       map.events.map(e => ({ storyId: e.storyId, blockIndex: e.blockIndex, tier: e.tier, title: e.title, articleCount: e.articleCount }))
     ).toEqual([
       { storyId: 28, blockIndex: 0, tier: 'lead', title: 'Ceasefire talks resume', articleCount: 4 },
-      { storyId: 14, blockIndex: 3, tier: 'more', title: 'Iran sanctions', articleCount: 2 },
+      { storyId: 14, blockIndex: 3, tier: 'more', title: 'Iran sanctions', articleCount: 3 },
     ]);
   });
 
@@ -130,11 +148,11 @@ describe('地图：正文块 → 故事', () => {
 
 describe('地图：故事的地点', () => {
   it('地点为空的成员不进分母（与原型 place() 同口径），articleCount 仍是全部成员', async () => {
-    const [event] = (await getMap(6)).events;
-    expect({ articleCount: event.articleCount, places: event.places }).toEqual({ articleCount: 4, places: [{ country: 'GB', share: 1 }] });
+    const event = (await getMap(6)).events.find(e => e.storyId === 29);
+    expect({ articleCount: event?.articleCount, places: event?.places }).toEqual({ articleCount: 4, places: [{ country: 'GB', share: 1 }] });
   });
 
-  it('成员按国家的占比（分母是全部成员）；别名归一，地区值与表里没有的值不进 places', async () => {
+  it('成员按国家的占比；别名归一，地区值与表里没有的值留在分母里、不进 places', async () => {
     const [event] = (await getMap(7)).events;
     expect(event.places).toEqual([
       { country: 'IL', share: 0.25 },
@@ -149,10 +167,17 @@ describe('地图：故事的主题', () => {
     expect(event.topics).toEqual(['politics']);
   });
 
-  it('一个主题要 2/3 的成员带它的某个标签（不分大小写），至多两个', async () => {
-    // story 14 的两篇成员：security / tech / economy 三个主题都是 2/2，只留前两个
+  it('一个主题要 2/3 的成员带它的某个标签（不分大小写，正好 2/3 也算），至多两个', async () => {
+    // story 14 的三篇成员：security / tech / economy 三个主题都是 2/3，只留前两个
     const iran = (await getMap(7)).events.find(e => e.storyId === 14);
     expect(iran?.topics).toEqual(['security', 'tech']);
+  });
+});
+
+describe('地图：没有成员的故事', () => {
+  it('主题与地点都为空，不兜底成 politics', async () => {
+    const event = (await getMap(6)).events.find(e => e.storyId === 30);
+    expect(event).toMatchObject({ blockIndex: 1, articleCount: 0, places: [], topics: [] });
   });
 });
 
@@ -207,6 +232,56 @@ describe('地图：当期文章', () => {
     const gb = (await getMap(8)).coverage.byCountry.find(c => c.country === 'GB');
     expect(gb?.count).toBe(9);
     expect(gb?.others).toEqual([8, 12, 24, 28, 32, 44, 48, 52].map(alpha));
+  });
+
+  it('run 按显式日期区间跑：窗口取 params 的 dateFrom / dateTo，不按 run 开始时刻往回推', async () => {
+    // 区间内的窗口文章：Alpha 12 22 24（14 地点为空、18 只写了 Europe）
+    const map = await getMap(4);
+    expect({ ...map.coverage, byCountry: map.coverage.byCountry.map(c => [c.country, c.count]) }).toEqual({
+      total: 5,
+      regional: 1,
+      unmapped: 1,
+      byCountry: [
+        ['GB', 2],
+        ['US', 1],
+      ],
+    });
+  });
+
+  it('run 按显式文章 id 跑：只取这些文章（不限时间与源类别），未处理 / 没正文的照样排除', async () => {
+    const map = await getMap(3);
+    expect(map.coverage).toMatchObject({ total: 2, byCountry: [{ country: 'GB', count: 1 }] });
+  });
+
+  it('brief-v3 记录坏了（不是 JSON、blocks 不是数组）：记 error 日志，事件为空，当期统计照算', async () => {
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((line: string) => void lines.push(line));
+    let maps: BriefMap[];
+    try {
+      maps = [await getMap(2), await getMap(3)];
+    } finally {
+      spy.mockRestore();
+    }
+    expect(maps.map(m => m.events)).toEqual([[], []]);
+    expect(maps[1].coverage.total).toBe(2);
+    const logged = lines.map(l => JSON.parse(l)).filter(e => e.workflow_id === 'wf-r2' || e.workflow_id === 'wf-r3');
+    expect(logged.map(e => [e.report_id, e.workflow_id])).toEqual([
+      [2, 'wf-r2'],
+      [3, 'wf-r3'],
+    ]);
+  });
+
+  it('归一表外的地点值记一条扁平日志：每篇只计一次（故事成员与当期窗口重叠也不重复），值编码成一个字符串', async () => {
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, 'warn').mockImplementation((line: string) => void lines.push(line));
+    try {
+      await getMap(8);
+    } finally {
+      spy.mockRestore();
+    }
+    const [entry] = lines.map(l => JSON.parse(l)).filter(e => e.unmapped_locations !== undefined);
+    // Alpha 2（Atlantis）既是 story 16 的成员又在窗口里；Alpha 14 的地点是空串
+    expect(entry).toMatchObject({ report_id: 8, workflow_id: 'wf-r8', unmapped_locations: '=1|Atlantis=1' });
   });
 
   it('这期没有 run：事件为空，当期统计全零', async () => {

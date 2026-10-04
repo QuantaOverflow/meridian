@@ -327,7 +327,16 @@ export class BriefBlockV6Service {
       // 回 not_a_single_event 先不收：前两次带 not_written 的提示再写，第三次还拒才收下（块不出，与原来一样）。
       // ADR 0010 决定 7：v4-pro 会把通讯社稿里大段大选背景当成「杂烩」，拒写一件明明是一件事的新闻
       // （10-03 期第 14 块不带提示 5/5 拒写、带提示 3/3 写出正事）；glm 近 13 期 316 块一次没拒过。
-      (x, attempt) => (x?.verdict === 'not_a_single_event' && attempt < TEMPERATURES.length - 1 ? ['not_written'] : writeOk(x, cited)),
+      (x, attempt) => {
+        if (x?.verdict !== 'not_a_single_event' || attempt >= TEMPERATURES.length - 1) return writeOk(x, cited);
+        // 模型给的理由只进日志、不回喂模型（重试只带 not_written 那句提示）；块记录里是 writeRejects 的 `#n not_written`
+        logger.warn('[BriefBlockV6] 写作回 not_a_single_event，带「同一件新闻」的提示再写', {
+          block: this.traceContext.callIndex ?? 0,
+          attempt: attempt + 1,
+          reason: String(x.reason ?? ''),
+        });
+        return ['not_written'];
+      },
       sentencesText,
       {
         model: WRITER_MODEL,

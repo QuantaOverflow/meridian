@@ -224,6 +224,7 @@ describe('写作–核查循环：块接口', () => {
 
   it('写作回 not_a_single_event：先不收，下一次在写作 prompt 后接「这几篇已判定是同一件新闻」的提示；再写出来就照常进循环', async () => {
     // 10-03 期第 14 块：4 篇都讲美澳暂停驻巴西领事服务，v4-pro 却判「杂烩」；带上这句提示后 3/3 写出了正事
+    const warn = vi.spyOn(console, 'warn')
     const f = fakeEnv({
       write: [JSON.stringify({ verdict: 'not_a_single_event', reason: 'A topic bag', title: '', sentences: [] }), DRAFT_REPLY],
       check: () => OK,
@@ -240,6 +241,9 @@ describe('写作–核查循环：块接口', () => {
 Your previous answer was rejected by a mechanical check. Fix these and answer again in full:
 - these articles were already judged to be one news story: keep verdict "written" and write the item about its most important development.
 Do not repeat the rejected wording; write the item again from the material above.`)
+    // 拒写打一行 warn：块号、第几次、模型给的理由（理由只进日志，不回喂模型）
+    const lines = warn.mock.calls.map(c => JSON.parse(String(c[0]))).filter(l => l.component === 'brief-block-v6' && l.reason === 'A topic bag')
+    expect(lines).toEqual([expect.objectContaining({ level: 'warn', block: 0, attempt: 1 })])
     expect(f.unscripted).toEqual([])
   })
 

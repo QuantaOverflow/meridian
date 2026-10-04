@@ -233,6 +233,9 @@ const REASON_HINTS: Record<string, string> = {
   no_terminal_punct:
     'the text ended without terminal punctuation; every sentence must be complete and end with a full stop.',
   at_length_limit: `the text reached the ${SENTENCE_MAX_CHARS}-character limit and was cut off there; write this sentence shorter.`,
+  // 改写的数字检查（numberCheck）。它会按句给一条列出缺的数字的提示，这条只是兜底
+  number_not_in_sources:
+    'a figure in it appears in no source sentence it cites; write each figure as a source sentence gives it, without adding up or converting numbers, and cite that sentence.',
   no_sources: 'the sources array was empty; cite the source sentences that support this sentence.',
   bad_source: 'a cited [articleId:sentence] coordinate is not in the material above; cite only sentences shown there.',
 };
@@ -246,6 +249,8 @@ const REASON_HINTS: Record<string, string> = {
  * `hints`：按原因码覆盖 `REASON_HINTS` 里的默认文案，用于 tier 相关的提示（如
  * `no_sentences`——句数因 tier 而异，写作步据当次 tier 传 `prompts/briefBlockV6.ts`
  * 的 `noSentencesHint` 覆盖，见 bug B5）。不传就用 `REASON_HINTS` 的默认文案。
+ * 也可以按整条原因给（`sentence 2: number_not_in_sources`），先于按原因码的：每句内容不同的提示用它
+ * （数字检查要列出那一句缺的数字）。
  */
 export function retryInstruction(reasons: string[], hints: Partial<Record<string, string>> = {}): string {
   if (!reasons.length) return '';
@@ -253,7 +258,7 @@ export function retryInstruction(reasons: string[], hints: Partial<Record<string
     const m = /^(sentence \d+): (.+)$/.exec(r);
     const where = m ? `${m[1]}: ` : '';
     const code = m ? m[2] : r;
-    return `- ${where}${hints[code] ?? REASON_HINTS[code] ?? `it failed the ${code} check.`}`;
+    return `- ${where}${hints[r] ?? hints[code] ?? REASON_HINTS[code] ?? `it failed the ${code} check.`}`;
   });
   return [
     'Your previous answer was rejected by a mechanical check. Fix these and answer again in full:',
@@ -313,8 +318,11 @@ export function writeMaterial(
 }
 
 // ── 数字 / 引语核对（移植自 eval/cluster-to-brief/lib.mjs）────────
-/** 句中出现的数字，去掉千分位。日期类（1900-2100 的四位整数）不算，它们常被正确推算出来。 */
-function numbersIn(text: unknown): Set<string> {
+/**
+ * 句中出现的数字，去掉千分位。日期类（1900-2100 的四位整数）不算，它们常被正确推算出来。
+ * 逐句核查的 timeline 检索与改写的数字检查用的也是这一条（同一判据，不另抄一份）。
+ */
+export function numbersIn(text: unknown): Set<string> {
   const out = new Set<string>();
   for (const m of String(text ?? '').match(/\d[\d,]*(?:\.\d+)?/g) ?? []) {
     const x = m.replace(/,/g, '');
@@ -323,6 +331,28 @@ function numbersIn(text: unknown): Set<string> {
     out.add(x);
   }
   return out;
+}
+
+/**
+ * 改写的数字检查（写作–核查循环，ADR 0010）：句中每个数字（numbersIn 的口径，1900–2100 的年份不算）都要
+ * 出现在它引的某句原文里，否则 `sentence N: number_not_in_sources`。核查员会自己把数加起来（15 + 11 写成
+ * "26 wounded"），写作会照抄它的建议改法。调用方先补出处再查。草稿不过这一条：草稿与测过的一次写成保持一致。
+ * 返回原因，以及按整条原因给的提示（列出那一句缺的数字，retryInstruction 先按整条原因取）。
+ */
+export function numberCheck(sentences: V6Sentence[], table: SentenceTable): { reasons: string[]; hints: Record<string, string> } {
+  const reasons: string[] = [];
+  const hints: Record<string, string> = {};
+  sentences.forEach((s, i) => {
+    const have = numbersIn(s.sources.map(r => sentenceOf(table, r.articleId, r.sentence) ?? '').join(' '));
+    const missing = [...numbersIn(s.text)].filter(n => !have.has(n));
+    if (!missing.length) return;
+    const reason = `sentence ${i + 1}: number_not_in_sources`;
+    reasons.push(reason);
+    hints[reason] =
+      `the figure(s) ${missing.join(', ')} appear in no source sentence it cites; write each figure as a source sentence gives it, ` +
+      'without adding up or converting numbers, and cite that sentence.';
+  });
+  return { reasons, hints };
 }
 
 /**

@@ -23,6 +23,7 @@ import {
   type SentenceTable,
 } from '../utils/brief-block-v6';
 import { writeMaterial } from '../utils/brief-block-v6';
+import { when, type CheckCluster, type Verdict } from '../utils/sentence-check';
 
 // ── 窗口步：只标重点，不写散文 ──────────────────────────────────────────
 export const ANCHOR_SCHEMA = {
@@ -215,4 +216,59 @@ How to write it:
 - Plain prose, normal sentence case. title: a short headline for the story, under 10 words.
 
 Return only JSON matching this schema:\n${JSON.stringify(writeSchemaOf(len))}`;
+}
+
+// ── 改写：逐句核查的意见发回写作的同一个对话（写作–核查循环，ADR 0010）──────────────
+// 逐字搬自原型 `apps/backend/prototypes/writer-faithfulness/loop.mts`（本地，不入库；冻结副本在
+// `.scratch/writer-checker-loop/port-source/`）的 findingsMessage 与 REVISE_HINTS。held-out 读数就是这段文字测的，
+// 一个字都别改。
+
+/** 改写回了 not_a_single_event 时的重试提示（原因码 revise_not_written）。 */
+export const REVISE_HINTS = { revise_not_written: 'this item was already accepted as one story: keep verdict "written" and write it again.' };
+
+/** 一句被标出的句子：句号（1 起）、原文、每个 epoch 的结论（没结论的是 null）。 */
+export interface FlaggedSentence {
+  index: number;
+  text: string;
+  verdicts: Array<Verdict | null>;
+}
+
+/**
+ * 给写作的意见：每句被标出的句子列出每个判它有问题的 epoch 的问题与建议改法（只当提示），再列证据原句
+ * （去重、旧报道在前、带发布时间）。`evidence` = 这一轮全部证据句的 key（`articleId:sentence`），改写时可以引。
+ */
+export function findingsMessage(flagged: FlaggedSentence[], c: CheckCluster): { text: string; evidence: string[] } {
+  const all: string[] = [];
+  const parts = flagged.map(f => {
+    const verdicts = f.verdicts.filter((r): r is Extract<Verdict, { ok: false }> => Boolean(r && r.ok === false));
+    const keys = [
+      ...new Set(
+        verdicts.flatMap(r => (r.evidence ?? []).filter(e => Array.isArray(e)).map(e => `${Number(e[0])}:${Number(e[1])}`)).filter(k => c.byKey.has(k))
+      ),
+    ];
+    all.push(...keys);
+    const lines = keys
+      .map(k => c.byKey.get(k)!)
+      .sort((a, b) => a.published.localeCompare(b.published) || a.articleId - b.articleId || a.n - b.n)
+      .map(s => `  [${s.articleId}:${s.n}] (published ${when(s.published)}) ${s.text}`);
+    const problems = verdicts.map(r => {
+      const hint = String(r.fix ?? '').trim();
+      return `- Problem${r.type ? ` (${r.type})` : ''}: ${String(r.problem ?? '').trim()}${hint ? `\n  Suggested wording, only a hint (check it against the sources): ${hint}` : ''}`;
+    });
+    return `Sentence ${f.index}: ${f.text}\n${problems.join('\n')}${lines.length ? `\n  Evidence, oldest report first:\n${lines.join('\n')}` : ''}`;
+  });
+  const which = flagged.map(f => f.index);
+  const text = `A fact checker compared each sentence of your item with all the reporting on this story, including reports
+that are not in the material above, and found problems in sentence${which.length > 1 ? 's' : ''} ${which.join(', ')}:
+
+${parts.join('\n\n')}
+
+Write the whole item again and answer in full, in the same JSON format. Fix every problem listed, so that each part
+of each sentence is supported by the sources; when reports from different times disagree, use the latest. You may
+cite the evidence sentences listed here as well as the material. If a part cannot be supported, leave it out rather
+than guess. Write each figure as a source sentence gives it: do not add up or convert numbers yourself, even when the
+suggested wording does. Keep the sentences without problems as they are unless a fix requires changing them. All the
+earlier instructions still apply: the length, one connected paragraph, each fact said once, attribution,
+word-for-word quotes, and never the [articleId:sentence] labels inside text.`;
+  return { text, evidence: [...new Set(all)] };
 }

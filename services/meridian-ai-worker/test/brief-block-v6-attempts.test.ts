@@ -13,6 +13,8 @@ import { retryInstruction } from '../src/utils/brief-block-v6'
 import { noSentencesHint } from '../src/prompts/briefBlockV6'
 
 const GLM = '@cf/zai-org/glm-4.7-flash'
+// 写作–核查循环（ADR 0010）：写作换 v4-pro，标重点仍是 glm
+const V4PRO = '@cf/deepseek-ai/deepseek-v4-pro-0813'
 
 type Step = Error | { content: string; finish?: string }
 interface Seen { model: string; inputs: Record<string, any> }
@@ -33,7 +35,8 @@ function fakeEnv(steps: Step[]) {
     }),
   } as unknown as Ai
   const ARTICLES_BUCKET = { put: vi.fn(async (key: string) => { puts.push(key) }) } as unknown as R2Bucket
-  return { env: { AI, ARTICLES_BUCKET }, seen, puts }
+  // 只测写作步本身：关掉逐句核查与改写（BRIEF_CHECK_EPOCHS=0）
+  return { env: { AI, ARTICLES_BUCKET, BRIEF_CHECK_EPOCHS: '0' }, seen, puts }
 }
 
 const flush = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setImmediate(r)) }
@@ -99,7 +102,7 @@ describe('brief-block-v6 chatJson：多次尝试', () => {
     expect(f.seen).toHaveLength(4)
 
     const r = await p
-    expect(f.seen.map(s => s.model)).toEqual(Array(4).fill(GLM))
+    expect(f.seen.map(s => s.model)).toEqual([GLM, GLM, V4PRO, V4PRO])
     expect(f.seen.map(s => s.inputs.temperature)).toEqual([0.1, 0.3, 0.1, 0.3])
     expect(f.seen.map(s => s.inputs.max_tokens)).toEqual([8000, 8000, 8000, 8000])
     expect(f.seen.map(s => s.inputs.response_format?.type)).toEqual(Array(4).fill('json_schema'))

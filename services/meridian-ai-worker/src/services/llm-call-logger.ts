@@ -18,9 +18,12 @@ export type LLMCallPhase =
   // （命名主线 + 逐篇归类），后者已随之删除。
   | 'cluster_judge'
   | 'story_rank'
-  // 简报块 v6：一个簇的原文 → 窗口标重点 + 一次写作。与 brief_generation 分开，
+  // 简报块 v6：一个簇的原文 → 窗口标重点 + 写作 + 改写。与 brief_generation 分开，
   // 免得两条链路的 R2 观测记录互相覆盖。
   | 'brief_block_v6'
+  // 简报块 v6 的逐句核查 agent（写作–核查循环，ADR 0010）：一句一个 agent、每步一次调用，
+  // 调用量是写作的几十倍，单独一个 phase，callIndex 编号与写作 / 改写互不挤占（见 services/brief-block-v6.ts）。
+  | 'brief_block_v6_check'
 
 export interface TraceContext {
   traceId?: string

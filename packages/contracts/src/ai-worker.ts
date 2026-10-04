@@ -176,8 +176,8 @@ interface BriefBlockV6CheckRound {
 /**
  * 写作–核查循环的块级记录（ADR 0010；用词见 CONTEXT.md「写作–核查循环」）。
  *
- * backend 原样存进 brief-v3 记录，只读 `outcome` 与 `unchecked`；其余字段供事后复盘
- * 核查员与写作做得对不对。改这些字段不需要改 backend。
+ * backend 原样存进 brief-v3 记录，只读 `outcome`、`unchecked` 与 `revisions`（run 级计数）；
+ * 其余字段供事后复盘核查员与写作做得对不对。改这些字段不需要改 backend。
  */
 export interface BriefBlockV6Check {
   /** 配置的核查 epoch 数；0 = 关掉核查 */

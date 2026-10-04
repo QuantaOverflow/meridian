@@ -247,35 +247,44 @@ app.get('/health/summary', async (c) => {
 app.get('/runs/:workflowId/llm-calls', async (c) => {
   try {
     const workflowId = c.req.param('workflowId');
-    const list = await c.env.ARTICLES_BUCKET.list({ prefix: llmCallsPrefix(workflowId) });
+    // R2 list 一次最多回 1000 个 key。写作–核查循环（ADR 0010）一期的调用记录会超过这个数
+    // （每块几十次逐句核查调用），不翻页的话录像拉不全、replay 必然 miss。
+    const objects: R2Object[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await c.env.ARTICLES_BUCKET.list({ prefix: llmCallsPrefix(workflowId), cursor });
+      objects.push(...page.objects);
+      cursor = page.truncated ? page.cursor : undefined;
+    } while (cursor);
 
     // 拉每个对象的简要 metadata（解析 R2 头）。如果想看全文走 /llm-calls/:key
-    const calls = await Promise.all(
-      list.objects.map(async (obj) => {
-        try {
-          const o = await c.env.ARTICLES_BUCKET.get(obj.key);
-          if (!o) return null;
-          const data: any = JSON.parse(await o.text());
-          return {
-            key: obj.key,
-            uploaded: obj.uploaded,
-            size: obj.size,
-            phase: data.phase,
-            call_index: data.call_index,
-            provider: data.request?.provider,
-            model: data.request?.model,
-            tokens: data.response?.usage,
-            latency_ms: data.latency_ms,
-            error: data.error || null,
-          };
-        } catch {
-          // eslint-disable-next-line local/no-swallowed-catch -- 失败标在返回的 error 字段里，列表照常返回
-          return { key: obj.key, uploaded: obj.uploaded, size: obj.size, error: 'parse_failed' };
-        }
-      })
-    );
+    const meta = async (obj: R2Object) => {
+      try {
+        const o = await c.env.ARTICLES_BUCKET.get(obj.key);
+        if (!o) return null;
+        const data: any = JSON.parse(await o.text());
+        return {
+          key: obj.key,
+          uploaded: obj.uploaded,
+          size: obj.size,
+          phase: data.phase,
+          call_index: data.call_index,
+          provider: data.request?.provider,
+          model: data.request?.model,
+          tokens: data.response?.usage,
+          latency_ms: data.latency_ms,
+          error: data.error || null,
+        };
+      } catch {
+        // eslint-disable-next-line local/no-swallowed-catch -- 失败标在返回的 error 字段里，列表照常返回
+        return { key: obj.key, uploaded: obj.uploaded, size: obj.size, error: 'parse_failed' };
+      }
+    };
+    // 分批读：一期上千条、核查调用每条带整段多轮对话，一次全读进来会顶到 Worker 的内存上限
+    const calls: Array<Awaited<ReturnType<typeof meta>>> = [];
+    for (let i = 0; i < objects.length; i += 50) calls.push(...(await Promise.all(objects.slice(i, i + 50).map(meta))));
 
-    return c.json({ success: true, total: list.objects.length, calls: calls.filter(Boolean) });
+    return c.json({ success: true, total: objects.length, calls: calls.filter(Boolean) });
   } catch (error) {
     logger.error('/observability/runs/:workflowId/llm-calls 失败:', undefined, error);
     return c.json(

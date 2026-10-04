@@ -29,6 +29,8 @@ import {
   clusteringSnapshotKey,
   datasetEmbeddingsKey,
   EMBEDDING_DIM,
+  type BriefBlockV6Check,
+  type BriefBlockV6CheckOutcome,
   type BriefBlockV6Sentence,
   type BriefV3FailedBlock,
   type BriefV3Record,
@@ -1260,6 +1262,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         writeRejects: string[];
         llmCalls: number;
         neurons: number;
+        /**
+         * 写作–核查循环的记录（ADR 0010），端点 trace.check 原样带下来、原样进 brief-v3 记录。
+         * 这里只读 outcome、unchecked 与 revisions（run 级计数）；回滚到旧 ai-worker 时没有。
+         */
+        check?: BriefBlockV6Check;
       };
       type BlockOutcome = { block: WrittenBlock } | { failure: { idx: number; title: string; reason: string } };
 
@@ -1340,6 +1347,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
               writeRejects: Array.isArray(t.writeRejects) ? t.writeRejects : [],
               llmCalls: t.llmCalls,
               neurons: t.neurons,
+              ...(t.check ? { check: t.check } : {}),
             },
           };
         } catch (error) {
@@ -1386,13 +1394,26 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const tiered = ledger.tieredWritten();
       const tierCount = (t: string) => tiered.filter((x) => x.tier === t).length;
       log.info(`[AutoBrief] 分层（出块后实际入节）：头条 ${tierCount('lead')} / 要闻 ${tierCount('more')} / 简讯 ${tierCount('brief')}`);
+      // 写作–核查循环（ADR 0010）怎么收尾的，按块计数。缺记录 = ai-worker 回滚到了循环之前的版本。
+      // 带着没核查到的句子发出去的块单独计数：它和块失败一样让这一步记为 degraded，不必逐块打开记录才看得到。
+      const checkOutcomes: Record<BriefBlockV6CheckOutcome | 'missing', number> = {
+        off: 0, clean: 0, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0,
+      };
+      for (const b of writtenBlocks) {
+        const k = b.check?.outcome ?? 'missing';
+        checkOutcomes[k] = (checkOutcomes[k] ?? 0) + 1;
+      }
+      const uncheckedBlocks = writtenBlocks.filter((b) => Array.isArray(b.check?.unchecked) && b.check.unchecked.length > 0).length;
+      const checkRevisions = writtenBlocks.reduce((n, b) => n + (b.check?.revisions ?? 0), 0);
       log.info(`[AutoBrief] 简报块完成: ${writtenBlocks.length}/${storiesForIntelligence.length}` +
           (blockFailures.length ? `，${blockFailures.length} 个块失败` : '') +
           `，重点合计 ${writtenBlocks.reduce((n, b) => n + b.anchors, 0)}` +
           `，窗口失败合计 ${writtenBlocks.reduce((n, b) => n + b.windowFailures, 0)}` +
-          `，补出处 ${writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0)} 处`);
+          `，补出处 ${writtenBlocks.reduce((n, b) => n + b.citationsRepaired, 0)} 处` +
+          `，核查收尾 ${JSON.stringify(checkOutcomes)}，改写 ${checkRevisions} 次` +
+          (uncheckedBlocks ? `，${uncheckedBlocks} 块带着没核查到的句子发出` : ''));
       // 报告层与写作层合并成一步后，观测也合并成这一条（旧的 intelligence_analysis 随报告层退役）。
-      await observability.logStep('brief_blocks', blockFailures.length > 0 ? 'degraded' : 'completed', {
+      await observability.logStep('brief_blocks', blockFailures.length > 0 || uncheckedBlocks > 0 ? 'degraded' : 'completed', {
         path: 'brief-block-v6',
         expected: storiesForIntelligence.length,
         written: writtenBlocks.length,
@@ -1408,6 +1429,10 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         writeRejects: writtenBlocks.reduce((n, b) => n + b.writeRejects.length, 0),
         llmCalls: writtenBlocks.reduce((n, b) => n + b.llmCalls, 0),
         neurons: Math.round(writtenBlocks.reduce((n, b) => n + b.neurons, 0)),
+        /** 写作–核查循环：每种收尾的块数（missing = 没有核查记录）、带未核查句发出的块数、改写合计 */
+        checkOutcomes,
+        uncheckedBlocks,
+        checkRevisions,
       });
 
       // 文章去向表的第 4 关 written（块写失败 / 进了哪一块）由账本推（见 story-ledger.ts）。
@@ -1433,7 +1458,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const assembled = {
         title: titled.title,
         content: rendered.content,
-        model_used: 'glm-4.7-flash (brief-block-v6)',
+        // 标重点仍是 glm-4.7-flash；写作 / 改写与逐句核查见 ADR 0010
+        model_used: 'deepseek-v4-pro writer + qwen3.8 check (brief-block-v6)',
       };
 
       // 每期一份 v3 记录：分层、每块的正文/出处与成本。管理页读它，验收（accept.ts M3）也读它。
@@ -1472,6 +1498,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
                   writeRejects: b.writeRejects,
                   llmCalls: b.llmCalls,
                   neurons: b.neurons,
+                  /** 写作–核查循环的记录，端点 trace.check 原样 */
+                  ...(b.check ? { check: b.check } : {}),
                 })),
                 ...blockFailures.map((f): BriefV3FailedBlock => ({
                   storyIdx: f.idx,

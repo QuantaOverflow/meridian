@@ -156,8 +156,17 @@ export function cleanWrite(x: any): any {
 /**
  * 句末标点。2026-09-19 生产那三句坏句全是断在半句上（`assured the incident ` /
  * `abetment of [` / `transferred,`），收尾字符就是它们与其余 105 句的分界。
+ * 直单引号只在跟着句末标点时算收句（`.'`）：deepseek-v4-pro 常这样收引语，
+ * 之前不认，held-out 113-3 整块三次写作全被拒、丢块（ADR 0010）。
  */
-const TERMINAL_PUNCT = /[.!?"”’)]\s*$/;
+const TERMINAL_PUNCT = /(?:[.!?"”’)]|[.!?]')\s*$/;
+
+/**
+ * 写作 schema 的每句 `maxLength`（prompts/briefBlockV6.ts）。约束解码到这个长度会把句子静默截断，
+ * 模型再补个标点收句（held-out 109-4："crude colonial mental”."），句末标点那条拦不住，
+ * 所以触顶即拒收重写。按码点计数，与 JSON Schema 的 maxLength 同口径。
+ */
+const SENTENCE_MAX_CHARS = 400;
 
 /**
  * 写作步的确定性校验。返回**失败原因列表**，空数组 = 通过。
@@ -170,6 +179,8 @@ const TERMINAL_PUNCT = /[.!?"”’)]\s*$/;
  * 3 句坏、全在 storyIdx=17；这两条在那 108 句上精确命中那 3 句、误伤 0 句）：
  *   · multi_sentence     一个 text 只能是一句（splitSentences 切出来正好 1 条）
  *   · no_terminal_punct  必须以句末标点结尾
+ * 写作–核查循环（ADR 0010）再加一条：
+ *   · at_length_limit    原文触到 schema 的 400 字符上限（被约束解码截过）；看剥标签之前的原文
  */
 export function writeOk(raw: any, cited: Set<string>): string[] {
   const x = cleanWrite(raw);
@@ -197,6 +208,7 @@ export function writeOk(raw: any, cited: Set<string>): string[] {
       if (MARKER.test(s.text)) bad.push(`${at}: marker_leak`);
       if (splitSentences(s.text).length !== 1) bad.push(`${at}: multi_sentence`);
       if (!TERMINAL_PUNCT.test(s.text)) bad.push(`${at}: no_terminal_punct`);
+      if ([...String(raw.sentences[i]?.text ?? '')].length >= SENTENCE_MAX_CHARS) bad.push(`${at}: at_length_limit`);
     }
     if (!Array.isArray(s?.sources) || s.sources.length === 0) bad.push(`${at}: no_sources`);
     else if (!s.sources.every((r: any) => cited.has(`${r?.articleId}:${r?.sentence}`))) bad.push(`${at}: bad_source`);
@@ -220,6 +232,7 @@ const REASON_HINTS: Record<string, string> = {
   multi_sentence: 'the text field contained more than one sentence; each text must be exactly one sentence.',
   no_terminal_punct:
     'the text ended without terminal punctuation; every sentence must be complete and end with a full stop.',
+  at_length_limit: `the text reached the ${SENTENCE_MAX_CHARS}-character limit and was cut off there; write this sentence shorter.`,
   no_sources: 'the sources array was empty; cite the source sentences that support this sentence.',
   bad_source: 'a cited [articleId:sentence] coordinate is not in the material above; cite only sentences shown there.',
 };

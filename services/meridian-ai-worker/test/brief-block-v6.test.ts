@@ -235,3 +235,57 @@ describe('brief-block-v6 cleanWrite 出处标签剥离', () => {
     expect(clean('Iran, Iraq and Syria met [1108271:7], then left.')).toBe('Iran, Iraq and Syria met, then left.');
   });
 });
+
+/**
+ * 写作–核查循环（ADR 0010）补的两条句级校验。样本是 deepseek-v4-pro 在 held-out 期（111–115）上的真实产出
+ * （原型 apps/backend/prototypes/writer-faithfulness，本地）：
+ *   · 句尾 `.'`：113-3 三次写作都以 `.'` 收句、被句末标点那条全拒，整块丢失（各臂一样）。
+ *     这里用同轮另一块里同样收尾的一句。
+ *   · 400 字符：109-4 那句恰好 400 字符。schema 的 `maxLength: 400` 让约束解码把 "mentality" 截成
+ *     "mental"，模型再补上 `”.` 收句，句末标点那条拦不住，读者看到的是半个词。
+ */
+describe('brief-block-v6 writeOk：句尾直单引号与 400 字符上限', () => {
+  const block = (text: string) => ({
+    verdict: 'written', reason: 'one event', title: 'Ethiopia fighting',
+    sentences: [{ text, sources: [{ articleId: 1, sentence: 1 }] }],
+  });
+  const cited = new Set(['1:1']);
+  const QUOTE_END =
+    "Iran's Islamic Revolutionary Guard Corps navy claimed it captured a second advanced US unmanned underwater vehicle, a Remus 600, in the Strait of Hormuz, while the US military rejected the claim as 'clearly desperate.'";
+  const CUT_AT_400 =
+    'The army chief’s accusation against Egypt follows a new exchange over the Grand Ethiopian Renaissance Dam, in which Egyptian Water Resources Minister Hani Sewilam said Ethiopian politicians needed to understand that building a dam on a shared river was “not like laying a carpet in their homes,” and Ethiopia’s Water and Energy Ministry responded that his remarks reflected a “crude colonial mental”.';
+  const SAME_UNCUT =
+    "The accusation against Egypt follows a new exchange over the Grand Ethiopian Renaissance Dam, in which Egyptian Water Resources Minister Hani Sewilam said Ethiopian politicians needed to understand that building a dam on a shared river was 'not like laying a carpet in their homes', and Ethiopia's Water and Energy Ministry responded that his remarks reflected a 'crude colonial mentality'.";
+
+  it(".' 收句算有句末标点；?' 与 !' 同理", () => {
+    expect(writeOk(block(QUOTE_END), cited)).toEqual([]);
+    expect(writeOk(block("He asked whether it was 'really over?'"), cited)).toEqual([]);
+    expect(writeOk(block("The crowd chanted 'never again!'"), cited)).toEqual([]);
+  });
+
+  it('引号后面没有句末标点的仍算断句', () => {
+    expect(writeOk(block("The minister called it 'a disgrace'"), cited)).toEqual(['sentence 1: no_terminal_punct']);
+  });
+
+  it('恰好 400 字符的句子报 at_length_limit；同一句没被截的 390 字符版本不报', () => {
+    expect([...CUT_AT_400].length).toBe(400);
+    expect([...SAME_UNCUT].length).toBe(390);
+    expect(writeOk(block(CUT_AT_400), cited)).toEqual(['sentence 1: at_length_limit']);
+    expect(writeOk(block(SAME_UNCUT), cited)).toEqual([]);
+  });
+
+  it('按字符（码点）计数，与 schema 的 maxLength 同口径：399 字符含一个 emoji 不报', () => {
+    const text = `${'a'.repeat(397)}😀.`;
+    expect([...text].length).toBe(399);
+    expect(text.length).toBe(400);
+    expect(writeOk(block(text), cited)).toEqual([]);
+  });
+
+  it('重试说明讲清楚是 400 字符上限把句子截断了、要写短', () => {
+    const instruction = retryInstruction(writeOk(block(CUT_AT_400), cited));
+    expect(instruction).toContain('sentence 1: ');
+    expect(instruction).toContain('400');
+    expect(instruction).toContain('shorter');
+    expect(instruction).not.toContain('mental');
+  });
+});

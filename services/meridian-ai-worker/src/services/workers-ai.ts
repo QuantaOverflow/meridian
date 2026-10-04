@@ -1,5 +1,5 @@
 import type { ChatRequest, ChatResponse } from '../types'
-import { isThinkingDisabled } from '../config/thinking'
+import { readsReasoningAsContent, thinkingOffKwargs } from '../config/thinking'
 import { Logger } from '../utils/logger'
 
 const logger = new Logger({ component: 'workers-ai' })
@@ -14,6 +14,10 @@ export const WORKERS_AI_MODELS: readonly string[] = [
   '@cf/qwen/qwen3-30b-a3b-fp8',
   // 简报链路全部 phase 与文章分析第二档（见 services/call-llm.ts）
   '@cf/zai-org/glm-4.7-flash',
+  // 写作–核查循环（ADR 0010）：简报块的写作与改写
+  '@cf/deepseek-ai/deepseek-v4-pro-0813',
+  // 写作–核查循环：逐句核查 agent
+  '@cf/qwen/qwen3.8-27b',
 ]
 
 function logDebug(message: string, metadata: Record<string, unknown>): void {
@@ -42,7 +46,7 @@ function mapResponse(body: any, modelName: string): ChatResponse {
   // 各家关掉 thinking 后的字段落位并不统一——GLM 关掉后正文照常进 content，走不到这条兜底。
   // **兜底必须限定在名单内**：思维链吃光 max_tokens 时同样是 content=null + 一堆 reasoning，
   // 无条件兜底会把那类真故障当正常输出放行，正是下面那段"响亮地失败"要防的事。
-  if (!cfContent && cfReasoning && isThinkingDisabled(modelName)) {
+  if (!cfContent && cfReasoning && readsReasoningAsContent(modelName)) {
     cfContent = cfReasoning
   }
 
@@ -114,8 +118,10 @@ export async function chat(ai: Ai, request: ChatRequest): Promise<ChatResponse> 
   // 但 OFF 臂 completion_tokens 808→389、耗时 9.5s→5.4s，且**自一致性显著更高**
   // （同文重跑两次的 Jaccard：topic_tags 0.458→0.653、thematic_keywords 0.147→0.514）。
   // 即思维链没换来更好的抽取，只换来更抖的输出——而下游聚类正建立在这些字段上。
-  if (isThinkingDisabled(modelName)) {
-    inputs.chat_template_kwargs = { enable_thinking: false }
+  // 下发哪组参数逐模型不同（deepseek 的模板读 `thinking`），名单与依据在 config/thinking.ts。
+  const kwargs = thinkingOffKwargs(modelName)
+  if (kwargs) {
+    inputs.chat_template_kwargs = kwargs
   }
 
   // 不传 gateway 参数。当前形态经生产日志验证可靠：2026-08-11 真实文章流量

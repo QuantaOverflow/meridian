@@ -2,7 +2,7 @@
  * 每期一份的 brief-v3 记录（R2 `observability/brief-v3/{workflowId}.json`，key 见 briefV3RecordKey）。
  * 写方：backend auto-brief-generation。读方：管理页、验收（accept.ts M3）、replay 比对。
  */
-import type { BriefBlockV6Sentence, BriefTier } from './ai-worker';
+import type { BriefBlockV6Check, BriefBlockV6Sentence, BriefTier } from './ai-worker';
 
 /** 写出来的块。字段含义见写入处（auto-brief-generation.ts）的注释。 */
 export interface BriefV3WrittenBlock {
@@ -25,6 +25,8 @@ export interface BriefV3WrittenBlock {
   writeRejects: string[];
   llmCalls: number;
   neurons: number;
+  /** 写作–核查循环的记录，原样抄自端点的 trace.check。循环上线前的记录、回滚到旧 ai-worker 时没有 */
+  check?: BriefBlockV6Check;
 }
 
 /** 没写出来的块：不进正文，但留在记录里，绝不静默消失。 */

@@ -137,6 +137,70 @@ export interface BriefBlockV6Request {
   tier?: BriefTier | string;
 }
 
+/**
+ * 写作–核查循环（ADR 0010）怎么收尾的：
+ * - `off`           核查 epoch 设成 0：不核查、不改写
+ * - `clean`         草稿里没有句子被标出
+ * - `fixed`         某次改写之后没有句子被标出
+ * - `revise_failed` 一次改写的三次尝试全被拒，发的是上一版
+ * - `still_flagged` 第 2 次改写之后仍有句子被标出，发的是最后一版
+ */
+export type BriefBlockV6CheckOutcome = 'off' | 'clean' | 'fixed' | 'revise_failed' | 'still_flagged';
+
+/** 一个核查 epoch 判「有问题」时给的意见。字段是核查 agent 的原话，可能缺。 */
+interface BriefBlockV6Finding {
+  type?: string;
+  problem?: string;
+  /** 证据原句 [articleId, sentence]，只含核查 agent 看过的句子 */
+  evidence?: [number, number][];
+  /** 建议改法；发回写作时只当提示 */
+  fix?: string;
+}
+
+interface BriefBlockV6CheckRound {
+  /** 0 = 草稿；n = 第 n 次改写后的那一版 */
+  round: number;
+  /** 这一版里被标出的句子（句号 1 起）；每个判有问题的 epoch 一条意见 */
+  flagged: Array<{ sentence: number; text: string; findings: BriefBlockV6Finding[] }>;
+  /** 这一轮核查了、但没有任何 epoch 给出结论的句子（句号 1 起）。沿用上一轮结论的句子不在这里 */
+  noVerdict: number[];
+  /** 这一轮之后的那次改写；没有改写（没标出句子，或已改满两次）就没有这一项 */
+  revise?: {
+    accepted: boolean;
+    attempts: number;
+    /** 每次被拒的尝试一条：`#<第几次> <原因>`（校验原因码、截断、JSON 解不出、复读或调用报错） */
+    rejects: string[];
+  };
+}
+
+/**
+ * 写作–核查循环的块级记录（ADR 0010；用词见 CONTEXT.md「写作–核查循环」）。
+ *
+ * backend 原样存进 brief-v3 记录，只读 `outcome` 与 `unchecked`；其余字段供事后复盘
+ * 核查员与写作做得对不对。改这些字段不需要改 backend。
+ */
+export interface BriefBlockV6Check {
+  /** 配置的核查 epoch 数；0 = 关掉核查 */
+  epochs: number;
+  outcome: BriefBlockV6CheckOutcome;
+  /** 被采纳的改写次数（0–2） */
+  revisions: number;
+  /**
+   * 发出去的那一版里，没有任何 epoch 给出结论的句子（句号 1 起）。非空 = 这块降级发出。
+   * `off` 时为空：关掉核查是主动的选择，不算降级。
+   */
+  unchecked: number[];
+  /** 发出去的那一版里仍被标出的句子（句号 1 起） */
+  stillFlagged: number[];
+  /** 草稿。发出去的就是草稿（revisions = 0）时为 null */
+  draft: null | { title: string; sentences: BriefBlockV6Sentence[] };
+  rounds: BriefBlockV6CheckRound[];
+  /** 循环本身（逐句核查 + 改写）的调用数、neurons 与耗时；trace.llmCalls / trace.neurons 已含这些 */
+  calls: number;
+  neurons: number;
+  ms: number;
+}
+
 // backend 落观测只读这几项（auto-brief-generation 的 brief-v3 记录）；复读重试另有 console.warn
 interface BriefBlockV6Trace {
   windows: number;
@@ -152,6 +216,11 @@ interface BriefBlockV6Trace {
   llmCalls: number;
   /** 全部 LLM 调用的 neurons 合计（成本验收读它）。 */
   neurons: number;
+  /**
+   * 写作–核查循环的记录。以下情况没有：verdict 是 not_a_single_event（没有句子可核）；
+   * 回滚到循环之前的 ai-worker 版本（backend 按「缺记录」计数，不报错）。
+   */
+  check?: BriefBlockV6Check;
 }
 
 export interface BriefBlockV6Result {

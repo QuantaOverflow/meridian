@@ -86,13 +86,14 @@ const target = computed(() => {
 <template>
   <div ref="stage" class="stage">
     <canvas ref="canvas" aria-label="Globe of today’s brief. Drag to rotate." />
-    <div class="hud tl">
+    <!-- HUD 是装饰性的短标签，Chrome 整页翻译会逐词机翻成「朗」「地位 闲置的」，不让它翻 -->
+    <div class="hud tl" translate="no">
       <div class="hud-title">Meridian · Holo terminal</div>
       <div class="row"><span>Briefed</span><b>{{ stats.briefed }}</b></div>
       <div class="row"><span>Reports</span><b>{{ stats.reports }}</b></div>
       <div class="row"><span>Nations</span><b>{{ stats.nations }}</b></div>
     </div>
-    <div class="hud bl">
+    <div class="hud bl" translate="no">
       <div>Selected region</div>
       <div class="hud-target">— {{ target ? (target.country?.name ?? target.key) : 'No target' }} —</div>
       <div class="row"><span>Lat</span><b>{{ target?.country ? target.country.lat.toFixed(2) : '--.--' }}</b></div>

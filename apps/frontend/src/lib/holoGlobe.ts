@@ -217,6 +217,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
   function drawDots(time: number) {
     const center = proj.invert!([W / 2, H / 2])!;
     drawn = [];
+    const labels: { text: string; x: number; y: number; rank: number; color: string; bold: boolean }[] = [];
     for (const m of state.scene.dots) {
       const c = countries[m.key];
       if (!c) continue;
@@ -261,16 +262,30 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       }
 
       if (!faded) {
-        ctx.font = `${isLock ? 600 : 500} 11px ${COLORS.font}`;
-        ctx.textBaseline = 'middle';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(4,9,14,0.85)';
-        ctx.lineJoin = 'round';
-        ctx.strokeText(m.label, x + r + 5, y);
-        ctx.fillStyle = isLock ? COLORS.lock : isHover ? COLORS.probe : COLORS.ink;
-        ctx.fillText(m.label, x + r + 5, y);
+        // 锁定 > 悬停 > 点大（故事多）> 头条脉动
+        const rank = (isLock ? 1e6 : 0) + (isHover ? 1e5 : 0) + m.r * 10 + (m.pulse ? 1 : 0);
+        labels.push({ text: m.label, x: x + r + 5, y, rank, color: isLock ? COLORS.lock : isHover ? COLORS.probe : COLORS.ink, bold: isLock });
       }
       ctx.globalAlpha = 1;
+    }
+    drawLabels(labels);
+  }
+
+  /** 点画完再画标签：按优先级放，和已放下的标签相交的就不画（欧洲这类密集区原先「UK 3」压着「Germany 1」）。点本身照画，悬停能看到 */
+  function drawLabels(labels: { text: string; x: number; y: number; rank: number; color: string; bold: boolean }[]) {
+    const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const l of labels.sort((a, b) => b.rank - a.rank)) {
+      ctx.font = `${l.bold ? 600 : 500} 11px ${COLORS.font}`;
+      const box = { x0: l.x - 2, y0: l.y - 8, x1: l.x + ctx.measureText(l.text).width + 2, y1: l.y + 8 };
+      if (placed.some(p => box.x0 < p.x1 && p.x0 < box.x1 && box.y0 < p.y1 && p.y0 < box.y1)) continue;
+      placed.push(box);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(4,9,14,0.85)';
+      ctx.strokeText(l.text, l.x, l.y);
+      ctx.fillStyle = l.color;
+      ctx.fillText(l.text, l.x, l.y);
     }
   }
 

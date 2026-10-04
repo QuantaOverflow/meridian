@@ -176,12 +176,23 @@ export function place(places: BriefMapEvent['places'], mentions: BriefMapEvent['
 
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
 
-/** 正文块导语（leadHtml）的前两句，纯文本 */
+// 句末：. ! ? 后面可跟右引号，再是空白，下一个词以大写、数字或左引号开头。右括号不算（「(High IQ!) PRESIDENT」在句中）
+const SENTENCE_BREAK = /(?<=[.!?]["'”’]*)\s+(?=["'“‘]?[A-Z0-9])/;
+// 不当句末的缩写：U.S. / U.K. 这类、姓名首字母，以及常见称谓
+const ABBREVIATION = /(?:^|\s)(?:(?:[A-Z]\.)+|(?:Mr|Mrs|Ms|Dr|St|Gen|Sen|Rep|Gov|Lt|Col|Sgt|Capt|Prof|Jr|Sr|Inc|Co|Corp|No|vs|Mt|Ft)\.)$/;
+
+/** 正文块导语（leadHtml）的前两句，纯文本。已知局限：缩写恰好收尾一句（「moved to the U.S. He…」）时两句会连在一起 */
 export function leadSentences(leadHtml: string): string {
   const text = leadHtml
     .replace(/<[^>]+>/g, ' ')
     .replace(/&(amp|lt|gt|quot|#39);/g, m => ENTITIES[m])
     .replace(/\s+/g, ' ')
     .trim();
-  return text.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+  const sentences: string[] = [];
+  for (const piece of text.split(SENTENCE_BREAK)) {
+    const last = sentences.length - 1;
+    if (last >= 0 && ABBREVIATION.test(sentences[last])) sentences[last] += ` ${piece}`;
+    else sentences.push(piece);
+  }
+  return sentences.slice(0, 2).join(' ');
 }

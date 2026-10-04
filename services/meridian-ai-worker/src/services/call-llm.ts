@@ -39,7 +39,8 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 故事排序：一次看当期全部候选标题（46-51 条约 1400 词），输出前 12 + 5 条落选。
   // maxTokens 3000 沿用离线实测值（两期各 3 轮，6 次调用 completion 全部在预算内，无截断）。
   story_rank: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0, maxTokens: 3000 },
-  // 简报块 v6：窗口标重点 + 一次写作，两种调用共用这个 phase（callIndex 区分 R2 key）。
+  // 简报块 v6：窗口标重点 + 写作 + 改写，三种调用共用这个 phase（callIndex 区分 R2 key）。
+  // 这里的 model 是标重点用的；写作与改写由 services/brief-block-v6.ts 覆盖成 deepseek-v4-pro（ADR 0010）。
   // maxTokens 8000 与 temperature 0.1 沿用原型实测值（原型 chatJson 的 max_tokens=8000）。
   // **不设 frequency_penalty**：原型没有它，而 v6 与生产的那份对比读数（同 3 簇，写作层
   // 缺陷 0/12 对 5/14）就是在没有它的配置下测出来的。移植时曾按本仓 glm-4.7-flash 的既有
@@ -48,6 +49,9 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 很清楚：实测过的配置优先于未实测的约定。复读由解析处的 detectRepetition 挡（见
   // services/brief-block-v6.ts），那才是真正拦得住的那层。
   brief_block_v6: { model: '@cf/zai-org/glm-4.7-flash', temperature: 0.1, maxTokens: 8000 },
+  // 逐句核查 agent（ADR 0010）：取值是原型 held-out 实测的那组。每步 3000 是原型 runAgent 的预算
+  // （原型里 glm-5.3-flash 先在协议行前长篇思考，1500 时写不完，2026-10-04）。
+  brief_block_v6_check: { model: '@cf/qwen/qwen3.8-27b', temperature: 0.2, maxTokens: 3000 },
   // 占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
 };
@@ -203,6 +207,11 @@ export interface AttemptPolicy<T> {
   retryOnError: (error: unknown, attempt: number) => boolean;
   /** 第 attempt 次失败后、下一次之前等多久；最后一次失败后不问。0 = 不等。 */
   backoffMs: (attempt: number) => number;
+  /**
+   * 同一对话里更早的轮次，每次尝试都原样发在这次 prompt 之前（简报块的改写接着写作的对话，ADR 0010）。
+   * 不传 = 只发一条 user，与原来一样。
+   */
+  history?: ChatMessage[];
 }
 
 export async function callLLMUntilAccepted<T>(
@@ -220,7 +229,7 @@ export async function callLLMUntilAccepted<T>(
     const prompt = policy.prompt(attempt, lastReasons);
     let res: ChatResponse | null = null;
     try {
-      res = await callLLM(ai, env, trace, phase, [{ role: 'user', content: prompt }], overrides);
+      res = await callLLM(ai, env, trace, phase, [...(policy.history ?? []), { role: 'user', content: prompt }], overrides);
     } catch (e) {
       lastError = e;
       lastReasons = [];

@@ -52,7 +52,8 @@ function fakeEnv() {
     }),
   } as unknown as Ai
   const ARTICLES_BUCKET = { put: vi.fn(async () => {}) } as unknown as R2Bucket
-  return { env: { AI, ARTICLES_BUCKET }, prompts }
+  // 只测切句与补出处：关掉逐句核查与改写（BRIEF_CHECK_EPOCHS=0）
+  return { env: { AI, ARTICLES_BUCKET, BRIEF_CHECK_EPOCHS: "0" }, prompts }
 }
 
 describe("brief-block-v6 集成：真实原文上的切句与补出处", () => {

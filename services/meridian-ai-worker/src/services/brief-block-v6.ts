@@ -7,6 +7,11 @@
  *   4 写作     全部重点 + 它们指向的原句 → 一块简报（句数随 tier：lead 5–7 / more 3–5 /  LLM × 1
  *              brief 1，以 prompts/briefBlockV6.ts 的 WRITE_LEN 为准）
  *   5 补出处   句中数字/引语不在所引原句里 → 在材料池里找字面包含它的原句补上        代码
+ *   6 核查改写 写作–核查循环（ADR 0010）：每句逐句核查（qwen3.8 小 agent × epoch 数），  LLM × 句数 × 步数
+ *              被标出就把意见发回写作的对话整块改写，只复核改过的句子，最多改两次     + 改写 ≤ 2
+ *              （services/sentence-check.ts；BRIEF_CHECK_EPOCHS=0 关掉）
+ *
+ * 标重点用 glm-4.7-flash，写作与改写用 deepseek-v4-pro（ADR 0010）。
  *
  * 移植自原型 `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
  * `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 这一条路径。
@@ -21,16 +26,31 @@
  */
 import { callLLMUntilAccepted, LLMAttemptsExhausted } from './call-llm';
 import type { TraceContext } from './llm-call-logger';
-import type { CloudflareEnv } from '../types';
-import type { BriefBlockV6Request as BriefBlockV6Input, BriefBlockV6Result } from '@meridian/contracts';
+import { sentenceCheck, type CheckCaller, type SentenceCheckRun } from './sentence-check';
+import type { ChatMessage, CloudflareEnv } from '../types';
+import type {
+  BriefBlockV6Check,
+  BriefBlockV6CheckOutcome,
+  BriefBlockV6Request as BriefBlockV6Input,
+  BriefBlockV6Result,
+} from '@meridian/contracts';
 import { splitSentences } from '../utils/report-v3';
 import { detectRepetition } from '../utils/brief-writer-v3';
-import { ANCHOR_SCHEMA, getAnchorPrompt, getWriteSchema, getWritePrompt, noSentencesHint } from '../prompts/briefBlockV6';
+import {
+  ANCHOR_SCHEMA,
+  REVISE_HINTS,
+  findingsMessage,
+  getAnchorPrompt,
+  getWriteSchema,
+  getWritePrompt,
+  noSentencesHint,
+} from '../prompts/briefBlockV6';
 import {
   anchorOk,
   cleanWrite,
   contextOf,
   makeWindows,
+  numberCheck,
   normalizeTier,
   repairCitations,
   retryInstruction,
@@ -40,12 +60,17 @@ import {
   type V6Article,
   type V6Sentence,
   type V6Source,
+  type V6Tier,
 } from '../utils/brief-block-v6';
+import { briefDateOf, clusterOf, type Verdict } from '../utils/sentence-check';
 import { Logger } from '../utils/logger';
 
 const logger = new Logger({ component: 'brief-block-v6' });
 
-const MODEL = '@cf/zai-org/glm-4.7-flash';
+/** 标重点（窗口步）。 */
+const ANCHOR_MODEL = '@cf/zai-org/glm-4.7-flash';
+/** 写作与改写（写作–核查循环，ADR 0010）：一次写成的走样比 glm-4.7-flash 少一半，标重点仍用 glm。 */
+const WRITER_MODEL = '@cf/deepseek-ai/deepseek-v4-pro-0813';
 /** 同时在飞的窗口调用数（原型 DIRECT_RAW_CONCURRENCY 默认值）。 */
 const CONCURRENCY = 2;
 /** 原型 chatJson 的重试策略：三次、温度依次这三个值、退避 3s → 8s。 */
@@ -60,11 +85,69 @@ const CALL_INDEX_BASE = 600;
  * `brief_block_v6-600`，后写的覆盖先写的（2026-09-19 实测：storyIdx=17 的原始输出查不到）。
  * 用 backend 传进来的 story 序号乘上这个步长把块彼此隔开。
  *
- * 100 是够用的上界：一块最多 = 窗口数 × 3 次尝试 + 写作 3 次尝试，最大的簇也只有 3 个窗口。
+ * 100 是够用的上界：一块最多 = 窗口数 × 3 次尝试 + 写作 3 次尝试 + 改写 2 次 × 3 次尝试，
+ * 最大的簇也只有 3 个窗口（9 + 3 + 6 = 18）。逐句核查的调用另有 phase 与编号，不占这里的槽位。
  * 日志 key 里带 phase 段（`brief_block_v6`），与 brief_generation 的标题(690)
  * 天然分开，所以这里只需要块间唯一，基数取多少都不会跨 phase 撞车。
  */
 const CALL_INDEX_PER_STORY = 100;
+/**
+ * 逐句核查 agent 的调用（phase `brief_block_v6_check`）的 callIndex = story 序号 × 这个步长 + 块内计数。
+ * 与写作 / 改写的计数分开：核查调用再多，写作与改写在 brief_block_v6 的 100 个槽位里的编号也不跳。
+ *
+ * 上界：一块的核查调用 = 句数 × epoch 数 × 核的版本数 × 每个 agent 的步数。句数最多 7（lead 档），
+ * 版本最多 3（草稿 + 两次改写，改写后只核改过的句子），一个 agent 最多 21 个动作 + 11 条读不懂的回复
+ * = 32 步，所以 1 个 epoch 最坏 7 × 3 × 32 = 672 < 1000。2 个 epoch 的理论最坏（每个 agent 都把两种上限
+ * 用满）会超过 1000、和下一块的前几个编号撞 key；只丢观测记录，不影响产出。某步调用报错重试的那几次另算。
+ */
+const CHECK_CALL_INDEX_PER_STORY = 1000;
+/** 每块同时在飞的逐句核查 agent 数（原型 CHECKS_IN_FLIGHT 默认值）。 */
+const CHECKS_IN_FLIGHT = 10;
+/** 最多改写几次（原型 MAX_ROUNDS）。 */
+const MAX_REVISIONS = 2;
+
+/** 复读检测读的文本：各句 text 连起来（写作与改写同一口径）。 */
+const sentencesText = (x: any): string =>
+  Array.isArray(x.sentences) ? (x.sentences as Array<{ text: string }>).map(s => String(s?.text ?? '')).join(' ') : '';
+
+/** BRIEF_CHECK_EPOCHS："0" = 关；正整数 = 几次；缺省或其他任何值 = 1（缺变量不会悄悄关掉核查）。 */
+const checkEpochsOf = (raw: string | undefined): number => (raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : 1);
+
+type Version = { title: string; sentences: V6Sentence[] };
+type CheckRound = BriefBlockV6Check['rounds'][number];
+
+/** 一版里一句的核查：每个 epoch 一次运行；文本没变、沿用上一轮结论的句子 carried = true。 */
+interface CheckLog {
+  index: number;
+  text: string;
+  runs: SentenceCheckRun[];
+  carried: boolean;
+}
+
+/** 任一 epoch 判有问题就算被标出（宁可多改，不漏错）。 */
+const isFlagged = (l: CheckLog) => l.runs.some(r => r.verdict?.ok === false);
+/** 没有一个 epoch 给出结论：没核到。 */
+const isUnchecked = (l: CheckLog) => !l.runs.some(r => r.verdict);
+
+const findingOf = (v: Extract<Verdict, { ok: false }>) => ({
+  ...(v.type !== undefined ? { type: v.type } : {}),
+  ...(v.problem !== undefined ? { problem: v.problem } : {}),
+  evidence: v.evidence,
+  ...(v.fix !== undefined ? { fix: v.fix } : {}),
+});
+
+/** 一轮的记录：这一版里被标出的句子（含沿用的，每个判有问题的 epoch 一条意见）与这一轮核了却没有结论的句子。 */
+function roundOf(round: number, logs: CheckLog[]): CheckRound {
+  return {
+    round,
+    flagged: logs.filter(isFlagged).map(l => ({
+      sentence: l.index,
+      text: l.text,
+      findings: l.runs.flatMap(r => (r.verdict && !r.verdict.ok ? [findingOf(r.verdict)] : [])),
+    })),
+    noVerdict: logs.filter(l => !l.carried && isUnchecked(l)).map(l => l.index),
+  };
+}
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promise<R>): Promise<R[]> {
   const result: R[] = new Array(items.length);
@@ -82,7 +165,10 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promis
 }
 
 export class BriefBlockV6Service {
+  /** 标重点 / 写作 / 改写的调用数，也是它们 callIndex 的块内计数 */
   private llmCalls = 0;
+  /** 逐句核查 agent 的调用数，也是它们 callIndex 的块内计数（与上面分开，见 CHECK_CALL_INDEX_PER_STORY） */
+  private checkCalls = 0;
   private neurons = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
@@ -104,26 +190,38 @@ export class BriefBlockV6Service {
     schema: Record<string, unknown>,
     ok: (x: any) => string[],
     repetitionTextOf: (x: any) => string,
-    rejects?: string[],
-    hints: Partial<Record<string, string>> = {}
-  ): Promise<any> {
+    o: {
+      model: string;
+      /** 校验不过的原因，每次一条 `#尝试次 原因…`（trace.writeRejects 的口径） */
+      rejects?: string[];
+      /** 每次被拒的尝试一条 `#尝试次 原因`：校验原因、截断、JSON 解不出、复读或调用报错（改写记录的口径） */
+      attemptRejects?: string[];
+      hints?: Partial<Record<string, string>>;
+      /** 同一对话里更早的轮次，发在这次 prompt 之前（改写接着写作的对话） */
+      history?: ChatMessage[];
+    }
+  ): Promise<{ value: any; raw: string; prompt: string; attempts: number }> {
+    const { rejects, attemptRejects, hints = {} } = o;
+    // 每次尝试实际发出的 prompt（重试时带诊断）；通过的那次就是改写要接上的那一轮 user
+    let sent = prompt;
     try {
-      const r = await callLLMUntilAccepted(this.ai, this.env, this.traceContext, 'brief_block_v6', {
+      const r = await callLLMUntilAccepted<{ parsed: any; raw: string }>(this.ai, this.env, this.traceContext, 'brief_block_v6', {
         attempts: TEMPERATURES.length,
+        history: o.history,
         overrides: attempt => {
           // 块间唯一：见 CALL_INDEX_PER_STORY。traceContext.callIndex 是 backend 传的 story 序号。
           const storyIdx = this.traceContext.callIndex ?? 0;
           const callIndex = CALL_INDEX_BASE + storyIdx * CALL_INDEX_PER_STORY + this.llmCalls;
           this.llmCalls++;
           return {
-            model: MODEL,
+            model: o.model,
             temperature: TEMPERATURES[attempt],
             callIndex,
             responseFormat: { type: 'json_schema' as const, json_schema: schema },
           };
         },
         prompt: (_attempt, lastReasons) =>
-          lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons, hints)}` : prompt,
+          (sent = lastReasons.length ? `${prompt}\n\n${retryInstruction(lastReasons, hints)}` : prompt),
         accept: (res, attempt) => {
           const choice = res.choices?.[0];
           const content = String(choice?.message?.content ?? '');
@@ -137,27 +235,31 @@ export class BriefBlockV6Service {
           // reasons === null：连 ok() 都没跑到（截断 / JSON 解不出），没有可回传的诊断
           const reasons = !truncated && parsed ? ok(parsed) : null;
           if (reasons && reasons.length === 0) {
-            if (!detectRepetition(repetitionTextOf(parsed))) return { ok: true, value: parsed };
+            if (!detectRepetition(repetitionTextOf(parsed))) return { ok: true, value: { parsed, raw: content } };
             logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 产出复读，丢弃重试`);
+            attemptRejects?.push(`#${attempt + 1} repetition`);
             return { ok: false, reasons: [] };
           }
           if (reasons?.length) rejects?.push(`#${attempt + 1} ${reasons.join(' | ')}`);
+          attemptRejects?.push(`#${attempt + 1} ${truncated ? 'finish_length' : reasons ? reasons.join(' | ') : 'json_parse'}`);
           logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：` +
               `${truncated ? 'finish_reason=length' : reasons ? `校验不过 ${reasons.join(' | ')}` : 'JSON 解不出'}`);
           return { ok: false, reasons: reasons ?? [] };
         },
         retryOnError: (err, attempt) => {
           logger.warn(`[BriefBlockV6] ${tag}#${attempt + 1} 失败：err=${err instanceof Error ? err.message : String(err)}`);
+          attemptRejects?.push(`#${attempt + 1} error: ${err instanceof Error ? err.message : String(err)}`);
           return true;
         },
         backoffMs: attempt => BACKOFF_MS[attempt],
       });
       this.neurons += r.neurons;
-      return r.value;
+      return { value: r.value.parsed, raw: r.value.raw, prompt: sent, attempts: r.attempts };
     } catch (e) {
       if (!(e instanceof LLMAttemptsExhausted)) throw e;
       this.neurons += e.neurons;
-      throw new Error(`${tag}: all model attempts failed validation`);
+      // cause 留着：改写要分得出「三次都没过」（留上一版）与别的错
+      throw new Error(`${tag}: all model attempts failed validation`, { cause: e });
     }
   }
 
@@ -182,14 +284,15 @@ export class BriefBlockV6Service {
     const batches = await pool(windows, CONCURRENCY, async w => {
       const allowed = new Set(w.articleIds);
       try {
-        const result = await this.chatJson(
+        const { value: result } = await this.chatJson(
           `w${w.index + 1}`,
           getAnchorPrompt(w, windows.length),
           ANCHOR_SCHEMA as unknown as Record<string, unknown>,
           // 窗口步的失败是窗口级的（已有跳过机制），不做逐条诊断：anchorOk 保持 boolean
           x => (anchorOk(x, sentences, allowed) ? [] : ['bad_anchors']),
           // 复读检测读 topic 文本；用 ". " 拼接让 detectRepetition 的句级那条腿切得开
-          x => (x.anchors as Array<{ topic: string }>).map(a => a.topic).join('. ')
+          x => (x.anchors as Array<{ topic: string }>).map(a => a.topic).join('. '),
+          { model: ANCHOR_MODEL }
         );
         return (result.anchors as Array<{ topic: string; sources: V6Source[] }>).map((c, i) => ({
           ...c,
@@ -216,26 +319,45 @@ export class BriefBlockV6Service {
     );
     const cited = new Set(citePool.map(s => `${s.articleId}:${s.sentence}`));
 
-    const written = cleanWrite(
-      await this.chatJson(
-        'write',
-        getWritePrompt(anchors, sentences, tier),
-        getWriteSchema(tier) as unknown as Record<string, unknown>,
-        x => writeOk(x, cited),
-        x => (Array.isArray(x.sentences) ? (x.sentences as Array<{ text: string }>).map(s => String(s?.text ?? '')).join(' ') : ''),
-        this.writeRejects,
+    const write = await this.chatJson(
+      'write',
+      getWritePrompt(anchors, sentences, tier),
+      getWriteSchema(tier) as unknown as Record<string, unknown>,
+      x => writeOk(x, cited),
+      sentencesText,
+      {
+        model: WRITER_MODEL,
+        rejects: this.writeRejects,
         // no_sentences 的重试提示要报这次调用实际用的 tier 的句数（bug B5），
         // 不能用 REASON_HINTS 里 tier 无关的默认文案。
-        { no_sentences: noSentencesHint(tier) }
-      )
+        hints: { no_sentences: noSentencesHint(tier) },
+      }
     );
+    const written = cleanWrite(write.value);
 
     let citationsRepaired = 0;
     let block: BriefBlockV6Result['block'] = null;
+    let check: BriefBlockV6Check | undefined;
     if (written.verdict === 'written') {
       const r = repairCitations(written.sentences as V6Sentence[], citePool, sentences);
-      citationsRepaired = r.added;
-      block = { title: String(written.title), sentences: r.sentences.map(s => ({ text: s.text, sources: s.sources })) };
+      const draft: Version = { title: String(written.title), sentences: r.sentences.map(s => ({ text: s.text, sources: s.sources })) };
+      const loop = await this.checkLoop({
+        draft,
+        draftRepaired: r.added,
+        // 写作的对话：通过的那次写作实际发出的 prompt（含重试诊断）→ 它的原文回复
+        conversation: [
+          { role: 'user', content: write.prompt },
+          { role: 'assistant', content: write.raw },
+        ],
+        articles,
+        table: sentences,
+        citePool,
+        cited,
+        tier,
+      });
+      block = loop.block;
+      citationsRepaired = loop.citationsRepaired;
+      check = loop.check;
     }
 
     return {
@@ -248,9 +370,200 @@ export class BriefBlockV6Service {
         citationsRepaired,
         windowFailures: this.windowFailures,
         writeRejects: this.writeRejects,
-        llmCalls: this.llmCalls,
+        llmCalls: this.llmCalls + this.checkCalls,
         neurons: this.neurons,
+        ...(check ? { check } : {}),
       },
     };
+  }
+
+  /**
+   * 写作–核查循环（ADR 0010；用词见 CONTEXT.md「写作–核查循环」）：草稿每句做逐句核查（× epoch 数），
+   * 被标出就把意见发回写作的同一个对话、整块改写，只复核改过的句子，最多改两次。
+   * 出什么问题都不让整块失败：核查出错 → 句子记成没核到、照发；发出去的永远是手上最好的一版。
+   */
+  private async checkLoop(o: {
+    draft: Version;
+    /** 草稿补出处补了几条（发草稿时就是 trace.citationsRepaired） */
+    draftRepaired: number;
+    conversation: ChatMessage[];
+    articles: V6Article[];
+    table: SentenceTable;
+    /** 写作的材料池与可引集合（补出处、writeOk 用）；改写时再加上证据句 */
+    citePool: V6Source[];
+    cited: Set<string>;
+    tier: V6Tier;
+  }): Promise<{ block: Version; citationsRepaired: number; check: BriefBlockV6Check }> {
+    const epochs = checkEpochsOf(this.env.BRIEF_CHECK_EPOCHS);
+    const blockIdx = this.traceContext.callIndex ?? 0;
+    if (epochs === 0) {
+      const check: BriefBlockV6Check = {
+        epochs: 0, outcome: 'off', revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 0, neurons: 0, ms: 0,
+      };
+      this.logLoop(blockIdx, check, []);
+      return { block: o.draft, citationsRepaired: o.draftRepaired, check };
+    }
+
+    const t0 = Date.now();
+    const before = { calls: this.llmCalls + this.checkCalls, neurons: this.neurons };
+    const cluster = clusterOf(o.articles);
+    const date = briefDateOf(o.articles);
+    const io: CheckCaller = {
+      ai: this.ai,
+      env: this.env,
+      trace: this.traceContext,
+      nextCallIndex: () => blockIdx * CHECK_CALL_INDEX_PER_STORY + this.checkCalls++,
+    };
+
+    // 一版的核查：文本没变的句子沿用上一轮的结论；其余每句跑 epochs 次独立核查，每块最多 10 个 agent 在飞
+    const verify = async (v: Version, earlier: Map<string, CheckLog>): Promise<CheckLog[]> => {
+      const logs = v.sentences.map((s, i): CheckLog => {
+        const old = earlier.get(s.text);
+        return old ? { ...old, index: i + 1, carried: true } : { index: i + 1, text: s.text, runs: [], carried: false };
+      });
+      const jobs = logs.filter(l => !l.carried).flatMap(l => Array.from({ length: epochs }, (_, run) => ({ l, run })));
+      await pool(jobs, CHECKS_IN_FLIGHT, async ({ l, run }) => {
+        const item = {
+          title: v.title,
+          sentences: v.sentences.map(x => x.text),
+          index: l.index,
+          text: l.text,
+          cited: v.sentences[l.index - 1].sources.map(x => [x.articleId, x.sentence] as [number, number]),
+        };
+        let r: SentenceCheckRun;
+        try {
+          r = await sentenceCheck(io, cluster, item, date);
+        } catch (e) {
+          // 核查出错不让整块失败：这一次记成没有结论，原因进降级日志
+          r = { verdict: null, calls: 0, neurons: 0, end: `error: ${e instanceof Error ? e.message : String(e)}` };
+        }
+        this.neurons += r.neurons;
+        l.runs[run] = r;
+      });
+      return logs;
+    };
+
+    let current = o.draft;
+    let repaired = o.draftRepaired;
+    let logs = await verify(current, new Map());
+    const rounds: CheckRound[] = [roundOf(0, logs)];
+    let history = o.conversation;
+    // 到目前为止发给写作的全部证据句（key，按出现先后），改写时都可以引
+    const evidence: string[] = [];
+    let revisions = 0;
+    let outcome: BriefBlockV6CheckOutcome | null = logs.some(isFlagged) ? null : 'clean';
+    for (let round = 1; !outcome && round <= MAX_REVISIONS; round++) {
+      const f = findingsMessage(
+        logs.filter(isFlagged).map(l => ({ index: l.index, text: l.text, verdicts: l.runs.map(r => r.verdict) })),
+        cluster
+      );
+      for (const k of f.evidence) if (!evidence.includes(k)) evidence.push(k);
+      const allowed = new Set([...o.cited, ...evidence]);
+      const revisePool: V6Source[] = [
+        ...o.citePool,
+        ...evidence.filter(k => !o.cited.has(k)).map(k => {
+          const [articleId, sentence] = k.split(':').map(Number);
+          return { articleId, sentence };
+        }),
+      ];
+      const rev = await this.revise(round, f.text, history, allowed, revisePool, o.table, o.tier);
+      rounds[rounds.length - 1].revise = { accepted: rev.accepted, attempts: rev.attempts, rejects: rev.rejects };
+      if (!rev.accepted) {
+        outcome = 'revise_failed';
+        break;
+      }
+      revisions++;
+      const w = cleanWrite(rev.value);
+      const r = repairCitations(w.sentences as V6Sentence[], revisePool, o.table);
+      current = { title: String(w.title ?? ''), sentences: r.sentences.map(s => ({ text: s.text, sources: s.sources })) };
+      repaired = r.added;
+      history = [...history, { role: 'user', content: rev.prompt }, { role: 'assistant', content: rev.raw }];
+      // 只复核改过的句子（按原文逐字比）；没改的沿用上一轮的结论
+      logs = await verify(current, new Map(logs.map(l => [l.text, l])));
+      rounds.push(roundOf(round, logs));
+      if (!logs.some(isFlagged)) outcome = 'fixed';
+    }
+    if (!outcome) outcome = 'still_flagged';
+
+    const check: BriefBlockV6Check = {
+      epochs,
+      outcome,
+      revisions,
+      unchecked: logs.filter(isUnchecked).map(l => l.index),
+      stillFlagged: logs.filter(isFlagged).map(l => l.index),
+      draft: revisions > 0 ? o.draft : null,
+      rounds,
+      calls: this.llmCalls + this.checkCalls - before.calls,
+      neurons: this.neurons - before.neurons,
+      ms: Date.now() - t0,
+    };
+    this.logLoop(blockIdx, check, logs);
+    return { block: current, citationsRepaired: repaired, check };
+  }
+
+  /**
+   * 一次改写：意见接在写作的对话之后发回 v4-pro，整块重写（同一 schema、三次尝试、温度与退避同写作）。
+   * 通过 = verdict 仍是 written + writeOk（可引的句子加上证据句）+ 不复读 + 数字检查（在材料池加证据句上
+   * 补完出处之后，句中每个数字都在它引的原句里）。被拒的尝试只把诊断接在意见后面，从不回传被拒的原文。
+   * 三次都不过不抛错：accepted=false，由循环留上一版。
+   */
+  private async revise(
+    round: number,
+    findings: string,
+    history: ChatMessage[],
+    allowed: Set<string>,
+    citePool: V6Source[],
+    table: SentenceTable,
+    tier: V6Tier
+  ): Promise<
+    | { accepted: true; value: any; raw: string; prompt: string; attempts: number; rejects: string[] }
+    | { accepted: false; attempts: number; rejects: string[] }
+  > {
+    const rejects: string[] = [];
+    // 数字检查按句给的提示（列出缺的数字）每次尝试后并进来，下一次的诊断按整条原因取
+    const hints: Record<string, string> = { no_sentences: noSentencesHint(tier), ...REVISE_HINTS };
+    const ok = (x: any): string[] => {
+      if (x?.verdict !== 'written') return ['revise_not_written'];
+      const bad = writeOk(x, allowed);
+      if (bad.length) return bad;
+      const numbers = numberCheck(repairCitations(cleanWrite(x).sentences as V6Sentence[], citePool, table).sentences, table);
+      Object.assign(hints, numbers.hints);
+      return numbers.reasons;
+    };
+    try {
+      const r = await this.chatJson(`revise${round}`, findings, getWriteSchema(tier) as unknown as Record<string, unknown>, ok, sentencesText, {
+        model: WRITER_MODEL,
+        attemptRejects: rejects,
+        hints,
+        history,
+      });
+      return { accepted: true, ...r, rejects };
+    } catch (e) {
+      if (!(e instanceof Error && e.cause instanceof LLMAttemptsExhausted)) throw e;
+      return { accepted: false, attempts: e.cause.attempts, rejects };
+    }
+  }
+
+  /** 每块一行 info；每种降级一行 warn（块号、outcome、句号、原因），`wrangler tail` 里当场看得到。 */
+  private logLoop(block: number, check: BriefBlockV6Check, logs: CheckLog[]): void {
+    const { outcome, unchecked } = check;
+    if (unchecked.length) {
+      const why = [...new Set(logs.filter(isUnchecked).flatMap(l => l.runs.map(r => r.end ?? 'no verdict')))];
+      logger.warn('[BriefBlockV6] 逐句核查降级：有句子没有结论，照发', { block, outcome, sentences: unchecked, reason: why.join(' | ') });
+    }
+    if (outcome === 'revise_failed') {
+      const last = check.rounds[check.rounds.length - 1];
+      logger.warn('[BriefBlockV6] 改写三次尝试全被拒，发上一版', {
+        block, outcome, sentences: check.stillFlagged, reason: (last.revise?.rejects ?? []).join(' / '),
+      });
+    }
+    if (outcome === 'still_flagged') {
+      logger.warn('[BriefBlockV6] 改写两次后仍有句子被标出，发最后一版', {
+        block, outcome, sentences: check.stillFlagged, reason: `still flagged after ${MAX_REVISIONS} revisions`,
+      });
+    }
+    logger.info('[BriefBlockV6] 写作–核查循环', {
+      block, flags: check.rounds.map(r => r.flagged.length), revisions: check.revisions, outcome, neurons: check.neurons, ms: check.ms,
+    });
   }
 }

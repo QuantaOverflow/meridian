@@ -57,7 +57,7 @@ export interface ChatResponse extends BaseAIResponse {
 
 export type AIResponse = ChatResponse
 
-// ai-worker 的全部 binding（wrangler.toml）。没有字符串 vars，也没有 secret。
+// ai-worker 的全部 binding 与 vars（wrangler.toml）。没有 secret。
 // 用 type 而不是 interface：hono 的 Bindings 约束带索引签名，只有类型字面量能隐式满足它
 // （interface 不会被推出索引签名），这样不必在这里写 `[k: string]: …` 把任意键放回来。
 export type CloudflareEnv = {
@@ -68,4 +68,10 @@ export type CloudflareEnv = {
    * 可选：没有这个 binding 时（本地/单测）两处写入都跳过。
    */
   ARTICLES_BUCKET?: R2Bucket
+  /**
+   * 逐句核查的 epoch 数（写作–核查循环，ADR 0010；wrangler.toml 的 [vars]）：每句独立核查几次，任一次判有问题就算有问题。
+   * "0" = 不核查、不改写（只留 v4-pro 写作，兼作回滚开关）；正整数 = 几次；缺省或其他任何值 = 1——
+   * 缺了这个变量不会悄悄把核查关掉。
+   */
+  BRIEF_CHECK_EPOCHS?: string
 }

@@ -41,7 +41,7 @@ Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) +
 | `apps/backend` | Hono API, Durable Object scrapers, queue consumer, both Workflows, admin / observability routes |
 | `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`, mostly) via the `AI` binding, no AI Gateway. Called via service binding `AI_WORKER` |
 | `services/meridian-ml-service` | FastAPI on a Cloudflare Container: `multilingual-e5-small` embeddings and agglomerative cosine clustering |
-| `apps/frontend` | Nuxt 3 reader (today's brief, archive, story threads) + admin pages |
+| `apps/frontend` | Nuxt 3 reader (map homepage for the latest issue, brief reading page, archive, story threads; English UI) + admin pages |
 | `packages/database` | Drizzle schema and migrations for Neon Postgres |
 
 The step-by-step pipeline is below in "How It Works"; design decisions and falsified alternatives are in [`docs/adr/`](docs/adr/).

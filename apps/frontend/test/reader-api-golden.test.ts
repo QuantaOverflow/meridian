@@ -88,6 +88,7 @@ const READER_CASES: Record<string, string> = {
   'brief-2-artifacts': '/api/briefs/2',
   'brief-404': '/api/briefs/999',
   'brief-invalid-slug': '/api/briefs/abc',
+  'brief-8-map': '/api/briefs/8/map',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',
@@ -133,6 +134,62 @@ describe('后台源读接口快照', () => {
   }
 
   it('admin-sources-no-session', () => snapshot('admin-sources-no-session', '/api/admin/sources'));
+});
+
+// ── 地图首页：服务端渲染出来的顶部与右侧面板 ──────────────────────────
+// 期望值写死自 backend 的 brief-8-map / briefs-latest 快照：story 15 是头条（块 0、线索 1 出现在 3 期），
+// story 16 不是头条；正文 2 条；主题 security、economy 各 1 条
+describe('地图首页（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 页面里每个 <a> 的 href 与去标签后的文字 */
+  const anchors = (html: string) =>
+    [...html.matchAll(/<a\b[^>]*?href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, inner]) => ({
+      href: href.replace(/&amp;/g, '&'),
+      text: text(inner),
+    }));
+
+  it('首屏：阅读入口、头条卡片、线索、其余条数、主题标签、往期入口、规范地址', async () => {
+    const res = await fetch('/');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    const links = anchors(html);
+
+    expect(links).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
+    expect(links).toContainEqual({ href: '/briefs', text: 'Past briefs' });
+    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · issue 3' });
+    // 头条卡片只有 story 15；不是头条的 story 16 不出卡片，算进「其余 1 条」
+    expect(links.filter(l => l.text === 'Read this part →').map(l => l.href)).toEqual(['/briefs/8#story-1']);
+    expect(links).toContainEqual({ href: '/briefs/8#story-2', text: '1 more in the brief →' });
+
+    const tags = [...html.matchAll(/<button\b[^>]*data-topic="([a-z]+)"[^>]*>([\s\S]*?)<\/button>/g)].map(([, key, inner]) => [
+      key,
+      text(inner),
+    ]);
+    expect(tags.sort()).toEqual([
+      ['economy', 'Economy 1'],
+      ['security', 'Conflict & Security 1'],
+    ]);
+
+    // 首页有自己的规范地址，不指向某一期的阅读页
+    expect(html).toMatch(/<link[^>]*rel="canonical"[^>]*href="http:\/\/[^"]+\/"/);
+    expect(html).not.toMatch(/rel="canonical"[^>]*\/briefs\//);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('地图数据取不到：顶部与阅读入口照常，面板处写明', async () => {
+    const saved = replies.get('/reader/briefs/8/map')!;
+    replies.set('/reader/briefs/8/map', { status: 500, body: '{"error":"boom"}' });
+    try {
+      const res = await fetch('/');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(anchors(html)).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
+      expect(html).toContain('Map data is unavailable right now.');
+      expect(html).not.toContain('data-topic=');
+    } finally {
+      replies.set('/reader/briefs/8/map', saved);
+    }
+  });
 });
 
 describe('backend 故障', () => {

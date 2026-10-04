@@ -209,7 +209,7 @@ const lockedView = computed(() => {
     </div>
 
     <div class="main">
-      <div>
+      <div class="globe-col">
         <div class="globe-slot">
           <LazyHoloGlobe
             v-model:locked="locked"
@@ -368,6 +368,9 @@ const lockedView = computed(() => {
 
 .main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .main { grid-template-columns: 1fr; } .hint { margin-left: 0; } }
+/* 面板比地球长时，地球随页面滚动会把左栏留空：宽屏让地球留在视口里，只滚面板；窄屏单列不粘 */
+.globe-col { position: sticky; top: 12px; }
+@media (max-width: 860px) { .globe-col { position: static; } }
 
 /* 地球加载前先占住位置，免得文字跳动 */
 .globe-slot { position: relative; aspect-ratio: 1 / 1; max-height: 78vh; width: 100%; }

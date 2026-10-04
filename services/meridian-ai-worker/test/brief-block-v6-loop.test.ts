@@ -121,14 +121,12 @@ type Reply = string | Error | { content: string; finish?: string }
 interface Msg { role: string; content: string }
 interface Seen { model: string; inputs: Record<string, any> }
 interface CheckQuery {
-  /** 被核的句号（1 起）与原文 */
-  sentence: number
+  /** 被核的那句原文 */
   text: string
   /** 这个 agent 的第几步（1 起） */
   step: number
   /** 同一句同一份 prompt 的第几个 agent（0 起；epoch 之间 prompt 相同，只能按到达先后分） */
   arrival: number
-  messages: Msg[]
 }
 interface Script {
   epochs?: string
@@ -155,12 +153,12 @@ function fakeEnv(script: Script) {
       if (model === GLM) r = Array.isArray(script.anchors) ? script.anchors[anchorCalls++] : script.anchors ?? ANCHORS
       else if (model === V4PRO) r = msgs.length === 1 ? script.write[writes++] : script.revise?.[revises++]
       else if (model === QWEN38) {
-        const m = /^Check S(\d+): (.*)$/m.exec(msgs[1].content)
+        const m = /^Check S\d+: (.*)$/m.exec(msgs[1].content)
         if (m && script.check) {
           const step = msgs.length / 2
           const arrival = arrivals.get(msgs[1].content) ?? 0
           if (step === 1) arrivals.set(msgs[1].content, arrival + 1)
-          r = script.check({ sentence: Number(m[1]), text: m[2], step, arrival, messages: msgs })
+          r = script.check({ text: m[1], step, arrival })
         }
       }
       if (r === undefined) {
@@ -468,7 +466,6 @@ Do not repeat the rejected wording; write the item again from the material above
   it('证据句可以引：改写引了材料外、但作为证据发给它的那句，照样收下', async () => {
     const S1_INJ = 'The storm that hit Freedonia on Wednesday killed 15 people and injured 11.'
     const flag = { ok: false, type: 'number', problem: 'The toll is stale and the injured are left out.', evidence: [[102, 1], [102, 2]], fix: S1_INJ }
-    const revised = versionWith(S1_INJ)
     const cites102_2 = reply('Storm kills 15 in Freedonia', [[S1_INJ, [[101, 1], [102, 1], [102, 2]]], [S2, [[102, 3]]]])
     const f = fakeEnv({
       write: [DRAFT_REPLY],
@@ -481,7 +478,6 @@ Do not repeat the rejected wording; write the item again from the material above
     expect(r.trace.check).toMatchObject({ outcome: 'fixed', revisions: 1 })
     expect(r.trace.check!.rounds[0].revise).toEqual({ accepted: true, attempts: 1, rejects: [] })
     expect(r.block!.sentences[0]).toEqual({ text: S1_INJ, sources: src([[101, 1], [102, 1], [102, 2]]) })
-    expect(revised.block.sentences[0].sources).not.toContainEqual({ articleId: 102, sentence: 2 })
     const findings = f.seen.find(s => s.model === V4PRO && s.inputs.messages.length > 1)!.inputs.messages[2].content as string
     expect(findings).toContain(`  Evidence, oldest report first:
   [102:1] (published 2026-10-03 06:30 UTC) The death toll from the Freedonia storm rose to 15 on Thursday.

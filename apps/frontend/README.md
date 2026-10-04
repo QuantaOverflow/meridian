@@ -7,7 +7,7 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 
 | 路径 | 内容 |
 |---|---|
-| `/` | 最新一期简报 |
+| `/` | 最新一期的地图首页（全息外观，`layouts/holo.vue`）：顶部摘要与阅读入口、地球（`components/HoloGlobe.client.vue` + `lib/holoGlobe.ts`，浏览器里懒加载）、右侧面板。落点阈值与国家 / 主题展示表在 `lib/briefMap.ts` |
 | `/briefs`、`/briefs/[slug]` | 简报归档与单期 |
 | `/stories`、`/stories/[id]` | 跨期故事线索 |
 | `/admin/login`、`/admin`、`/admin/feed/[id]` | 源管理后台（`nuxt-auth-utils` 会话登录） |
@@ -53,6 +53,7 @@ Playwright 驱动浏览器，backend 由测试自己起的 HTTP 服务假冒。*
 - `reader-api-golden.test.ts`：读接口的响应快照。假 backend 回放 backend 自己的快照（`apps/backend/test/fixtures/reader/__golden__/`，
   由 backend 的 `test/lib/reader.spec.ts` 生成），前端 `/api/*` 的输出与 `test/__golden__/reader-api/` 逐字节比对
   （后者录于前端还直连数据库时，是「搬到 backend 前后不变」的基准）。backend 快照变了，先确认是有意的，再看这里是否跟着变。
+  同一文件还断言服务端渲染的地图首页 `/`：阅读入口、头条卡片的 `#story-N` 链接、线索链接、其余条数与主题标签（期望值从同一份地图快照读出）。
 - `admin-sources.test.ts`：后台源管理的转发与页面交互。
 
 运行（每个文件先构建一次，约一分钟）：

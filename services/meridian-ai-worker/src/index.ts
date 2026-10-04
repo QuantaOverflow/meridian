@@ -67,6 +67,22 @@ function analysisFailure(error: unknown): Error {
   return error instanceof Error ? error : new Error(errorMessage)
 }
 
+/** 原地清掉整值等于类型占位符 `string` 的字段（大小写、首尾空白不论）：字符串 → ''，数组去掉该项。返回动过的字段名。 */
+function stripTemplatePlaceholders(result: Record<string, unknown>): string[] {
+  const isPlaceholder = (v: unknown) => typeof v === 'string' && v.trim().toLowerCase() === 'string'
+  const touched: string[] = []
+  for (const [key, value] of Object.entries(result)) {
+    if (isPlaceholder(value)) {
+      result[key] = ''
+      touched.push(key)
+    } else if (Array.isArray(value) && value.some(isPlaceholder)) {
+      result[key] = value.filter(v => !isPlaceholder(v))
+      touched.push(key)
+    }
+  }
+  return touched
+}
+
 app.post('/meridian/article/analyze', async (c) => {
   const ai = c.env.AI
   const requestMetadata = createRequestMetadata(c)
@@ -173,6 +189,14 @@ app.post('/meridian/article/analyze', async (c) => {
     }
 
     logger.info(`[Article Analysis] 成功完成分析: ${JSON.stringify(analysisResult).substring(0, 200)}...`)
+
+    // 模型照抄输出模板的类型占位符（prompt 结尾的模板把类型名写成值，如 "primary_location": "string"）。
+    // 2026-10-04 复现：没有地点的文章用真实模型重跑 78 次有 70 次照抄；垃圾页偶尔整份模板照抄。
+    // `"string"` 是合法字符串，字段契约拦不住，在这里按「整值等于占位符」清掉：字符串清成空串，数组去掉该项。
+    const echoedFields = stripTemplatePlaceholders(analysisResult)
+    if (echoedFields.length > 0) {
+      logger.warn(`[Article Analysis] 模型照抄了输出模板的类型占位符，已清掉: ${echoedFields.join(', ')}`)
+    }
 
     // 字段契约校验：此前只校验"能否解析成 object"，{} 或缺字段照样当 success 返回
     // （articleAnalysisSchema 定义了却从未用于校验端点输出）。用 safeParse 让契约违背可见。

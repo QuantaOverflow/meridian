@@ -101,3 +101,58 @@ describe('文章分析：两档模型', () => {
     expect(f.puts).toEqual(['llm-calls/trace-a/article_analysis-007.json'])
   })
 })
+
+// 2026-10-04 复现：prompt 输出模板把类型名写成值（"primary_location": "string"），文章没有地点时模型照抄。
+// 生产近 30 天 39 篇；对这 39 篇用真实模型重跑 78 次有 70 次复现，对照组（有明确国家的 20 篇）0/40。
+// 下面第一条的回复取自那次重跑（1203851「Great Dirhombicosidodecahedron」，正文截短），第二条是垃圾页整份模板照抄。
+describe('文章分析：模型照抄输出模板的类型占位符', () => {
+  it('没有地点的文章回 "primary_location": "string" → 地点清成空串，其余字段原样', async () => {
+    const reply = JSON.stringify({
+      language: 'en',
+      primary_location: 'string',
+      completeness: 'COMPLETE',
+      content_quality: 'OK',
+      event_summary_points: ['Great Dirhombicosidodecahedron is a uniform polyhedron with 124 faces'],
+      thematic_keywords: ['Uniform polyhedron'],
+      topic_tags: ['Mathematics', 'Geometry'],
+      key_entities: ['Stella software'],
+      content_focus: ['Mathematics'],
+    })
+    const r = await analyze(fakeEnv([reply]).env)
+    expect(r.status).toBe(200)
+    expect(r.body.data).toEqual({ ...JSON.parse(reply), primary_location: '' })
+  })
+
+  it('整份模板照抄（垃圾页）→ 字符串字段清空、数组里的 "string" 去掉', async () => {
+    const reply = JSON.stringify({
+      language: 'string',
+      primary_location: 'String',
+      completeness: 'PARTIAL_USELESS',
+      content_quality: 'JUNK',
+      event_summary_points: ['string'],
+      thematic_keywords: ['string'],
+      topic_tags: ['string'],
+      key_entities: ['string'],
+      content_focus: ['string'],
+    })
+    const r = await analyze(fakeEnv([reply]).env)
+    expect(r.status).toBe(200)
+    expect(r.body.data).toEqual({
+      language: '',
+      primary_location: '',
+      completeness: 'PARTIAL_USELESS',
+      content_quality: 'JUNK',
+      event_summary_points: [],
+      thematic_keywords: [],
+      topic_tags: [],
+      key_entities: [],
+      content_focus: [],
+    })
+  })
+
+  it('真实值里含 string 字样的不动（只认整值等于占位符）', async () => {
+    const reply = JSON.stringify({ primary_location: 'United States', topic_tags: ['String theory', 'Physics'] })
+    const r = await analyze(fakeEnv([reply]).env)
+    expect(r.body.data).toEqual({ primary_location: 'United States', topic_tags: ['String theory', 'Physics'] })
+  })
+})

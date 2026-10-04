@@ -12,7 +12,7 @@ const { data: brief, error, status } = await useFetch<BriefDetail>(() => `/api/b
 if (error.value) {
   throw createError({
     statusCode: error.value.statusCode ?? 500,
-    statusMessage: error.value.statusCode === 404 ? '这一期简报不存在' : '简报加载失败',
+    statusMessage: error.value.statusCode === 404 ? 'This issue does not exist' : 'Failed to load brief',
     fatal: true,
   });
 }

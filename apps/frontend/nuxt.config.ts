@@ -4,8 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineNuxtConfig({
   app: {
     head: {
-      // 界面文案为中文，正文为英文；lang 跟随界面
-      htmlAttrs: { lang: 'zh-CN' },
+      // 界面文案与正文都是英文（中文读者靠浏览器翻译）；lang 跟随界面
+      htmlAttrs: { lang: 'en' },
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.ico' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

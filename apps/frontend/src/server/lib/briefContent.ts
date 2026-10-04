@@ -111,7 +111,7 @@ export function estimateReadingMinutes(content: string): number {
  */
 function stripPromptArtifacts(text: string): string {
   return text
-    .replace(/<\/?curated_news_data>/g, '本期采集到的数据')
+    .replace(/<\/?curated_news_data>/g, "this issue's collected data")
     .replace(/<\/?final_brief>/g, '');
 }
 

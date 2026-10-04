@@ -1,8 +1,8 @@
 <script setup lang="ts">
 useSeoMeta({
-  title: '归档 | Meridian',
-  description: '检索历史每日情报简报',
-  ogLocale: 'zh_CN',
+  title: 'Archive | Meridian',
+  description: 'Search past daily intelligence briefs',
+  ogLocale: 'en_US',
 });
 </script>
 

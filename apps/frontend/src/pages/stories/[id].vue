@@ -11,15 +11,16 @@ const { data: thread, error, status } = await useFetch<StoryThreadDetail>(
 if (error.value) {
   throw createError({
     statusCode: error.value.statusCode ?? 500,
-    statusMessage: error.value.statusCode === 404 ? '这条线索不存在' : '线索加载失败',
+    statusMessage: error.value.statusCode === 404 ? 'This story thread does not exist' : 'Failed to load story thread',
     fatal: true,
   });
 }
 
 useSeoMeta({
-  title: () => (thread.value ? `${thread.value.title} | 事件追踪` : '事件追踪 | Meridian'),
-  description: () => (thread.value ? `持续 ${thread.value.durationDays} 天，覆盖 ${thread.value.briefCount} 期简报` : ''),
-  ogLocale: 'zh_CN',
+  title: () => (thread.value ? `${thread.value.title} | Story threads` : 'Story threads | Meridian'),
+  description: () =>
+    thread.value ? `Running ${thread.value.durationDays} days, across ${thread.value.briefCount} issues` : '',
+  ogLocale: 'en_US',
 });
 </script>
 

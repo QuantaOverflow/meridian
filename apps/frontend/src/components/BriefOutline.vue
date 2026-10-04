@@ -20,8 +20,8 @@ const total = computed(() => props.groups.reduce((n, group) => n + group.items.l
 </script>
 
 <template>
-  <nav aria-label="本期事件目录">
-    <p class="mb-[14px] text-[11.5px] tracking-[0.12em] text-ink3">本期 {{ total }} 条</p>
+  <nav aria-label="Table of contents">
+    <p class="mb-[14px] text-[11.5px] tracking-[0.12em] text-ink3">{{ total }} stories in this issue</p>
 
     <!-- 分组之间留白比组内大一档，让三节一眼分得开；组内仍靠左侧那条竖线串起来 -->
     <div class="flex flex-col gap-[18px]">

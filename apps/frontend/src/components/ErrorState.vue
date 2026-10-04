@@ -13,13 +13,13 @@ defineProps<{ statusCode: number; message: string }>();
         to="/"
         class="border-rule text-ink2 hover:border-ink hover:text-ink rounded-full border px-6 py-[10px] text-[13.5px] transition-colors"
       >
-        回到今日简报
+        Back to today's brief
       </NuxtLink>
       <NuxtLink
         to="/briefs"
         class="border-rule text-ink2 hover:border-ink hover:text-ink rounded-full border px-6 py-[10px] text-[13.5px] transition-colors"
       >
-        去归档找找
+        Browse the archive
       </NuxtLink>
     </div>
   </div>

@@ -1,7 +1,7 @@
 import type { BriefDetail } from '~/shared/types';
 import { readFromBackend, type BackendBriefDetail } from './backend';
 import { parseBriefContent, stripInlineMarkdown } from './briefContent';
-import { ensureDate, formatReportDateCN } from './utils';
+import { ensureDate, formatReportDate } from './utils';
 
 /**
  * 一期简报的读者视图。被 /api/briefs/:slug 与 /api/briefs/latest 共用——
@@ -26,7 +26,7 @@ export async function loadBriefDetail(
     slug: String(report.id),
     title: report.title,
     createdAt,
-    dateLabel: formatReportDateCN(createdAt),
+    dateLabel: formatReportDate(createdAt),
     tldrProse: report.tldrProse === null ? null : stripInlineMarkdown(report.tldrProse),
     sections: parsed.sections,
     storyCount: parsed.storyCount,

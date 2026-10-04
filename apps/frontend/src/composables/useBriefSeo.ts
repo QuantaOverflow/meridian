@@ -11,7 +11,7 @@ export function useBriefSeo(brief: Ref<BriefDetail | null | undefined>) {
   const origin = useRequestURL().origin;
 
   const summary = computed(() =>
-    brief.value ? (brief.value.tldrProse ?? `${brief.value.dateLabel}的每日情报简报`) : '每日情报简报'
+    brief.value ? (brief.value.tldrProse ?? `Daily intelligence brief for ${brief.value.dateLabel}`) : 'Daily intelligence brief'
   );
 
   useSeoMeta({
@@ -24,7 +24,7 @@ export function useBriefSeo(brief: Ref<BriefDetail | null | undefined>) {
       brief.value
         ? `${config.public.WORKER_API}/openGraph/brief?title=${encodeURIComponent(brief.value.title)}&date=${encodeURIComponent(new Date(brief.value.createdAt).getTime())}&articles=${brief.value.usedArticles}&sources=${brief.value.usedSources}`
         : `${config.public.WORKER_API}/openGraph/default`,
-    ogLocale: 'zh_CN',
+    ogLocale: 'en_US',
     twitterCard: 'summary_large_image',
   });
 

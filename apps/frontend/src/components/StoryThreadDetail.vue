@@ -7,9 +7,9 @@ const props = defineProps<{ thread: StoryThreadDetail }>();
 const lead = computed(() => props.thread.entries.find(entry => !entry.disputed && entry.description !== '')?.description ?? '');
 
 const statusLine = computed(() => {
-  const parts = ['事件追踪', `持续 ${props.thread.durationDays} 天`];
-  if (props.thread.escalating) parts.push('升级中');
-  else if (props.thread.status === 'dormant') parts.push('暂无更新');
+  const parts = ['Story thread', `${props.thread.durationDays} days running`];
+  if (props.thread.escalating) parts.push('Escalating');
+  else if (props.thread.status === 'dormant') parts.push('No recent updates');
   return parts.join(' · ');
 });
 
@@ -20,7 +20,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
 <template>
   <div class="mx-auto max-w-[700px] px-5 pt-[70px] pb-[140px] md:px-8">
     <NuxtLink to="/stories" class="text-ink3 hover:text-ink mb-[22px] inline-block text-[13px] transition-colors">
-      ← 全部追踪
+      ← All story threads
     </NuxtLink>
 
     <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">{{ statusLine }}</p>
@@ -34,8 +34,8 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
     </p>
 
     <p class="border-rule-soft mb-11 border-b pb-7 text-[13px] text-ink3">
-      首次出现 {{ thread.firstSeenLabel }} · 最近更新 {{ thread.lastSeenLabel }} · {{ thread.entryCount }} 条记录 ·
-      {{ thread.briefCount }} 期简报
+      First seen {{ thread.firstSeenLabel }} · Last updated {{ thread.lastSeenLabel }} · {{ thread.entryCount }} entries ·
+      {{ thread.briefCount }} issues
     </p>
 
     <ol>
@@ -63,7 +63,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
           </p>
           <!-- 只写「未进入简报」读者会以为是被删掉或不可信的内容。
                说清楚它其实是当天识别出来、但没被选进简报的候选故事。 -->
-          <p class="text-[12.5px] leading-[1.6] text-ink3">未进入简报 · 当天识别出的候选，未入选当期</p>
+          <p class="text-[12.5px] leading-[1.6] text-ink3">Not in the brief · identified that day but not selected for the issue</p>
         </div>
 
         <div v-else>
@@ -77,7 +77,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
             {{ entry.description }}
           </p>
           <NuxtLink :to="`/briefs/${entry.briefSlug}`" class="border-rule text-ink3 hover:text-ink border-b text-[12.5px] transition-colors">
-            第 {{ entry.briefNumber }} 期
+            Issue {{ entry.briefNumber }}
           </NuxtLink>
         </div>
       </li>

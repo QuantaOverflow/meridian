@@ -18,7 +18,7 @@ function pick(x: any, key: string): any {
 }
 
 /** Args 里的文本带了没转义的引号时的宽松读法：按它前后的键名定位。 */
-export function salvageArgs(raw: string): any | null {
+function salvageArgs(raw: string): any | null {
   const out: any = {};
   const text = raw.match(/"text"\s*:\s*"([\s\S]*?)"\s*,\s*"sources"/i) ?? raw.match(/"text"\s*:\s*"([\s\S]*)"\s*}\s*}?\s*$/i);
   if (text) out.text = text[1].replace(/\\"/g, '"');

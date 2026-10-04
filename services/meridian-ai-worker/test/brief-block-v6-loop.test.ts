@@ -213,6 +213,15 @@ describe('写作–核查循环：块接口', () => {
     expect(f.unscripted).toEqual([])
   })
 
+  it('草稿是 not_a_single_event：没有句子可核，不进循环，trace 里没有 check', async () => {
+    const f = fakeEnv({ write: [JSON.stringify({ verdict: 'not_a_single_event', reason: 'Two storms', title: '', sentences: [] })] })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(r).toMatchObject({ verdict: 'not_a_single_event', reason: 'Two storms', block: null })
+    expect(r.trace.check).toBeUndefined()
+    expect(f.seen.map(s => s.model)).toEqual([GLM, V4PRO])
+  })
+
   it.each([undefined, '1', 'two', '-1'])('clean（BRIEF_CHECK_EPOCHS=%s 按 1 次）：草稿没有句子被标出 → 照发草稿', async epochs => {
     const f = fakeEnv({ epochs, write: [DRAFT_REPLY], check: () => OK })
     const r = await settle(service(f).generate(INPUT))

@@ -338,11 +338,19 @@ export function numbersIn(text: unknown): Set<string> {
  * 出现在它引的某句原文里，否则 `sentence N: number_not_in_sources`。核查员会自己把数加起来（15 + 11 写成
  * "26 wounded"），写作会照抄它的建议改法。调用方先补出处再查。草稿不过这一条：草稿与测过的一次写成保持一致。
  * 返回原因，以及按整条原因给的提示（列出那一句缺的数字，retryInstruction 先按整条原因取）。
+ *
+ * `unchanged`：上一版的句子原文。与它逐字相同的句子不查——这一条拦的是改写新带进来的数；
+ * 没改的句子已经过了逐句核查，拿它拦改写只会让被标出那句的修正丢掉（改写三次全被拒就发上一版）。
  */
-export function numberCheck(sentences: V6Sentence[], table: SentenceTable): { reasons: string[]; hints: Record<string, string> } {
+export function numberCheck(
+  sentences: V6Sentence[],
+  table: SentenceTable,
+  unchanged: ReadonlySet<string> = new Set()
+): { reasons: string[]; hints: Record<string, string> } {
   const reasons: string[] = [];
   const hints: Record<string, string> = {};
   sentences.forEach((s, i) => {
+    if (unchanged.has(s.text)) return;
     const have = numbersIn(s.sources.map(r => sentenceOf(table, r.articleId, r.sentence) ?? '').join(' '));
     const missing = [...numbersIn(s.text)].filter(n => !have.has(n));
     if (!missing.length) return;

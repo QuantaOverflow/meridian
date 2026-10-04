@@ -466,7 +466,14 @@ export class BriefBlockV6Service {
           return { articleId, sentence };
         }),
       ];
-      const rev = await this.revise(round, f.text, history, allowed, revisePool, o.table, o.tier);
+      const rev = await this.revise(round, f.text, {
+        history,
+        allowed,
+        citePool: revisePool,
+        table: o.table,
+        tier: o.tier,
+        unchanged: new Set(current.sentences.map(s => s.text)),
+      });
       rounds[rounds.length - 1].revise = { accepted: rev.accepted, attempts: rev.attempts, rejects: rev.rejects };
       if (!rev.accepted) {
         outcome = 'revise_failed';
@@ -504,38 +511,46 @@ export class BriefBlockV6Service {
   /**
    * 一次改写：意见接在写作的对话之后发回 v4-pro，整块重写（同一 schema、三次尝试、温度与退避同写作）。
    * 通过 = verdict 仍是 written + writeOk（可引的句子加上证据句）+ 不复读 + 数字检查（在材料池加证据句上
-   * 补完出处之后，句中每个数字都在它引的原句里）。被拒的尝试只把诊断接在意见后面，从不回传被拒的原文。
+   * 补完出处之后，改过的句子里每个数字都在它引的原句里）。被拒的尝试只把诊断接在意见后面，从不回传被拒的原文。
    * 三次都不过不抛错：accepted=false，由循环留上一版。
    */
   private async revise(
     round: number,
     findings: string,
-    history: ChatMessage[],
-    allowed: Set<string>,
-    citePool: V6Source[],
-    table: SentenceTable,
-    tier: V6Tier
+    o: {
+      /** 写作的对话到目前为止的轮次 */
+      history: ChatMessage[];
+      /** 可引的句子：材料池加上到目前为止发过的证据句 */
+      allowed: Set<string>;
+      /** 补出处用的池：同上 */
+      citePool: V6Source[];
+      table: SentenceTable;
+      tier: V6Tier;
+      /** 上一版的句子原文：逐字没改的句子不过数字检查 */
+      unchanged: ReadonlySet<string>;
+    }
   ): Promise<
     | { accepted: true; value: any; raw: string; prompt: string; attempts: number; rejects: string[] }
     | { accepted: false; attempts: number; rejects: string[] }
   > {
     const rejects: string[] = [];
     // 数字检查按句给的提示（列出缺的数字）每次尝试后并进来，下一次的诊断按整条原因取
-    const hints: Record<string, string> = { no_sentences: noSentencesHint(tier), ...REVISE_HINTS };
+    const hints: Record<string, string> = { no_sentences: noSentencesHint(o.tier), ...REVISE_HINTS };
     const ok = (x: any): string[] => {
       if (x?.verdict !== 'written') return ['revise_not_written'];
-      const bad = writeOk(x, allowed);
+      const bad = writeOk(x, o.allowed);
       if (bad.length) return bad;
-      const numbers = numberCheck(repairCitations(cleanWrite(x).sentences as V6Sentence[], citePool, table).sentences, table);
+      const repaired = repairCitations(cleanWrite(x).sentences as V6Sentence[], o.citePool, o.table).sentences;
+      const numbers = numberCheck(repaired, o.table, o.unchanged);
       Object.assign(hints, numbers.hints);
       return numbers.reasons;
     };
     try {
-      const r = await this.chatJson(`revise${round}`, findings, getWriteSchema(tier) as unknown as Record<string, unknown>, ok, sentencesText, {
+      const r = await this.chatJson(`revise${round}`, findings, getWriteSchema(o.tier) as unknown as Record<string, unknown>, ok, sentencesText, {
         model: WRITER_MODEL,
         attemptRejects: rejects,
         hints,
-        history,
+        history: o.history,
       });
       return { accepted: true, ...r, rejects };
     } catch (e) {

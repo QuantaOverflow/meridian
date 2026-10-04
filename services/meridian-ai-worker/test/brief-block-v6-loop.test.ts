@@ -513,6 +513,22 @@ Do not repeat the rejected wording; write the item again from the material above
     expect(f.unscripted).toEqual([])
   })
 
+  it('数字检查只查改过的句子：没改的那句带着所引原句里没有的数，不拦改写', async () => {
+    // 草稿 S2 写了 40,000（所引的 102:3 里没有数），核查判它没问题；改写只改被标出的 S1，S2 原样带回
+    const S2_NUM = 'Power was restored to 40,000 homes by Thursday evening.'
+    const f = fakeEnv({
+      write: [reply('Storm kills 12 in Freedonia', [[S1, [[101, 1], [101, 2]]], [S2_NUM, [[102, 3]]]])],
+      revise: [reply('Storm kills 15 in Freedonia', [[S1_FIXED, [[101, 1], [102, 1]]], [S2_NUM, [[102, 3]]]])],
+      check: q => (q.text === S1 ? flagS1Steps(q.step) : OK),
+    })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(r.trace.check).toMatchObject({ outcome: 'fixed', revisions: 1 })
+    expect(r.trace.check!.rounds[0].revise).toEqual({ accepted: true, attempts: 1, rejects: [] })
+    expect(r.block!.sentences.map(s => s.text)).toEqual([S1_FIXED, S2_NUM])
+    expect(f.unscripted).toEqual([])
+  })
+
   it('数字检查只管改写：草稿里有所引原句没有的数也照收（草稿与测过的一次写成保持一致）', async () => {
     const S1_13 = 'A storm killed at least 13 people in Freedonia on Wednesday.'
     const f = fakeEnv({ epochs: '0', write: [reply('Storm kills 13 in Freedonia', [[S1_13, [[101, 1], [101, 2]]], [S2, [[102, 3]]]])] })

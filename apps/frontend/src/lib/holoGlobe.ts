@@ -244,12 +244,15 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       }
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = col;
-      ctx.globalAlpha = 0.55 * (faded ? 0.2 : 1);
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 12;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      // 连线终点：只描边不填充，和有故事的点分开
+      if (!m.hollow) {
+        ctx.fillStyle = col;
+        ctx.globalAlpha = 0.55 * (faded ? 0.2 : 1);
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
       ctx.globalAlpha = faded ? 0.18 : 1;
       ctx.strokeStyle = col;
       ctx.lineWidth = isLock ? 2 : 1.3;

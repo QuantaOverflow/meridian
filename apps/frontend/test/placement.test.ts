@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { place } from '../src/lib/briefMap';
+import { linkEnds, place } from '../src/lib/briefMap';
 
 // 落点与连线（ADR 0009 决定 4）。连线的第二个国家看 mentions：2026-10 在 111–115 期 121 个故事上量过，
 // 至少 2/3 成员提到、且不与下一名并列时，连出的 30 条里没有强行关联（并列和 Georgia 是两类强行关联的来源）。
@@ -36,5 +36,16 @@ describe('place：第二个国家（连线）', () => {
       [{ country: 'RU', share: 1 }]
     );
     expect(p).toEqual({ primary: null, secondary: null, spread: ['US', 'CN'] });
+  });
+});
+
+describe('linkEnds：连线终点标记', () => {
+  it('只挑没有故事落点的端点，去重', () => {
+    const links = [{ a: 'UA', b: 'RU' }, { a: 'LV', b: 'RU' }, { a: 'SA', b: 'YE' }];
+    expect(linkEnds(links, new Set(['UA', 'LV', 'SA']))).toEqual(['RU', 'YE']);
+  });
+
+  it('两端都有落点时不加标记', () => {
+    expect(linkEnds([{ a: 'KR', b: 'KP' }], new Set(['KR', 'KP']))).toEqual([]);
   });
 });

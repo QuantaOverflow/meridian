@@ -174,6 +174,11 @@ export function place(places: BriefMapEvent['places'], mentions: BriefMapEvent['
   return { primary, secondary, spread: spread.length >= 2 ? spread : [] };
 }
 
+/** 连线端点里没有故事落点的国家（去重、按出现顺序）：给它们画终点标记 */
+export function linkEnds(links: { a: string; b: string }[], dotted: { has(key: string): boolean }): string[] {
+  return [...new Set(links.flatMap(l => [l.a, l.b]))].filter(k => !dotted.has(k));
+}
+
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
 
 // 句末：. ! ? 后面可跟右引号，再是空白，下一个词以大写、数字或左引号开头。右括号不算（「(High IQ!) PRESIDENT」在句中）

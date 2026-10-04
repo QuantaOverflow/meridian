@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { BriefMap, BriefMapCountryCoverage, BriefTier, MapTopic } from '@meridian/contracts';
-import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, place } from '~/lib/briefMap';
+import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, linkEnds, place } from '~/lib/briefMap';
 import type { GlobeDot, GlobeLink, GlobeTip } from '~/lib/globeScene';
 import type { BriefDetail } from '~/shared/types';
 
@@ -112,15 +112,18 @@ onMounted(() => window.addEventListener('keydown', onEsc));
 onBeforeUnmount(() => window.removeEventListener('keydown', onEsc));
 
 // ── 给地球的场景 ─────────────────────────────────────────────
-const dots = computed<GlobeDot[]>(() =>
-  [...byCountry.value].map(([key, a]) => ({
+const dots = computed<GlobeDot[]>(() => [
+  ...[...byCountry.value].map(([key, a]) => ({
     key,
     r: 3 + 3.2 * Math.sqrt(a.events.length),
     pulse: a.top,
     label: `${countryName(key)} ${a.events.length}`,
     fade: !!topic.value && !a.events.some(e => e.topics.includes(topic.value!)),
-  }))
-);
+    hollow: false,
+  })),
+  // 连线另一端的国家当天没有故事落点时，线原先停在空地上，看不出连到哪
+  ...linkEnds(links.value, byCountry.value).map(key => ({ key, r: 3, pulse: false, label: countryName(key), fade: false, hollow: true })),
+]);
 const links = computed<GlobeLink[]>(() => {
   const out: GlobeLink[] = [];
   const focus = (keys: string[]) => !!locked.value && keys.includes(locked.value);

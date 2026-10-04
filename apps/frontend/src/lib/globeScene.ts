@@ -14,6 +14,8 @@ export interface GlobeDot {
   label: string;
   /** 不在当前主题筛选里：淡出 */
   fade: boolean;
+  /** 只是连线的终点、当天没有故事落在这里：小空心圈，标签只写国名 */
+  hollow: boolean;
 }
 
 export interface GlobeLink {

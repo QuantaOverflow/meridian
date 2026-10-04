@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { chat, WORKERS_AI_MODELS } from '../src/services/workers-ai'
 
 const GLM = '@cf/zai-org/glm-4.7-flash'
@@ -90,5 +90,68 @@ describe('workers-ai.chat', () => {
     await expect(
       chat(ai, { model: GLM, messages: [{ role: 'user', content: 'hi' }] })
     ).rejects.toThrow('Workers AI binding failed: 3040: Capacity temporarily exceeded, please try again.')
+  })
+})
+
+/**
+ * 服务端会自愈的故障（容量不足、超时、内部错误、连接中断）：v4-pro 与 qwen3.8 指数退避加抖动后原样重发
+ * （写作–核查循环，ADR 0010）。抖动是随机的，所以只断言重发时间的上下界：第 n 次等 2s·2^n 到 2s·2^n + 1s。
+ */
+describe('workers-ai.chat：服务故障指数退避', () => {
+  const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
+  const ok = { choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage: { completion_tokens: 1 } }
+  /** 按次序回放：Error 就抛，否则回 ok；返回已调用次数的读取器 */
+  function scripted(steps: Array<Error | 'ok'>) {
+    let n = 0
+    const ai = fakeAi(async () => {
+      const s = steps[n++]
+      if (s === undefined) throw new Error(`unexpected call #${n}`)
+      if (s instanceof Error) throw s
+      return ok
+    })
+    return { ai, calls: () => n }
+  }
+
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }) })
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
+
+  it('qwen3.8：连接中断、内部错误各一次 → 等 2–3s、4–5s 后重发，第三次成功', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const f = scripted([new Error('Network connection lost.'), new Error('8005: Internal server error'), 'ok'])
+    const p = chat(f.ai, { model: QWEN38, messages: [{ role: 'user', content: 'hi' }] })
+    await flush()
+    expect(f.calls()).toBe(1)
+    await vi.advanceTimersByTimeAsync(1999); await flush()
+    expect(f.calls()).toBe(1)
+    await vi.advanceTimersByTimeAsync(1001); await flush()
+    expect(f.calls()).toBe(2)
+    // 第二次重发从第二次调用（第 2–3s 之间）起算再等 4–5s：从头算落在第 6–8s 之间
+    await vi.advanceTimersByTimeAsync(2999); await flush()
+    expect(f.calls()).toBe(2)
+    await vi.advanceTimersByTimeAsync(2001); await flush()
+    expect(f.calls()).toBe(3)
+    await expect(p).resolves.toMatchObject({ choices: [{ message: { content: 'ok' } }] })
+  })
+
+  it('v4-pro：连着 4 次容量不足 → 等满 3 次（2s、4s、8s 起）后照旧抛错，共调用 4 次', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const busy = () => new Error('3040: Capacity temporarily exceeded, please try again.')
+    const f = scripted([busy(), busy(), busy(), busy()])
+    const p = chat(f.ai, { model: V4PRO, messages: [{ role: 'user', content: 'hi' }] })
+    p.catch(() => {})
+    await vi.advanceTimersByTimeAsync(3000 + 5000 + 9000); await flush()
+    await expect(p).rejects.toThrow('Workers AI binding failed: 3040: Capacity temporarily exceeded')
+    expect(f.calls()).toBe(4)
+  })
+
+  it('重发也没用的错误（参数错）不等，立刻抛；glm 遇到服务故障也照旧立刻抛', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const bad = scripted([new Error("5006: Error: oneOf at '/' not all constraints satisfied")])
+    await expect(chat(bad.ai, { model: QWEN38, messages: [{ role: 'user', content: 'hi' }] })).rejects.toThrow('5006')
+    expect(bad.calls()).toBe(1)
+    const glm = scripted([new Error('3040: Capacity temporarily exceeded, please try again.')])
+    await expect(chat(glm.ai, { model: GLM, messages: [{ role: 'user', content: 'hi' }] })).rejects.toThrow('3040')
+    expect(glm.calls()).toBe(1)
   })
 })

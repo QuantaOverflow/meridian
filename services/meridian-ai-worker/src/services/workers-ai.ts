@@ -21,15 +21,27 @@ export const WORKERS_AI_MODELS: readonly string[] = [
 ]
 
 /**
- * 限流等待（写作–核查循环，ADR 0010）：只对这两个模型。v4-pro 每账号每模型 20 次/分钟、qwen3.8 300 次/分钟，
- * 一期 6 块在飞时撞得到。报错里带 3021 或 "rate limit"（不分大小写）就等一会儿、原样重发同一个请求：
- * 不算调用方的一次尝试，也不算核查 agent 的一步。等 15s，之后每次多 10s，最多等 8 次（原型 lib.mts 的取值）；
- * 第 8 次之后照旧抛错。glm 等其他模型不变。
+ * 等一会儿、原样重发同一个请求（写作–核查循环，ADR 0010）：只对这两个模型，glm 等其他模型不变。
+ * 重发不算调用方的一次尝试，也不算核查 agent 的一步。两类错误各自计数：
+ *
+ * - 限流：报错里带 3021 或 "rate limit"（不分大小写）。v4-pro 每账号每模型 20 次/分钟、qwen3.8 300 次/分钟，
+ *   一期 6 块在飞时撞得到。等 15s，之后每次多 10s，最多等 8 次（原型 lib.mts 的取值）。
+ * - 服务端会自愈的故障：容量不足（3040）、超时（3046）、内部错误（8005）、连接中断。指数退避：等 2s、4s、8s，
+ *   各加 0–1s 随机抖动，免得同时失败的几十个核查请求一起重发；最多 3 次。原型在 REST 层也重试这类错误
+ *   （5xx / 408 / 断连），生产原先只有核查 agent 每步立刻连试 3 次，一阵繁忙就可能把句子记成没核到。
+ *   参数错、鉴权错这类重发也没用的错误不在此列，照旧立刻失败。
+ *
+ * 等满之后照旧抛错。
  */
-const RATE_LIMIT_WAIT_MODELS: readonly string[] = ['@cf/deepseek-ai/deepseek-v4-pro-0813', '@cf/qwen/qwen3.8-27b']
+const RESEND_MODELS: readonly string[] = ['@cf/deepseek-ai/deepseek-v4-pro-0813', '@cf/qwen/qwen3.8-27b']
 const RATE_LIMIT_MAX_WAITS = 8
 const rateLimitWaitMs = (wait: number) => 15_000 + 10_000 * wait
-const isRateLimited = (error: unknown) => /3021|rate limit/i.test(error instanceof Error ? error.message : String(error))
+const FAULT_MAX_WAITS = 3
+const faultWaitMs = (wait: number) => 2_000 * 2 ** wait + Math.floor(Math.random() * 1_000)
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
+const isRateLimited = (error: unknown) => /3021|rate limit/i.test(messageOf(error))
+const isTransientFault = (error: unknown) =>
+  /\b(3040|3046|8005)\b|capacity temporarily exceeded|request timeout|internal server error|network connection lost/i.test(messageOf(error))
 
 function logDebug(message: string, metadata: Record<string, unknown>): void {
   logger.debug(message, { request_id: metadata.requestId || 'unknown', metadata })
@@ -153,20 +165,27 @@ export async function chat(ai: Ai, request: ChatRequest): Promise<ChatResponse> 
 
   try {
     let body: unknown
-    for (let wait = 0; ; wait++) {
+    for (let rateWaits = 0, faultWaits = 0; ; ) {
       try {
         // model 名以运行时字符串驱动（模型表见 WORKERS_AI_MODELS），Ai.run 的类型签名要求
         // 具体字面量的 keyof——用真实 Ai 类型就必须在这一处转型，换不掉。
         body = await ai.run(modelName as keyof AiModels, inputs as any)
         break
       } catch (error) {
-        if (!RATE_LIMIT_WAIT_MODELS.includes(modelName) || wait >= RATE_LIMIT_MAX_WAITS || !isRateLimited(error)) throw error
-        const ms = rateLimitWaitMs(wait)
-        logger.warn(`Workers AI 限流，${ms / 1000}s 后原样重发（第 ${wait + 1}/${RATE_LIMIT_MAX_WAITS} 次等待）`, {
-          request_id: request.metadata?.requestId || 'unknown',
-          model: modelName,
-          error_message: error instanceof Error ? error.message : String(error),
-        })
+        if (!RESEND_MODELS.includes(modelName)) throw error
+        const rateLimited = isRateLimited(error)
+        if (rateLimited ? rateWaits >= RATE_LIMIT_MAX_WAITS : !isTransientFault(error) || faultWaits >= FAULT_MAX_WAITS) throw error
+        const ms = rateLimited ? rateLimitWaitMs(rateWaits++) : faultWaitMs(faultWaits++)
+        logger.warn(
+          rateLimited
+            ? `Workers AI 限流，${ms / 1000}s 后原样重发（第 ${rateWaits}/${RATE_LIMIT_MAX_WAITS} 次等待）`
+            : `Workers AI 服务故障，${(ms / 1000).toFixed(1)}s 后原样重发（第 ${faultWaits}/${FAULT_MAX_WAITS} 次等待）`,
+          {
+            request_id: request.metadata?.requestId || 'unknown',
+            model: modelName,
+            error_message: messageOf(error),
+          }
+        )
         await new Promise(r => setTimeout(r, ms))
       }
     }

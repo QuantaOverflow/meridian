@@ -334,7 +334,11 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
     // 每条 1 次 get，外加每 1000 条 1 次 list、1 次读观测、1 次写库。
     // 纯观测：recordRunOpsSummary 自己吞错只打 warn；外层再包一层，是因为 step.do 本身也会抛
     // （超时、平台 canceled），不能让它把已经写好状态的 run 带进下面的 catch 改记成 FAILED。
+    // 成功路径写过之后，后面的收尾再抛错进 catch 时不重写：那次重写不带降级原因，会把已记下的原因盖成空
+    let opsSummaryAttempted = false;
     const writeOpsSummary = async (degradedReasons: string[]) => {
+      if (opsSummaryAttempted) return;
+      opsSummaryAttempted = true;
       try {
         await step.do('persist:ops_summary', opsSummaryStepConfig, () =>
           recordRunOpsSummary(this.env, workflowId, degradedReasons)

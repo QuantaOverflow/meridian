@@ -5,57 +5,77 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import type { OpsSourceKind, OpsSources } from '@meridian/contracts';
 import { $fetch, createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
 
 // ── 假 backend ─────────────────────────────────────────────────────────
-// 读（GET /admin/sources、/admin/sources/:id/details）按内存里的源列表回答；
+// 读（GET /observability/ops/sources、/admin/sources/:id/details）按内存里的源列表回答；
 // 写（其余方法）的状态码由测试控制、记录请求，建源成功时把源加进列表（真 backend 就是这么做的），页面列表才读得到
 interface FakeSource {
   id: number;
   url: string;
   name: string;
   pausedAt: string | null;
+  kind?: OpsSourceKind;
+  lastChecked?: string | null;
+  lastArticleAt?: string | null;
+  articles7d?: number;
+  articles48h?: number;
+  fetchFailedPct?: number | null;
+  junkPct?: number | null;
+  singleLinePct?: number | null;
+  viaBrowserPct?: number | null;
 }
 let sources: FakeSource[] = [];
 let backendStatus = 200;
 const backendHits: string[] = [];
 const backendBodies: unknown[] = [];
 
-function sourceStats(s: FakeSource) {
+const LEVELS: Record<OpsSourceKind, OpsSources['sources'][number]['level']> = {
+  ok: 'ok',
+  not_checked: 'red',
+  dead_feed: 'red',
+  fetch_failing: 'yellow',
+  bad_body: 'yellow',
+  paused: 'grey',
+};
+
+function opsSource(s: FakeSource): OpsSources['sources'][number] {
+  const kind = s.kind ?? (s.pausedAt ? 'paused' : 'ok');
   return {
     id: s.id,
     name: s.name,
     url: s.url,
     category: 'news',
-    paywall: false,
     frequency: '4 Hours',
-    totalArticles: 0,
-    avgPerDay: 0,
-    processSuccessRate: null,
-    errorRate: null,
-    lowQualityRate: null,
+    kind,
+    level: LEVELS[kind],
+    lastChecked: s.lastChecked ?? null,
+    lastArticleAt: s.lastArticleAt ?? null,
+    pausedAt: s.pausedAt,
+    articles7d: s.articles7d ?? 0,
+    articles48h: s.articles48h ?? 0,
+    fetchFailedPct: s.fetchFailedPct ?? null,
+    junkPct: s.junkPct ?? null,
+    singleLinePct: s.singleLinePct ?? null,
+    viaBrowserPct: s.viaBrowserPct ?? null,
+  };
+}
+
+function opsSourcesReply(): OpsSources {
+  const rows = sources.map(opsSource);
+  const counts: OpsSources['counts'] = { ok: 0, not_checked: 0, dead_feed: 0, fetch_failing: 0, bad_body: 0, paused: 0 };
+  for (const r of rows) counts[r.kind]++;
+  return {
+    generatedAt: '2026-10-05T12:00:00.000Z',
+    counts,
+    sources: rows,
+    thresholds: { fetchFailingPct: 30, badBodyPct: 20, deadFeedMinArticles7d: 7, deadFeedQuietHours: 48 },
   };
 }
 
 function readReply(path: string): { status: number; body: unknown } {
-  if (path === '/admin/sources') {
-    return {
-      status: 200,
-      body: {
-        overview: {
-          lastSourceCheck: null,
-          lastArticleProcessed: null,
-          lastArticleFetched: null,
-          articlesProcessedToday: 0,
-          articlesFetchedToday: 0,
-          errorsToday: 0,
-          staleSourcesCount: 0,
-          totalSourcesCount: sources.length,
-        },
-        sources: sources.map(sourceStats),
-      },
-    };
-  }
+  if (path === '/observability/ops/sources') return { status: 200, body: opsSourcesReply() };
   const details = path.match(/^\/admin\/sources\/(\d+)\/details(\?|$)/);
   const source = details && sources.find(s => s.id === Number(details[1]));
   if (source) {
@@ -186,6 +206,95 @@ describe('POST /api/admin/sources/:id/init-dos', () => {
     const cookie = await loginCookie();
     const body = await $fetch(`/api/admin/sources/${sourceId}/init-dos`, { method: 'POST', headers: { cookie } });
     expect(body).toEqual({ success: true });
+  });
+});
+
+describe('后台页面「Sources」视图', () => {
+  async function sourcesPage() {
+    const page = await createPage();
+    await page.route('**/*', route => {
+      const host = new URL(route.request().url()).hostname;
+      return host === '127.0.0.1' || host === 'localhost' ? route.continue() : route.abort();
+    });
+    await page.goto(url('/admin/login'));
+    await page.fill('input[name=username]', ADMIN.username);
+    await page.fill('input[name=password]', ADMIN.password);
+    await Promise.all([page.waitForURL('**/admin'), page.click('button[type=submit]')]);
+    await page.goto(url('/admin/sources'));
+    await page.waitForSelector('text=What counts as a problem');
+    return page;
+  }
+
+  const fixture = (): FakeSource[] => [
+    { id: 1, url: 'https://a.example/feed', name: 'Quiet Feed', pausedAt: null, kind: 'not_checked', lastChecked: '2026-10-05T09:33:00.000Z', lastArticleAt: '2026-10-05T08:33:00.000Z', articles7d: 85, articles48h: 24, fetchFailedPct: 0, junkPct: 0, singleLinePct: 7, viaBrowserPct: 6 },
+    { id: 2, url: 'https://b.example/feed', name: 'Dead Feed', pausedAt: null, kind: 'dead_feed', articles7d: 9, articles48h: 0 },
+    { id: 3, url: 'https://c.example/feed', name: 'Failing Feed', pausedAt: null, kind: 'fetch_failing', articles7d: 10, articles48h: 3, fetchFailedPct: 40 },
+    { id: 4, url: 'https://d.example/feed', name: 'Flat Feed', pausedAt: null, kind: 'bad_body', articles7d: 536, articles48h: 161, singleLinePct: 100, junkPct: 0.9, viaBrowserPct: 74 },
+    { id: 5, url: 'https://e.example/feed', name: 'Good Feed', pausedAt: null, kind: 'ok', articles7d: 43, articles48h: 17, singleLinePct: null },
+    { id: 6, url: 'https://f.example/feed', name: 'Held Feed', pausedAt: '2026-09-25T17:04:00.000Z', kind: 'paused' },
+  ];
+
+  it('每种状态的计数、表格的每一行（状态名、7 天数字、比例）和规则图例', async () => {
+    sources = fixture();
+    const page = await sourcesPage();
+    const summary = (kind: string) => page.locator(`section[aria-label=Summary] [data-kind=${kind}]`).innerText();
+    expect(await summary('not_checked')).toMatch(/1\s+not checked/);
+    expect(await summary('dead_feed')).toMatch(/1\s+dead feeds/);
+    expect(await summary('fetch_failing')).toMatch(/1\s+fetch failing/);
+    expect(await summary('bad_body')).toMatch(/1\s+bad body format/);
+    expect(await summary('paused')).toMatch(/1\s+paused/);
+    expect(await summary('ok')).toMatch(/1\s+OK/);
+
+    const row = (kind: string) => page.locator(`tbody tr[data-kind=${kind}]`).innerText();
+    expect(await row('not_checked')).toContain('Not checked');
+    expect(await row('dead_feed')).toContain('Dead feed');
+    expect(await row('fetch_failing')).toContain('Fetch failing');
+    expect(await row('fetch_failing')).toContain('40%');
+    const bad = await row('bad_body');
+    expect(bad).toContain('Bad body');
+    expect(bad).toContain('536');
+    expect(bad).toContain('100%');
+    expect(bad).toContain('74%');
+    expect(await row('ok')).toContain('—'); // single-line 为 null：显示破折号，不是 0%
+    expect(await page.locator('tbody tr').count()).toBe(6);
+
+    const legend = await page.locator('section:has(h2:text("What counts as a problem"))').innerText();
+    expect(legend).toContain('No check for two scrape intervals');
+    expect(legend).toContain('At least 7 new articles in 7 days, none in the last 48 h');
+    expect(legend).toContain('More than 30% of new articles failed to fetch');
+    expect(legend).toContain('More than 20% junk pages or single-line bodies');
+    expect(legend).toContain('Paused sources are grey and never count as a problem');
+    await page.close();
+  });
+
+  it('时间按北京时间显示（UTC 09:33 → 17:33），从没有的显示 -', async () => {
+    sources = fixture();
+    const page = await sourcesPage();
+    const first = await page.locator('tbody tr[data-kind=not_checked]').innerText();
+    expect(first).toContain('Oct 5 17:33');
+    expect(first).toContain('Oct 5 16:33');
+    expect(await page.locator('tbody tr[data-kind=dead_feed]').innerText()).toContain('-');
+    await page.close();
+  });
+
+  it('过滤：Problems 只留红黄，Paused 只留暂停的；暂停的源不算 Problems', async () => {
+    sources = fixture();
+    const page = await sourcesPage();
+    await page.click('button:has-text("Problems 4")');
+    expect(await page.locator('tbody tr').count()).toBe(4);
+    expect(await page.locator('tbody tr[data-kind=paused]').count()).toBe(0);
+    await page.click('button:has-text("Paused 1")');
+    expect(await page.locator('tbody tr').count()).toBe(1);
+    expect(await page.locator('tbody tr[data-kind=paused]').innerText()).toContain('Held Feed');
+    await page.close();
+  });
+
+  it('「View Feed」链到单个源的页面', async () => {
+    sources = fixture();
+    const page = await sourcesPage();
+    const href = await page.locator('tbody tr[data-kind=ok] a:has-text("View Feed")').getAttribute('href');
+    expect(href).toBe('/admin/feed/5');
+    await page.close();
   });
 });
 

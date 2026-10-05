@@ -95,6 +95,35 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     p(obj);
   };
 
+  // 球边发光（shadowBlur 18）每帧重算约占一帧的 15%，而它只随尺寸和缩放变：画一次存起来，之后每帧贴图。
+  // 缓存只取球边外扩 RIM_PAD 与视口的交集，放大到球比视口还大时也不超过画布本身
+  const RIM_PAD = 40;
+  let rim: { key: string; img: HTMLCanvasElement; x: number; y: number } | null = null;
+  function drawRim(R: number) {
+    const x0 = Math.max(0, Math.floor(W / 2 - R - RIM_PAD));
+    const y0 = Math.max(0, Math.floor(H / 2 - R - RIM_PAD));
+    const x1 = Math.min(W, Math.ceil(W / 2 + R + RIM_PAD));
+    const y1 = Math.min(H, Math.ceil(H / 2 + R + RIM_PAD));
+    if (x1 <= x0 || y1 <= y0) return;
+    const key = `${W}x${H}x${R}x${dpr}`;
+    if (rim?.key !== key) {
+      const img = rim?.img ?? document.createElement('canvas');
+      img.width = Math.round((x1 - x0) * dpr);
+      img.height = Math.round((y1 - y0) * dpr);
+      const c = img.getContext('2d')!;
+      c.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+      c.beginPath();
+      c.arc(W / 2, H / 2, R, 0, Math.PI * 2);
+      c.strokeStyle = COLORS.border;
+      c.lineWidth = 1.2;
+      c.shadowColor = COLORS.coast;
+      c.shadowBlur = 18; // 与主画布同口径：shadowBlur 不随变换缩放，两边都是设备像素
+      c.stroke();
+      rim = { key, img, x: x0, y: y0 };
+    }
+    ctx.drawImage(rim.img, rim.x, rim.y, rim.img.width / dpr, rim.img.height / dpr);
+  }
+
   function draw(time: number) {
     const R = R0 * state.k;
     proj.scale(R).translate([W / 2, H / 2]).rotate(state.rot);
@@ -170,13 +199,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    stroke({ type: 'Sphere' });
-    ctx.strokeStyle = COLORS.border;
-    ctx.lineWidth = 1.2;
-    ctx.shadowColor = COLORS.coast;
-    ctx.shadowBlur = 18;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    drawRim(R);
 
     // 自北向南的扫描线
     if (!reduceMotion) {
@@ -329,12 +352,14 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
   };
 
   function onPointerDown(e: PointerEvent) {
+    lastInput = performance.now();
     canvas.setPointerCapture?.(e.pointerId);
     down = { x: e.clientX, y: e.clientY, rot: [...state.rot], moved: false };
     state.spin = false;
     animating = null;
   }
   function onPointerMove(e: PointerEvent) {
+    lastInput = performance.now();
     const [x, y] = local(e);
     if (down) {
       const dx = e.clientX - down.x;
@@ -373,6 +398,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     zoomTo(state.k * Math.exp(-e.deltaY * 0.0015));
   }
   function zoomTo(k: number) {
+    lastInput = performance.now();
     state.k = Math.max(0.85, Math.min(5, k));
   }
 
@@ -402,6 +428,12 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
   ro.observe(stage);
   resize();
 
+  // 省电：没人操作时只剩慢速自转、扫描线与脉动圈，限到约 30 帧（120Hz 屏上原先每秒画 120 次整张地图）；
+  // 拖动、缩放、转到某国、悬停与场景变化后的一小段时间照常每帧画，手感不变。阈值留 4ms 余量，60Hz 与 120Hz 都落在整 30 帧
+  const IDLE_FRAME_MS = 1000 / 30 - 4;
+  const ACTIVE_MS = 600;
+  let lastInput = -Infinity;
+  let lastDraw = -Infinity;
   let last = performance.now();
   let raf = 0;
   function frame(now: number) {
@@ -415,25 +447,44 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     } else if (state.spin && !state.hover) {
       state.rot = [state.rot[0] + dt * 0.006, state.rot[1], 0];
     }
-    draw(now);
+    const active = down || animating || now - lastInput < ACTIVE_MS;
+    if (active || now - lastDraw >= IDLE_FRAME_MS) {
+      draw(now);
+      lastDraw = now;
+    }
     raf = requestAnimationFrame(frame);
   }
   raf = requestAnimationFrame(frame);
 
+  // 省电：地球滚出视口就停掉循环，回来再接上（标签页隐藏时浏览器本来就停 requestAnimationFrame）
+  const io = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    } else if (!raf) {
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    }
+  });
+  io.observe(stage);
+
   return {
     setScene(scene: GlobeScene) {
       state.scene = scene;
+      lastInput = performance.now();
     },
     /** 锁定（含面板卡片按 Enter 锁的）一律转到正中，并停掉自转 */
     setLocked(key: string | null) {
       if (state.locked === key) return;
       state.locked = key;
+      lastInput = performance.now();
       state.spin = false;
       if (key) rotateTo(key);
     },
     /** 面板卡片悬停时点亮对应国家；不触发 onHover */
     setHover(key: string | null) {
       state.hover = key;
+      lastInput = performance.now();
     },
     zoomBy(f: number) {
       zoomTo(state.k * f);
@@ -441,6 +492,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
     destroy() {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);

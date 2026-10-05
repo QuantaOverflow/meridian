@@ -3,7 +3,7 @@ import type { OpsLevel, OpsSourceKind, OpsSources } from '@meridian/contracts';
 import type { Db } from '../reader/db';
 
 /**
- * 运维台「来源异常」的判据：每个源按近 7 天的数据判成六种之一（规则见 .scratch/ops-console/spec.md「Source kinds」）。
+ * 运维台「来源异常」的判据：每个源按近 7 天的数据判成六种之一（术语见 CONTEXT.md「来源异常」）。
  * 阈值全在这里，调参改一行。Sources 页（sources.ts）与 Health 页的来源摘要共用 `computeSourceStatuses`。
  */
 

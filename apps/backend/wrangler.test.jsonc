@@ -83,6 +83,10 @@
   
   // 测试环境变量
   "vars": {
-    "API_TOKEN": "test-api-token"
+    "API_TOKEN": "test-api-token",
+    // 运维台的 Cloudflare 用量：测试里由假 GraphQL 服务回答（test/fake-cloudflare.ts）
+    "CF_ANALYTICS_TOKEN": "test-cf-analytics-token",
+    "CF_ACCOUNT_ID": "test-account",
+    "CF_API_BASE_URL": "https://cloudflare-api.test/client/v4"
   }
 } 

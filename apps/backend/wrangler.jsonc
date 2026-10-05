@@ -12,7 +12,13 @@
   // Env 的 secret 字段，不再从各人本地的 .dev.vars 推断，生成结果在每台机器上一致；
   // deploy 时缺这个 secret 会直接报错。
   "secrets": {
-    "required": ["API_TOKEN"],
+    // CF_ANALYTICS_TOKEN：运维台读账户用量（Account Analytics: Read），由账户所有者在 dashboard 建
+    "required": ["API_TOKEN", "CF_ANALYTICS_TOKEN"],
+  },
+  // 运维台读 Cloudflare GraphQL Analytics 用（src/lib/ops/cloudflare.ts）。CF_API_BASE_URL 单列成变量是为了测试能指到假服务
+  "vars": {
+    "CF_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
+    "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
   },
   "migrations": [
     {

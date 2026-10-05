@@ -199,10 +199,10 @@ describe('核查结果', () => {
 describe('Worker 报错', () => {
   const invocation = (date: string, scriptName: string, status: string, requests: number) => ({
     sum: { requests },
-    dimensions: { date, scriptName, status, scriptVersion: 'v1' },
+    dimensions: { datetimeHour: `${date}T05:00:00Z`, scriptName, status, scriptVersion: 'v1' },
   });
 
-  it('按 UTC 日、按服务，范围内每天都有一行（没报错的补 0）', async () => {
+  it('按北京日、按服务，范围内每天都有一行（没报错的补 0）', async () => {
     cf.answer = () => [
       invocation('2026-10-18', 'meridian-backend', 'scriptThrewException', 3),
       invocation('2026-10-18', 'meridian-ai-worker', 'exceededCpu', 2),
@@ -212,8 +212,9 @@ describe('Worker 报错', () => {
     expect(status).toBe(200);
     if (!Array.isArray(body.workerErrors)) throw new Error('应当有数');
     expect(body.workerErrors.map(d => d.day)).toEqual([
-      '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20',
+      '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20',
     ]);
+    expect(body.workerErrors.map(d => d.day)).toEqual(body.ingest.map(d => d.day));
     expect(body.workerErrors.find(d => d.day === '2026-10-18')).toEqual({ day: '2026-10-18', backend: 3, aiWorker: 2, mlService: 0 });
     expect(body.workerErrors.find(d => d.day === '2026-10-20')).toEqual({ day: '2026-10-20', backend: 0, aiWorker: 0, mlService: 1 });
     expect(body.workerErrors.find(d => d.day === '2026-10-14')).toEqual({ day: '2026-10-14', backend: 0, aiWorker: 0, mlService: 0 });

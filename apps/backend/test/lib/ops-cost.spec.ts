@@ -354,9 +354,10 @@ describe('Cloudflare 读不到：受影响的块说明原因，端点照常回 2
 });
 
 describe('Cloudflare 客户端：生产 Worker 的报错次数（08、09 号票用）', () => {
+  // Cloudflare 按小时给数（datetimeHour，UTC）；date 是北京日，这里放在北京当天 13 点
   const invocation = (date: string, scriptName: string, status: string, scriptVersion: string, requests: number) => ({
     sum: { requests },
-    dimensions: { date, scriptName, status, scriptVersion },
+    dimensions: { datetimeHour: `${date}T05:00:00Z`, scriptName, status, scriptVersion },
   });
 
   it('只算生产版本（scriptVersion 非空）；success 和 clientDisconnected 不算报错；按日、按服务合计', async () => {
@@ -381,6 +382,21 @@ describe('Cloudflare 客户端：生产 Worker 的报错次数（08、09 号票�
     ]);
     expect(cf.requests).toHaveLength(1);
     expect(cf.requests[0].variables).toMatchObject({ since: '2026-10-04T00:00:00.000Z', until: '2026-10-06T00:00:00.000Z' });
+  });
+
+  it('按北京日归日：UTC 15 点还是北京当天，UTC 16 点已是北京第二天', async () => {
+    const at = (datetimeHour: string, requests: number) => ({
+      sum: { requests },
+      dimensions: { datetimeHour, scriptName: 'meridian-backend', status: 'scriptThrewException', scriptVersion: 'v1' },
+    });
+    cf.answer = () => [at('2026-10-04T15:00:00Z', 1), at('2026-10-04T16:00:00Z', 2), at('2026-10-04T23:00:00Z', 4)];
+
+    const rows = await workerErrorsByDay(env, new Date('2026-10-04T00:00:00Z'), new Date('2026-10-06T00:00:00Z'));
+
+    expect(rows).toEqual([
+      { day: '2026-10-04', service: 'backend', errors: 1 },
+      { day: '2026-10-05', service: 'backend', errors: 6 },
+    ]);
   });
 
   it('超过 31 天的范围分段查，结果拼在一起', async () => {

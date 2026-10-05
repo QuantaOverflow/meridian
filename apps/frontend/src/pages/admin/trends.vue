@@ -391,7 +391,7 @@ const CHECK_LEGEND = [
             <p v-if="errorTotals.all > 0" class="mt-1.5 text-[13px] text-[#52514e] tabular-nums">
               backend {{ int(errorTotals.backend) }} · ai-worker {{ int(errorTotals.aiWorker) }} · ml-service {{ int(errorTotals.mlService) }}
             </p>
-            <p class="mt-1.5 text-[12.5px] text-[#6b6a66]">Client disconnects are not counted. Local dev sessions are excluded. Days are UTC.</p>
+            <p class="mt-1.5 text-[12.5px] text-[#6b6a66]">Client disconnects are not counted. Local dev sessions are excluded. Days are Beijing days (UTC+8).</p>
           </template>
           <p v-else class="font-medium">Not available — {{ reasonOf(trends.workerErrors) }}</p>
         </section>

@@ -35,6 +35,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** `YYYY-MM-DD`（UTC） */
 export const utcDay = (d: Date) => d.toISOString().slice(0, 10);
 
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
+/** 北京日 `YYYY-MM-DD`（输入是 UTC 时刻）。运维台给人看的日子一律是北京日；Cloudflare 按小时给数，在这里归到北京日 */
+export const beijingDay = (d: Date) => utcDay(new Date(d.getTime() + BEIJING_OFFSET_MS));
+
 /**
  * 查账户下的一个数据集。`selection` 是 `accounts(...) { ... }` 里的内容，以数据集名开头；
  * 变量在 `variableTypes` 里声明类型（Cloudflare 的标量：`Date` = YYYY-MM-DD，`Time` = ISO 时刻）。
@@ -121,14 +125,15 @@ export const WORKER_SCRIPT_NAMES: Record<OpsServiceName, string> = {
 const NOT_ERROR_STATUSES = ['success', 'clientDisconnected'];
 
 export interface WorkerErrorsRow {
-  /** UTC 日，`YYYY-MM-DD` */
+  /** 北京日，`YYYY-MM-DD` */
   day: string;
   service: OpsServiceName;
   errors: number;
 }
 
 /**
- * 生产 Worker 的报错次数：[`since`, `until`) 内，按 UTC 日和服务，只回有报错的（日, 服务）。
+ * 生产 Worker 的报错次数：[`since`, `until`) 内，按北京日和服务，只回有报错的（日, 服务）。
+ * Cloudflare 自己的 `date` 维度是 UTC 日，所以按小时取（`datetimeHour`）再归到北京日。
  * 只算生产版本：本地 `wrangler dev` 走 remote binding 时建的预览会话也进这个数据集，`scriptVersion` 为空，
  * 它们的 loadShed / scriptThrewException 比生产多两个数量级（2026-09-26 实测一周几千次，生产 0 次）。
  * 过滤在查询里做一遍、拿到行后再做一遍：这是整个读数是否可信的前提，不只托付给对方的过滤器。
@@ -144,10 +149,10 @@ export async function workerErrorsByDay(env: CloudflareEnv, since: Date, until: 
 
   const chunks = await Promise.all(
     windows.map(([from, to]) =>
-      queryDataset<{ sum: { requests: number }; dimensions: { date: string; scriptName: string; status: string; scriptVersion: string } }>(
+      queryDataset<{ sum: { requests: number }; dimensions: { datetimeHour: string; scriptName: string; status: string; scriptVersion: string } }>(
         env,
         'workersInvocationsAdaptive',
-        `(limit: ${ROW_LIMIT}, filter: { datetime_geq: $since, datetime_lt: $until, scriptName_in: ${scripts}, scriptVersion_neq: "", status_notin: ${JSON.stringify(NOT_ERROR_STATUSES)} }) { sum { requests } dimensions { date scriptName status scriptVersion } }`,
+        `(limit: ${ROW_LIMIT}, filter: { datetime_geq: $since, datetime_lt: $until, scriptName_in: ${scripts}, scriptVersion_neq: "", status_notin: ${JSON.stringify(NOT_ERROR_STATUSES)} }) { sum { requests } dimensions { datetimeHour scriptName status scriptVersion } }`,
         { since: 'Time', until: 'Time' },
         { since: from.toISOString(), until: to.toISOString() }
       )
@@ -156,11 +161,12 @@ export async function workerErrorsByDay(env: CloudflareEnv, since: Date, until: 
 
   const totals = new Map<string, WorkerErrorsRow>();
   for (const row of chunks.flat()) {
-    const { date, scriptName, status, scriptVersion } = row.dimensions;
+    const { datetimeHour, scriptName, status, scriptVersion } = row.dimensions;
     const service = serviceOf.get(scriptName);
     if (!service || !scriptVersion || NOT_ERROR_STATUSES.includes(status)) continue;
-    const key = `${date}|${service}`;
-    const total = totals.get(key) ?? { day: date, service, errors: 0 };
+    const day = beijingDay(new Date(datetimeHour));
+    const key = `${day}|${service}`;
+    const total = totals.get(key) ?? { day, service, errors: 0 };
     total.errors += row.sum.requests;
     totals.set(key, total);
   }

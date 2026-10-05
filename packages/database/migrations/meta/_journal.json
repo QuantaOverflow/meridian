@@ -134,6 +134,13 @@
       "when": 1791211100969,
       "tag": "0018_vengeful_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791216426768,
+      "tag": "0019_modern_wild_child",
+      "breakpoints": true
     }
   ]
 }

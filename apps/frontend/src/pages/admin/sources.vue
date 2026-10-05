@@ -158,7 +158,7 @@ async function addSource() {
                 <svg v-else width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
                   <circle cx="6" cy="6" r="5" fill="#0ca30c" />
                 </svg>
-                {{ KINDS[source.kind].label }}
+                {{ source.kind === 'not_checked' && source.lastError ? 'Check failing' : KINDS[source.kind].label }}
               </span>
             </td>
             <td class="p-2.5 border-b border-gray-100">
@@ -167,6 +167,10 @@ async function addSource() {
             </td>
             <td class="p-2.5 border-b border-gray-100 whitespace-nowrap">
               {{ beijingDateTime(source.lastChecked) }}<span class="text-gray-500"> · {{ ago(source.lastChecked) }}</span>
+              <!-- 最近一轮去了但失败：把什么时候试的、为什么失败写在下面，不用翻日志 -->
+              <div v-if="source.lastError" class="mt-0.5 max-w-[340px] whitespace-normal text-xs text-red-800" data-test="last-error">
+                Last attempt {{ beijingDateTime(source.lastAttemptAt) }} failed: {{ source.lastError }}
+              </div>
             </td>
             <td class="p-2.5 border-b border-gray-100 whitespace-nowrap">{{ beijingDateTime(source.lastArticleAt) }}</td>
             <td class="p-2.5 border-b border-gray-100 text-right tabular-nums">{{ source.articles7d }}</td>
@@ -187,7 +191,7 @@ async function addSource() {
     <section class="bg-white rounded border p-5 mt-6">
       <h2 class="text-[15px] font-semibold mb-2.5">What counts as a problem</h2>
       <div class="grid gap-x-7 gap-y-3 text-sm text-gray-600" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))">
-        <div><strong class="font-semibold text-gray-900">Not checked</strong> · red<br />No check for two scrape intervals (2 h for hourly sources).</div>
+        <div><strong class="font-semibold text-gray-900">Not checked</strong> · red<br />No successful check for two scrape intervals (2 h for hourly sources). When checks ran but failed, the reason is shown under Last checked.</div>
         <div>
           <strong class="font-semibold text-gray-900">Dead feed</strong> · red<br />At least {{ thresholds?.deadFeedMinArticles7d ?? 7 }} new articles in 7 days, none in the last
           {{ thresholds?.deadFeedQuietHours ?? 48 }} h.

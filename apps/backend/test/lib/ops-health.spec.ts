@@ -500,6 +500,26 @@ describe('Cloudflare 读不到', () => {
   });
 });
 
+describe('去了但失败的源', () => {
+  it('待处理那行写明是检查在失败，并带上原因；从没成功过也一样', async () => {
+    atBeijing('12:00:00');
+    await source({ name: 'Blocked', scrape_frequency: 1, lastChecked: ago(3), last_attempt_at: ago(0.1), last_error: 'Fetch failed with status: 406 Not Acceptable' });
+    await source({ name: 'Silent', scrape_frequency: 1, lastChecked: ago(3) });
+
+    const body = await health();
+
+    const lines = body.attention.filter(a => a.link === 'sources');
+    expect(lines).toEqual([
+      { level: 'red', title: 'Blocked: checks are failing', detail: 'Last check failed: Fetch failed with status: 406 Not Acceptable', link: 'sources' },
+      { level: 'red', title: 'Silent has not been checked', detail: 'Last checked 3h 0m ago', link: 'sources' },
+    ]);
+    expect(body.sources.worst.map(w => w.detail)).toEqual([
+      'Last check failed: Fetch failed with status: 406 Not Acceptable',
+      'Last checked 3h 0m ago',
+    ]);
+  });
+});
+
 describe('待处理清单的顺序与鉴权', () => {
   it('红的排在黄的前面', async () => {
     await run(20, { status: 'DEGRADED' });

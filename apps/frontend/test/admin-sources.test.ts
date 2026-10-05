@@ -18,6 +18,8 @@ interface FakeSource {
   pausedAt: string | null;
   kind?: OpsSourceKind;
   lastChecked?: string | null;
+  lastAttemptAt?: string | null;
+  lastError?: string | null;
   lastArticleAt?: string | null;
   articles7d?: number;
   articles48h?: number;
@@ -51,6 +53,8 @@ function opsSource(s: FakeSource): OpsSources['sources'][number] {
     kind,
     level: LEVELS[kind],
     lastChecked: s.lastChecked ?? null,
+    lastAttemptAt: s.lastAttemptAt ?? null,
+    lastError: s.lastError ?? null,
     lastArticleAt: s.lastArticleAt ?? null,
     pausedAt: s.pausedAt,
     articles7d: s.articles7d ?? 0,
@@ -234,6 +238,23 @@ describe('后台页面「Sources」视图', () => {
     { id: 6, url: 'https://f.example/feed', name: 'Held Feed', pausedAt: '2026-09-25T17:04:00.000Z', kind: 'paused' },
   ];
 
+  it('去了但失败的源：状态写 Check failing，Last checked 下面写出什么时候试的、为什么失败', async () => {
+    sources = [
+      { id: 1, url: 'https://a.example/feed', name: 'Blocked Feed', pausedAt: null, kind: 'not_checked', lastChecked: '2026-10-05T12:33:00.000Z', lastAttemptAt: '2026-10-05T15:54:00.000Z', lastError: 'Fetch failed with status: 406 Not Acceptable' },
+      { id: 2, url: 'https://b.example/feed', name: 'Silent Feed', pausedAt: null, kind: 'not_checked', lastChecked: '2026-10-05T09:33:00.000Z' },
+    ];
+    const page = await sourcesPage();
+    const rows = await page.locator('tbody tr[data-kind=not_checked]').allInnerTexts();
+    const blocked = rows.find(r => r.includes('Blocked Feed'))!;
+    const silent = rows.find(r => r.includes('Silent Feed'))!;
+    expect(blocked).toContain('Check failing');
+    // 15:54 UTC = 北京 23:54
+    expect(blocked).toContain('Last attempt Oct 5 23:54 failed: Fetch failed with status: 406 Not Acceptable');
+    expect(silent).toContain('Not checked');
+    expect(silent).not.toContain('Last attempt');
+    await page.close();
+  });
+
   it('每种状态的计数、表格的每一行（状态名、7 天数字、比例）和规则图例', async () => {
     sources = fixture();
     const page = await sourcesPage();
@@ -259,7 +280,7 @@ describe('后台页面「Sources」视图', () => {
     expect(await page.locator('tbody tr').count()).toBe(6);
 
     const legend = await page.locator('section:has(h2:text("What counts as a problem"))').innerText();
-    expect(legend).toContain('No check for two scrape intervals');
+    expect(legend).toContain('No successful check for two scrape intervals');
     expect(legend).toContain('At least 7 new articles in 7 days, none in the last 48 h');
     expect(legend).toContain('More than 30% of new articles failed to fetch');
     expect(legend).toContain('More than 20% junk pages or single-line bodies');

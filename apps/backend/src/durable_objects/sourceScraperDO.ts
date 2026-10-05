@@ -38,6 +38,11 @@ const INITIAL_RETRY_DELAY_MS = 500; // Start delay, doubles each time
 
 // 只处理近 48 小时发布的文章：抓取时据此分流，ProcessArticles 的 'get articles' 也按同一窗口过滤
 const PROCESSING_WINDOW_MS = 48 * 60 * 60 * 1000;
+// 抓 feed 时声明接受的格式。2026-10-05：cbsnews.com 的 feed 对 Cloudflare 出口时不时回 406 Not Acceptable（连试 3 次都是），
+// 同一个地址从别处抓是 200；请求里原先没有 Accept。带上它是对 406 最直接的回应，对其它源无害
+const FEED_ACCEPT = 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5';
+// sources.last_error 最多留这么多字符（解析报错会带一大段原文）
+const LAST_ERROR_MAX_CHARS = 300;
 // PENDING_FETCH 超过这么久还没人动，视为卡住（入队失败 / 消费失败进 DLQ / workflow 没跑到第一步）。
 // 生产实测 created→processed p99.9 约 220 秒，1 小时远在正常延迟之外
 const STRANDED_AFTER_MS = 60 * 60 * 1000;
@@ -190,6 +195,9 @@ export class SourceScraperDO extends DurableObject<Env> {
     const alarmLogger = this.logger.child({ operation: 'alarm' });
     alarmLogger.info('Alarm triggered');
 
+    // 这一轮真的去抓了哪个源（查过源还在、没暂停、地址没改之后才赋值）：失败时把原因记到它头上
+    let attempted: { sourceId: number; at: number } | undefined;
+
     try {
       const state = await this.ctx.storage.get<SourceState>('state');
       if (!state) {
@@ -238,6 +246,8 @@ export class SourceScraperDO extends DurableObject<Env> {
         return;
       }
 
+      attempted = { sourceId, at: now };
+
       // 回收本源卡住的文章。放在抓取前、单独 try：feed 抓不到时也照做；回收失败下次 alarm 再来
       try {
         await this.recoverStrandedArticles(sourceId, now, alarmLogger.child({ step: 'Recover stranded' }));
@@ -254,6 +264,8 @@ export class SourceScraperDO extends DurableObject<Env> {
             headers: {
               'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
               Referer: 'https://www.google.com/',
+              // 声明要的是 feed：不带 Accept 时有的站对机房来的请求回 406（2026-10-05 CBS，见 FEED_ACCEPT）
+              Accept: FEED_ACCEPT,
             },
           });
           
@@ -271,7 +283,8 @@ export class SourceScraperDO extends DurableObject<Env> {
       // --- Workflow Step 2: Parse Feed with Retries ---
       const parseLogger = alarmLogger.child({ step: 'Parse' });
       const articles = await attemptWithRetries(
-        async () => parseRSSFeed(feedText),
+        // await 而不是直接把 promise 交出去：解析失败时，直接返回的被拒 promise 有一个微任务的空档没人接，测试环境会报成 unhandled rejection
+        async () => await parseRSSFeed(feedText),
         MAX_STEP_RETRIES,
         INITIAL_RETRY_DELAY_MS,
         parseLogger
@@ -321,7 +334,7 @@ export class SourceScraperDO extends DurableObject<Env> {
           async () => {
             await getDb(this.env.HYPERDRIVE)
               .update($sources)
-              .set({ lastChecked: new Date(now) })
+              .set({ lastChecked: new Date(now), last_attempt_at: new Date(now), last_error: null })
               .where(eq($sources.id, sourceId));
           },
           MAX_STEP_RETRIES,
@@ -389,7 +402,7 @@ export class SourceScraperDO extends DurableObject<Env> {
         async () => {
           await getDb(this.env.HYPERDRIVE)
             .update($sources)
-            .set({ lastChecked: new Date(now) })
+            .set({ lastChecked: new Date(now), last_attempt_at: new Date(now), last_error: null })
             .where(eq($sources.id, sourceId));
         },
         MAX_STEP_RETRIES,
@@ -400,6 +413,23 @@ export class SourceScraperDO extends DurableObject<Env> {
       sourceUpdateLogger.info('Updated source lastChecked in database');
     } catch (error) {
       alarmLogger.error('Alarm processing failed', undefined, error as Error);
+      if (attempted) await this.recordFailedAttempt(attempted, error, alarmLogger);
+    }
+  }
+
+  /**
+   * 这一轮失败了：把「什么时候试的、为什么失败」记到来源上，运维台的 Sources 页直接显示，不用翻日志。
+   * lastChecked 不动。记录本身失败（多半是库也连不上）只打日志，不再往外抛。
+   */
+  private async recordFailedAttempt(attempted: { sourceId: number; at: number }, error: unknown, logger: Logger): Promise<void> {
+    const reason = (error instanceof Error ? error.message : String(error)).slice(0, LAST_ERROR_MAX_CHARS);
+    try {
+      await getDb(this.env.HYPERDRIVE)
+        .update($sources)
+        .set({ last_attempt_at: new Date(attempted.at), last_error: reason })
+        .where(eq($sources.id, attempted.sourceId));
+    } catch (recordError) {
+      logger.warn('Failed to record the failed attempt on the source', { source_id: attempted.sourceId }, recordError as Error);
     }
   }
 

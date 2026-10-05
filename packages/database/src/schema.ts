@@ -38,6 +38,10 @@ export const $sources = pgTable('sources', {
   do_initialized_at: timestamp('do_initialized_at', { mode: 'date' }),
   // 暂停自动抓取的时间；非空时 DO 不抓、批量初始化跳过，恢复时清空（源与已有文章都保留）
   paused_at: timestamp('paused_at', { mode: 'date' }),
+  // 抓取程序最近一轮的结局（每轮都写，成功失败都算）：最近一次尝试的时间，和失败时的原因（成功时清空）。
+  // lastChecked 只在整轮成功时前进，光看它分不出「没去检查」和「去了但失败」；运维台靠这两列说明为什么没检查成
+  last_attempt_at: timestamp('last_attempt_at', { mode: 'date' }),
+  last_error: text('last_error'),
 });
 
 export const $articles = pgTable(

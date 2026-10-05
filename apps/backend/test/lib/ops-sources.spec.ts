@@ -120,6 +120,18 @@ describe('响应形状', () => {
     expect(new Date(s.lastArticleAt!).getTime()).toBeCloseTo(ago(24 * 8).getTime(), -4);
   });
 
+  it('最近一轮的结局原样带出：什么时候试的、失败原因（成功的源原因是 null）', async () => {
+    await source({ name: 'failing', scrape_frequency: 1, lastChecked: ago(5), last_attempt_at: ago(0.2), last_error: 'Fetch failed with status: 406 Not Acceptable' });
+    await source({ name: 'fine', last_attempt_at: ago(1), last_error: null });
+    await source({ name: 'old-row' });
+    const body = await fetchSources();
+    const by = (name: string) => body.sources.find(s => s.name === name)!;
+    expect(by('failing')).toMatchObject({ kind: 'not_checked', lastError: 'Fetch failed with status: 406 Not Acceptable' });
+    expect(new Date(by('failing').lastAttemptAt!).getTime()).toBeCloseTo(ago(0.2).getTime(), -4);
+    expect(by('fine')).toMatchObject({ kind: 'ok', lastError: null });
+    expect(by('old-row')).toMatchObject({ lastAttemptAt: null, lastError: null });
+  });
+
   it('列表按严重度排（红、黄、ok、灰），同级按名字；counts 与之一致', async () => {
     await source({ name: 'b-ok' });
     await source({ name: 'a-paused', paused_at: ago(5) });

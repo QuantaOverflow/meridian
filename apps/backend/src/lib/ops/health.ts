@@ -256,6 +256,8 @@ const YELLOW_SOURCE_NAMES_SHOWN = 5;
 function sourceDetail(s: SourceStatus, now: Date): string {
   switch (s.kind) {
     case 'not_checked':
+      // 去了但失败：把原因放在最前面（「没去检查」和「去了但失败」要的处理不一样）
+      if (s.lastError !== null) return `Last check failed: ${s.lastError}`;
       return s.lastChecked === null ? 'Never checked' : `Last checked ${formatSpan(now.getTime() - Date.parse(s.lastChecked))} ago`;
     case 'dead_feed':
       return `No new article in 48 hours · ${s.articles7d} in the last 7 days`;
@@ -280,9 +282,11 @@ function sourcesPanel(statuses: SourceStatus[], now: Date): { sources: OpsHealth
   const line = ({ status: s, detail }: (typeof problems)[number]): Attention => ({
     level: s.level as 'red' | 'yellow',
     title:
-      s.kind === 'not_checked' && s.lastChecked === null
-        ? `${s.name} has never been checked`
-        : `${s.name} ${SOURCE_TITLE[s.kind as keyof typeof SOURCE_TITLE]}`,
+      s.kind === 'not_checked' && s.lastError !== null
+        ? `${s.name}: checks are failing`
+        : s.kind === 'not_checked' && s.lastChecked === null
+          ? `${s.name} has never been checked`
+          : `${s.name} ${SOURCE_TITLE[s.kind as keyof typeof SOURCE_TITLE]}`,
     detail,
     link: 'sources',
   });

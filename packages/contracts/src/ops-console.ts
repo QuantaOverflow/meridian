@@ -201,6 +201,10 @@ export interface OpsSources {
     kind: OpsSourceKind;
     level: OpsLevel | 'grey';
     lastChecked: string | null;
+    /** 抓取程序最近一轮（成功或失败）是什么时候；null = 加这个记录之前，或还没跑过 */
+    lastAttemptAt: string | null;
+    /** 最近一轮失败的原因（如 `Fetch failed with status: 406 Not Acceptable`）；最近一轮成功时是 null */
+    lastError: string | null;
     lastArticleAt: string | null;
     pausedAt: string | null;
     articles7d: number;

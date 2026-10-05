@@ -133,6 +133,8 @@ export async function computeSourceStatuses(db: Db, now: Date): Promise<SourceSt
       kind,
       level: LEVEL_OF_KIND[kind],
       lastChecked: s.lastChecked?.toISOString() ?? null,
+      lastAttemptAt: s.last_attempt_at?.toISOString() ?? null,
+      lastError: s.last_error,
       lastArticleAt: lastBySource.get(s.id) ?? null,
       pausedAt: s.paused_at?.toISOString() ?? null,
       articles7d: c.n7,

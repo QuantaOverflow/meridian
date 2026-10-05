@@ -58,6 +58,7 @@
 - 改写作层（报告 → 正文）/ 治事实关系写错 → `docs/adr/0004-brief-writer-v3.md`（现行流程、证伪清单、检测上限）
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
 - 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `eval/cluster-to-brief/CONTRACTS.md`）
+- 改运维台（后台的 Health / Trends / Cost / Sources / 运行详情，判据与阈值）→ `docs/adr/0011-ops-console.md`
 - 架构决策记录 → `docs/adr/`
 
 ## 路径触发的规则（`.claude/rules/`）

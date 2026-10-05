@@ -121,7 +121,7 @@ const startedBeforeEndOf = (cycle: BillingCycle) =>
   sql`${$brief_runs.started_at} < ${new Date(Date.parse(`${cycle.end}T00:00:00Z`) + DAY_MS).toISOString()}`;
 
 /** 周期内开始的生产运行：次数，以及记下了汇总的那些的 neurons 合计（没记汇总的不计入，也无从补） */
-async function productionRunsIn(db: Db, cycle: BillingCycle): Promise<{ runs: number; runNeurons: number }> {
+export async function productionRunsIn(db: Db, cycle: BillingCycle): Promise<{ runs: number; runNeurons: number }> {
   const rows = await db
     .select({ summary: $brief_runs.ops_summary })
     .from($brief_runs)
@@ -159,6 +159,19 @@ async function lastRunByStep(db: Db, cycle: BillingCycle): Promise<OpsCost['last
   };
 }
 
+/**
+ * 生产用了多少：生产运行的汇总 + 文章分析模型的全账户用量（后者是近似：这个模型只有入库时逐篇分析在用）。
+ * `usage` 是同一个周期的账户用量；账户一点没用时占比是 0。Cost 页与 Health 页的「生产占比」共用这一份。
+ */
+export function productionUsage(usage: NeuronsRow[], production: { runs: number; runNeurons: number }) {
+  const total = Math.round(usage.reduce((sum, r) => sum + r.neurons, 0));
+  const analysisNeurons = Math.round(
+    usage.reduce((sum, r) => sum + (r.modelId === ARTICLE_ANALYSIS_MODEL ? r.neurons : 0), 0)
+  );
+  const neurons = production.runNeurons + analysisNeurons;
+  return { neurons, runs: production.runs, runNeurons: production.runNeurons, analysisNeurons, share: total > 0 ? neurons / total : 0 };
+}
+
 // ── 组装 ───────────────────────────────────────────────────────────────
 
 type ModelPanels = Pick<OpsCost, 'account' | 'production' | 'daily' | 'byModel'>;
@@ -179,18 +192,9 @@ function modelPanels(usage: NeuronsRow[], cycle: BillingCycle, lastDay: string, 
     if (day) day[row.modelId] = (day[row.modelId] ?? 0) + row.neurons;
   }
 
-  const analysisNeurons = Math.round(perModel.get(ARTICLE_ANALYSIS_MODEL) ?? 0);
-  const productionNeurons = production.runNeurons + analysisNeurons;
-
   return {
     account: modelBill(total, cycle.days),
-    production: {
-      neurons: productionNeurons,
-      runs: production.runs,
-      runNeurons: production.runNeurons,
-      analysisNeurons,
-      share: shareOf(productionNeurons),
-    },
+    production: productionUsage(usage, production),
     daily: [...perDay].map(([day, byModel]) => ({
       day,
       byModel: Object.fromEntries(Object.entries(byModel).map(([model, n]) => [model, Math.round(n)])),

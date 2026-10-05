@@ -85,7 +85,9 @@ class AIWorkerService {
       headers: this.buildHeaders(),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    return this.callJson<OpsServiceVersion>(request);
+    // return await：没接 binding 时 callJson 在第一个 await 之前就抛，直接 return 它的 promise 会有一个微任务的空档没人接，
+    // 被运行时报成 unhandled rejection（调用方其实接住了）
+    return await this.callJson<OpsServiceVersion>(request);
   }
 
   /**

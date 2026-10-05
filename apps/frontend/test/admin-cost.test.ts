@@ -126,7 +126,7 @@ describe('Cost 页', () => {
     const page = await costPage();
 
     expect(backendHits).toContain('GET /observability/ops/cost?cycle=current');
-    await expect.poll(() => page.locator('text=Oct 4 – Nov 3').count()).toBeGreaterThan(0);
+    await expect.poll(() => page.locator('text=Oct 4 08:00 – Nov 4 08:00').count()).toBeGreaterThan(0);
     for (const heading of ['Estimated model bill', 'Production vs everything else', 'Daily usage by model', 'By model · this cycle']) {
       const text = await panel(page, heading).innerText();
       expect(text, heading).toContain('Not available');
@@ -150,7 +150,7 @@ describe('Cost 页', () => {
     expect(await page.getAttribute('button:has-text("Previous cycle")', 'aria-pressed')).toBe('true');
 
     const bill = await panel(page, 'Estimated model bill').innerText();
-    expect(bill).toContain('Sep 4 – Oct 3');
+    expect(bill).toContain('Sep 4 08:00 – Oct 4 08:00');
     expect(bill).toContain('closed');
     expect(bill).toContain('2,978,181'); // 用量
     expect(bill).toContain('300,000'); // 免费池

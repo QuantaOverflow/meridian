@@ -22,7 +22,11 @@ const QWEN = '@cf/qwen/qwen3-30b-a3b-fp8';
 const GLM = '@cf/zai-org/glm-4.7-flash';
 const V4 = '@cf/deepseek-ai/deepseek-v4-pro-0813';
 
-const neuronRow = (date: string, modelId: string, totalNeurons: number) => ({ sum: { totalNeurons }, dimensions: { date, modelId } });
+// 同一份假数据答两种查询：账单合计按 UTC 日（date），每日用量图按小时（datetimeHour，这里放在北京当天 13 点）
+const neuronRow = (date: string, modelId: string, totalNeurons: number) => ({
+  sum: { totalNeurons },
+  dimensions: { date, datetimeHour: `${date}T05:00:00Z`, modelId },
+});
 
 /** 只有模型用量有数据，其它数据集都回空 */
 const onlyNeurons = (rows: unknown[]) => (request: FakeCloudflareRequest): FakeCloudflareAnswer =>
@@ -200,6 +204,58 @@ describe('模型账单', () => {
   });
 });
 
+describe('每日用量图按北京日', () => {
+  const hourRow = (datetimeHour: string, totalNeurons: number) => ({
+    sum: { totalNeurons },
+    dimensions: { date: datetimeHour.slice(0, 10), datetimeHour, modelId: GLM },
+  });
+
+  it('UTC 15 点还是北京当天，UTC 16 点已是北京第二天；各柱之和等于周期合计', async () => {
+    at('2026-10-06T12:00:00Z');
+    cf.answer = onlyNeurons([
+      hourRow('2026-10-04T15:00:00Z', 1_000),
+      hourRow('2026-10-04T16:00:00Z', 2_000),
+      hourRow('2026-10-05T23:00:00Z', 4_000),
+    ]);
+
+    const { body } = await getCost('current');
+
+    expect(body.daily).toEqual([
+      { day: '2026-10-04', byModel: { [GLM]: 1_000 } },
+      { day: '2026-10-05', byModel: { [GLM]: 2_000 } },
+      { day: '2026-10-06', byModel: { [GLM]: 4_000 } },
+    ]);
+    expect(body.account).toMatchObject({ neurons: 7_000 });
+  });
+
+  it('已结束的周期：从北京 9 月 4 日到 10 月 4 日，比 UTC 日多一根（周期在北京 8 点起止）', async () => {
+    at('2026-10-05T12:00:00Z');
+    // 假服务对每次查询都回同一批行；按小时的查询分三段问，只让含这一小时的那段回它
+    const inLastWindow = onlyNeurons([hourRow('2026-10-03T20:00:00Z', 500)]);
+    cf.answer = request =>
+      'since' in request.variables && request.variables.since !== '2026-09-24T00:00:00.000Z' ? [] : inLastWindow(request);
+
+    const { body } = await getCost('previous');
+
+    if (!Array.isArray(body.daily)) throw new Error('应当有数');
+    expect(body.daily).toHaveLength(31);
+    expect(body.daily[0].day).toBe('2026-09-04');
+    expect(body.daily.at(-1)).toEqual({ day: '2026-10-04', byModel: { [GLM]: 500 } });
+  });
+
+  it('按小时的查询每次不超过 10 天', async () => {
+    at('2026-10-05T12:00:00Z');
+    cf.answer = onlyNeurons([]);
+    await getCost('previous');
+    const hourly = cf.requests.filter(r => 'since' in r.variables).map(r => [r.variables.since, r.variables.until]);
+    expect(hourly).toEqual([
+      ['2026-09-04T00:00:00.000Z', '2026-09-14T00:00:00.000Z'],
+      ['2026-09-14T00:00:00.000Z', '2026-09-24T00:00:00.000Z'],
+      ['2026-09-24T00:00:00.000Z', '2026-10-04T00:00:00.000Z'],
+    ]);
+  });
+});
+
 describe('生产 = 周期内生产运行的汇总 + 文章分析模型的全账户用量', () => {
   it('只算定时触发、在周期内开始的运行；没记汇总的算次数不算 neurons', async () => {
     at('2026-10-05T12:00:00Z');
@@ -286,8 +342,14 @@ describe('其它计费项：占免费额度多少', () => {
       { name: 'Container memory', unit: 'GiB-hours', allowance: 25, used: null, share: null },
       { name: 'Workers Logs events', unit: 'events', allowance: 20_000_000, used: null, share: null },
     ]);
-    // 每个数据集都按这个周期问
-    for (const r of cf.requests) expect(r.variables).toMatchObject({ from: '2026-09-04', to: '2026-10-03' });
+    // 每个数据集都按这个周期问：按日的问 UTC 日的两端，每日用量图按小时问、落在周期的 UTC 起止之内
+    for (const r of cf.requests) {
+      if ('from' in r.variables) expect(r.variables).toMatchObject({ from: '2026-09-04', to: '2026-10-03' });
+      else {
+        expect(r.variables.since >= '2026-09-04T00:00:00.000Z').toBe(true);
+        expect(r.variables.until <= '2026-10-04T00:00:00.000Z').toBe(true);
+      }
+    }
   });
 
   it('一个数据集报错：只有那一项变成读不到，别的项和模型账单照常', async () => {

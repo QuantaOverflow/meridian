@@ -189,7 +189,7 @@ describe('Health 页', () => {
 
     const spend = await text(page, 'spend');
     expect(spend).toContain('$32.60');
-    expect(spend).toContain('Oct 4 – Nov 3 · day 9 of 31');
+    expect(spend).toContain('Oct 4 08:00 – Nov 4 08:00 · day 9 of 31'); // 周期按 UTC 零点切，显示成北京时间
     expect(spend).toContain('3,273,508');
     expect(spend).toContain('310,000');
     expect(spend).toContain('0.5%');

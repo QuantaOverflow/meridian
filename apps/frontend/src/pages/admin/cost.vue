@@ -31,8 +31,8 @@ const byModel = computed(() => ok(data.value?.byModel));
 
 // ── 格式 ───────────────────────────────────────────────────────────────
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-/** 账单按 UTC 日：`2026-10-04` → `Oct 4`，不换时区 */
-function utcDayLabel(day: string) {
+/** `2026-10-04` → `Oct 4`。接口给的日子已经是北京日，这里只换写法 */
+function dayLabel(day: string) {
   const [, month, date] = day.split('-').map(Number);
   return `${MONTHS[month - 1]} ${date}`;
 }
@@ -46,7 +46,7 @@ function short(n: number) {
   return String(Math.round(n));
 }
 
-const cycleRange = computed(() => (data.value ? `${utcDayLabel(data.value.cycle.start)} – ${utcDayLabel(data.value.cycle.end)}` : ''));
+const cycleRange = computed(() => (data.value ? beijingCycleRange(data.value.cycle.start, data.value.cycle.end) : ''));
 const cycleNote = computed(() => {
   const c = data.value?.cycle;
   if (!c) return '';
@@ -98,7 +98,7 @@ const chart = computed(() => {
       height: Math.max(1, Math.round((values.get(s.id)! / max) * CHART_HEIGHT)),
     }));
     const stackHeight = segments.reduce((a, s) => a + s.height, 0) + Math.max(0, segments.length - 1) * SEGMENT_GAP;
-    return { day: d.day, label: utcDayLabel(d.day), total: totals[i], segments, stackHeight, alignRight: i >= days.length / 2 };
+    return { day: d.day, label: dayLabel(d.day), total: totals[i], segments, stackHeight, alignRight: i >= days.length / 2 };
   });
   return {
     bars,
@@ -312,7 +312,8 @@ const amount = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits:
             </div>
           </div>
           <p class="mt-3 text-[12.5px] text-[#52514e]">
-            Days are UTC, as on the invoice. The cycle runs from the 4th to the 3rd, not by calendar month.
+            Days are Beijing days (UTC+8). Cloudflare starts each cycle on the 4th at 08:00 Beijing time (midnight UTC), so the
+            first bar covers 16 hours and a finished cycle ends with an 8-hour bar. The bars add up to the cycle total.
           </p>
         </template>
         <p v-else class="font-medium">Not available — {{ reasonOf(data.daily) }}</p>

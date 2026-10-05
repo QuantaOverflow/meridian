@@ -7,11 +7,12 @@ import { getDb } from '../database';
 import type { Db } from '../reader/db';
 import {
   durableObjectsDurationGbSeconds,
+  neuronsByBeijingDayAndModel,
   neuronsByDayAndModel,
   queuesOperations,
   r2ClassAOperations,
   unavailableReason,
-  utcDay,
+  beijingDay, utcDay,
   workersUsage,
   type CloudflareEnv,
   type NeuronsRow,
@@ -174,35 +175,40 @@ export function productionUsage(usage: NeuronsRow[], production: { runs: number;
 
 // ── 组装 ───────────────────────────────────────────────────────────────
 
-type ModelPanels = Pick<OpsCost, 'account' | 'production' | 'daily' | 'byModel'>;
+type ModelPanels = Pick<OpsCost, 'account' | 'production' | 'byModel'>;
 
-function modelPanels(usage: NeuronsRow[], cycle: BillingCycle, lastDay: string, production: { runs: number; runNeurons: number }): ModelPanels {
+function modelPanels(usage: NeuronsRow[], cycle: BillingCycle, production: { runs: number; runNeurons: number }): ModelPanels {
   const total = Math.round(usage.reduce((sum, r) => sum + r.neurons, 0));
   const shareOf = (neurons: number) => (total > 0 ? neurons / total : 0);
 
   const perModel = new Map<string, number>();
-  const perDay = new Map<string, Record<string, number>>();
-  // 周期里到今天为止的每一天都列出来，没用量的日子是空对象（图上那天是空的，而不是被跳过）
-  for (let t = Date.parse(`${cycle.start}T00:00:00Z`); t <= Date.parse(`${lastDay}T00:00:00Z`); t += DAY_MS) {
-    perDay.set(utcDay(new Date(t)), {});
-  }
-  for (const row of usage) {
-    perModel.set(row.modelId, (perModel.get(row.modelId) ?? 0) + row.neurons);
-    const day = perDay.get(row.day);
-    if (day) day[row.modelId] = (day[row.modelId] ?? 0) + row.neurons;
-  }
+  for (const row of usage) perModel.set(row.modelId, (perModel.get(row.modelId) ?? 0) + row.neurons);
 
   return {
     account: modelBill(total, cycle.days),
     production: productionUsage(usage, production),
-    daily: [...perDay].map(([day, byModel]) => ({
-      day,
-      byModel: Object.fromEntries(Object.entries(byModel).map(([model, n]) => [model, Math.round(n)])),
-    })),
     byModel: [...perModel]
       .map(([modelId, n]) => ({ modelId, neurons: Math.round(n), share: shareOf(n), usdAtList: usdAtList(n) }))
       .sort((a, b) => b.neurons - a.neurons),
   };
+}
+
+/**
+ * 每日用量图：按北京日。周期本身从 UTC 零点（北京 8 点）起止，所以第一根柱子只有 16 小时，
+ * 已结束的周期最后多出一根 8 小时的柱子；各柱之和仍等于周期合计。没用量的日子是空对象（图上那天是空的，而不是被跳过）。
+ */
+function dailyPanel(rows: NeuronsRow[], since: Date, until: Date): Extract<OpsCost['daily'], unknown[]> {
+  const perDay = new Map<string, Record<string, number>>();
+  const lastDay = beijingDay(new Date(until.getTime() - 1));
+  for (let t = since.getTime(); beijingDay(new Date(t)) <= lastDay; t += DAY_MS) perDay.set(beijingDay(new Date(t)), {});
+  for (const row of rows) {
+    const day = perDay.get(row.day);
+    if (day) day[row.modelId] = (day[row.modelId] ?? 0) + row.neurons;
+  }
+  return [...perDay].map(([day, byModel]) => ({
+    day,
+    byModel: Object.fromEntries(Object.entries(byModel).map(([model, n]) => [model, Math.round(n)])),
+  }));
 }
 
 export async function opsCost(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -217,20 +223,27 @@ export async function opsCost(c: Context<{ Bindings: Env }>): Promise<Response> 
   const lastDay = cycle.complete ? cycle.end : utcDay(now);
   const db = getDb(c.env.HYPERDRIVE);
 
-  const [usage, production, lastRun, otherItems] = await Promise.all([
-    neuronsByDayAndModel(c.env, cycle.start, lastDay).catch((error): OpsUnavailable => {
-      logger.warn('运维台 cost：模型用量读不到', { error_message: unavailableReason(error) });
-      return { unavailable: unavailableReason(error) };
-    }),
+  // 每日用量图的范围：周期的 UTC 起点到终点（没结束的周期到此刻）
+  const since = new Date(`${cycle.start}T00:00:00Z`);
+  const until = cycle.complete ? new Date(Date.parse(`${cycle.end}T00:00:00Z`) + DAY_MS) : now;
+  const unavailable = (what: string) => (error: unknown): OpsUnavailable => {
+    logger.warn(`运维台 cost：${what}读不到`, { error_message: unavailableReason(error) });
+    return { unavailable: unavailableReason(error) };
+  };
+
+  const [usage, hourly, production, lastRun, otherItems] = await Promise.all([
+    neuronsByDayAndModel(c.env, cycle.start, lastDay).catch(unavailable('模型用量')),
+    neuronsByBeijingDayAndModel(c.env, since, until).catch(unavailable('按小时的模型用量')),
     productionRunsIn(db, cycle),
     lastRunByStep(db, cycle),
     loadOtherItems(c.env, cycle.start, lastDay),
   ]);
 
   const panels: ModelPanels = Array.isArray(usage)
-    ? modelPanels(usage, cycle, lastDay, production)
-    : { account: usage, production: usage, daily: usage, byModel: usage };
+    ? modelPanels(usage, cycle, production)
+    : { account: usage, production: usage, byModel: usage };
+  const daily: OpsCost['daily'] = Array.isArray(hourly) ? dailyPanel(hourly, since, until) : hourly;
 
-  const body: OpsCost = { cycle, ...panels, lastRunByStep: lastRun, otherItems };
+  const body: OpsCost = { cycle, ...panels, daily, lastRunByStep: lastRun, otherItems };
   return c.json(body);
 }

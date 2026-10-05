@@ -20,12 +20,6 @@ function reasonOf(value: object | undefined): string {
 }
 
 // ── 格式 ───────────────────────────────────────────────────────────────
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-/** 账单按 UTC 日：`2026-10-04` → `Oct 4`，不换时区 */
-function utcDayLabel(day: string) {
-  const [, month, date] = day.split('-').map(Number);
-  return `${MONTHS[month - 1]} ${date}`;
-}
 const int = (n: number) => Math.round(n).toLocaleString('en-US');
 const num = (n: number | null) => (n === null ? '—' : int(n));
 const pct = (part: number, total: number) => (total > 0 ? `${((part / total) * 100).toFixed(1)}%` : '0%');
@@ -341,7 +335,7 @@ const runsTable = computed(() => {
           <template v-if="spend">
             <div class="text-[44px] leading-[1.05] font-semibold tracking-tight">${{ spend.usd.toFixed(2) }}</div>
             <div class="text-[#52514e]">
-              {{ utcDayLabel(spend.cycleStart) }} – {{ utcDayLabel(spend.cycleEnd) }} · day {{ spend.day }} of {{ spend.days }} · estimate from usage
+              {{ beijingCycleRange(spend.cycleStart, spend.cycleEnd) }} · day {{ spend.day }} of {{ spend.days }} · estimate from usage
             </div>
             <div class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 border-t border-black/[0.08] pt-2 text-[13px]">
               <span class="text-[#52514e]">Neurons used</span><span class="text-right tabular-nums">{{ int(spend.neurons) }}</span>

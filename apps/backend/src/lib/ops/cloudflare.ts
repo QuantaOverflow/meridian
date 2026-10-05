@@ -94,7 +94,7 @@ async function queryDataset<Row>(
 // ── Workers AI ─────────────────────────────────────────────────────────
 
 export interface NeuronsRow {
-  /** UTC 日，`YYYY-MM-DD` */
+  /** `YYYY-MM-DD`：`neuronsByDayAndModel` 给的是 UTC 日，`neuronsByBeijingDayAndModel` 给的是北京日 */
   day: string;
   modelId: string;
   neurons: number;
@@ -110,6 +110,41 @@ export async function neuronsByDayAndModel(env: CloudflareEnv, from: string, to:
     { from, to }
   );
   return rows.map(r => ({ day: r.dimensions.date, modelId: r.dimensions.modelId, neurons: r.sum.totalNeurons }));
+}
+
+/** 按小时取模型用量时一次查多少天：行数 = 小时 × 模型，10 天 × 24 小时下四十来个模型才会顶到单次上限 */
+const HOURLY_NEURONS_WINDOW_DAYS = 10;
+
+/**
+ * Workers AI 用量：[`since`, `until`) 内，按北京日和模型（`day` 是北京日）。给每日用量图用。
+ * Cloudflare 的 `date` 维度是 UTC 日，所以按小时取（`datetimeHour`）再归到北京日；账单合计仍用 `neuronsByDayAndModel`
+ * （与发票同一口径）。两者总和一致，只是日界线不同。
+ */
+export async function neuronsByBeijingDayAndModel(env: CloudflareEnv, since: Date, until: Date): Promise<NeuronsRow[]> {
+  const windows: Array<[Date, Date]> = [];
+  for (let start = since.getTime(); start < until.getTime(); start += HOURLY_NEURONS_WINDOW_DAYS * DAY_MS) {
+    windows.push([new Date(start), new Date(Math.min(start + HOURLY_NEURONS_WINDOW_DAYS * DAY_MS, until.getTime()))]);
+  }
+  const chunks = await Promise.all(
+    windows.map(([from, to]) =>
+      queryDataset<{ sum: { totalNeurons: number }; dimensions: { datetimeHour: string; modelId: string } }>(
+        env,
+        'aiInferenceAdaptiveGroups',
+        `(limit: ${ROW_LIMIT}, filter: { datetime_geq: $since, datetime_lt: $until }) { sum { totalNeurons } dimensions { datetimeHour modelId } }`,
+        { since: 'Time', until: 'Time' },
+        { since: from.toISOString(), until: to.toISOString() }
+      )
+    )
+  );
+  const totals = new Map<string, NeuronsRow>();
+  for (const row of chunks.flat()) {
+    const day = beijingDay(new Date(row.dimensions.datetimeHour));
+    const key = `${day}|${row.dimensions.modelId}`;
+    const total = totals.get(key) ?? { day, modelId: row.dimensions.modelId, neurons: 0 };
+    total.neurons += row.sum.totalNeurons;
+    totals.set(key, total);
+  }
+  return [...totals.values()];
 }
 
 // ── Worker 报错 ────────────────────────────────────────────────────────

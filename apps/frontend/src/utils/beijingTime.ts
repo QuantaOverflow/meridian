@@ -34,3 +34,13 @@ export function beijingDateTime(iso: string | null | undefined): string {
   const p = beijingParts(iso);
   return p ? `${p.date} ${p.hm}` : '-';
 }
+
+/**
+ * 计费周期的起止，北京时间。接口给的是 UTC 日（`2026-10-04` 到 `2026-11-03`，含两端）；Cloudflare 按 UTC 零点切周期，
+ * 也就是北京 8 点：`Oct 4 08:00 – Nov 4 08:00`。
+ */
+export function beijingCycleRange(startDay: string, endDay: string): string {
+  const start = `${startDay}T00:00:00Z`;
+  const end = new Date(Date.parse(`${endDay}T00:00:00Z`) + 24 * 60 * 60 * 1000).toISOString();
+  return `${beijingDateTime(start)} – ${beijingDateTime(end)}`;
+}

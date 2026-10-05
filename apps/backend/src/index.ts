@@ -11,6 +11,11 @@ type ArticleQueueMessage = { articles_id: number[] };
 // 只收窄生成类型给不出的：队列消息体。
 export type Env = Omit<Cloudflare.Env, 'ARTICLE_PROCESSING_QUEUE'> & {
   ARTICLE_PROCESSING_QUEUE: Queue<ArticleQueueMessage>;
+  // 部署的提交：短哈希、标题、工作区是否有未提交改动（"true"/"false"）。scripts/deploy.sh 用 --var 注入，
+  // 不在 wrangler.jsonc 里，所以 wrangler types 生成不出来；不经脚本部署时没有。
+  GIT_COMMIT?: string;
+  GIT_TITLE?: string;
+  GIT_DIRTY?: string;
 };
 
 // Create a base logger for the queue handler

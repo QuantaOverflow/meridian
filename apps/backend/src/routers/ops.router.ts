@@ -5,6 +5,7 @@ import { opsTrends } from '../lib/ops/trends';
 import { opsCost } from '../lib/ops/cost';
 import { opsSources } from '../lib/ops/sources';
 import { opsRunDetail } from '../lib/ops/run-detail';
+import { getServiceVersions } from '../lib/ops/services';
 
 /**
  * 运维台（Ops console）的只读端点，挂在 /observability/ops 下（鉴权在 app.ts 的 /observability/* 挂载处）。
@@ -17,5 +18,6 @@ app.get('/trends', opsTrends);
 app.get('/cost', opsCost);
 app.get('/sources', opsSources);
 app.get('/runs/:workflowId', opsRunDetail);
+app.get('/services', async c => c.json(await getServiceVersions(c.env)));
 
 export default app;

@@ -141,6 +141,16 @@ export interface ClusteringResult {
   buildIdentityCheck: BuildIdentityAssertion;
 }
 
+/** GET /health 的回包，字段原样带出，取哪些由调用方定 */
+interface MLHealth {
+  /** 容器自报的状态，正常是 'healthy' */
+  status: string;
+  /** build_identity 原样（build_time、injected、git_commit、git_title、git_dirty）；旧镜像或缺字段时是空对象 */
+  buildIdentity: Record<string, unknown>;
+  /** 壳的 Cloudflare 版本 id；本地 dev-shim 没有这个头 */
+  versionId: string | null;
+}
+
 /** ML 服务客户端 */
 class MLService {
   constructor(private env: MLServiceEnv, private traceId?: string) {}
@@ -157,6 +167,31 @@ class MLService {
       headers,
       body: JSON.stringify(body),
     }));
+  }
+
+  /**
+   * GET /health：容器的健康状态与镜像身份（构建戳、部署时的提交），外加壳（cf-worker）用响应头带出来的版本 id。
+   * 运维台用。够不着时 binding 的 fetch 抛错，由调用方接。容器睡着时这个请求会把它唤醒。
+   */
+  async health(timeoutMs: number): Promise<ServiceResult<MLHealth>> {
+    const response = await this.env.ML_SERVICE.fetch(new Request('https://meridian-ml-service/health', {
+      headers: this.traceId ? { 'x-trace-id': this.traceId } : {},
+      signal: AbortSignal.timeout(timeoutMs),
+    }));
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '<unreadable>');
+      return { ok: false, status: response.status, error: `ML health failed: ${response.status} - ${errorText}` };
+    }
+    const body = (await response.json()) as { status?: unknown; [ML_BUILD_IDENTITY_FIELD]?: unknown };
+    const identity = body[ML_BUILD_IDENTITY_FIELD];
+    return {
+      ok: true,
+      value: {
+        status: typeof body.status === 'string' ? body.status : '',
+        buildIdentity: identity && typeof identity === 'object' ? (identity as Record<string, unknown>) : {},
+        versionId: response.headers.get('x-meridian-version-id'),
+      },
+    };
   }
 
   /**

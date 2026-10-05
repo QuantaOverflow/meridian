@@ -25,6 +25,7 @@ import {
   type BriefTitleResult,
   type ClusterJudgeRequest,
   type ClusterJudgeResult,
+  type OpsServiceVersion,
   type StoryRankRequest,
 } from '@meridian/contracts'
 import { Logger } from './utils/logger'
@@ -460,6 +461,31 @@ app.post('/meridian/generate-brief-summary', async (c) => {
       metadata: { details: error.message }
     }, 500)
   }
+})
+
+// ============================================================================
+// 部署版本（运维台）
+// ============================================================================
+
+// 本 Worker 跑的是哪个提交。backend 的运维台经 AI_WORKER binding 读（apps/backend/src/lib/ops/services.ts）。
+// 提交三项是 scripts/deploy.sh 部署时用 --var 注入的；版本 id 与部署时刻来自 version metadata binding。
+// 不经脚本直接 wrangler deploy 时提交三项为 null。能答这个请求就是 healthy。
+// 路径带 /meridian/ 前缀：scripts/check-routes.mjs 只按这个前缀认 backend 对本 Worker 的调用。
+app.get('/meridian/version', (c) => {
+  const text = (v: string | undefined) => v?.trim() || null
+  const dirty = text(c.env.GIT_DIRTY)
+  return c.json<APIResponse<OpsServiceVersion>>({
+    success: true,
+    data: {
+      service: 'ai-worker',
+      commit: text(c.env.GIT_COMMIT),
+      title: text(c.env.GIT_TITLE),
+      dirty: dirty === 'true' ? true : dirty === 'false' ? false : null,
+      deployedAt: text(c.env.CF_VERSION_METADATA?.timestamp),
+      versionId: text(c.env.CF_VERSION_METADATA?.id),
+      health: 'healthy',
+    },
+  })
 })
 
 // ============================================================================

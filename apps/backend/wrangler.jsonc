@@ -50,6 +50,10 @@
   "triggers": {
     "crons": ["0 13 * * *"],
   },
+  // 本次部署的版本 id 与时刻，运维台与 GET /version 读（提交哈希与标题由 scripts/deploy.sh 用 --var 注入）
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA",
+  },
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",

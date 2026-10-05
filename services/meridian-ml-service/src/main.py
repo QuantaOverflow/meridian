@@ -103,16 +103,33 @@ def get_build_identity() -> Dict[str, Any]:
     }
 
 
+def _git_env(name: str) -> str | None:
+    value = (os.getenv(name) or "").strip()
+    return None if value in ("", BUILD_NOT_INJECTED) else value
+
+
+def get_git_identity() -> Dict[str, Any]:
+    """部署时的提交：scripts/deploy.sh 经 wrangler 的 image_vars 传成 Docker build arg，Dockerfile 落成环境变量。
+    没经该脚本部署（wrangler.jsonc 里的占位值原样进镜像）或本地直起服务时三项都是 None。
+    只挂在 /health 上，不进聚类响应（那边的 golden 与 backend 的镜像身份断言都不看它）。"""
+    dirty = _git_env("MERIDIAN_ML_GIT_DIRTY")
+    return {
+        "git_commit": _git_env("MERIDIAN_ML_GIT_COMMIT"),
+        "git_title": _git_env("MERIDIAN_ML_GIT_TITLE"),
+        "git_dirty": {"true": True, "false": False}.get(dirty) if dirty else None,
+    }
+
+
 # ============================================================================
 # 健康检查和基础端点
 # ============================================================================
 
 @app.get("/health")
 async def health_check():
-    """健康检查端点：Docker HEALTHCHECK 只看状态码；build_identity 给人核对线上是哪个镜像"""
+    """健康检查端点：Docker HEALTHCHECK 只看状态码；build_identity 给人和运维台核对线上是哪个镜像、哪个提交"""
     return {
         "status": "healthy",
-        BUILD_IDENTITY_FIELD: get_build_identity(),
+        BUILD_IDENTITY_FIELD: {**get_build_identity(), **get_git_identity()},
     }
 
 # ============================================================================

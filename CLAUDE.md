@@ -15,7 +15,7 @@
 - `pnpm typecheck` / `pnpm format`
 - `pnpm -F @meridian/backend dev` / `@meridian/frontend dev` / `meridian-ai-worker dev`
 - `pnpm -F @meridian/database generate` / `migrate` / `studio`
-- 部署：进对应 service 目录跑 `wrangler deploy`，**永不从 root 部署**（唯一例外：前端 Pages 的配置就在根目录 `wrangler.toml`，见 README）
+- 部署：进对应 service 目录（`apps/backend`、`services/meridian-ai-worker`、`services/meridian-ml-service/cf-worker`）跑 `scripts/deploy.sh`（包一层 `wrangler deploy`，把提交短哈希、标题、dirty 带上去，运维台靠它显示各服务的版本；`--print` 只打印命令），**永不从 root 部署**——脚本在根目录会拒绝（唯一例外：前端 Pages 的配置就在根目录 `wrangler.toml`，见 README）
 
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）

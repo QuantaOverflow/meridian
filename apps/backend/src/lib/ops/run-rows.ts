@@ -21,9 +21,9 @@ export const BASELINE_MIN_RUNS = 5;
 /** 中位数取被判那次之前的最多这么多次 */
 const BASELINE_WINDOW = 14;
 export const SLOW_FACTOR = 1.5;
-const COSTLY_FACTOR = 1.5;
+export const COSTLY_FACTOR = 1.5;
 /** 当天这个钟点（北京时间）还没跑完算红 */
-const LATE_HOUR_BEIJING = 22;
+export const LATE_HOUR_BEIJING = 22;
 
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
 

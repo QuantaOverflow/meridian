@@ -250,7 +250,16 @@ const SOURCE_GROUP_TITLE: Record<'fetch_failing' | 'bad_body', string> = {
   bad_body: 'have a bad body format',
 };
 /** 合成一行时最多点几个源的名字 */
-const YELLOW_SOURCE_NAMES_SHOWN = 5;
+const SOURCE_NAMES_SHOWN = 5;
+/** 同一种「没检查成」有这么多个源时合成一行 */
+const RED_GROUP_MIN = 3;
+
+/** 出现次数最多的那个；并列时取先出现的 */
+function mostCommon(values: string[]): string {
+  const counts = new Map<string, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts].reduce((best, entry) => (entry[1] > best[1] ? entry : best))[0];
+}
 
 /** 这个源为什么是红 / 黄：一句话，数字取自判它的那几项 */
 function sourceDetail(s: SourceStatus, now: Date): string {
@@ -292,21 +301,44 @@ function sourcesPanel(statuses: SourceStatus[], now: Date): { sources: OpsHealth
   });
   // 红的源每个一行。黄的同一种有好几个时合成一行：一种毛病常常一批源同时犯（正文黏成一行那阵是 9 个），
   // 逐个列会把清单里别的事挤下去；具体哪几个、各自多少，Sources 页有
-  const redLines = problems.filter(p => p.status.level === 'red').map(line);
+  const names = (group: typeof problems) => {
+    const all = group.map(p => p.status.name);
+    const more = all.length - SOURCE_NAMES_SHOWN;
+    const shown = all.slice(0, SOURCE_NAMES_SHOWN).join(', ');
+    return more > 0 ? `${shown} and ${more} more` : shown;
+  };
+  // 「没检查成」的源分两种：去了但失败的、压根没去的。同一种有 RED_GROUP_MIN 个及以上时合成一行——
+  // 那多半是同一个原因（抓取程序停了、库连不上、某类请求被拒），不是这些源各自出事；逐个列会把清单占满
+  const notChecked = problems.filter(p => p.status.kind === 'not_checked');
+  const failing = notChecked.filter(p => p.status.lastError !== null);
+  const silent = notChecked.filter(p => p.status.lastError === null);
+  const failingLines: Attention[] =
+    failing.length >= RED_GROUP_MIN
+      ? [
+          {
+            level: 'red',
+            title: `${failing.length} sources: checks are failing`,
+            detail: `Most common reason: ${mostCommon(failing.map(p => p.status.lastError!))} · ${names(failing)}`,
+            link: 'sources',
+          },
+        ]
+      : failing.map(line);
+  const silentLines: Attention[] =
+    silent.length >= RED_GROUP_MIN
+      ? [
+          {
+            level: 'red',
+            title: `${silent.length} sources have not been checked`,
+            detail: `The scraper may be down · ${names(silent)}`,
+            link: 'sources',
+          },
+        ]
+      : silent.map(line);
+  const redLines = [...failingLines, ...silentLines, ...problems.filter(p => p.status.kind === 'dead_feed').map(line)];
   const yellowLines = (['fetch_failing', 'bad_body'] as const).flatMap((kind): Attention[] => {
     const group = problems.filter(p => p.status.kind === kind);
     if (group.length <= 1) return group.map(line);
-    const names = group.map(p => p.status.name);
-    const shown = names.slice(0, YELLOW_SOURCE_NAMES_SHOWN).join(', ');
-    const more = names.length - YELLOW_SOURCE_NAMES_SHOWN;
-    return [
-      {
-        level: 'yellow',
-        title: `${group.length} sources ${SOURCE_GROUP_TITLE[kind]}`,
-        detail: more > 0 ? `${shown} and ${more} more` : shown,
-        link: 'sources',
-      },
-    ];
+    return [{ level: 'yellow', title: `${group.length} sources ${SOURCE_GROUP_TITLE[kind]}`, detail: names(group), link: 'sources' }];
   });
   return {
     sources: {

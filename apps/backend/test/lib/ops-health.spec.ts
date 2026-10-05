@@ -520,6 +520,50 @@ describe('去了但失败的源', () => {
   });
 });
 
+describe('很多来源同时没检查成', () => {
+  it('没去检查的有 3 个及以上：合成一行，提示抓取程序可能停了；不足 3 个仍各列一行', async () => {
+    atBeijing('12:00:00');
+    for (const name of ['A', 'B', 'C', 'D', 'E', 'F', 'G']) await source({ name, scrape_frequency: 1, lastChecked: ago(3) });
+
+    const body = await health();
+
+    expect(body.attention.filter(a => a.link === 'sources')).toEqual([
+      {
+        level: 'red',
+        title: '7 sources have not been checked',
+        detail: 'The scraper may be down · A, B, C, D, E and 2 more',
+        link: 'sources',
+      },
+    ]);
+    // 来源面板里最差的几个仍逐个列
+    expect(body.sources.worst).toHaveLength(5);
+  });
+
+  it('去了但失败的有 3 个及以上：合成一行，带上最常见的原因；和没去检查的分开算', async () => {
+    atBeijing('12:00:00');
+    const failing = (name: string, reason: string) =>
+      source({ name, scrape_frequency: 1, lastChecked: ago(3), last_attempt_at: ago(0.1), last_error: reason });
+    await failing('A', 'Fetch failed with status: 503 Service Unavailable');
+    await failing('B', 'Fetch failed with status: 406 Not Acceptable');
+    await failing('C', 'Fetch failed with status: 503 Service Unavailable');
+    await source({ name: 'Silent 1', scrape_frequency: 1, lastChecked: ago(3) });
+    await source({ name: 'Silent 2', scrape_frequency: 1, lastChecked: ago(3) });
+
+    const body = await health();
+
+    expect(body.attention.filter(a => a.link === 'sources')).toEqual([
+      {
+        level: 'red',
+        title: '3 sources: checks are failing',
+        detail: 'Most common reason: Fetch failed with status: 503 Service Unavailable · A, B, C',
+        link: 'sources',
+      },
+      { level: 'red', title: 'Silent 1 has not been checked', detail: 'Last checked 3h 0m ago', link: 'sources' },
+      { level: 'red', title: 'Silent 2 has not been checked', detail: 'Last checked 3h 0m ago', link: 'sources' },
+    ]);
+  });
+});
+
 describe('待处理清单的顺序与鉴权', () => {
   it('红的排在黄的前面', async () => {
     await run(20, { status: 'DEGRADED' });

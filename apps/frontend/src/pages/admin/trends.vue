@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 definePageMeta({ layout: 'admin' });
-useSeoMeta({ title: 'Health · Meridian Ops' });
+useSeoMeta({ title: 'Trends · Meridian Ops' });
 </script>
 
 <template>
   <div>
-    <h1 class="text-xl font-medium text-gray-900">Health</h1>
+    <h1 class="text-xl font-medium text-gray-900">Trends</h1>
     <p class="mt-2 text-sm text-gray-600">Not built yet.</p>
   </div>
 </template>

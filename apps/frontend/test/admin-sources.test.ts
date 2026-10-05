@@ -207,6 +207,8 @@ describe('后台页面「Add Source」', () => {
     await page.fill('input[name=username]', ADMIN.username);
     await page.fill('input[name=password]', ADMIN.password);
     await Promise.all([page.waitForURL('**/admin'), page.click('button[type=submit]')]);
+    // 登录后落在运维台首页（Health），来源表在 Sources 页
+    await page.goto(url('/admin/sources'));
     await page.waitForSelector(`a[href="${EXISTING_URL}"]`);
     return { page, dialogs };
   }

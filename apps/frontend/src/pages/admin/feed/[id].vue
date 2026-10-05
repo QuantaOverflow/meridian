@@ -126,7 +126,7 @@ async function deleteSource() {
       method: 'DELETE',
     });
     // Redirect back to sources list after successful deletion
-    await navigateTo('/admin');
+    await navigateTo('/admin/sources');
   } catch (error) {
     console.error('Failed to delete source:', error);
     alert('Failed to delete source. Please try again.');

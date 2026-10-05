@@ -1,6 +1,6 @@
 import { boolean, index, integer, jsonb, pgEnum, pgTable, real, serial, text, timestamp, vector } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { EMBEDDING_DIM } from '@meridian/contracts';
+import { EMBEDDING_DIM, type RunOpsSummary } from '@meridian/contracts';
 
 /**
  * Note: We use $ to denote the table objects
@@ -66,6 +66,8 @@ export const $articles = pgTable(
     embedding: vector('embedding', { dimensions: EMBEDDING_DIM }),
 
     failReason: text('fail_reason'),
+    // 抽出的正文有几行非空行（抓取成功时记）。1 = 段落黏成一行；null = 加这列之前的旧文章或没抓到正文。运维台按它算「黏成一行」的占比
+    body_lines: integer('body_lines'),
 
     sourceId: integer('source_id')
       .references(() => $sources.id)
@@ -135,6 +137,9 @@ export const $brief_runs = pgTable(
 
     report_id: integer('report_id').references(() => $reports.id),
     error: text('error'),
+    // run 结束时写下的汇总（调用数、neurons、各步耗时、降级原因），形状是 @meridian/contracts 的 RunOpsSummary。
+    // null = 没记下（加这列之前的 run，或写汇总那一步失败）
+    ops_summary: jsonb('ops_summary').$type<RunOpsSummary>(),
   }
 );
 

@@ -13,7 +13,6 @@
 | 方法 与 路径 | 鉴权 | 调用方 | 说明 |
 |---|---|---|---|
 | `GET /ping` | 无 | 运维 | `{ pong: true }` |
-| `GET /version` | token | 运维 | backend 自己跑的版本（`@meridian/contracts` 的 `OpsServiceVersion`）：提交短哈希、标题、dirty、部署时刻、版本 id。提交三项由 `scripts/deploy.sh` 部署时注入，不经它部署时为 null |
 | `GET /openGraph/default` | 无 | 前端 | 默认 OG 图（PNG） |
 | `GET /openGraph/brief?title&date&articles&sources` | 无 | 前端 | 简报 OG 图；`date` 是毫秒时间戳 |
 | `GET /events?date&pagination&page&limit` | 需要 | 运维 | 已处理文章列表，含 R2 正文；`limit` 1–1000，默认 100 |
@@ -44,7 +43,7 @@
 | `GET /observability/ops/services` | token | 运维 | backend、ai-worker、ml-service 三个服务各自的版本（`OpsServiceVersion[]`，顺序固定）。后两个经 service binding 现读；够不着的是 `health: "unknown"`、各项 null，不报错。会唤醒睡着的 ml 容器 |
 
 `/admin/*`、`/reader/*`、`/observability/*`、`/do/*`、`/events` 的鉴权都挂在 `app.ts` 的挂载处（2026-09-24 起；此前
-`/do/source/*` 无鉴权、`/events` 的中间件挂错了对象从未生效）。只有 `/openGraph/*`、`/ping` 公开（`/version` 单独挡了一道）。
+`/do/source/*` 无鉴权、`/events` 的中间件挂错了对象从未生效）。只有 `/openGraph/*`、`/ping` 公开。
 
 ## `POST /admin/briefs/generate` 的可选字段
 

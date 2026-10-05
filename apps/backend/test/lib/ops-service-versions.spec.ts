@@ -1,5 +1,5 @@
 /**
- * 运维台的「各服务跑的是哪个版本」：GET /observability/ops/services 与 backend 自己的 GET /version。
+ * 运维台的「各服务跑的是哪个版本」：GET /observability/ops/services。
  * 走真实路由；AI_WORKER / ML_SERVICE 两个 service binding 换成按各自响应契约回包的假对象
  * （ai-worker 的 GET /meridian/version、ml-service 的 GET /health），backend 自己的版本来自
  * version metadata binding 与部署脚本注入的变量。不连数据库。
@@ -125,16 +125,8 @@ describe('GET /observability/ops/services', () => {
   });
 });
 
-describe('GET /version', () => {
-  it('回 backend 自己的版本', async () => {
-    const res = await get('/version', backendDeploy);
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(backendVersion);
-  });
-
-  it('不带 token 是 401（提交标题不对公网开放）', async () => {
-    expect((await get('/version', backendDeploy, null)).status).toBe(401);
+describe('版本信息不对公网开放', () => {
+  it('不带 token 是 401（提交标题会写到还没公开的改动）', async () => {
     expect((await get('/observability/ops/services', backendDeploy, null)).status).toBe(401);
   });
 });

@@ -28,7 +28,7 @@ function blank(service: OpsServiceName, health: OpsServiceVersion['health']): Op
 }
 
 /** backend 自己的版本。能跑到这里就是 healthy */
-export function backendVersion(env: Env): OpsServiceVersion {
+function backendVersion(env: Env): OpsServiceVersion {
   const dirty = text(env.GIT_DIRTY);
   return {
     service: 'backend',

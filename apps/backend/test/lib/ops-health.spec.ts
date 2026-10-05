@@ -147,7 +147,8 @@ async function articles(sourceId: number, count: number, spec: ArticleSpec = {})
 const neuronRow = (date: string, modelId: string, totalNeurons: number) => ({ sum: { totalNeurons }, dimensions: { date, modelId } });
 const errorRow = (date: string, scriptName: string, status: string, requests: number, scriptVersion = 'v1') => ({
   sum: { requests },
-  dimensions: { date, scriptName, status, scriptVersion },
+  // Cloudflare 按小时给数（datetimeHour，UTC）
+  dimensions: { datetimeHour: `${date}T05:00:00Z`, scriptName, status, scriptVersion },
 });
 
 function cloudflareAnswers(answers: { neurons?: unknown[]; errors?: unknown[] }) {
@@ -436,14 +437,13 @@ describe('来源', () => {
       { id: failingSource, name: 'Failing', kind: 'fetch_failing', detail: '40% of new articles failed to fetch' },
       { id: glued, name: 'Glued', kind: 'bad_body', detail: '50% single-line bodies' },
     ]);
-    // 待处理：每个红 / 黄的源一行（不止最差的 5 个），红在前，都连到 Sources
+    // 待处理：红的源每个一行；黄的同一种只有一个时单列，有好几个时合成一行。红在前，都连到 Sources
     expect(body.attention).toEqual([
       { level: 'red', title: 'Never has never been checked', detail: 'Never checked', link: 'sources' },
       { level: 'red', title: 'Stale has not been checked', detail: 'Last checked 2h 30m ago', link: 'sources' },
       { level: 'red', title: 'Dead looks like a dead feed', detail: 'No new article in 48 hours · 7 in the last 7 days', link: 'sources' },
       { level: 'yellow', title: 'Failing is failing to fetch', detail: '40% of new articles failed to fetch', link: 'sources' },
-      { level: 'yellow', title: 'Glued has a bad body format', detail: '50% single-line bodies', link: 'sources' },
-      { level: 'yellow', title: 'Junky has a bad body format', detail: '30% junk pages', link: 'sources' },
+      { level: 'yellow', title: '2 sources have a bad body format', detail: 'Glued, Junky', link: 'sources' },
     ]);
   });
 });

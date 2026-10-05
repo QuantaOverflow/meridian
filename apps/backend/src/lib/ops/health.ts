@@ -12,7 +12,7 @@ import type { Env } from '../../index';
 import { Logger } from '../core/logger';
 import { getDb } from '../database';
 import type { Db } from '../reader/db';
-import { neuronsByDayAndModel, unavailableReason, utcDay, workerErrorsByDay } from './cloudflare';
+import { beijingDay, neuronsByDayAndModel, unavailableReason, utcDay, workerErrorsByDay } from './cloudflare';
 import { billingCycle, modelBill, productionRunsIn, productionUsage } from './cost';
 import {
   BASELINE_MIN_RUNS,
@@ -55,8 +55,6 @@ const BEIJING_OFFSET_MS = 8 * HOUR_MS;
 
 type Attention = OpsHealth['attention'][number];
 
-/** `YYYY-MM-DD`（北京日） */
-const beijingDay = (d: Date) => new Date(d.getTime() + BEIJING_OFFSET_MS).toISOString().slice(0, 10);
 const beijingHour = (d: Date) => new Date(d.getTime() + BEIJING_OFFSET_MS).getUTCHours();
 /** `HH:mm`（北京时间），只用在待处理清单的说明文字里 */
 const beijingClock = (d: Date) => new Date(d.getTime() + BEIJING_OFFSET_MS).toISOString().slice(11, 16);
@@ -247,6 +245,13 @@ const SOURCE_TITLE: Record<'not_checked' | 'dead_feed' | 'fetch_failing' | 'bad_
   bad_body: 'has a bad body format',
 };
 
+const SOURCE_GROUP_TITLE: Record<'fetch_failing' | 'bad_body', string> = {
+  fetch_failing: 'are failing to fetch',
+  bad_body: 'have a bad body format',
+};
+/** 合成一行时最多点几个源的名字 */
+const YELLOW_SOURCE_NAMES_SHOWN = 5;
+
 /** 这个源为什么是红 / 黄：一句话，数字取自判它的那几项 */
 function sourceDetail(s: SourceStatus, now: Date): string {
   switch (s.kind) {
@@ -272,20 +277,39 @@ function sourcesPanel(statuses: SourceStatus[], now: Date): { sources: OpsHealth
   const problems = statuses
     .filter(s => s.level === 'red' || s.level === 'yellow')
     .map(s => ({ status: s, detail: sourceDetail(s, now) }));
+  const line = ({ status: s, detail }: (typeof problems)[number]): Attention => ({
+    level: s.level as 'red' | 'yellow',
+    title:
+      s.kind === 'not_checked' && s.lastChecked === null
+        ? `${s.name} has never been checked`
+        : `${s.name} ${SOURCE_TITLE[s.kind as keyof typeof SOURCE_TITLE]}`,
+    detail,
+    link: 'sources',
+  });
+  // 红的源每个一行。黄的同一种有好几个时合成一行：一种毛病常常一批源同时犯（正文黏成一行那阵是 9 个），
+  // 逐个列会把清单里别的事挤下去；具体哪几个、各自多少，Sources 页有
+  const redLines = problems.filter(p => p.status.level === 'red').map(line);
+  const yellowLines = (['fetch_failing', 'bad_body'] as const).flatMap((kind): Attention[] => {
+    const group = problems.filter(p => p.status.kind === kind);
+    if (group.length <= 1) return group.map(line);
+    const names = group.map(p => p.status.name);
+    const shown = names.slice(0, YELLOW_SOURCE_NAMES_SHOWN).join(', ');
+    const more = names.length - YELLOW_SOURCE_NAMES_SHOWN;
+    return [
+      {
+        level: 'yellow',
+        title: `${group.length} sources ${SOURCE_GROUP_TITLE[kind]}`,
+        detail: more > 0 ? `${shown} and ${more} more` : shown,
+        link: 'sources',
+      },
+    ];
+  });
   return {
     sources: {
       counts: countByKind(statuses),
       worst: problems.slice(0, WORST_SOURCES_SHOWN).map(({ status: s, detail }) => ({ id: s.id, name: s.name, kind: s.kind, detail })),
     },
-    attention: problems.map(({ status: s, detail }) => ({
-      level: s.level as 'red' | 'yellow',
-      title:
-        s.kind === 'not_checked' && s.lastChecked === null
-          ? `${s.name} has never been checked`
-          : `${s.name} ${SOURCE_TITLE[s.kind as keyof typeof SOURCE_TITLE]}`,
-      detail,
-      link: 'sources',
-    })),
+    attention: [...redLines, ...yellowLines],
   };
 }
 

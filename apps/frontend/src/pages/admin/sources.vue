@@ -1,11 +1,12 @@
 <script lang="ts" setup>
 import { z } from 'zod';
 import { formatDistanceToNow } from 'date-fns';
-import { LockClosedIcon, LockOpenIcon } from '@heroicons/vue/20/solid';
+import type { OpsSources, OpsSourceKind } from '@meridian/contracts';
+import { beijingDateTime } from '~/utils/beijingTime';
 
 definePageMeta({ layout: 'admin' });
 
-const { data, error: sourcesError, refresh: refreshSources } = await useFetch('/api/admin/sources');
+const { data, error: sourcesError, refresh: refreshSources } = await useFetch<OpsSources>('/api/admin/ops/sources');
 if (sourcesError.value) {
   console.error(sourcesError.value);
 
@@ -16,122 +17,32 @@ if (sourcesError.value) {
   }
 }
 
-type Source = NonNullable<typeof data.value>['sources'][number];
-
 const sources = computed(() => data.value?.sources ?? []);
-const overview = computed(() => data.value?.overview);
+const counts = computed(() => data.value?.counts);
+const thresholds = computed(() => data.value?.thresholds);
 
-const sortKey = ref<keyof Source | ''>('');
-const sortOrder = ref<'asc' | 'desc'>('asc');
-const selectedFrequency = ref<string>('all');
-const selectedCategory = ref<string>('all');
-const showPaywallOnly = ref(false);
-const showErrorsOnly = ref(false);
-const errorThreshold = ref(5);
-const staleHours = ref(24);
-const enableTimeFilter = ref(false);
-const articleCountFilter = ref<'more' | 'less'>('more');
-const articleCountThreshold = ref(100);
-const enableArticleFilter = ref(false);
-
-const FREQUENCIES = ['Hourly', '4 Hours', '6 Hours', 'Daily'] as const;
-
-const totalArticles = computed(() => sources.value?.reduce((sum, source) => sum + source.totalArticles, 0) ?? 0);
-const filteredArticles = computed(() => filteredSources.value.reduce((sum, source) => sum + source.totalArticles, 0));
-const stats = computed(() => {
-  if (!filteredSources.value.length) return null;
-
-  return {
-    avgProcessSuccess: Math.round(
-      filteredSources.value.reduce((sum, s) => sum + (s.processSuccessRate ?? 0), 0) / filteredSources.value.length
-    ),
-    avgErrorRate: Math.round(
-      filteredSources.value.reduce((sum, s) => sum + (s.errorRate ?? 0), 0) / filteredSources.value.length
-    ),
-    avgLowQuality: Math.round(
-      filteredSources.value.reduce((sum, s) => sum + (s.lowQualityRate ?? 0), 0) / filteredSources.value.length
-    ),
-    avgArticlesPerDay: Math.round(
-      filteredSources.value.reduce((sum, s) => sum + (s.avgPerDay || 0), 0) / filteredSources.value.length
-    ),
-  };
-});
-const filteredSources = computed(() => {
-  let filtered = sources.value;
-
-  // frequency filter
-  if (selectedFrequency.value !== 'all') {
-    filtered = filtered.filter(source => source.frequency === selectedFrequency.value);
-  }
-
-  // category filter
-  if (selectedCategory.value !== 'all') {
-    filtered = filtered.filter(source => source.category === selectedCategory.value);
-  }
-
-  // paywall filter
-  if (showPaywallOnly.value) {
-    filtered = filtered.filter(source => source.paywall);
-  }
-
-  // errors filter
-  if (showErrorsOnly.value) {
-    filtered = filtered.filter(source => (source.errorRate ?? 0) > errorThreshold.value);
-  }
-
-  // stale sources filter
-  if (enableTimeFilter.value) {
-    const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - staleHours.value);
-
-    filtered = filtered.filter(source => {
-      const lastCheck = new Date(source.lastChecked ?? '');
-      return lastCheck > cutoffTime;
-    });
-  }
-
-  // article count filter
-  if (enableArticleFilter.value) {
-    filtered = filtered.filter(source => {
-      if (articleCountFilter.value === 'more') {
-        return source.totalArticles > articleCountThreshold.value;
-      }
-      return source.totalArticles < articleCountThreshold.value;
-    });
-  }
-
-  return filtered;
-});
-const sortedSources = computed(() => {
-  if (!sortKey.value) return filteredSources.value;
-
-  const key = sortKey.value as keyof Source;
-
-  return [...filteredSources.value].sort((a, b) => {
-    if (key === 'lastChecked') {
-      const aTime = new Date(a[key] ?? '').getTime();
-      const bTime = new Date(b[key] ?? '').getTime();
-      return sortOrder.value === 'asc' ? aTime - bTime : bTime - aTime;
-    }
-
-    const aVal = a[key];
-    const bVal = b[key];
-    return sortOrder.value === 'asc' ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
-  });
-});
-
-const toggleSort = (key: keyof Source) => {
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortOrder.value = 'asc';
-  }
+// 状态在表里的名字、色块底色与图形（形状和颜色同时区分，不只靠颜色）
+const KINDS: Record<OpsSourceKind, { label: string; plural: string; chip: string; shape: 'square' | 'triangle' | 'circle' | 'pause' | 'none' }> = {
+  not_checked: { label: 'Not checked', plural: 'not checked', chip: 'bg-red-50', shape: 'square' },
+  dead_feed: { label: 'Dead feed', plural: 'dead feeds', chip: 'bg-red-50', shape: 'square' },
+  fetch_failing: { label: 'Fetch failing', plural: 'fetch failing', chip: 'bg-amber-50', shape: 'triangle' },
+  bad_body: { label: 'Bad body', plural: 'bad body format', chip: 'bg-amber-50', shape: 'triangle' },
+  paused: { label: 'Paused', plural: 'paused', chip: 'bg-gray-100', shape: 'pause' },
+  ok: { label: 'OK', plural: 'OK', chip: 'bg-gray-100', shape: 'none' },
 };
-const formatTimeAgo = (dateStr: string | null) => {
-  if (!dateStr) return 'Never';
-  return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
-};
+const SUMMARY_ORDER: OpsSourceKind[] = ['not_checked', 'dead_feed', 'fetch_failing', 'bad_body', 'paused', 'ok'];
+
+const filter = ref<'all' | 'problems' | 'paused'>('all');
+const isProblem = (kind: OpsSourceKind) => kind !== 'ok' && kind !== 'paused';
+const problemCount = computed(() => sources.value.filter(s => isProblem(s.kind)).length);
+const shown = computed(() => {
+  if (filter.value === 'problems') return sources.value.filter(s => isProblem(s.kind));
+  if (filter.value === 'paused') return sources.value.filter(s => s.kind === 'paused');
+  return sources.value;
+});
+
+const ago = (iso: string | null) => (iso ? formatDistanceToNow(new Date(iso), { addSuffix: true }) : 'never');
+const pct = (v: number | null) => (v === null ? '—' : `${v}%`);
 
 async function addSource() {
   const url = prompt('Enter the URL of the source you want to add');
@@ -158,320 +69,137 @@ async function addSource() {
     alert(`Failed to add source: ${reason}`);
   }
 }
-
-// Add health status computation
-const getSourceHealth = (source: Source) => {
-  const isStale = isSourceStale(source.lastChecked);
-
-  if ((source.errorRate ?? 0) > 10 || isStale) return 'red';
-  if ((source.errorRate ?? 0) > 0 || (source.lowQualityRate ?? 0) > 15) return 'yellow';
-  return 'green';
-};
-
-const getHealthColor = (health: string) => {
-  switch (health) {
-    case 'red':
-      return 'bg-red-500';
-    case 'yellow':
-      return 'bg-yellow-500';
-    case 'green':
-      return 'bg-green-500';
-    default:
-      return 'bg-gray-500';
-  }
-};
-
-const isSourceStale = (lastChecked: string | null | undefined) => {
-  if (!lastChecked) return true;
-  return new Date().getTime() - new Date(lastChecked).getTime() > 24 * 60 * 60 * 1000;
-};
 </script>
 
 <template>
   <div>
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-xl font-medium text-gray-900">Source Analytics</h1>
-
-      <!-- button to add a new source -->
-      <button @click="addSource" class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100">
-        Add Source
-      </button>
-    </div>
-
-    <!-- Overview Section -->
-    <div v-if="overview" class="grid grid-cols-4 gap-4 mb-6">
-      <div class="col-span-4 bg-white p-4 rounded border">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">System Overview</h2>
-        <div class="grid grid-cols-4 gap-4">
-          <!-- Last Activity -->
-          <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Last Activity</div>
-            <div>
-              <div class="text-sm text-gray-600">Source Check: {{ formatTimeAgo(overview.lastSourceCheck) }}</div>
-              <div class="text-sm text-gray-600">
-                Article Processed: {{ formatTimeAgo(overview.lastArticleProcessed) }}
-              </div>
-              <div class="text-sm text-gray-600">Article Fetched: {{ formatTimeAgo(overview.lastArticleFetched) }}</div>
-            </div>
-          </div>
-
-          <!-- Today's Stats -->
-          <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Today's Stats</div>
-            <div>
-              <div class="text-sm text-gray-600">Articles Fetched: {{ overview.articlesFetchedToday }}</div>
-              <div class="text-sm text-gray-600">Articles Processed: {{ overview.articlesProcessedToday }}</div>
-              <div class="text-sm text-gray-600">Errors: {{ overview.errorsToday }}</div>
-            </div>
-          </div>
-
-          <!-- Source Health -->
-          <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Source Health</div>
-            <div>
-              <div class="text-sm text-gray-600">Total Sources: {{ overview.totalSourcesCount }}</div>
-              <div
-                class="text-sm"
-                :class="{
-                  'text-red-600': overview.staleSourcesCount > 0,
-                  'text-gray-600': overview.staleSourcesCount === 0,
-                }"
-              >
-                Stale Sources: {{ overview.staleSourcesCount }}
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+      <div>
+        <h1 class="text-xl font-medium text-gray-900">Sources</h1>
+        <p class="text-sm text-gray-600 mt-1">
+          {{ sources.length }} sources · status uses the last 7 days · pause and resume stay on the source page
+        </p>
       </div>
-    </div>
-
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Process Success</div>
-        <div class="text-2xl font-medium text-gray-900">{{ stats?.avgProcessSuccess ?? '-' }}%</div>
-      </div>
-      <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Error Rate</div>
-        <div
-          class="text-2xl font-medium"
-          :class="{ 'text-red-600': (stats?.avgErrorRate ?? 0) > 5, 'text-gray-900': (stats?.avgErrorRate ?? 0) <= 5 }"
-        >
-          {{ stats?.avgErrorRate ?? '-' }}%
-        </div>
-      </div>
-      <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Low Quality</div>
-        <div
-          class="text-2xl font-medium"
-          :class="{
-            'text-amber-600': (stats?.avgLowQuality ?? 0) > 10,
-            'text-gray-900': (stats?.avgLowQuality ?? 0) <= 10,
-          }"
-        >
-          {{ stats?.avgLowQuality ?? '-' }}%
-        </div>
-      </div>
-      <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Articles/Day</div>
-        <div class="text-2xl font-medium text-gray-900">{{ stats?.avgArticlesPerDay ?? '-' }}</div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded border p-4 mb-4">
-      <div class="flex flex-wrap gap-6 items-center text-sm">
-        <div class="flex items-center gap-2">
-          <label class="text-gray-600">Frequency:</label>
-          <select v-model="selectedFrequency" class="border rounded px-2 py-1.5 text-sm bg-white">
-            <option value="all">All</option>
-            <option v-for="freq in FREQUENCIES" :key="freq" :value="freq">{{ freq }}</option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="text-gray-600">Category:</label>
-          <select v-model="selectedCategory" class="border rounded px-2 py-1.5 text-sm bg-white">
-            <option value="all">All</option>
-            <option v-for="cat in [...new Set(sources?.map(s => s.category))]" :key="cat" :value="cat">
-              {{ cat }}
-            </option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" v-model="showPaywallOnly" class="rounded border-gray-300" />
-            <span class="text-gray-600">Paywall only</span>
-          </label>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" v-model="showErrorsOnly" class="rounded border-gray-300" />
-            <span class="text-gray-600">Error rate above:</span>
-          </label>
-          <input
-            v-model="errorThreshold"
-            type="number"
-            min="0"
-            max="100"
-            :disabled="!showErrorsOnly"
-            class="border rounded px-2 py-1.5 w-16 text-sm disabled:opacity-50 bg-white"
-          />
-          <span class="text-gray-600">%</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" v-model="enableTimeFilter" class="rounded border-gray-300" />
-            <span class="text-gray-600">Sources checked within:</span>
-          </label>
-          <input
-            v-model="staleHours"
-            type="number"
-            min="1"
-            :disabled="!enableTimeFilter"
-            class="border rounded px-2 py-1.5 w-16 text-sm disabled:opacity-50 bg-white"
-          />
-          <span class="text-gray-600">hours</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" v-model="enableArticleFilter" class="rounded border-gray-300" />
-            <span class="text-gray-600">Articles:</span>
-          </label>
-          <select
-            v-model="articleCountFilter"
-            :disabled="!enableArticleFilter"
-            class="border rounded px-2 py-1.5 text-sm disabled:opacity-50 bg-white"
+      <div class="flex items-center gap-3">
+        <div role="group" aria-label="Filter" class="inline-flex bg-white border rounded-lg p-0.5 gap-0.5 text-sm">
+          <button
+            v-for="f in [
+              { key: 'all', label: `All ${sources.length}` },
+              { key: 'problems', label: `Problems ${problemCount}` },
+              { key: 'paused', label: `Paused ${counts?.paused ?? 0}` },
+            ] as const"
+            :key="f.key"
+            type="button"
+            :aria-pressed="filter === f.key"
+            class="px-3 py-1.5 rounded-md hover:cursor-pointer"
+            :class="filter === f.key ? 'bg-gray-900 text-white' : 'text-gray-900 hover:bg-gray-100'"
+            @click="filter = f.key"
           >
-            <option value="more">More than</option>
-            <option value="less">Less than</option>
-          </select>
-          <input
-            v-model="articleCountThreshold"
-            type="number"
-            min="0"
-            :disabled="!enableArticleFilter"
-            class="border rounded px-2 py-1.5 w-20 text-sm disabled:opacity-50 bg-white"
-          />
+            {{ f.label }}
+          </button>
         </div>
+        <!-- button to add a new source -->
+        <button @click="addSource" class="border bg-white px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100">
+          Add Source
+        </button>
       </div>
     </div>
 
-    <div class="text-sm text-gray-600 mb-4">
-      Showing {{ filteredArticles }} / {{ totalArticles }} articles from {{ filteredSources.length }} /
-      {{ sources?.length ?? 0 }} sources
-    </div>
+    <!-- count per kind -->
+    <section aria-label="Summary" class="flex flex-wrap gap-2.5 mb-6">
+      <span
+        v-for="kind in SUMMARY_ORDER"
+        :key="kind"
+        :data-kind="kind"
+        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm"
+        :class="(counts?.[kind] ?? 0) > 0 && kind !== 'ok' && kind !== 'paused' ? KINDS[kind].chip : 'bg-gray-100'"
+      >
+        <svg v-if="KINDS[kind].shape !== 'none'" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <rect v-if="KINDS[kind].shape === 'square'" x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="#d03b3b" />
+          <path v-else-if="KINDS[kind].shape === 'triangle'" d="M6 1 L11.2 10.5 H0.8 Z" fill="#fab219" stroke="#9a6b00" stroke-linejoin="round" />
+          <g v-else fill="#898781">
+            <rect x="2.5" y="2" width="2.5" height="8" rx="1" />
+            <rect x="7" y="2" width="2.5" height="8" rx="1" />
+          </g>
+        </svg>
+        <strong class="font-semibold">{{ counts?.[kind] ?? 0 }}</strong> {{ KINDS[kind].plural }}
+      </span>
+    </section>
 
-    <div class="bg-white text-gray-800 rounded border overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
+    <div class="bg-white text-gray-800 rounded border px-5 py-2 overflow-x-auto">
+      <table class="w-full min-w-[1080px] text-[13.5px]">
         <thead>
-          <tr class="bg-gray-50">
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('lastChecked')"
-            >
-              Last Checked
-              <span v-if="sortKey === 'lastChecked'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-            </th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('errorRate')"
-            >
-              Error Rate
-              <span v-if="sortKey === 'errorRate'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-            </th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('processSuccessRate')"
-            >
-              Success Rate
-              <span v-if="sortKey === 'processSuccessRate'" class="text-gray-400">{{
-                sortOrder === 'asc' ? '↑' : '↓'
-              }}</span>
-            </th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('totalArticles')"
-            >
-              Total Articles
-              <span v-if="sortKey === 'totalArticles'" class="text-gray-400">{{
-                sortOrder === 'asc' ? '↑' : '↓'
-              }}</span>
-            </th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('avgPerDay')"
-            >
-              Avg/Day
-              <span v-if="sortKey === 'avgPerDay'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-            </th>
-            <th
-              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              @click="toggleSort('lowQualityRate')"
-            >
-              Low Quality
-              <span v-if="sortKey === 'lowQualityRate'" class="text-gray-400">{{
-                sortOrder === 'asc' ? '↑' : '↓'
-              }}</span>
-            </th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">Paywall</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <tr class="text-left text-gray-600 text-xs">
+            <th class="font-medium py-2.5 pr-2.5 border-b">Status</th>
+            <th class="font-medium p-2.5 border-b">Source</th>
+            <th class="font-medium p-2.5 border-b">Last checked</th>
+            <th class="font-medium p-2.5 border-b">Last new article</th>
+            <th class="font-medium p-2.5 border-b text-right">7 days</th>
+            <th class="font-medium p-2.5 border-b text-right">48 h</th>
+            <th class="font-medium p-2.5 border-b text-right">Fetch failed</th>
+            <th class="font-medium p-2.5 border-b text-right">Junk page</th>
+            <th class="font-medium p-2.5 border-b text-right">Single-line</th>
+            <th class="font-medium p-2.5 border-b text-right">Via browser</th>
+            <th class="font-medium py-2.5 pl-2.5 border-b">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr
-            v-for="source in sortedSources"
-            :key="source.id"
-            class="hover:bg-gray-50/50 transition-colors"
-            :class="{
-              'bg-red-50 dark:bg-red-900/10': getSourceHealth(source) === 'red',
-              'bg-yellow-50 dark:bg-yellow-900/10': getSourceHealth(source) === 'yellow',
-              'bg-green-50 dark:bg-green-900/10': getSourceHealth(source) === 'green',
-            }"
-          >
-            <td class="px-4 py-2">
-              <span class="inline-block w-3 h-3 rounded-full" :class="getHealthColor(getSourceHealth(source))"></span>
+        <tbody>
+          <tr v-for="source in shown" :key="source.id" :data-kind="source.kind" :class="source.kind === 'paused' ? 'text-gray-500' : ''">
+            <td class="py-2.5 pr-2.5 border-b border-gray-100 whitespace-nowrap">
+              <span class="inline-flex items-center gap-1.5 font-medium">
+                <svg v-if="KINDS[source.kind].shape !== 'none'" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <rect v-if="KINDS[source.kind].shape === 'square'" x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="#d03b3b" />
+                  <path v-else-if="KINDS[source.kind].shape === 'triangle'" d="M6 1 L11.2 10.5 H0.8 Z" fill="#fab219" stroke="#9a6b00" stroke-linejoin="round" />
+                  <g v-else fill="#898781">
+                    <rect x="2.5" y="2" width="2.5" height="8" rx="1" />
+                    <rect x="7" y="2" width="2.5" height="8" rx="1" />
+                  </g>
+                </svg>
+                <svg v-else width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <circle cx="6" cy="6" r="5" fill="#0ca30c" />
+                </svg>
+                {{ KINDS[source.kind].label }}
+              </span>
             </td>
-            <td class="px-4 py-2">
-              <NuxtLink :to="source.url" target="_blank" class="text-gray-500 hover:underline">{{
-                source.name
-              }}</NuxtLink>
+            <td class="p-2.5 border-b border-gray-100">
+              <NuxtLink :to="source.url" target="_blank" class="font-medium text-blue-700 hover:underline">{{ source.name }}</NuxtLink>
+              <span class="text-gray-500"> · {{ source.category }}</span>
             </td>
-            <td
-              class="px-4 py-2"
-              :class="{
-                'text-gray-400': isSourceStale(source.lastChecked),
-                'text-red-600': !source.lastChecked,
-              }"
-            >
-              {{ formatDate(source.lastChecked ?? '') }}
+            <td class="p-2.5 border-b border-gray-100 whitespace-nowrap">
+              {{ beijingDateTime(source.lastChecked) }}<span class="text-gray-500"> · {{ ago(source.lastChecked) }}</span>
             </td>
-            <td class="px-4 py-2" :class="{ 'text-red-600': (source.errorRate ?? 0) > 5 }">
-              {{ source.errorRate?.toFixed(1) ?? 'N/A' }}%
-            </td>
-            <td class="px-4 py-2">{{ source.processSuccessRate?.toFixed(1) ?? 'N/A' }}%</td>
-            <td class="px-4 py-2">{{ source.totalArticles }}</td>
-            <td class="px-4 py-2">{{ source.avgPerDay ? source.avgPerDay.toFixed(1) : 'N/A' }}</td>
-            <td class="px-4 py-2" :class="{ 'text-amber-600': (source.lowQualityRate ?? 0) > 10 }">
-              {{ source.lowQualityRate?.toFixed(1) ?? 'N/A' }}%
-            </td>
-            <td class="px-4 py-2">
-              <component
-                :is="source.paywall ? LockClosedIcon : LockOpenIcon"
-                class="w-4 h-4"
-                :class="source.paywall ? 'text-amber-600' : 'text-gray-400'"
-              />
-            </td>
-            <td class="px-4 py-2">
+            <td class="p-2.5 border-b border-gray-100 whitespace-nowrap">{{ beijingDateTime(source.lastArticleAt) }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums">{{ source.articles7d }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums">{{ source.articles48h }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums" :class="{ 'font-semibold': (source.fetchFailedPct ?? 0) > (thresholds?.fetchFailingPct ?? 100) }">{{ pct(source.fetchFailedPct) }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums" :class="{ 'font-semibold': (source.junkPct ?? 0) > (thresholds?.badBodyPct ?? 100) }">{{ pct(source.junkPct) }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums" :class="{ 'font-semibold': (source.singleLinePct ?? 0) > (thresholds?.badBodyPct ?? 100) }">{{ pct(source.singleLinePct) }}</td>
+            <td class="p-2.5 border-b border-gray-100 text-right tabular-nums">{{ pct(source.viaBrowserPct) }}</td>
+            <td class="py-2.5 pl-2.5 border-b border-gray-100">
               <NuxtLink :to="`/admin/feed/${source.id}`" class="text-blue-600 hover:underline"> View Feed </NuxtLink>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- legend of rules -->
+    <section class="bg-white rounded border p-5 mt-6">
+      <h2 class="text-[15px] font-semibold mb-2.5">What counts as a problem</h2>
+      <div class="grid gap-x-7 gap-y-3 text-sm text-gray-600" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))">
+        <div><strong class="font-semibold text-gray-900">Not checked</strong> · red<br />No check for two scrape intervals (2 h for hourly sources).</div>
+        <div>
+          <strong class="font-semibold text-gray-900">Dead feed</strong> · red<br />At least {{ thresholds?.deadFeedMinArticles7d ?? 7 }} new articles in 7 days, none in the last
+          {{ thresholds?.deadFeedQuietHours ?? 48 }} h.
+        </div>
+        <div>
+          <strong class="font-semibold text-gray-900">Fetch failing</strong> · yellow<br />More than {{ thresholds?.fetchFailingPct ?? 30 }}% of new articles failed to fetch in 7 days.
+        </div>
+        <div>
+          <strong class="font-semibold text-gray-900">Bad body format</strong> · yellow<br />More than {{ thresholds?.badBodyPct ?? 20 }}% junk pages or single-line bodies in 7 days.
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-gray-500">Paused sources are grey and never count as a problem.</p>
+    </section>
   </div>
 </template>

@@ -47,3 +47,8 @@ export function looksLikeNonArticleUrl(rawUrl: string): string | null {
     return null;
   }
 }
+
+/** 正文的非空行数：运维台用它看「整篇正文糊成一行」的占比（articles.body_lines，只在 CONTENT_FETCHED 时写）。 */
+export function countBodyLines(text: string): number {
+  return text.split('\n').filter(line => line.trim().length > 0).length;
+}

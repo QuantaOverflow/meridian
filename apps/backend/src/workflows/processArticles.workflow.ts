@@ -3,7 +3,7 @@ import { DomainRateLimiter } from '../lib/api/rate-limiter';
 import { Env } from '../index';
 import { getDb } from '../lib/database';
 import { browserTriedFromError, getArticleFetchFirst } from '../lib/services/article-fetchers';
-import { looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
+import { countBodyLines, looksLikeExtractionFailure, looksLikeNonArticleUrl } from '../lib/core/extraction-quality';
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, WorkflowStepConfig } from 'cloudflare:workers';
 import { Logger } from '../lib/core/logger';
 import { createAIServices } from '../lib/services/ai-services';
@@ -259,6 +259,7 @@ export class ProcessArticles extends WorkflowEntrypoint<Env, ProcessArticlesPara
               .set({
                 status: 'CONTENT_FETCHED',
                 used_browser: result.used_browser,
+                body_lines: countBodyLines(result.html.text),
               })
               .where(eq($articles.id, result.id));
           });

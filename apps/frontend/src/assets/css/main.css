@@ -85,7 +85,9 @@ body {
   transition: background 0.2s ease;
 }
 
-a {
+/* 后台（layouts/admin.vue 的 .admin-shell）不吃这条：这条规则不在任何 layer 里，会压过 Tailwind 的颜色类，
+ * 后台的链接就全都跟着父元素的颜色走、写的 text-blue-600 之类不生效。:where 让选择器的优先级保持不变。 */
+a:where(:not(.admin-shell *)) {
   color: inherit;
   text-decoration: none;
 }

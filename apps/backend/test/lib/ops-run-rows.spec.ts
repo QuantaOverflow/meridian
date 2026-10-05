@@ -105,13 +105,14 @@ describe('运维台端点的门', () => {
     }
   });
 
-  it('带 token 能打到各自的 handler（不是 404）', async () => {
+  it('带 token 能打到各自的 handler（不是没挂上路由）', async () => {
     for (const p of paths) {
       const res = await exports.default.fetch(`http://backend/observability/ops/${p}`, {
         headers: { Authorization: `Bearer ${env.API_TOKEN}` },
       });
-      expect(res.status, p).not.toBe(404);
       expect(res.status, p).not.toBe(401);
+      // 没挂上的路由回的是 Hono 默认的纯文本 404；运行详情查不到那次运行时回的是 JSON 404，属于打到了
+      expect(res.headers.get('content-type') ?? '', p).toContain('application/json');
     }
   });
 });

@@ -223,3 +223,6 @@ eval/*/prototypes/
 
 # matt skills 的 spec / 票 / wayfinder 地图=工作流水账，结论蒸馏进 ADR（见 docs/agents/file-placement.md）
 .scratch/
+
+# scripts/deploy.sh 给 ml-service 生成的临时配置（image_vars 换成真值），跑完即删
+wrangler.deploy.jsonc

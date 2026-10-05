@@ -7,6 +7,7 @@ import opsRouter from './routers/ops.router';
 import readerRouter from './routers/reader.router';
 import { Env } from './index';
 import { hasValidAuthToken } from './lib/core/utils';
+import { backendVersion } from './lib/ops/services';
 import { Hono } from 'hono';
 import { trimTrailingSlash } from 'hono/trailing-slash';
 
@@ -61,6 +62,13 @@ const app = new Hono<HonoEnv>()
     await next();
   })
   .route('/reader', readerRouter)
+  // backend 自己跑的是哪个提交（scripts/deploy.sh 部署时注入）。挡在门后：提交标题会写到还没公开的改动，
+  // 也没有匿名的调用方；/ping 只回一个固定值所以公开。
+  .use('/version', async (c, next) => {
+    if (!(await hasValidAuthToken(c))) return c.json({ error: 'Unauthorized' }, 401);
+    await next();
+  })
+  .get('/version', async c => c.json(backendVersion(c.env)))
   .get('/ping', async c => c.json({ pong: true }));
 
 export default app;

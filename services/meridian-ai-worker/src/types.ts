@@ -74,4 +74,10 @@ export type CloudflareEnv = {
    * 缺了这个变量不会悄悄把核查关掉。
    */
   BRIEF_CHECK_EPOCHS?: string
+  /** 本次部署的版本 id 与时刻（wrangler.toml 的 [version_metadata]）。可选：单测里没有。 */
+  CF_VERSION_METADATA?: WorkerVersionMetadata
+  /** 部署的提交：短哈希、标题、工作区是否有未提交改动（"true"/"false"）。scripts/deploy.sh 用 --var 注入，不经脚本部署时没有。 */
+  GIT_COMMIT?: string
+  GIT_TITLE?: string
+  GIT_DIRTY?: string
 }

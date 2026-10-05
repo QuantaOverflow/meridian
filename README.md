@@ -124,7 +124,9 @@ curl -X POST -H "Authorization: Bearer $API_TOKEN" \
 
 ### Deployment
 
-Four deployable units, each deployed from its own directory — **never `wrangler deploy` from the repo root**. Variables for each are documented in that directory's `.dev.vars.example`; production secrets are set with `wrangler secret put`.
+Four deployable units, each deployed from its own directory — **never deploy from the repo root**. Variables for each are documented in that directory's `.dev.vars.example`; production secrets are set with `wrangler secret put`.
+
+The three Workers are deployed with `scripts/deploy.sh`, run from the service directory. It wraps `wrangler deploy` (extra arguments are passed through) and records which commit is being deployed: the short hash, the commit title and whether the working tree is dirty go in as `--var GIT_COMMIT/GIT_TITLE/GIT_DIRTY`, the hash also as the version `--tag`; for the ML Service the same three values become Docker build args (a temporary `wrangler.deploy.jsonc` with `image_vars` filled in). Each service reports them — backend `GET /version`, AI Worker `GET /meridian/version`, ML Service `GET /health` — and the backend collects all three at `GET /observability/ops/services` for the ops console. The script refuses to run from the repo root; `scripts/deploy.sh --print` shows the command without running it. A plain `wrangler deploy` still works, but that service then reports no commit.
 
 Deploy in dependency order: DB migration → AI Worker → ML Service → backend → frontend. The backend's service bindings point at `meridian-ai-worker` and `meridian-ml-service`, so backend deploy fails if those aren't live yet.
 
@@ -132,13 +134,13 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 2. **AI Worker** (`services/meridian-ai-worker`, `wrangler.toml`)
    ```bash
    cd services/meridian-ai-worker
-   wrangler deploy
+   ../../scripts/deploy.sh
    ```
    No secrets needed — every model call goes through the Workers AI binding `AI`; per-phase models live in `src/services/call-llm.ts`'s `PHASE_DEFAULTS`.
 3. **ML Service** (`services/meridian-ml-service/cf-worker`) — one deploy is two things: the Durable Object shell (`cf-worker/src/index.ts`) and the container image built from `wrangler.jsonc`'s `"image": "../Dockerfile"` (the clustering/embedding code lives in the image). Needs Docker locally and a populated `services/meridian-ml-service/model-cache/` (gitignored, ~470MB — the Dockerfile `COPY`s it directly).
    ```bash
    cd services/meridian-ml-service/cf-worker
-   wrangler deploy
+   ../../../scripts/deploy.sh
    ```
    No secrets and no public URL: `workers_dev` and `preview_urls` are off, the only way in is the backend's `ML_SERVICE` service binding.
    **A successful shell deploy does not mean the image was updated** (the clustering algorithm once shipped three and a half months late because of this, 2026-06→09). After deploying, run:
@@ -150,13 +152,13 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    ```bash
    cd apps/backend
    wrangler secret put API_TOKEN                     # Bearer token for /admin/* and /observability/*
-   wrangler deploy
+   ../../scripts/deploy.sh
    ```
    Bindings — see "Configuration" below. Adding a source via `POST /admin/sources` (or the admin UI) starts its DO; `POST /do/admin/initialize-dos` is only a backfill for rows inserted straight into the DB.
 5. **Frontend** (Cloudflare Pages) — Pages config is in the repo-root `wrangler.toml` (`pages_build_output_dir = "apps/frontend/dist"`, production vars under `[env.production.vars]`). Pages project `meridian-reader`. Secrets via `wrangler pages secret put` — runtime only reads `NUXT_`-prefixed names: `NUXT_SESSION_PASSWORD`, `NUXT_WORKER_API_TOKEN`, `NUXT_ADMIN_USERNAME`, `NUXT_ADMIN_PASSWORD`. Build: `pnpm -F @meridian/frontend build`. The frontend has no database access — all data comes from the backend (`/reader/*`, `/admin/*`), so deploy the backend first.
 
 **Judging whether a deploy worked**
-- `wrangler deploy` uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.
+- `scripts/deploy.sh` (`wrangler deploy` underneath) uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.
 - Upload succeeds but activation hangs: usually an OAuth token missing write scope; `wrangler whoami` will warn — `wrangler login` again.
 - ML Service also needs to pass `scripts/check-container-deploy.sh`.
 - "Deployed" isn't "ran": new brief-generation code only proves itself on the next cron run (or a manual `POST /admin/briefs/generate`).

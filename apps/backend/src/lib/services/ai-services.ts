@@ -23,6 +23,7 @@ import type {
   ClusterJudgeRequest,
   ClusterJudgeResult,
   JudgeArticle,
+  OpsServiceVersion,
   RankCandidate,
   StoryRankRequest,
   StoryRankResult,
@@ -74,6 +75,17 @@ class AIWorkerService {
         (response as any).dispose();
       }
     }
+  }
+
+  /**
+   * ai-worker 自己跑的是哪个版本（运维台用）。够不着时 binding 的 fetch 抛错，由调用方接。
+   */
+  async version(timeoutMs: number): Promise<ServiceResult<OpsServiceVersion>> {
+    const request = new Request(`${this.baseUrl}/meridian/version`, {
+      headers: this.buildHeaders(),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return this.callJson<OpsServiceVersion>(request);
   }
 
   /**

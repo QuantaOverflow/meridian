@@ -8,7 +8,7 @@ import type { Db } from '../reader/db';
  */
 
 /** 生产运行 = 定时触发的那次（workflow id 由 cron 入口生成）；手动运行不算进流水线健康 */
-const PRODUCTION_RUN_ID_PREFIX = 'cron-brief-';
+export const PRODUCTION_RUN_ID_PREFIX = 'cron-brief-';
 
 /**
  * 判「慢 / 贵」只跟这一天之后的运行比。2026-10-05 写作–核查循环上线，一期从约 17 分钟、两三千 neurons

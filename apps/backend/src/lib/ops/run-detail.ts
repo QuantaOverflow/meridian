@@ -10,10 +10,9 @@ import {
 import type { Env } from '../../index';
 import { getDb } from '../database';
 import { Logger } from '../core/logger';
-import { loadProductionRuns, toRunRow, type BriefRunRecord } from './run-rows';
+import { PRODUCTION_RUN_ID_PREFIX, loadProductionRuns, toRunRow, type BriefRunRecord } from './run-rows';
 
 const logger = new Logger({ module: 'ops-run-detail' });
-const PRODUCTION_RUN_ID_PREFIX = 'cron-brief-';
 /** 手动运行没有基线：慢 / 贵都不判 */
 const NO_BASELINE = { runs: 0, medianDurationMs: null, medianNeurons: null };
 

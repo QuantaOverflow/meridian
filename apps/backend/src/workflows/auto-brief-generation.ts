@@ -23,6 +23,7 @@ import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
 import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 import { Logger } from '../lib/core/logger';
+import { recordRunOpsSummary } from '../lib/ops/run-summary';
 import {
   articleJourneyKey,
   briefV3RecordKey,
@@ -119,6 +120,12 @@ const defaultStepConfig: WorkflowStepConfig = {
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
   timeout: '30 seconds',
+};
+
+// run 汇总：一期上千条调用记录、每批 50 条地读，正常几十秒；它自己不抛错，重试只为平台抖动留一次
+const opsSummaryStepConfig: WorkflowStepConfig = {
+  retries: { limit: 1, delay: '5 seconds', backoff: 'constant' },
+  timeout: '5 minutes',
 };
 
 // 簇判定：每簇 1 次调用。全量一期约 70 个簇（不降维凝聚 + 最小 3 篇成簇），并发 6 下
@@ -321,6 +328,21 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         })
         .onConflictDoNothing({ target: $brief_runs.workflow_id });
     });
+
+    // 运维台：run 结束（完成 / 无故事终止 / 失败）后把这次 run 的调用数、neurons、步骤耗时、块与核查计数
+    // 汇总进 brief_runs.ops_summary（lib/ops/run-summary.ts）。一步读完 R2 里这次 run 的全部调用记录：
+    // 每条 1 次 get，外加每 1000 条 1 次 list、1 次读观测、1 次写库。
+    // 纯观测：recordRunOpsSummary 自己吞错只打 warn；外层再包一层，是因为 step.do 本身也会抛
+    // （超时、平台 canceled），不能让它把已经写好状态的 run 带进下面的 catch 改记成 FAILED。
+    const writeOpsSummary = async (degradedReasons: string[]) => {
+      try {
+        await step.do('persist:ops_summary', opsSummaryStepConfig, () =>
+          recordRunOpsSummary(this.env, workflowId, degradedReasons)
+        );
+      } catch (summaryErr) {
+        log.warn('[AutoBrief] run 汇总这一步没跑成（ops_summary 留空，run 状态不变）:', undefined, summaryErr);
+      }
+    };
 
     try {
       log.info(`[AutoBriefGeneration] 开始简报生成工作流, 参数:`, { detail: event.payload });
@@ -1040,6 +1062,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             })
             .where(eq($brief_runs.workflow_id, workflowId));
         });
+        await writeOpsSummary([]);
 
         // 一块都没出的这一期最该有去向表：此时每篇都停在 clustered / judged 两关之一。
         await persistArticleJourney(ledger);
@@ -1653,6 +1676,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
           })
           .where(eq($brief_runs.workflow_id, workflowId));
       });
+      await writeOpsSummary(degradedReasons);
 
       // =====================================================================
       // 完成工作流
@@ -1700,6 +1724,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       } catch (persistErr) {
         log.error('[AutoBrief] 标记 brief_runs FAILED 失败:', undefined, persistErr);
       }
+      await writeOpsSummary([]);
 
       throw error;
     }

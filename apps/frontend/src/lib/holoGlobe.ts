@@ -39,6 +39,7 @@ function readColors(el: Element) {
     mk: v('mk'),
     probe: v('probe'),
     lock: v('lock'),
+    link: v('link'),
     heat: v('heat'),
     font: v('mono'),
   };
@@ -223,10 +224,14 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       if (!a || !b) continue;
       stroke({ type: 'LineString', coordinates: [[a.lon, a.lat], [b.lon, b.lat]] });
       const spread = l.kind === 'spread';
-      ctx.strokeStyle = l.focus ? COLORS.lock : spread ? COLORS.probe : COLORS.mk;
-      // 第二国家的连线原先 0.3 透明度的细虚线，开了开关也几乎看不见
-      ctx.globalAlpha = l.focus ? 0.9 : spread ? 0.55 : 0.7;
-      ctx.lineWidth = l.focus ? 1.8 : spread ? 1.3 : 1.5;
+      // 先垫一道深色底，线压在青色海岸线和国家底色上也分得出来
+      ctx.strokeStyle = 'rgba(4,9,14,0.75)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      // 原先用青色（和海岸线同色，看不清）；锁定时的琥珀色不变
+      ctx.strokeStyle = l.focus ? COLORS.lock : COLORS.link;
+      ctx.globalAlpha = l.focus ? 0.95 : spread ? 0.75 : 0.9;
+      ctx.lineWidth = l.focus ? 1.8 : 1.5;
       ctx.setLineDash(l.focus ? [] : spread ? [6, 4] : [5, 3]);
       ctx.shadowColor = ctx.strokeStyle;
       ctx.shadowBlur = l.focus ? 8 : 4;
@@ -253,7 +258,7 @@ export function createHoloGlobe({ stage, canvas, countries, world, onHover, onLo
       const isHover = state.hover === m.key;
       const faded = m.fade && !isLock && !isHover;
       ctx.globalAlpha = faded ? 0.18 : 1;
-      const col = isLock ? COLORS.lock : isHover ? COLORS.probe : COLORS.mk;
+      const col = isLock ? COLORS.lock : isHover ? COLORS.probe : m.hollow ? COLORS.link : COLORS.mk;
 
       if (m.pulse && !faded) {
         const phase = reduceMotion ? 0.5 : (time % 2200) / 2200;

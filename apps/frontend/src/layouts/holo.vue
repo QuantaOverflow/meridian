@@ -22,7 +22,7 @@ useHead({
 </template>
 
 <style>
-/* 颜色只表示状态——青 = 基础，绿 = 探测中，琥珀 = 已锁定。html 上的属性选择器比 main.css 的 [data-theme] 更具体。
+/* 颜色只表示状态——青 = 基础，绿 = 探测中，琥珀 = 已锁定；品红只给跨国连线（和青色海岸线撞色时看不清）。html 上的属性选择器比 main.css 的 [data-theme] 更具体。
  * 地球的 canvas 也从这里取色（lib/holoGlobe.ts 的 readColors），全息配色只改这一处 */
 html[data-skin='holo'] {
   color-scheme: dark;
@@ -39,6 +39,7 @@ html[data-skin='holo'] {
   --mk: #5fd4ff;
   --probe: #7dffb0;
   --lock: #ffb347;
+  --link: #ff6ad5;
   --heat: #5fd4ff;
   --land: rgba(70, 190, 230, 0.1);
   --land-hi: rgba(255, 179, 71, 0.22);

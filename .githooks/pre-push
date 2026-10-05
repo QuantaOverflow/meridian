@@ -49,3 +49,6 @@ fi
 if touched services/meridian-ml-service/; then
   check "ml-service 测试" sh -c 'cd services/meridian-ml-service && .venv/bin/python -m pytest -q -x test/'
 fi
+
+# 只提醒、不拦：线上哪个服务跑的提交比要推的旧。问不到线上就不出声
+node scripts/check-deployed-lag.mjs || true

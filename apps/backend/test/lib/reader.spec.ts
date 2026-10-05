@@ -47,7 +47,6 @@ const CASES: Record<string, string> = {
   'story-4-dormant': '/reader/stories/4',
   'story-5-below-threshold': '/reader/stories/5',
   'story-6-representative-title': '/reader/stories/6',
-  'admin-sources': '/admin/sources',
   'admin-source-1-details': '/admin/sources/1/details',
   'admin-source-1-page-2': '/admin/sources/1/details?page=2',
   'admin-source-1-processed-asc': '/admin/sources/1/details?status=PROCESSED&sortBy=processedAt&sortOrder=asc',
@@ -97,7 +96,7 @@ describe('边界', () => {
   });
 
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });

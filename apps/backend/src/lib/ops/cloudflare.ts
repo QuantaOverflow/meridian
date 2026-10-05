@@ -17,7 +17,7 @@ import type { Env } from '../../index';
 
 export type CloudflareEnv = Pick<Env, 'CF_ANALYTICS_TOKEN' | 'CF_ACCOUNT_ID' | 'CF_API_BASE_URL'>;
 
-export class CloudflareAnalyticsError extends Error {}
+class CloudflareAnalyticsError extends Error {}
 
 /** 把读 Cloudflare 时的失败变成面板上显示的原因 */
 export function unavailableReason(error: unknown): string {
@@ -150,7 +150,7 @@ export async function neuronsByBeijingDayAndModel(env: CloudflareEnv, since: Dat
 // ── Worker 报错 ────────────────────────────────────────────────────────
 
 /** 三个服务在 Cloudflare 上的脚本名 */
-export const WORKER_SCRIPT_NAMES: Record<OpsServiceName, string> = {
+const WORKER_SCRIPT_NAMES: Record<OpsServiceName, string> = {
   backend: 'meridian-backend',
   'ai-worker': 'meridian-ai-worker',
   'ml-service': 'meridian-ml-service',

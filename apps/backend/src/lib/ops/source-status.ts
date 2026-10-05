@@ -8,14 +8,14 @@ import type { Db } from '../reader/db';
  */
 
 /** 近多少天算「新文章」的窗口 */
-export const SOURCE_WINDOW_DAYS = 7;
+const SOURCE_WINDOW_DAYS = 7;
 /** not_checked：超过「两个抓取间隔」没查过。键是 sources.scrape_frequency（1–4），值是小时数 */
-export const NOT_CHECKED_AFTER_HOURS: Record<number, number> = { 1: 2, 2: 8, 3: 12, 4: 48 };
+const NOT_CHECKED_AFTER_HOURS: Record<number, number> = { 1: 2, 2: 8, 3: 12, 4: 48 };
 /** dead_feed：7 天内至少这么多篇，最近 DEAD_FEED_QUIET_HOURS 小时却一篇没有 */
-export const DEAD_FEED_MIN_ARTICLES_7D = 7;
-export const DEAD_FEED_QUIET_HOURS = 48;
+const DEAD_FEED_MIN_ARTICLES_7D = 7;
+const DEAD_FEED_QUIET_HOURS = 48;
 /** fetch_failing：新文章里抓取失败的占比超过它（严格大于） */
-export const FETCH_FAILING_PCT = 30;
+const FETCH_FAILING_PCT = 30;
 /** bad_body：垃圾页占比或「黏成一行」占比超过它（严格大于，各自判） */
 export const BAD_BODY_PCT = 20;
 /** fail_reason 以它开头 = 垃圾页，不算抓取失败 */

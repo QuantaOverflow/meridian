@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { createSource, updateSource } from '../lib/sources';
-import { getSourceDetails, getSourcesOverview } from '../lib/reader/source-stats';
+import { getSourceDetails } from '../lib/reader/source-stats';
 import { getDb } from '../lib/database';
 import { startProcessArticleWorkflow } from '../workflows/processArticles.workflow';
 import { 
@@ -44,10 +44,7 @@ const briefGenerateSchema = z.object({
 const processArticlesSchema = z.object({ article_ids: z.array(z.number().int()).min(1) });
 
 // ========== RSS源管理 ==========
-// 后台源页面的读数（总览、单个源的文章列表）在 lib/reader/source-stats.ts，前端只转发
-app.get('/sources', async (c) => {
-  return c.json(await getSourcesOverview(getDb(c.env.HYPERDRIVE)));
-});
+// 单个源的文章列表在 lib/reader/source-stats.ts，前端只转发。全部源的总览在运维台：GET /observability/ops/sources（lib/ops/source-status.ts）
 
 app.get('/sources/:id/details', zValidator('param', idParamSchema), async (c) => {
   const details = await getSourceDetails(getDb(c.env.HYPERDRIVE), c.req.valid('param').id, c.req.query());

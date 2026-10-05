@@ -1,7 +1,7 @@
 {"status":401,"cache-control":"no-cache"}
 {
   "error": true,
-  "url": "{server}/api/admin/sources",
+  "url": "{server}/api/admin/sources/1/details",
   "statusCode": 401,
   "statusMessage": "Server Error",
   "message": "Unauthorized"

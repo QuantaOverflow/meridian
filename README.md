@@ -179,7 +179,7 @@ POST /do/admin/initialize-dos       # backfill: initialize scraper DOs for sourc
 POST /do/admin/source/:id/pause     # stop auto-scraping a source (source and articles kept; skipped by initialize-dos)
 POST /do/admin/source/:id/resume    # clear the pause and re-initialize its DO
 GET  /observability/runs/:workflowId   # one run: status, stories, step metrics
-GET  /observability/health/summary     # recent runs and 24h article stats
+GET  /observability/ops/health         # ops console: today's run, ingest, services, sources, spend (the admin UI reads this)
 ```
 
 ### AI Worker
@@ -239,15 +239,21 @@ Runbook for figuring out what went wrong with a given brief run. Recording code:
 | `GET /observability/runs/:workflowId/clustering` | R2 `observability/clustering/<workflowId>.json` |
 | `GET /observability/runs/:workflowId/llm-calls` | list of that run's LLM calls (key, size, brief metadata — no bodies) |
 | `GET /observability/llm-calls/*` | full JSON of one call, by key |
-| `GET /observability/trends?days=14` | daily run outcomes and story metrics (1–90 days) |
-| `GET /observability/health/summary` | recent runs, last brief, 24h article stats |
+| `GET /observability/ops/health` | ops console Health: today's production run and its level, 24 h ingest, service versions, source problems, cycle spend, last 14 production runs |
+| `GET /observability/ops/trends?days=30` | production runs, ingest per Beijing day, Worker errors, check outcomes (7–90 days) |
+| `GET /observability/ops/cost?cycle=current\|previous` | Workers AI spend for a Cloudflare billing cycle, production share, usage by model and day |
+| `GET /observability/ops/sources` | every source with its problem kind (not checked, dead feed, fetch failing, bad body, paused) and 7-day numbers |
+| `GET /observability/ops/runs/:workflowId` | one run for the console: level, run summary (`brief_runs.ops_summary`), blocks with check outcomes |
+| `GET /observability/ops/services` | deployed commit, title, deploy time and health of backend, ai-worker, ml-service |
+
+The `ops/*` endpoints back the ops console in the admin UI (`/admin`: Health, Trends, Cost, Sources, run detail; read-only, production runs only). Cloudflare-derived panels need the backend secret `CF_ANALYTICS_TOKEN` (Account Analytics: Read); without it they show "not available" and the rest still works.
 
 R2 objects with no endpoint (article-journey, brief-v3) need `wrangler r2 object get meridian-articles-prod/<key> --remote`.
 
 **Common troubleshooting paths**
 
-1. **A brief didn't come out / errored**: `/health/summary` to find the run → `/runs/:wf` for `run.status` and any `detailedMetrics` step with `status === 'failed'` and its `error`; cross-check `wrangler workflows instances describe` for platform-level state
-2. **Status is `DEGRADED`**: three triggers (`degradedReasons`, Workers logs only, not in the DB): ≥1 failed block; a cluster NO_EVENT rate above 15% (normally 2–3%); or the ML Service image identity check failing (`missing` = an old image without `build_identity` — also recorded as `buildIdentityCheck` in `observability/clustering/<wf>.json`). Check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image too
+1. **A brief didn't come out / errored**: the console's Health page (or `/ops/health`) to find the run → `/runs/:wf` for `run.status` and any `detailedMetrics` step with `status === 'failed'` and its `error`; cross-check `wrangler workflows instances describe` for platform-level state
+2. **Status is `DEGRADED`**: three triggers (`degradedReasons`: in `brief_runs.ops_summary` and on the console's run page for runs since 2026-10; Workers logs only for older runs): ≥1 failed block; a cluster NO_EVENT rate above 15% (normally 2–3%); or the ML Service image identity check failing (`missing` = an old image without `build_identity` — also recorded as `buildIdentityCheck` in `observability/clustering/<wf>.json`). Check `detailedMetrics.brief_blocks` / `story_validation`. A high NO_EVENT rate usually means a stale ML Service image too
 3. **Why didn't a big story make the brief**: look up the article in article-journey to see which gate stopped it; a selected-but-missing block shows up as `ok:false` in the brief-v3 record
 4. **A block reads wrong**: find its `brief_block_v6` call under `/runs/:wf/llm-calls` and pull the raw input/output
 5. **Why this ranking**: `detailedMetrics.story_rank` (rounds succeeded, `intersectionSize`, failure reason) and `story_validation` (judge counts: `judgeFailures` / `pocketFlagged` / `unsureClusters`, normally ~0)

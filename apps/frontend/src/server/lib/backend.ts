@@ -1,5 +1,5 @@
 /**
- * 前端不连数据库：读者页与后台的读数都从 backend 取（`/reader/*`、`GET /admin/sources*`，查询在 backend 的
+ * 前端不连数据库：读者页与后台的读数都从 backend 取（`/reader/*`、`GET /admin/sources/:id/details`、运维台的 `/observability/ops/*`，查询在 backend 的
  * `src/lib/reader/`），带 `NUXT_WORKER_API_TOKEN`。写操作的转发见 sourceActions.ts。
  *
  * 这里的类型是 backend 响应的 JSON 形状（日期是 ISO 字符串），以 backend 的 lib/reader 为准。
@@ -105,35 +105,6 @@ export interface BackendStoryThreadDetail extends BackendStoryThreadSummary {
 }
 
 // ── /admin/sources* （前端原样返回，页面按这些类型推断）─────────
-
-export interface AdminSourceStats {
-  id: number;
-  name: string;
-  url: string;
-  category: string;
-  paywall: boolean;
-  frequency: string;
-  lastChecked?: string;
-  totalArticles: number;
-  avgPerDay: number;
-  processSuccessRate: number | null;
-  errorRate: number | null;
-  lowQualityRate: number | null;
-}
-
-export interface AdminSourcesResponse {
-  overview: {
-    lastSourceCheck: string | null;
-    lastArticleProcessed: string | null;
-    lastArticleFetched: string | null;
-    articlesProcessedToday: number;
-    articlesFetchedToday: number;
-    errorsToday: number;
-    staleSourcesCount: number;
-    totalSourcesCount: number;
-  } | null;
-  sources: AdminSourceStats[];
-}
 
 export interface AdminSourceDetails {
   name: string;

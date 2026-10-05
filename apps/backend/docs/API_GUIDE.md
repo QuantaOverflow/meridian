@@ -6,7 +6,7 @@
 - 本地：`http://localhost:8787`；生产：`https://meridian-backend.swj299792458.workers.dev`
 - 鉴权：`Authorization: Bearer <API_TOKEN>`（`src/lib/core/utils.ts` 的 `hasValidAuthToken`；`API_TOKEN` 未配置时一律拒绝）
 - 调用方：「前端」= frontend 的 server 在调；「运维」= 人手 curl 或排错时调。pre-push 的 `scripts/check-routes.mjs` 按这一列对账——「前端」行必须在前端代码里找到调用，「运维」行本身就算调用方；新增、删除路由时同步改这张表
-- `/admin/*` 的写操作响应形如 `{ success, data?, message?, error?, timestamp }`（`src/lib/api/utils.ts`）；`/reader/*` 与 `GET /admin/sources*` 直接回数据、404 回 `{ error }`；其余路由各自返回
+- `/admin/*` 的写操作响应形如 `{ success, data?, message?, error?, timestamp }`（`src/lib/api/utils.ts`）；`/reader/*`、`GET /admin/sources/:id/details` 与运维台的 `/observability/ops/*` 直接回数据、404 回 `{ error }`；其余路由各自返回
 
 ## 路由表
 
@@ -21,7 +21,6 @@
 | `GET /reader/briefs/latest`、`GET /reader/briefs/:id` | token | 前端 | 一期简报：正文 markdown 原文 + 简报级来源清单；不存在回 404 |
 | `GET /reader/briefs/:id/map` | token | 前端 | 地图首页数据（形状见 `@meridian/contracts` 的 `BriefMap`）：正文块按 brief-v3 记录的 clusterId 对回故事，带国家占比、主题、过门槛的线索，以及当期窗口按国家的文章统计；只有 `:id` 形式，可见性同单期页，不存在回 404 |
 | `GET /reader/stories`、`GET /reader/stories/:id` | token | 前端 | 跨期线索列表 / 单条（含各期条目）；状态与「升级中」在这里判定，不到门槛的簇回 404 |
-| `GET /admin/sources` | token | 前端 | 后台源总览：每个源近 7 天的文章数与健康度、全局的今日计数与过期源数 |
 | `GET /admin/sources/:id/details?page&status&completeness&quality&sortBy&sortOrder` | token | 前端 | 单个源的文章列表，每页 50；不认识的筛选值等于不筛选；源不存在回 404 |
 | `POST /admin/sources` | token | 前端 | 新建 RSS 源：`{url, name?, category?, scrape_frequency?}`（默认 `Unknown` / `news` / 2）；URL 重复回 409。插入后立即启动该源的 DO，启动失败则撤销插入、回 500 |
 | `PUT /admin/sources/:id` | token | 运维 | 部分更新同上字段；改 url 会停掉旧 url 的 DO、按新 url 启动，改档位会重新初始化 DO（暂停中的源只改表） |
@@ -37,8 +36,11 @@
 | `GET /observability/runs/:workflowId/clustering` | token | 运维 | R2 `observability/clustering/<wf>.json` 聚类快照 |
 | `GET /observability/runs/:workflowId/llm-calls` | token | 运维 | 列出 R2 `llm-calls/<wf>/` 下的 LLM 调用记录 |
 | `GET /observability/llm-calls/<key>` | token | 运维 | 读取单条 LLM 调用记录，`<key>` 必须以 `llm-calls/` 开头 |
-| `GET /observability/trends?days=14` | token | 运维 | 按天的运行 / 故事趋势，`days` 1–90 |
-| `GET /observability/health/summary` | token | 运维 | 当日运行状态、文章数、最后一次成功简报 |
+| `GET /observability/ops/health` | token | 前端 | 运维台 Health：今天的生产运行与灯、近 24 小时入库、各服务版本、来源异常、本周期花费、最近 14 次生产运行（`OpsHealth`） |
+| `GET /observability/ops/trends?days=30` | token | 前端 | 运维台 Trends：生产运行、按北京日的入库与 Worker 报错、核查结果，`days` 7–90（`OpsTrends`） |
+| `GET /observability/ops/cost?cycle=current\|previous` | token | 前端 | 运维台 Cost：一个 Cloudflare 计费周期的模型花费、生产占比、按模型与按北京日的用量（`OpsCost`） |
+| `GET /observability/ops/sources` | token | 前端 | 运维台 Sources：每个源的来源异常判定与近 7 天读数（`OpsSources`） |
+| `GET /observability/ops/runs/:workflowId` | token | 前端 | 运维台运行详情：灯、run 汇总、各块的核查结果（`OpsRunDetail`）；查不到回 404 |
 | `GET /observability/ops/services` | token | 运维 | backend、ai-worker、ml-service 三个服务各自的版本（`OpsServiceVersion[]`，顺序固定）。后两个经 service binding 现读；够不着的是 `health: "unknown"`、各项 null，不报错。会唤醒睡着的 ml 容器 |
 
 `/admin/*`、`/reader/*`、`/observability/*`、`/do/*`、`/events` 的鉴权都挂在 `app.ts` 的挂载处（2026-09-24 起；此前

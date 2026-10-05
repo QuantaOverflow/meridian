@@ -19,7 +19,8 @@ Meridian 的读者端与源管理后台。Nuxt 3（`srcDir: src`）+ Tailwind CS
 - 读者端 API（`server/api/briefs/*`、`server/api/stories/*`）从 backend 的 `/reader/*` 取数（`server/lib/backend.ts`），
   这里只做展示：正文 markdown 解析成板块 / 条目（`server/lib/briefContent.ts`）、中文日期、「N 天前更新」文案。
   查询、线索状态与升级判定在 backend 的 `src/lib/reader/`。
-- 后台 API（`server/api/admin/*`）需要登录会话；源总览与详情转发 backend 的 `GET /admin/sources*`，
+- 后台 API（`server/api/admin/*`）需要登录会话，统一在 `server/middleware/admin-auth.ts` 拦；运维台（`/admin` 的 Health / Trends / Cost / Sources / 运行详情）
+  的读数转发 backend 的 `/observability/ops/*`（`server/api/admin/ops/*`），单个源的文章列表转发 `GET /admin/sources/:id/details`，
   建源、暂停 / 恢复、删源、初始化 DO 转发到 backend 的 `/admin/sources`、`/do/admin/source/:id/*`（`server/lib/sourceActions.ts`）。
 - backend 回 404 时前端回 404，其余失败回 502。
 

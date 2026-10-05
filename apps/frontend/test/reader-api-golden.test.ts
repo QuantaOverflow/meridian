@@ -98,7 +98,6 @@ const READER_CASES: Record<string, string> = {
   'story-invalid-id': '/api/stories/0',
 };
 const ADMIN_CASES: Record<string, string> = {
-  'admin-sources': '/api/admin/sources',
   'admin-source-1-details': '/api/admin/sources/1/details',
   'admin-source-1-page-2': '/api/admin/sources/1/details?page=2',
   'admin-source-1-processed-asc': '/api/admin/sources/1/details?status=PROCESSED&sortBy=processedAt&sortOrder=asc',
@@ -133,7 +132,8 @@ describe('后台源读接口快照', () => {
     it(name, async () => snapshot(name, path, await loginCookie()));
   }
 
-  it('admin-sources-no-session', () => snapshot('admin-sources-no-session', '/api/admin/sources'));
+  // 没登录：单个源的详情接口回 401（全部后台接口的登录门见 admin-api-auth.test.ts）
+  it('admin-source-no-session', () => snapshot('admin-source-no-session', '/api/admin/sources/1/details'));
 });
 
 // ── 地图首页：服务端渲染出来的顶部与右侧面板 ──────────────────────────

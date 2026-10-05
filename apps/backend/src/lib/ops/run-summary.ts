@@ -12,7 +12,10 @@ import { getDb } from '../database';
  * 只是读 R2 的方式不同（binding / Cloudflare REST API）。
  */
 
-/** 汇总要读的两类 R2 记录从哪来。读失败一律抛错：缺一部分的汇总不写（列留空 = 页面显示「not recorded」） */
+/**
+ * 汇总要读的两类 R2 记录从哪来。读失败一律抛错：缺一部分的汇总不写（列留空 = 页面显示「not recorded」）
+ * @internal 导出只给 scripts/backfill-ops-summary.ts（回填脚本经 REST API 读 R2）；生产在本文件内用
+ */
 export interface RunRecordSource {
   /** 列一页 key（R2 一次最多回 1000 个）；还有下一页时带 `cursor` */
   list(prefix: string, cursor?: string): Promise<{ keys: string[]; cursor?: string }>;
@@ -136,6 +139,7 @@ function blocksFrom(metrics: ObservedMetric[]): Pick<RunOpsSummary, 'blocks' | '
 /**
  * 从一次 run 落在 R2 的记录拼出汇总。没有观测对象（很早就失败的 run）时步骤为空、块与核查为 null，照样返回；
  * R2 读失败、记录不是合法 JSON 则抛错。
+ * @internal 导出只给 scripts/backfill-ops-summary.ts（回填脚本）；生产在本文件内用
  */
 export async function buildRunOpsSummary(
   source: RunRecordSource,
@@ -149,7 +153,7 @@ export async function buildRunOpsSummary(
   return { v: 1, llm, steps: stepsFrom(metrics), ...blocksFrom(metrics), degradedReasons };
 }
 
-export function r2BucketSource(bucket: R2Bucket): RunRecordSource {
+function r2BucketSource(bucket: R2Bucket): RunRecordSource {
   return {
     async list(prefix, cursor) {
       const page = await bucket.list({ prefix, cursor });

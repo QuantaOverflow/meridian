@@ -104,6 +104,9 @@ export function checkQuality(
   return { isValid: true };
 }
 
+/** 首行不超过这么长才当页眉（时间戳、署名、栏目名）去掉，见 bodyFingerprint */
+const HEADER_LINE_MAX_CHARS = 60;
+
 /**
  * 同源模板页指纹：正文折叠空白、小写后取 sha1。**多行正文先去掉第一行**
  * （常是 "Updated: 19/09/2026 - 7:00 GMT+2" 这类每篇都不同的时间戳）。
@@ -121,10 +124,17 @@ export function checkQuality(
  * 无条件去首行 + 不挡空串 = 丢 407 篇。改成按行数分支后这 414 篇照常参与比对，
  * 当天读数：命中 2 组、丢 3 篇（Euronews bulletin ×3、The Independent 同一篇被抓两次
  * ×2），误杀方向为零。仍保留空串返回 null 的兜底——正文为空本就不该进去重。
+ *
+ * **首行超过 HEADER_LINE_MAX_CHARS 就不去**：2026-10 起抓取保留段落换行（parsers.ts），
+ * 几乎每篇都是多行，首行常是导语。去掉导语只剩模板尾巴（订阅推广、相关视频列表）时，
+ * 同一家的不同短讯会互判重复。10-04 当天 353 篇新格式正文实测：时间戳、署名、栏目名这类
+ * 页眉行都在 60 字符内（Euronews 的 "Updated: 04/10/2026 - 18:00 GMT+2" 33 字符），
+ * 首行长度中位数 118。判出的重复组：Euronews bulletin ×3、France24 同文两个链接，与旧格式旧规则相同；
+ * 旧格式下还判重的一组不再判重——CBS 两个视频页（描述不同、相关视频列表相同），两篇都留。
  */
 export async function bodyFingerprint(content: string): Promise<string | null> {
   const lines = content.split('\n');
-  const body = lines.length > 1 ? lines.slice(1).join('\n') : content;
+  const body = lines.length > 1 && lines[0].length <= HEADER_LINE_MAX_CHARS ? lines.slice(1).join('\n') : content;
   const normalized = body.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!normalized) return null;
   const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(normalized));

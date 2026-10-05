@@ -57,6 +57,14 @@ describe('bodyFingerprint', () => {
     expect(await bodyFingerprint('')).toBeNull();
     expect(await bodyFingerprint('timestamp\n   \n')).toBeNull();
   });
+  // 抓取保留段落换行后几乎每篇都是多行，首行常是导语。去掉导语只剩同一段订阅推广，
+  // 同一家的两条短讯就会互判重复、丢掉一篇真新闻
+  it('多行但首行是长段落（导语）：不去首行，导语不同、尾巴相同的两篇不判重', async () => {
+    const promo = '\nSign up for our daily newsletter\nGet the morning briefing delivered to your inbox';
+    const a = await bodyFingerprint('Police detained about 40 people, mostly young, as the rally in the capital was ending on Sunday night.' + promo);
+    const b = await bodyFingerprint('The central bank held interest rates steady on Thursday and signalled that cuts could come early next year.' + promo);
+    expect(a).not.toBe(b);
+  });
 });
 
 describe('dropSameSourceDuplicates', () => {

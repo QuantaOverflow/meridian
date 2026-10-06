@@ -185,7 +185,17 @@ export interface OpsCost {
     | { neurons: number; runs: number; runNeurons: number; analysisNeurons: number; share: number }
     | OpsUnavailable;
   /** 按 UTC 日（与账单一致） */
-  daily: Array<{ day: string; byModel: Record<string, number> }> | OpsUnavailable;
+  daily:
+    | Array<{
+        day: string;
+        byModel: Record<string, number>;
+        /**
+         * 那天 DashScope 的花费（美元），从生产运行的汇总加出来；没有的日子不带这一项。
+         * 不在 `byModel` 里，也不在 Cloudflare 的合计里。
+         */
+        dashscopeUsd?: number;
+      }>
+    | OpsUnavailable;
   byModel: Array<{ modelId: string; neurons: number; share: number; usdAtList: number }> | OpsUnavailable;
   lastRunByStep: {
     workflowId: string;

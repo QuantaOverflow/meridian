@@ -63,16 +63,14 @@ const PIPELINE_MODELS = [
   { id: '@cf/qwen/qwen3-30b-a3b-fp8', name: 'qwen3-30b', role: 'article analysis at ingest', color: '#eda100' },
 ];
 const OTHER_SERIES = { id: 'other', name: 'Other models', role: 'not in the pipeline: trials and local development', color: '#e87ba4' };
+const SERIES = [...PIPELINE_MODELS, OTHER_SERIES];
+const seriesOf = (modelId: string) => PIPELINE_MODELS.find(m => m.id === modelId) ?? OTHER_SERIES;
 /**
- * 每日用量里 backend 单列的一项（键与 apps/backend/src/lib/ops/cost.ts 的 DASHSCOPE_DAILY_KEY 一致）：
- * 逐句核查走 DashScope 的花费，由阿里云出账。Cloudflare 的账户用量里没有它，数来自生产运行的汇总，
- * 按牌价折成 neurons 传过来；页面上按美元显示，不加进 Workers AI 的合计
+ * 每日用量里的 `dashscopeUsd`：逐句核查走 DashScope 的花费，由阿里云出账，不是 Workers AI 的模型。
+ * 图上按牌价折成 neurons 画在柱顶（同一把尺），读数按美元，不加进 Workers AI 的合计
  */
 const DASHSCOPE_SERIES = { id: 'dashscope', name: 'DashScope', role: 'sentence check, billed by Alibaba Cloud', color: '#7a5bd6' };
-const SERIES = [...PIPELINE_MODELS, OTHER_SERIES, DASHSCOPE_SERIES];
-const seriesOf = (modelId: string) =>
-  modelId === DASHSCOPE_SERIES.id ? DASHSCOPE_SERIES : (PIPELINE_MODELS.find(m => m.id === modelId) ?? OTHER_SERIES);
-const neuronsToUsd = (neurons: number) => (neurons * USD_PER_1K_NEURONS) / 1000;
+const usdToNeurons = (usd: number) => (usd * 1000) / USD_PER_1K_NEURONS;
 const modelName = (modelId: string) => PIPELINE_MODELS.find(m => m.id === modelId)?.name ?? modelId.split('/').pop() ?? modelId;
 
 // ── 按日的堆叠柱 ───────────────────────────────────────────────────────
@@ -90,8 +88,8 @@ const chart = computed(() => {
   const days = daily.value;
   if (!days) return null;
   // 合计只算 Workers AI 的模型；柱高另把 DashScope 那段算进去
-  const dashscope = days.map(d => d.byModel[DASHSCOPE_SERIES.id] ?? 0);
-  const totals = days.map((d, i) => Object.values(d.byModel).reduce((a, b) => a + b, 0) - dashscope[i]);
+  const dashscope = days.map(d => usdToNeurons(d.dashscopeUsd ?? 0));
+  const totals = days.map(d => Object.values(d.byModel).reduce((a, b) => a + b, 0));
   // 三格刻度，最高的一天不顶出图外
   const step = niceCeil(Math.max(...totals.map((t, i) => t + dashscope[i]), 0) / 3);
   const max = step * 3;
@@ -101,10 +99,12 @@ const chart = computed(() => {
       const key = seriesOf(modelId).id;
       values.set(key, (values.get(key) ?? 0) + neurons);
     }
-    // 自下而上按 SERIES 的固定顺序；有用量的段至少 1px，不让小数被画没
-    const segments = SERIES.filter(s => (values.get(s.id) ?? 0) > 0).map(s => ({
+    if (dashscope[i] > 0) values.set(DASHSCOPE_SERIES.id, dashscope[i]);
+    // 自下而上按 SERIES 的固定顺序，DashScope 在最上；有用量的段至少 1px，不让小数被画没
+    const segments = [...SERIES, DASHSCOPE_SERIES].filter(s => (values.get(s.id) ?? 0) > 0).map(s => ({
       ...s,
       neurons: values.get(s.id)!,
+      usd: s.id === DASHSCOPE_SERIES.id ? (d.dashscopeUsd ?? 0) : null,
       height: Math.max(1, Math.round((values.get(s.id)! / max) * CHART_HEIGHT)),
     }));
     const stackHeight = segments.reduce((a, s) => a + s.height, 0) + Math.max(0, segments.length - 1) * SEGMENT_GAP;
@@ -115,8 +115,8 @@ const chart = computed(() => {
     ticks: [0, 1, 2, 3].map(k => ({ y: Math.round(((k * step) / max) * CHART_HEIGHT), label: short(k * step) })),
     first: bars[0]?.label ?? '',
     last: bars.at(-1)?.label ?? '',
-    used: SERIES.filter(s => bars.some(b => b.segments.some(seg => seg.id === s.id))),
-    dashscopeUsd: neuronsToUsd(dashscope.reduce((a, b) => a + b, 0)),
+    used: [...SERIES, DASHSCOPE_SERIES].filter(s => bars.some(b => b.segments.some(seg => seg.id === s.id))),
+    dashscopeUsd: days.reduce((a, d) => a + (d.dashscopeUsd ?? 0), 0),
   };
 });
 
@@ -309,9 +309,7 @@ const amount = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits:
                     </div>
                     <div v-for="s in [...b.segments].reverse()" :key="s.id" class="mt-0.5 flex items-center gap-1.5">
                       <span class="swatch" :style="{ background: s.color }"></span>
-                      <strong class="font-semibold tabular-nums">{{
-                        s.id === DASHSCOPE_SERIES.id ? usd(neuronsToUsd(s.neurons)) : int(s.neurons)
-                      }}</strong>
+                      <strong class="font-semibold tabular-nums">{{ s.usd !== null ? usd(s.usd) : int(s.neurons) }}</strong>
                       <span class="text-white/75">{{ s.name }}</span>
                     </div>
                   </div>

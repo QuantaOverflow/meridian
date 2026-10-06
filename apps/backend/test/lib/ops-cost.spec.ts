@@ -325,7 +325,7 @@ describe('生产 = 周期内生产运行的汇总 + 文章分析模型的全账�
 });
 
 describe('DashScope 的花费：Cloudflare 看不到，从生产运行的汇总来', () => {
-  it('每日用量里单列一项（按牌价折成 neurons），只出现在有它的北京日；手动运行和没有这一项的汇总不算', async () => {
+  it('每日用量里单列一项（美元），只出现在有它的北京日；手动运行和没有这一项的汇总不算', async () => {
     at('2026-10-07T12:00:00Z');
     await insertRun('cron-brief-1004', '2026-10-04T13:00:00', summary(80_000)); // 一次调用核查上线之前
     await insertRun('cron-brief-1005', '2026-10-05T13:00:00', summaryWithDashscope(30_000, 0.11));
@@ -338,9 +338,9 @@ describe('DashScope 的花费：Cloudflare 看不到，从生产运行的汇总�
 
     expect(body.daily).toEqual([
       { day: '2026-10-04', byModel: {} },
-      { day: '2026-10-05', byModel: { [V4]: 20_000, dashscope: 10_000 } },
+      { day: '2026-10-05', byModel: { [V4]: 20_000 }, dashscopeUsd: 0.11 },
       { day: '2026-10-06', byModel: {} },
-      { day: '2026-10-07', byModel: { dashscope: 5_000 } },
+      { day: '2026-10-07', byModel: {}, dashscopeUsd: 0.055 },
     ]);
     // Cloudflare 的账与按模型的表不含它
     expect(body.account).toMatchObject({ neurons: 20_000 });

@@ -36,13 +36,6 @@ const PLAN_FEE_USD = 5;
 /** 文章分析（入库时逐篇）用的模型，与 ai-worker 的 `/meridian/article/analyze` 首选档一致 */
 const ARTICLE_ANALYSIS_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
-/**
- * 每日用量里 DashScope 那一项的键（逐句核查的一次调用走 DashScope，ADR 0012）。它不是 Workers AI 的模型：
- * Cloudflare 的账户用量里没有它，数来自生产运行的汇总，按牌价折成 neurons 以便和别的项同一把尺。
- * 前端 `pages/admin/cost.vue` 认同一个键，单列一行、按美元显示
- */
-const DASHSCOPE_DAILY_KEY = 'dashscope';
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface BillingCycle {
@@ -220,7 +213,7 @@ function modelPanels(usage: NeuronsRow[], cycle: BillingCycle, production: { run
 /**
  * 每日用量图：按北京日。周期本身从 UTC 零点（北京 8 点）起止，所以第一根柱子只有 16 小时，
  * 已结束的周期最后多出一根 8 小时的柱子；各柱的 Workers AI 模型之和仍等于周期合计。没用量的日子是空对象（图上那天是空的，而不是被跳过）。
- * 有 DashScope 花费的日子多一项 `DASHSCOPE_DAILY_KEY`，不在周期合计里。
+ * 有 DashScope 花费的日子多一项 `dashscopeUsd`（美元，来自生产运行的汇总，按运行开始的北京日归日），不在 `byModel` 和周期合计里。
  */
 function dailyPanel(
   rows: NeuronsRow[],
@@ -235,13 +228,11 @@ function dailyPanel(
     const day = perDay.get(row.day);
     if (day) day[row.modelId] = (day[row.modelId] ?? 0) + row.neurons;
   }
-  for (const [dayKey, usd] of dashscopeUsdByDay) {
-    const day = perDay.get(dayKey);
-    if (day) day[DASHSCOPE_DAILY_KEY] = neuronsAtList(usd);
-  }
   return [...perDay].map(([day, byModel]) => ({
     day,
     byModel: Object.fromEntries(Object.entries(byModel).map(([model, n]) => [model, Math.round(n)])),
+    // 留 6 位小数去掉浮点尾巴
+    ...(dashscopeUsdByDay.has(day) ? { dashscopeUsd: Math.round(dashscopeUsdByDay.get(day)! * 1e6) / 1e6 } : {}),
   }));
 }
 

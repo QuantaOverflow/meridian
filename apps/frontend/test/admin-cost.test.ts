@@ -21,8 +21,8 @@ const closedCycle: OpsCost = {
   daily: [
     { day: '2026-09-04', byModel: { [GLM]: 68_109, [QWEN]: 10_832 } },
     { day: '2026-09-05', byModel: {} },
-    // dashscope：那天生产运行在 DashScope 花的钱，按牌价折成 neurons（10,000 = $0.11）；不是 Workers AI 的用量
-    { day: '2026-10-03', byModel: { [V4]: 1_051_549, [GLM]: 2_536, [QWEN]: 6_510, [TRIAL]: 57_290, dashscope: 10_000 } },
+    // dashscopeUsd：那天生产运行在 DashScope 花的钱；不是 Workers AI 的用量
+    { day: '2026-10-03', byModel: { [V4]: 1_051_549, [GLM]: 2_536, [QWEN]: 6_510, [TRIAL]: 57_290 }, dashscopeUsd: 0.11 },
   ],
   byModel: [
     { modelId: GLM, neurons: 1_144_059, share: 0.3841, usdAtList: 12.584649 },

@@ -147,6 +147,28 @@ export interface BriefBlockV6Request {
  */
 export type BriefBlockV6CheckOutcome = 'off' | 'clean' | 'fixed' | 'revise_failed' | 'still_flagged';
 
+/** 逐句核查的两种做法（ADR 0012） */
+export type BriefBlockV6CheckMode = 'one_call' | 'agent';
+
+/**
+ * 一次调用核查失败、回退到 agent 的原因：
+ * - `auth`            key 无效或过期（不重试；同一块之后的核查直接走 agent）
+ * - `content_filter`  DashScope 的内容审核拒绝了这次回复（不重试）
+ * - `provider_error`  其他报错：限流 / 超时 / 5xx 重发用尽，或别的 4xx
+ * - `unreadable`      三次回复都读不出结论
+ */
+export type BriefBlockV6CheckFallbackReason = 'auth' | 'content_filter' | 'provider_error' | 'unreadable';
+
+export interface BriefBlockV6CheckFallback {
+  /** 句号（1 起），按核查时那一版的顺序 */
+  sentence: number;
+  /** 0 = 草稿；n = 第 n 次改写后的那一版 */
+  round: number;
+  reason: BriefBlockV6CheckFallbackReason;
+  /** 厂商的报错原文（截到 300 字符）；`unreadable` 时是最后一次回复的结尾 */
+  message: string;
+}
+
 /** 一个核查 epoch 判「有问题」时给的意见。字段是核查 agent 的原话，可能缺。 */
 interface BriefBlockV6Finding {
   type?: string;
@@ -199,6 +221,22 @@ export interface BriefBlockV6Check {
   calls: number;
   neurons: number;
   ms: number;
+  /**
+   * 以下各项随「一次调用核查」加入（ADR 0012），都可缺：缺 = 记录写于它上线之前，或回滚到了旧 ai-worker，
+   * 那时逐句核查全部由 agent 做。
+   */
+  /** 逐句核查配置成哪种方式：`one_call` 代码取证据 + 一次调用；`agent` 逐句 agent（ADR 0010 的做法） */
+  mode?: BriefBlockV6CheckMode;
+  /** 结论各由哪条路给出，一句一个 epoch 算一次。`agent` 含 one_call 模式下回退过去的那些 */
+  paths?: { oneCall: number; agent: number };
+  /** 一次调用没拿到可用回复、改由 agent 核查的每一次 */
+  fallbacks?: BriefBlockV6CheckFallback[];
+  /** 取证有没有用上按意思搜；false = 向量没算出来，这块只按词搜 */
+  meaningSearch?: boolean;
+  /** 这块里最大的一个证据包有几句原文 */
+  maxEvidence?: number;
+  /** DashScope 的调用数与花费（美元）。这笔钱已按 $0.011 / 千 neurons 折进上面的 `neurons`，这里是其中的分项 */
+  dashscope?: { calls: number; usd: number };
 }
 
 // backend 落观测只读这几项（auto-brief-generation 的 brief-v3 记录）；复读重试另有 console.warn

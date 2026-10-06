@@ -57,11 +57,11 @@ export interface ChatResponse extends BaseAIResponse {
 
 export type AIResponse = ChatResponse
 
-// ai-worker 的全部 binding 与 vars（wrangler.toml）。没有 secret。
+// ai-worker 的全部 binding、vars（wrangler.toml）与 secret（只有一次调用核查的 DashScope 通道要，ADR 0012）。
 // 用 type 而不是 interface：hono 的 Bindings 约束带索引签名，只有类型字面量能隐式满足它
 // （interface 不会被推出索引签名），这样不必在这里写 `[k: string]: …` 把任意键放回来。
 export type CloudflareEnv = {
-  /** Workers AI binding：唯一的模型通道 */
+  /** Workers AI binding：模型通道（一次调用核查另走 DashScope，见下） */
   AI: Ai
   /**
    * 生产桶，只写 LLM 调用日志（llm-calls/）与传感器读数（observability/sensors/）。
@@ -74,6 +74,22 @@ export type CloudflareEnv = {
    * 缺了这个变量不会悄悄把核查关掉。
    */
   BRIEF_CHECK_EPOCHS?: string
+  /**
+   * 逐句核查怎么做（ADR 0012；wrangler.toml 的 [vars]）："one_call" = 代码取证据 + DashScope 一次调用，失败的句子回退到 agent；
+   * "agent" = 逐句 agent（ADR 0010 的做法，请求与改动前逐字相同）。缺省或其他任何值 = "agent"（并打 warn）——
+   * 写错了不会悄悄不核查，也不会悄悄去调一个没配好的厂商。
+   */
+  BRIEF_CHECK_MODE?: string
+  /**
+   * DashScope 的 OpenAI 兼容入口，到 `/compatible-mode/v1` 为止（后面接 `/chat/completions`）。生产指向 Cloudflare AI Gateway 的
+   * custom provider：`https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/custom-dashscope/compatible-mode/v1`。
+   * 是变量不是常量：单测与 replay 把它指到本地 HTTP 服务。
+   */
+  DASHSCOPE_BASE_URL?: string
+  /** DashScope 的 key（secret）。只有 one_call 核查用；缺了按 key 无效处理（回退 agent）。 */
+  DASHSCOPE_API_KEY?: string
+  /** AI Gateway 自己的鉴权 token（secret，网关开了鉴权才要）；有就带 `cf-aig-authorization` 头。 */
+  AI_GATEWAY_TOKEN?: string
   /** 本次部署的版本 id 与时刻（wrangler.toml 的 [version_metadata]）。可选：单测里没有。 */
   CF_VERSION_METADATA?: WorkerVersionMetadata
   /** 部署的提交：短哈希、标题、工作区是否有未提交改动（"true"/"false"）。scripts/deploy.sh 用 --var 注入，不经脚本部署时没有。 */

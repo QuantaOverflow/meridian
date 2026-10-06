@@ -38,6 +38,20 @@ export interface RunOpsSummary {
     outcomes: Record<OpsCheckOutcome, number>;
     uncheckedBlocks: number;
     revisions: number;
+    /**
+     * 一次调用核查（ADR 0012）的 run 级汇总；缺 = 这次运行早于它，或各块都没带这些字段。
+     * `checks` 是逐句核查的总次数，`fallbacks` 是其中回退到 agent 的次数，`fallbackReasons` 按原因计数，
+     * `fallbackMessage` 是第一条回退的厂商报错（给人看），`noMeaningSearchBlocks` 是没用上按意思搜的块数，
+     * `dashscopeUsd` 是 DashScope 的花费（已折进 llm.neurons，这里是分项）。
+     */
+    oneCall?: {
+      checks: number;
+      fallbacks: number;
+      fallbackReasons: Record<string, number>;
+      fallbackMessage: string | null;
+      noMeaningSearchBlocks: number;
+      dashscopeUsd: number;
+    };
   } | null;
   degradedReasons: string[];
 }
@@ -234,7 +248,14 @@ export interface OpsRunDetail {
         tier: 'lead' | 'more' | 'brief';
         title: string;
         articles: number;
-        check: { outcome: string; revisions: number; unchecked: number } | null;
+        check: {
+          outcome: string;
+          revisions: number;
+          unchecked: number;
+          /** 一次调用核查（ADR 0012）：各路给出结论的次数与回退次数；缺 = 记录早于它 */
+          paths?: { oneCall: number; agent: number };
+          fallbacks?: number;
+        } | null;
         refusals: number;
         calls: number;
         neurons: number;

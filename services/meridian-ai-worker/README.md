@@ -40,22 +40,29 @@ backend 侧的调用方法在 `apps/backend/src/lib/services/ai-services.ts`，�
 - 除 article analyze 与 `/meridian/chat` 外，所有调用都经 `src/services/call-llm.ts` 的
   `callLLM(phase)`：每个 phase 在 `PHASE_DEFAULTS` 里有一套 model / temperature /
   maxTokens 默认值，caller 只覆盖真不同的。
-- 现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
+- 除下面说的一次调用核查外，现行 phase 全部默认 `workers-ai` + `@cf/zai-org/glm-4.7-flash`，经 **`env.AI` binding** 调用
   （`src/services/workers-ai.ts` 的 `chat()`）。思维链由 `config/thinking.ts` 关掉。
 - article analyze 在 `index.ts` 自带两档重试：`@cf/qwen/qwen3-30b-a3b-fp8` → `@cf/zai-org/glm-4.7-flash`。
-- **只有这一个 provider，且不经 AI Gateway**：`chat()` 刻意不传 `gateway`
+- **Workers AI 这条通道不经 AI Gateway**：`chat()` 刻意不传 `gateway`
   参数（原因见该处注释），因此也没有网关缓存。要接非 CF 厂商时经 CF AI Gateway 接入。
+- **第二条通道 DashScope**（ADR 0012，只有 phase `brief_block_v6_check_one_call` 走，目前还没有调用方）：
+  `src/services/dashscope.ts` 的 `dashScopeChat()`，经 `DASHSCOPE_BASE_URL`（生产指向 AI Gateway）调 `qwen3.8-flash`，
+  关 thinking、关网关缓存；按价目表把 token 折成美元与等价 neurons。同样从 `callLLM` 进，日志里 provider 是 `dashscope`。
+- **句子向量**：`src/services/embed-texts.ts` 的 `embedTexts()`，`@cf/baai/bge-m3` 经 binding，日志 phase 是 `brief_block_v6_embed`。
 - 经 `callLLM` 的调用都会做输出语言检测（`checkOutputLanguage`），CJK 占比超阈值只告警、落 sensor，不改输出。
 
 ## 环境变量与 secret
 
-本地复制 `.dev.vars.example` 为 `.dev.vars`；生产不需要任何 secret。
-代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `services/workers-ai.ts`）：
+本地复制 `.dev.vars.example` 为 `.dev.vars`；Workers AI 这条通道不需要任何 secret，只有 DashScope 通道要（见下表）。
+代码实际读取的（`src/types.ts` 的 `CloudflareEnv` + `services/workers-ai.ts` + `services/dashscope.ts`）：
 
 | 名称 | 作用 |
 |---|---|
 | `AI`（binding，`wrangler.toml` 的 `[ai]`） | Workers AI，现行所有 phase 走这里；无需 token |
 | `ARTICLES_BUCKET`（R2 binding） | 观测落盘（只写不读），与 backend 同一个桶 `meridian-articles-prod` |
+| `DASHSCOPE_BASE_URL`（变量） | DashScope 的 OpenAI 兼容入口，到 `/compatible-mode/v1` 为止；生产指向 Cloudflare AI Gateway 的 custom provider。只有 phase `brief_block_v6_check_one_call`（一次调用核查，ADR 0012）用 |
+| `DASHSCOPE_API_KEY`（secret） | DashScope 的 key。缺它或缺 base URL 时这条通道不发请求、直接报 `auth` |
+| `AI_GATEWAY_TOKEN`（secret，可选） | AI Gateway 自己的鉴权 token；有就带 `cf-aig-authorization` 头 |
 
 ## 观测数据落在哪
 

@@ -1,4 +1,5 @@
 import { chat } from './workers-ai'
+import { dashScopeChat } from './dashscope'
 import type { ChatRequest, AIResponse, CloudflareEnv } from '../types'
 import { recordLLMCall } from './observe'
 import { llmCallKey } from '@meridian/contracts'
@@ -24,6 +25,9 @@ export type LLMCallPhase =
   // 简报块 v6 的逐句核查 agent（写作–核查循环，ADR 0010）：一句一个 agent、每步一次调用，
   // 调用量是写作的几十倍，单独一个 phase，callIndex 编号与写作 / 改写互不挤占（见 services/brief-block-v6.ts）。
   | 'brief_block_v6_check'
+  // 逐句核查的「一次调用」做法（ADR 0012）：代码取证据、一句一次调用，走 DashScope 而不是 Workers AI binding。
+  // 与上面的 agent 核查分开一个 phase：两条路的调用数与花费要分开看，callIndex 也互不挤占。
+  | 'brief_block_v6_check_one_call'
 
 export interface TraceContext {
   traceId?: string
@@ -43,7 +47,7 @@ export function readTraceContext(req: Request | { headers: Headers }): TraceCont
 }
 
 /**
- * 调用 workers-ai.chat 并把 input/output/metadata 落 R2：
+ * 调用模型通道（默认 workers-ai.chat；`request.provider` 为 `dashscope` 时走 DashScope）并把 input/output/metadata 落 R2：
  *   llm-calls/{trace_id}/{phase}-{idx 3位}.json
  *
  * 失败不阻塞主流程：R2 写入是 best-effort、异步
@@ -59,8 +63,10 @@ export async function loggedChat(
   const startedAt = Date.now()
   let response: AIResponse | null = null
   let errMsg: string | undefined
+  // 两条通道：只有显式标了 dashscope 的请求（一次调用核查的 phase 默认值）走 DashScope，其余全是 Workers AI binding
+  const provider = request.provider === 'dashscope' ? 'dashscope' : 'workers-ai'
   try {
-    response = await chat(ai, request)
+    response = provider === 'dashscope' ? await dashScopeChat(env, request) : await chat(ai, request)
     return response
   } catch (e) {
     errMsg = e instanceof Error ? e.message : String(e)
@@ -70,6 +76,7 @@ export async function loggedChat(
     // 观测 wrapper：这次调用挂到当前步骤下（只在请求带 x-observe: inline 时记，见 observe.ts）
     await recordLLMCall({
       phase,
+      provider,
       model: request.model,
       params: {
         temperature: request.temperature,
@@ -96,9 +103,9 @@ export async function loggedChat(
         call_index: idx,
         timestamp: new Date().toISOString(),
         request: {
-          // 只有 workers-ai 一家 provider（call-llm.ts 的 PHASE_DEFAULTS 已去掉 provider 列，
-          // request.provider 常态是 undefined）——日志字段保留字面量，格式不因此漂移。
-          provider: 'workers-ai',
+          // 实际走的通道，不是 request.provider 的原值：Workers AI 的 phase 不带 provider 列
+          // （request.provider 常态是 undefined），这一格照旧落 'workers-ai'，格式不因此漂移。
+          provider,
           model: request.model,
           messages: request.messages,
           temperature: request.temperature,

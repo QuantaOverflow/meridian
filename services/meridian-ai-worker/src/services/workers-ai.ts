@@ -43,6 +43,29 @@ const isRateLimited = (error: unknown) => /3021|rate limit/i.test(messageOf(erro
 const isTransientFault = (error: unknown) =>
   /\b(3040|3046|8005)\b|capacity temporarily exceeded|request timeout|internal server error|network connection lost/i.test(messageOf(error))
 
+/**
+ * 调一次 binding；撞上限流或会自愈的故障就按上面的规矩等待、原样重发，等满后照旧抛错。
+ * chat() 只对 RESEND_MODELS 用它；句子向量（services/embed-texts.ts）也用它。
+ */
+export async function runWithResend<T>(run: () => Promise<T>, logContext: { request_id: string; model: string }): Promise<T> {
+  for (let rateWaits = 0, faultWaits = 0; ; ) {
+    try {
+      return await run()
+    } catch (error) {
+      const rateLimited = isRateLimited(error)
+      if (rateLimited ? rateWaits >= RATE_LIMIT_MAX_WAITS : !isTransientFault(error) || faultWaits >= FAULT_MAX_WAITS) throw error
+      const ms = rateLimited ? rateLimitWaitMs(rateWaits++) : faultWaitMs(faultWaits++)
+      logger.warn(
+        rateLimited
+          ? `Workers AI 限流，${ms / 1000}s 后原样重发（第 ${rateWaits}/${RATE_LIMIT_MAX_WAITS} 次等待）`
+          : `Workers AI 服务故障，${(ms / 1000).toFixed(1)}s 后原样重发（第 ${faultWaits}/${FAULT_MAX_WAITS} 次等待）`,
+        { ...logContext, error_message: messageOf(error) }
+      )
+      await new Promise(r => setTimeout(r, ms))
+    }
+  }
+}
+
 function logDebug(message: string, metadata: Record<string, unknown>): void {
   logger.debug(message, { request_id: metadata.requestId || 'unknown', metadata })
 }
@@ -164,31 +187,12 @@ export async function chat(ai: Ai, request: ChatRequest): Promise<ChatResponse> 
   })
 
   try {
-    let body: unknown
-    for (let rateWaits = 0, faultWaits = 0; ; ) {
-      try {
-        // model 名以运行时字符串驱动（模型表见 WORKERS_AI_MODELS），Ai.run 的类型签名要求
-        // 具体字面量的 keyof——用真实 Ai 类型就必须在这一处转型，换不掉。
-        body = await ai.run(modelName as keyof AiModels, inputs as any)
-        break
-      } catch (error) {
-        if (!RESEND_MODELS.includes(modelName)) throw error
-        const rateLimited = isRateLimited(error)
-        if (rateLimited ? rateWaits >= RATE_LIMIT_MAX_WAITS : !isTransientFault(error) || faultWaits >= FAULT_MAX_WAITS) throw error
-        const ms = rateLimited ? rateLimitWaitMs(rateWaits++) : faultWaitMs(faultWaits++)
-        logger.warn(
-          rateLimited
-            ? `Workers AI 限流，${ms / 1000}s 后原样重发（第 ${rateWaits}/${RATE_LIMIT_MAX_WAITS} 次等待）`
-            : `Workers AI 服务故障，${(ms / 1000).toFixed(1)}s 后原样重发（第 ${faultWaits}/${FAULT_MAX_WAITS} 次等待）`,
-          {
-            request_id: request.metadata?.requestId || 'unknown',
-            model: modelName,
-            error_message: messageOf(error),
-          }
-        )
-        await new Promise(r => setTimeout(r, ms))
-      }
-    }
+    // model 名以运行时字符串驱动（模型表见 WORKERS_AI_MODELS），Ai.run 的类型签名要求
+    // 具体字面量的 keyof——用真实 Ai 类型就必须在这一处转型，换不掉。
+    const run = () => ai.run(modelName as keyof AiModels, inputs as any)
+    const body: unknown = RESEND_MODELS.includes(modelName)
+      ? await runWithResend(run, { request_id: request.metadata?.requestId || 'unknown', model: modelName })
+      : await run()
     const response = mapResponse(body, modelName)
     response.processingTime = Date.now() - startTime
     return response

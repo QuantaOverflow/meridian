@@ -10,6 +10,8 @@
  *   6 核查改写 写作–核查循环（ADR 0010）：每句逐句核查（qwen3.8 小 agent × epoch 数），  LLM × 句数 × 步数
  *              被标出就把意见发回写作的对话整块改写，只复核改过的句子，最多改两次     + 改写 ≤ 2
  *              （services/sentence-check.ts；BRIEF_CHECK_EPOCHS=0 关掉）
+ *              BRIEF_CHECK_MODE=one_call 时逐句核查改成代码取证据 + DashScope 一次调用，
+ *              失败的句子回退到上面的 agent（ADR 0012；services/one-call-check.ts）
  *
  * 标重点用 glm-4.7-flash，写作与改写用 deepseek-v4-pro（ADR 0010）。
  *
@@ -27,9 +29,11 @@
 import { callLLMUntilAccepted, LLMAttemptsExhausted } from './call-llm';
 import type { TraceContext } from './llm-call-logger';
 import { sentenceCheck, type CheckCaller, type SentenceCheckRun } from './sentence-check';
+import { OneCallChecker, type OneCallRun } from './one-call-check';
 import type { ChatMessage, CloudflareEnv } from '../types';
 import type {
   BriefBlockV6Check,
+  BriefBlockV6CheckMode,
   BriefBlockV6CheckOutcome,
   BriefBlockV6Request as BriefBlockV6Input,
   BriefBlockV6Result,
@@ -101,6 +105,9 @@ const CALL_INDEX_PER_STORY = 100;
  * 用满）会超过 1000、和下一块的前几个编号撞 key；只丢观测记录，不影响产出。某步调用报错重试的那几次另算。
  */
 const CHECK_CALL_INDEX_PER_STORY = 1000;
+// 一次调用核查（phase `brief_block_v6_check_one_call`）与它的向量调用（`brief_block_v6_embed`）各自另有块内计数，
+// 步长同上：key 里带 phase 段，三种编号互不相干。离上界远得多：一次调用最多 7 句 × 3 版 × 3 次尝试 × epoch 数，
+// 向量最多 1 + 7 句 × 3 版 × epoch 数。
 /** 每块同时在飞的逐句核查 agent 数（原型 CHECKS_IN_FLIGHT 默认值）。 */
 const CHECKS_IN_FLIGHT = 10;
 /** 最多改写几次（原型 MAX_ROUNDS）。 */
@@ -112,6 +119,8 @@ const sentencesText = (x: any): string =>
 
 /** BRIEF_CHECK_EPOCHS："0" = 关；正整数 = 几次；缺省或其他任何值 = 1（缺变量不会悄悄关掉核查）。 */
 const checkEpochsOf = (raw: string | undefined): number => (raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : 1);
+/** BRIEF_CHECK_MODE：只认 "one_call" 与 "agent"；缺省或其他任何值 = null，由调用方按 agent 做并打 warn。 */
+const checkModeOf = (raw: string | undefined): BriefBlockV6CheckMode | null => (raw === 'one_call' || raw === 'agent' ? raw : null);
 
 type Version = { title: string; sentences: V6Sentence[] };
 type CheckRound = BriefBlockV6Check['rounds'][number];
@@ -169,6 +178,10 @@ export class BriefBlockV6Service {
   private llmCalls = 0;
   /** 逐句核查 agent 的调用数，也是它们 callIndex 的块内计数（与上面分开，见 CHECK_CALL_INDEX_PER_STORY） */
   private checkCalls = 0;
+  /** 一次调用核查（DashScope）的调用数，也是它 callIndex 的块内计数 */
+  private oneCallCalls = 0;
+  /** 句子向量的调用数：只当 callIndex 的块内计数，不进 llmCalls（不是 chat 调用，binding 也不随结果报它的用量） */
+  private embedCalls = 0;
   private neurons = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
@@ -383,7 +396,7 @@ export class BriefBlockV6Service {
         citationsRepaired,
         windowFailures: this.windowFailures,
         writeRejects: this.writeRejects,
-        llmCalls: this.llmCalls + this.checkCalls,
+        llmCalls: this.llmCalls + this.checkCalls + this.oneCallCalls,
         neurons: this.neurons,
         ...(check ? { check } : {}),
       },
@@ -409,16 +422,24 @@ export class BriefBlockV6Service {
   }): Promise<{ block: Version; citationsRepaired: number; check: BriefBlockV6Check }> {
     const epochs = checkEpochsOf(this.env.BRIEF_CHECK_EPOCHS);
     const blockIdx = this.traceContext.callIndex ?? 0;
+    const configured = checkModeOf(this.env.BRIEF_CHECK_MODE);
+    if (!configured) {
+      logger.warn('[BriefBlockV6] BRIEF_CHECK_MODE 缺省或不认识，逐句核查按 agent 做', { block: blockIdx, value: this.env.BRIEF_CHECK_MODE ?? null });
+    }
+    const mode: BriefBlockV6CheckMode = configured ?? 'agent';
+    // 结论各由哪条路给出，一句一个 epoch 算一次
+    const paths = { oneCall: 0, agent: 0 };
     if (epochs === 0) {
       const check: BriefBlockV6Check = {
         epochs: 0, outcome: 'off', revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 0, neurons: 0, ms: 0,
+        mode, paths,
       };
       this.logLoop(blockIdx, check, []);
       return { block: o.draft, citationsRepaired: o.draftRepaired, check };
     }
 
     const t0 = Date.now();
-    const before = { calls: this.llmCalls + this.checkCalls, neurons: this.neurons };
+    const before = { calls: this.llmCalls + this.checkCalls + this.oneCallCalls, neurons: this.neurons };
     const cluster = clusterOf(o.articles);
     const date = briefDateOf(o.articles);
     const io: CheckCaller = {
@@ -427,9 +448,19 @@ export class BriefBlockV6Service {
       trace: this.traceContext,
       nextCallIndex: () => blockIdx * CHECK_CALL_INDEX_PER_STORY + this.checkCalls++,
     };
+    // one_call：这一块的一次调用核查（整簇向量、key 是否已失效、回退记录都在它身上，随这一块结束）
+    const oneCall =
+      mode === 'one_call'
+        ? new OneCallChecker(io, cluster, date, {
+            block: blockIdx,
+            nextOneCallIndex: () => blockIdx * CHECK_CALL_INDEX_PER_STORY + this.oneCallCalls++,
+            nextEmbedIndex: () => blockIdx * CHECK_CALL_INDEX_PER_STORY + this.embedCalls++,
+          })
+        : null;
 
     // 一版的核查：文本没变的句子沿用上一轮的结论；其余每句跑 epochs 次独立核查，每块最多 10 个 agent 在飞
-    const verify = async (v: Version, earlier: Map<string, CheckLog>): Promise<CheckLog[]> => {
+    // round：0 = 草稿，n = 第 n 次改写后的那一版
+    const verify = async (v: Version, earlier: Map<string, CheckLog>, round: number): Promise<CheckLog[]> => {
       const logs = v.sentences.map((s, i): CheckLog => {
         const old = earlier.get(s.text);
         return old ? { ...old, index: i + 1, carried: true } : { index: i + 1, text: s.text, runs: [], carried: false };
@@ -443,13 +474,14 @@ export class BriefBlockV6Service {
           text: l.text,
           cited: v.sentences[l.index - 1].sources.map(x => [x.articleId, x.sentence] as [number, number]),
         };
-        let r: SentenceCheckRun;
+        let r: SentenceCheckRun & { path?: OneCallRun['path'] };
         try {
-          r = await sentenceCheck(io, cluster, item, date);
+          r = oneCall ? await oneCall.check(item, round) : await sentenceCheck(io, cluster, item, date);
         } catch (e) {
           // 核查出错不让整块失败：这一次记成没有结论，原因进降级日志
           r = { verdict: null, calls: 0, neurons: 0, end: `error: ${e instanceof Error ? e.message : String(e)}` };
         }
+        paths[r.path ?? 'agent']++;
         this.neurons += r.neurons;
         l.runs[run] = r;
       });
@@ -458,7 +490,7 @@ export class BriefBlockV6Service {
 
     let current = o.draft;
     let repaired = o.draftRepaired;
-    let logs = await verify(current, new Map());
+    let logs = await verify(current, new Map(), 0);
     const rounds: CheckRound[] = [roundOf(0, logs)];
     let history = o.conversation;
     // 到目前为止发给写作的全部证据句（key，按出现先后），改写时都可以引
@@ -499,7 +531,7 @@ export class BriefBlockV6Service {
       repaired = r.added;
       history = [...history, { role: 'user', content: rev.prompt }, { role: 'assistant', content: rev.raw }];
       // 只复核改过的句子（按原文逐字比）；没改的沿用上一轮的结论
-      logs = await verify(current, new Map(logs.map(l => [l.text, l])));
+      logs = await verify(current, new Map(logs.map(l => [l.text, l])), round);
       rounds.push(roundOf(round, logs));
       if (!logs.some(isFlagged)) outcome = 'fixed';
     }
@@ -513,9 +545,19 @@ export class BriefBlockV6Service {
       stillFlagged: logs.filter(isFlagged).map(l => l.index),
       draft: revisions > 0 ? o.draft : null,
       rounds,
-      calls: this.llmCalls + this.checkCalls - before.calls,
+      calls: this.llmCalls + this.checkCalls + this.oneCallCalls - before.calls,
       neurons: this.neurons - before.neurons,
       ms: Date.now() - t0,
+      mode,
+      paths,
+      ...(oneCall
+        ? {
+            fallbacks: oneCall.fallbacks,
+            meaningSearch: oneCall.meaningSearch,
+            maxEvidence: oneCall.maxEvidence,
+            dashscope: { calls: this.oneCallCalls, usd: oneCall.usd },
+          }
+        : {}),
     };
     this.logLoop(blockIdx, check, logs);
     return { block: current, citationsRepaired: repaired, check };

@@ -4,7 +4,7 @@
  * 接线照原型 `.scratch/one-call-sentence-check/port-source/one-call.mts` 的 `sentenceCheckOneCall`：取证（utils/evidence-pack.ts）、
  * 提示词（prompts/oneCallCheck.ts）、读回复（utils/one-call-reply.ts）各是纯函数，这里只管调用、重试与回退。
  *
- *   · 一句一个 epoch 一次调用（phase `brief_block_v6_check_one_call`）。回复读不出（解不出结论、被 token 上限截断、复读）
+ *   · 一句一个 epoch 一次调用（phase `brief_block_v6_check_one_call`）。回复读不出（解不出结论、被 token 上限截断）
  *     最多试三次；还读不出，或通道报错（key 无效 / 内容审核拒绝 / 其他报错，通道里该重发的已重发过），这一句这一个 epoch
  *     改由 agent 核查（services/sentence-check.ts），每次回退记一条、打一行 warn。
  *   · 一块里第一次 key 无效之后，这一块余下的核查不再去 DashScope，直接走 agent。
@@ -22,7 +22,6 @@ import type { ChatResponse } from '../types';
 import type { EvidenceEmbeddings, SentenceKey } from '../types/one-call-check';
 import { oneCallPrompts } from '../prompts/oneCallCheck';
 import type { SentenceItem } from '../prompts/sentenceCheck';
-import { detectRepetition } from '../utils/brief-writer-v3';
 import { buildEvidencePack, clausesOf } from '../utils/evidence-pack';
 import { parseOneCallReply } from '../utils/one-call-reply';
 import type { CheckCluster, Verdict } from '../utils/sentence-check';
@@ -131,8 +130,9 @@ export class OneCallChecker {
       this.usd += usdOf(res);
       const choice = res.choices?.[0];
       const content = String(choice?.message?.content ?? '');
-      // 截断与复读的回复即使解得出 JSON 也不认：前者的 CHECKS 没写完，后者是退化输出
-      const verdict = choice?.finish_reason === 'length' || detectRepetition(content) ? null : parseOneCallReply(content, this.cluster);
+      // 截断的回复即使解得出 JSON 也不认：CHECKS 没写完。真的复读退化会一直写到 token 上限，也落在这里。
+      // 不接写作那边的 detectRepetition：逐部分核对本来就反复抄同一句，它在实测回复上误拒约 7%。
+      const verdict = choice?.finish_reason === 'length' ? null : parseOneCallReply(content, this.cluster);
       if (verdict) return { verdict, calls, neurons };
       lastReply = content;
     }

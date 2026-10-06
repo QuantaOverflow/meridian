@@ -312,11 +312,22 @@ describe('一次调用核查：块接口', () => {
     expect(r.trace.check).toMatchObject({ outcome: 'clean', unchecked: [], paths: { oneCall: 3, agent: 0 }, fallbacks: [], dashscope: { calls: 4 } })
   })
 
-  const REPEATED = 'The sentence says the dam failed on Tuesday night and so does the source. '
+  // 逐部分核对本来就会把同一句原文、同一句成稿抄好几遍：这不是复读退化，照常读结论。
+  // 写作那边的复读检测（同句 ≥3 次 / 12 词片段 ≥4 次）拿来判这种回复，在 152 条实测回复里误拒 10–11 条（2026-10-06 干跑）。
+  it('核对过程里同一句话抄了好几遍的回复照常读，不重试', async () => {
+    const REPEATED = 'The sentence says the dam failed on Tuesday night and so does the source. '
+    const f = fakeEnv({ write: [DRAFT_REPLY] })
+    dash = q => (q.text === S2 ? `CHECKS\n${REPEATED.repeat(4)}\nRESULT\n{"ok": true}` : OK_REPLY)
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(dashFor(S2)).toHaveLength(1)
+    expect(agentCalls(f)).toHaveLength(0)
+    expect(r.trace.check).toMatchObject({ outcome: 'clean', paths: { oneCall: 3, agent: 0 }, fallbacks: [], dashscope: { calls: 3 } })
+  })
+
   it.each<[string, DashReply, string]>([
     ['解不出结论', 'I compared the sentence with the sources and it looks fine.', 'it looks fine.'],
     ['被 token 上限截断（finish_reason length）', { content: OK_REPLY, finish: 'length' }, '{"ok": true}'],
-    ['复读', `CHECKS\n${REPEATED.repeat(4)}\nRESULT\n{"ok": true}`, '{"ok": true}'],
   ])('三次回复都读不出（%s）：这一句改由 agent 核查，记一条 unreadable', async (_name, bad, tail) => {
     const warn = vi.spyOn(console, 'warn')
     const f = fakeEnv({ write: [DRAFT_REPLY], agent: () => AGENT_OK })

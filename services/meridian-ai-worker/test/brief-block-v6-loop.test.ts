@@ -206,6 +206,7 @@ describe('写作–核查循环：块接口', () => {
     expect(r.block).toEqual(DRAFT_BLOCK)
     expect(r.trace.check).toEqual({
       epochs: 0, outcome: 'off', revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 0, neurons: 0, ms: 0,
+      mode: 'agent', paths: { oneCall: 0, agent: 0 },
     })
     expect(r.trace).toMatchObject({ llmCalls: 2, neurons: 11 })
     expect(f.unscripted).toEqual([])
@@ -259,6 +260,7 @@ Do not repeat the rejected wording; write the item again from the material above
       epochs: 1, outcome: 'clean', revisions: 0, unchecked: [], stillFlagged: [], draft: null,
       rounds: [{ round: 0, flagged: [], noVerdict: [] }],
       calls: 2, neurons: 200, ms: expect.any(Number),
+      mode: 'agent', paths: { oneCall: 0, agent: 2 },
     })
     // 合计含核查：标重点 1 + 写作 1 + 核查 2
     expect(r.trace).toMatchObject({ llmCalls: 4, neurons: 211 })
@@ -310,6 +312,7 @@ It cites:
       ],
       // 核查：S1 三步 + S2 一步 + 改过的 S1 一步；改写一次
       calls: 6, neurons: 510, ms: expect.any(Number),
+      mode: 'agent', paths: { oneCall: 0, agent: 3 },
     })
     expect(r.trace).toMatchObject({ llmCalls: 8, neurons: 521 })
 
@@ -640,6 +643,7 @@ ${FINDINGS_CLOSING}`
       rounds: [{ round: 0, flagged: [], noVerdict: [1, 2] }],
       // S1：一步三次调用都失败；S2：1 条读不懂 + 21 个动作
       calls: 25, neurons: 2200, ms: expect.any(Number),
+      mode: 'agent', paths: { oneCall: 0, agent: 2 },
     })
     const s2 = checkCalls(f).filter(c => userOf(c).includes(`Check S2: ${S2}`))
     expect(s2).toHaveLength(22)

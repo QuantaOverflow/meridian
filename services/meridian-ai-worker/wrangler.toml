@@ -45,4 +45,10 @@ head_sampling_rate = 1
 # 逐句核查的 epoch 数（写作–核查循环，ADR 0010）：每句独立核查几次，任一次判有问题就改写。
 # "0" = 不核查、不改写，只留 v4-pro 写作（回滚开关）；缺省或非法值按 1。改它不用改代码。
 BRIEF_CHECK_EPOCHS = "1"
+# 逐句核查怎么做（ADR 0012）："agent" = 逐句 agent（ADR 0010）；"one_call" = 代码取证据 + DashScope 一次调用，失败的句子回退到 agent。
+# 缺省或写错按 agent 并打 warn。满负荷干跑通过之前保持 "agent"，切到 "one_call" 是部署那张票的事。
+BRIEF_CHECK_MODE = "agent"
+# DashScope 的 OpenAI 兼容入口（经 Cloudflare AI Gateway 的 custom provider），只有 one_call 核查用。
+# REPLACE_WITH_GATEWAY_ID 由部署那张票填成真实的 gateway id；key 与网关 token 是 secret（DASHSCOPE_API_KEY / AI_GATEWAY_TOKEN），不写在这里。
+DASHSCOPE_BASE_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/REPLACE_WITH_GATEWAY_ID/custom-dashscope/compatible-mode/v1"
 

@@ -16,6 +16,8 @@ const logger = new Logger({ component: 'call-llm' });
 // 但 provider/model/temp 每档都由 index.ts 的 analysisStrategies 给全，phase 默认值对它不生效。
 
 interface PhaseDefault {
+  /** 不写 = Workers AI binding；只有一次调用核查写 'dashscope'（通道在 llm-call-logger.ts 的 loggedChat 里分） */
+  provider?: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -52,6 +54,9 @@ const PHASE_DEFAULTS: Record<LLMCallPhase, PhaseDefault> = {
   // 逐句核查 agent（ADR 0010）：取值是原型 held-out 实测的那组。每步 3000 是原型 runAgent 的预算
   // （原型里 glm-5.3-flash 先在协议行前长篇思考，1500 时写不完，2026-10-04）。
   brief_block_v6_check: { model: '@cf/qwen/qwen3.8-27b', temperature: 0.2, maxTokens: 3000 },
+  // 逐句核查的一次调用做法（ADR 0012）：走 DashScope 的 qwen3.8-flash。取值是 2026-10-06 原型实测的那组；
+  // 回复先写 CHECKS 再给 RESULT，上限 8000。thinking 由 services/dashscope.ts 在请求体里关。
+  brief_block_v6_check_one_call: { provider: 'dashscope', model: 'qwen3.8-flash', temperature: 0.2, maxTokens: 8000 },
   // 占位（strategy-driven，各值由 index.ts 的 analysisStrategies 每次给）
   article_analysis: { model: '@cf/qwen/qwen3-30b-a3b-fp8', temperature: 0, maxTokens: 6000 },
 };
@@ -113,7 +118,7 @@ export function callLLM(
   const d = PHASE_DEFAULTS[phase];
   const request = {
     messages,
-    provider: overrides.provider,
+    provider: overrides.provider ?? d.provider,
     model: overrides.model ?? d.model,
     // ?? 而非 ||：确定性子调用显式传 temperature:0，|| 会吞成默认
     temperature: overrides.temperature ?? d.temperature,

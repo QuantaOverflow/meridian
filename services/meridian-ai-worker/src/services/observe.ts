@@ -69,7 +69,7 @@ async function run<T>(
  * 一次 LLM 调用挂到当前请求下（由 llm-call-logger 的 loggedChat 统一调用，业务代码不用管）。
  */
 export async function recordLLMCall(info: {
-  phase: string; model?: string; params?: Record<string, unknown>; messages: unknown;
+  phase: string; provider?: string; model?: string; params?: Record<string, unknown>; messages: unknown;
   content?: string; finishReason?: string; usage?: unknown; error?: string;
   startedAt: number; latencyMs: number;
 }): Promise<void> {
@@ -80,7 +80,7 @@ export async function recordLLMCall(info: {
     name: `llm ${info.phase}`, kind: 'llm', status: info.error ? 'error' : 'ok',
     started_at: new Date(info.startedAt).toISOString(), duration_ms: info.latencyMs,
     attributes: {
-      phase: info.phase, model: info.model, params: info.params, messages: info.messages,
+      phase: info.phase, provider: info.provider, model: info.model, params: info.params, messages: info.messages,
       content: info.content, finish_reason: info.finishReason, usage: info.usage, error: info.error,
     },
   });

@@ -55,8 +55,13 @@ export default defineConfig(
   {
     // LLM 调用必须经 callLLM → loggedChat 才会挂进 span、落 R2 的 llm-calls/；直接用底层 chat() 或
     // env.AI.run 调用照样成功、只是悄悄不记。只有 llm-call-logger.ts 能碰底层（workers-ai.ts 自己实现它）。
+    // embed-texts.ts 是句子向量的唯一入口（ADR 0012）：向量调用套不进 chat，它直接调 binding 并自己记日志。
     files: ['services/meridian-ai-worker/src/**/*.ts', 'apps/backend/src/**/*.ts'],
-    ignores: ['services/meridian-ai-worker/src/services/llm-call-logger.ts', 'services/meridian-ai-worker/src/services/workers-ai.ts'],
+    ignores: [
+      'services/meridian-ai-worker/src/services/llm-call-logger.ts',
+      'services/meridian-ai-worker/src/services/workers-ai.ts',
+      'services/meridian-ai-worker/src/services/embed-texts.ts',
+    ],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{

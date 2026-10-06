@@ -144,7 +144,13 @@ export class OneCallChecker {
    * 出错不抛：两条路都没有结论就是 verdict null，由调用方记成没核到。
    */
   async check(item: SentenceItem, round: number): Promise<OneCallRun> {
-    const r = await this.oneCall(item);
+    let r: Awaited<ReturnType<OneCallChecker['oneCall']>>;
+    try {
+      r = await this.oneCall(item);
+    } catch (e) {
+      // 这条路上任何意外的错（取证、拼提示词……）都和通道报错一样处理：记一条回退、交给 agent，不让这一句悄悄没人核
+      r = { verdict: null, failure: { reason: 'provider_error', message: e instanceof Error ? e.message : String(e) }, calls: 0, neurons: 0 };
+    }
     if (r.verdict) return { verdict: r.verdict, calls: r.calls, neurons: r.neurons, path: 'oneCall' };
     const failure = r.failure!;
     const fallback: BriefBlockV6CheckFallback = { sentence: item.index, round, reason: failure.reason, message: failure.message.slice(0, MESSAGE_CHARS) };

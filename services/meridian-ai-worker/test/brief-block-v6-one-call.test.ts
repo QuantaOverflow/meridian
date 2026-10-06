@@ -498,6 +498,24 @@ describe('核查方式的开关（BRIEF_CHECK_MODE）', () => {
     expect(warnLines(warn).filter(l => /BRIEF_CHECK_MODE/.test(l.message))).toEqual([])
   })
 
+  it('agent 与不设这个变量发给 binding 的请求完全一样（模型与入参，按先后），DashScope 一个请求都收不到', async () => {
+    // 一句被标出、改写一次、复核通过：标重点、写作、核查、改写各种请求都在里面
+    const run = async (mode: string | undefined) => {
+      const f = fakeEnv({ mode, write: [DRAFT_REPLY], revise: [R1_REPLY], agent: q => (q.text === S2 ? AGENT_FLAG : AGENT_OK) })
+      const r = await settle(service(f).generate(INPUT))
+      expect(r.block).toEqual(R1_BLOCK)
+      expect(f.unscripted).toEqual([])
+      return f.seen
+    }
+    const unset = await run(undefined)
+    const agent = await run('agent')
+
+    // 标重点 1 + 写作 1 + 草稿三句各一步 + 改写 1 + 改过的一句一步
+    expect(unset.map(s => s.model)).toEqual([GLM, V4PRO, QWEN38, QWEN38, QWEN38, V4PRO, QWEN38])
+    expect(agent).toEqual(unset)
+    expect(dashSeen).toHaveLength(0)
+  })
+
   it.each([undefined, 'onecall', 'ONE_CALL', ''])('缺省或不认识的值（%s）按 agent，每块打一行 warn', async mode => {
     const warn = vi.spyOn(console, 'warn')
     const f = fakeEnv({ mode, write: [DRAFT_REPLY], agent: () => AGENT_OK })

@@ -29,6 +29,7 @@ function parseJsonReply(content: string): any | null {
   try {
     return JSON.parse(fixed);
   } catch {
+    // eslint-disable-next-line local/no-swallowed-catch -- 读不出 = null，由核查那一步当作「回复读不出」重试
     return null;
   }
 }

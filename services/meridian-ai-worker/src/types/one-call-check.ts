@@ -21,7 +21,7 @@ export interface EvidenceEmbeddings {
 }
 
 /** 一句成稿的证据包：给模型看的原句，以及提示词里各分组要列的 key */
-export interface EvidencePack {
+interface EvidencePack {
   /** 要列出的全部原句，按发布时间从早到晚（同刻按 articleId、句号） */
   shown: SentenceKey[];
   /** 这句引用的、簇里确实有的原句 */

@@ -68,13 +68,25 @@ async function health(bindings: Record<string, unknown> = {}): Promise<OpsHealth
 }
 
 // ── 灌数据 ────────────────────────────────────────────────────────────
-const summary = (neurons: number, degradedReasons: string[] = []): RunOpsSummary => ({
+type OneCall = NonNullable<NonNullable<RunOpsSummary['check']>['oneCall']>;
+
+const summary = (neurons: number, degradedReasons: string[] = [], check: RunOpsSummary['check'] = null): RunOpsSummary => ({
   v: 1,
   llm: { calls: 10, neurons, byPhase: {} },
   steps: [],
   blocks: null,
-  check: null,
+  check,
   degradedReasons,
+});
+
+/** 25 块都核查干净的一期；`oneCall` 不给 = 一次调用核查上线之前的汇总 */
+const checkSummary = (oneCall?: Partial<OneCall>): NonNullable<RunOpsSummary['check']> => ({
+  outcomes: { off: 0, clean: 25, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+  uncheckedBlocks: 0,
+  revisions: 0,
+  ...(oneCall
+    ? { oneCall: { checks: 100, fallbacks: 0, fallbackReasons: {}, fallbackMessage: null, noMeaningSearchBlocks: 0, dashscopeUsd: 0.11, ...oneCall } }
+    : {}),
 });
 
 interface RunSpec {
@@ -85,6 +97,7 @@ interface RunSpec {
   ms?: number;
   neurons?: number | null;
   degradedReasons?: string[];
+  check?: RunOpsSummary['check'];
   id?: string;
   error?: string;
 }
@@ -102,7 +115,7 @@ async function run(day: number, spec: RunSpec = {}) {
     stories_identified: 25,
     intelligence_analyses: 25,
     error,
-    ops_summary: neurons === null ? null : summary(neurons, degradedReasons),
+    ops_summary: neurons === null ? null : summary(neurons, degradedReasons, spec.check),
   });
 }
 
@@ -290,6 +303,83 @@ describe('今天的生产运行：状态表的每一行', () => {
     const body = await health();
     expect(body.today).toMatchObject({ state: 'scheduled', level: 'ok', run: null });
     expect(body.runs).toEqual([]);
+  });
+});
+
+describe('逐句核查回退到 agent', () => {
+  it('有一次是 key 被拒：红，那行写出原因并引厂商的报错，连到这次运行', async () => {
+    await run(20, {
+      check: checkSummary({ fallbacks: 3, fallbackReasons: { auth: 1, provider_error: 2 }, fallbackMessage: 'Incorrect API key provided.' }),
+    });
+    atBeijing('21:40:00');
+    const body = await health();
+    expect(body.attention).toEqual([
+      {
+        level: 'red',
+        title: "Today's run: DashScope rejected the API key",
+        detail: '3 of 100 sentence checks fell back to the agent · provider error 2, key rejected 1 · provider said: "Incorrect API key provided."',
+        link: { run: 'cron-brief-20' },
+      },
+    ]);
+    // 运行本身跑完了、没降级：这一行的灯不变
+    expect(body.today).toMatchObject({ state: 'done', level: 'ok', run: { flags: [] } });
+  });
+
+  it('回退刚好占五分之一不亮灯，多一次就黄', async () => {
+    await run(20, { check: checkSummary({ fallbacks: 20, fallbackReasons: { provider_error: 20 }, fallbackMessage: 'Request timed out' }) });
+    atBeijing('21:40:00');
+    expect((await health()).attention).toEqual([]);
+
+    await db.execute(sql`delete from brief_runs where workflow_id = 'cron-brief-20'`);
+    await run(20, {
+      check: checkSummary({ fallbacks: 21, fallbackReasons: { unreadable: 5, provider_error: 16 }, fallbackMessage: 'Request timed out' }),
+    });
+    expect((await health()).attention).toEqual([
+      {
+        level: 'yellow',
+        title: "Today's run: 21% of sentence checks fell back to the agent",
+        detail: '21 of 100 sentence checks fell back to the agent · limit 20% · provider error 16, unreadable reply 5 · provider said: "Request timed out"',
+        link: { run: 'cron-brief-20' },
+      },
+    ]);
+  });
+
+  it('汇总里没有一次调用核查这一项（这之前的运行）、或一次都没回退：不进待处理', async () => {
+    await run(20, { check: checkSummary() });
+    atBeijing('21:40:00');
+    expect((await health()).attention).toEqual([]);
+
+    await db.execute(sql`delete from brief_runs where workflow_id = 'cron-brief-20'`);
+    await run(20, { check: checkSummary({}) });
+    expect((await health()).attention).toEqual([]);
+  });
+
+  it('今天还没跑：看最近一次生产运行，那行说明是上一次的', async () => {
+    await run(19, { check: checkSummary({ fallbacks: 1, fallbackReasons: { auth: 1 }, fallbackMessage: null }) });
+    atBeijing('09:00:00');
+    const body = await health();
+    expect(body.today).toMatchObject({ state: 'scheduled', level: 'ok', run: null });
+    expect(body.attention).toEqual([
+      {
+        level: 'red',
+        title: 'The last run: DashScope rejected the API key',
+        detail: '1 of 100 sentence checks fell back to the agent · key rejected 1',
+        link: { run: 'cron-brief-19' },
+      },
+    ]);
+  });
+
+  it('这次运行本身也亮了灯：各占一行', async () => {
+    await run(20, {
+      status: 'DEGRADED',
+      degradedReasons: ['brief_blocks: 2 of 25 blocks not written'],
+      check: checkSummary({ fallbacks: 30, fallbackReasons: { content_filter: 30 }, fallbackMessage: 'Output data may contain inappropriate content.' }),
+    });
+    atBeijing('21:40:00');
+    expect((await health()).attention.map(a => [a.level, a.title])).toEqual([
+      ['yellow', "Today's run was degraded"],
+      ['yellow', "Today's run: 30% of sentence checks fell back to the agent"],
+    ]);
   });
 });
 

@@ -34,6 +34,59 @@ const RUNS: Record<string, unknown> = {
       { index: 5, tier: 'brief', title: 'Other block', articles: 3, check: null, refusals: 0, calls: 0, neurons: 0, usd: 0 },
     ],
   },
+  // 一次调用核查（ADR 0012）上线后的运行：DashScope 的 key 被拒过
+  'cron-brief-auth': {
+    run: row('cron-brief-auth'),
+    params: null,
+    error: null,
+    summary: {
+      v: 1,
+      llm: { calls: 61, neurons: 2097, byPhase: {} },
+      steps: [],
+      blocks: null,
+      check: {
+        outcomes: { off: 0, clean: 3, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+        uncheckedBlocks: 0,
+        revisions: 0,
+        oneCall: {
+          checks: 30, fallbacks: 3, fallbackReasons: { auth: 2, unreadable: 1 }, fallbackMessage: 'Incorrect API key provided.',
+          noMeaningSearchBlocks: 1, dashscopeUsd: 0.0123,
+        },
+      },
+      degradedReasons: [],
+    },
+    blocks: [
+      { index: 1, tier: 'lead', title: 'Key expired mid-block', articles: 9, check: { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 10, agent: 3 }, fallbacks: 3 }, refusals: 0, calls: 20, neurons: 900, usd: 0.0099 },
+      { index: 2, tier: 'more', title: 'All on the one-call path', articles: 4, check: { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 17, agent: 0 }, fallbacks: 0 }, refusals: 0, calls: 19, neurons: 300, usd: 0.0033 },
+      // 回滚到旧 ai-worker 写出的块：没有这两项
+      { index: 3, tier: 'brief', title: 'Written by the old checker', articles: 3, check: { outcome: 'clean', revisions: 0, unchecked: 0 }, refusals: 0, calls: 8, neurons: 200, usd: 0.0022 },
+    ],
+  },
+  // 回退很多，但没有 key 的问题；每块都用上了按意思搜
+  'cron-brief-many': {
+    run: row('cron-brief-many'),
+    params: null,
+    error: null,
+    summary: {
+      v: 1,
+      llm: { calls: 61, neurons: 2097, byPhase: {} },
+      steps: [],
+      blocks: null,
+      check: {
+        outcomes: { off: 0, clean: 1, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+        uncheckedBlocks: 0,
+        revisions: 0,
+        oneCall: {
+          checks: 40, fallbacks: 12, fallbackReasons: { provider_error: 9, content_filter: 3 }, fallbackMessage: 'Request timed out',
+          noMeaningSearchBlocks: 0, dashscopeUsd: 0.02,
+        },
+      },
+      degradedReasons: [],
+    },
+    blocks: [
+      { index: 1, tier: 'lead', title: 'Timeouts', articles: 9, check: { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 28, agent: 12 }, fallbacks: 12 }, refusals: 0, calls: 20, neurons: 900, usd: 0.0099 },
+    ],
+  },
   'cron-brief-bare': {
     run: row('cron-brief-bare', { calls: null, neurons: null, usd: null, blocks: null }),
     params: null, error: null, summary: null, blocks: { unavailable: 'block record not found' },
@@ -120,6 +173,51 @@ describe('运行详情页', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toContain('Ethiopia, Eritrea resume conflict');
     expect(rows[0]).toContain('fixed');
+    await page.close();
+  });
+
+  it('这之前的运行（汇总和块都不带一次调用核查的字段）：没有逐句核查那一栏，块表也没有多出来的列', async () => {
+    const page = await adminPage('/admin/runs/cron-brief-full');
+    await page.waitForSelector('[data-test=block-row]');
+    expect(await page.locator('[data-test=sentence-check]').count()).toBe(0);
+    const table = await page.locator('[data-test=blocks]').innerText();
+    expect(table).not.toMatch(/fallback|one-call/i);
+    expect(await page.locator('[data-test=blocks] thead th').count()).toBe(10);
+    await page.close();
+  });
+
+  it('有一次调用核查的运行、key 被拒过：逐句核查那一栏写出回退次数、原因、厂商报错、没按意思搜的块数和 DashScope 花费；每块列出各路次数与回退', async () => {
+    const page = await adminPage('/admin/runs/cron-brief-auth');
+    await page.waitForSelector('[data-test=sentence-check]');
+    const check = await page.locator('[data-test=sentence-check]').innerText();
+    expect(check).toContain('30 checks');
+    expect(check).toContain('3 fell back to the agent');
+    expect(check).toContain('key rejected 2');
+    expect(check).toContain('unreadable reply 1');
+    expect(check).toContain('Incorrect API key provided.');
+    expect(check).toContain('1 block without meaning search');
+    expect(check).toContain('$0.0123');
+
+    const rows = await page.locator('[data-test=block-row]').allInnerTexts();
+    expect(rows[0]).toContain('10 one-call · 3 agent');
+    expect(await page.locator('[data-test=block-row]').nth(0).locator('[data-test=fallbacks]').innerText()).toBe('3');
+    expect(rows[1]).toContain('17 one-call · 0 agent');
+    expect(await page.locator('[data-test=block-row]').nth(1).locator('[data-test=fallbacks]').innerText()).toBe('0');
+    // 不带这两项的块写「-」，不写成 0
+    expect(await page.locator('[data-test=block-row]').nth(2).locator('[data-test=paths]').innerText()).toBe('-');
+    expect(await page.locator('[data-test=block-row]').nth(2).locator('[data-test=fallbacks]').innerText()).toBe('-');
+    await page.close();
+  });
+
+  it('回退很多但每块都按意思搜了：写出占比和原因，不提没按意思搜', async () => {
+    const page = await adminPage('/admin/runs/cron-brief-many');
+    await page.waitForSelector('[data-test=sentence-check]');
+    const check = await page.locator('[data-test=sentence-check]').innerText();
+    expect(check).toContain('12 fell back to the agent (30%)');
+    expect(check).toContain('provider error 9');
+    expect(check).toContain('content filter 3');
+    expect(check).toContain('Request timed out');
+    expect(check).not.toContain('meaning search');
     await page.close();
   });
 

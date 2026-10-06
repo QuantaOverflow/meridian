@@ -1,5 +1,12 @@
 import { $brief_runs, eq } from '@meridian/database';
-import { llmCallsPrefix, workflowObservabilityKey, type OpsCheckOutcome, type RunOpsSummary } from '@meridian/contracts';
+import {
+  briefV3RecordKey,
+  llmCallsPrefix,
+  workflowObservabilityKey,
+  type BriefBlockV6Check,
+  type OpsCheckOutcome,
+  type RunOpsSummary,
+} from '@meridian/contracts';
 import type { Env } from '../../index';
 import { Logger } from '../core/logger';
 import { getDb } from '../database';
@@ -8,7 +15,7 @@ import { getDb } from '../database';
  * run 结束时写进 `brief_runs.ops_summary` 的汇总：运维台的页面读这一行，不必每次去 R2 把几百上千条调用记录加一遍。
  *
  * 数据全部来自这次 run 已经落在 R2 的记录——`llm-calls/<wf>/` 下每次模型调用一个对象、`observability/<wf>.json`
- * 一份逐步观测——所以 workflow 里的那一步和回填脚本（scripts/backfill-ops-summary.ts）走同一个 `buildRunOpsSummary`，
+ * 一份逐步观测、`observability/brief-v3/<wf>.json` 一份块记录（只取一次调用核查的那几项）——所以 workflow 里的那一步和回填脚本（scripts/backfill-ops-summary.ts）走同一个 `buildRunOpsSummary`，
  * 只是读 R2 的方式不同（binding / Cloudflare REST API）。
  */
 
@@ -136,6 +143,37 @@ function blocksFrom(metrics: ObservedMetric[]): Pick<RunOpsSummary, 'blocks' | '
   };
 }
 
+type OneCallSummary = NonNullable<NonNullable<RunOpsSummary['check']>['oneCall']>;
+
+/**
+ * 一次调用核查（ADR 0012）的 run 级汇总，从各块的核查记录加出来。
+ * 没有任何块带这些字段（记录早于它，或 ai-worker 回滚到了旧版本）时返回 undefined：汇总里不写这一项，页面照旧。
+ */
+function oneCallFrom(checks: BriefBlockV6Check[]): OneCallSummary | undefined {
+  const carrying = checks.filter(c => c.mode !== undefined || c.paths !== undefined || c.fallbacks !== undefined);
+  if (carrying.length === 0) return undefined;
+  const fallbacks = carrying.flatMap(c => (Array.isArray(c.fallbacks) ? c.fallbacks : []));
+  const fallbackReasons: Record<string, number> = {};
+  for (const f of fallbacks) fallbackReasons[f.reason] = (fallbackReasons[f.reason] ?? 0) + 1;
+  return {
+    checks: carrying.reduce((n, c) => n + count(c.paths?.oneCall) + count(c.paths?.agent), 0),
+    fallbacks: fallbacks.length,
+    fallbackReasons,
+    fallbackMessage: fallbacks[0]?.message ?? null,
+    noMeaningSearchBlocks: carrying.filter(c => c.meaningSearch === false).length,
+    // 留 6 位小数去掉浮点尾巴
+    dashscopeUsd: Math.round(carrying.reduce((n, c) => n + count(c.dashscope?.usd), 0) * 1e6) / 1e6,
+  };
+}
+
+/** 这次 run 的块记录里各块的核查记录；没有块记录（run 没走到拼装，或那次落盘失败）就是空 */
+async function blockChecks(source: RunRecordSource, workflowId: string): Promise<BriefBlockV6Check[]> {
+  const text = await source.get(briefV3RecordKey(workflowId));
+  if (text === null) return [];
+  const blocks: unknown = JSON.parse(text)?.blocks;
+  return Array.isArray(blocks) ? blocks.flatMap(b => (b?.ok && b.check && typeof b.check === 'object' ? [b.check] : [])) : [];
+}
+
 /**
  * 从一次 run 落在 R2 的记录拼出汇总。没有观测对象（很早就失败的 run）时步骤为空、块与核查为 null，照样返回；
  * R2 读失败、记录不是合法 JSON 则抛错。
@@ -150,7 +188,9 @@ export async function buildRunOpsSummary(
   const observed = await source.get(workflowObservabilityKey(workflowId));
   const parsed = observed === null ? null : JSON.parse(observed);
   const metrics: ObservedMetric[] = Array.isArray(parsed?.detailedMetrics) ? parsed.detailedMetrics : [];
-  return { v: 1, llm, steps: stepsFrom(metrics), ...blocksFrom(metrics), degradedReasons };
+  const { blocks, check } = blocksFrom(metrics);
+  const oneCall = check ? oneCallFrom(await blockChecks(source, workflowId)) : undefined;
+  return { v: 1, llm, steps: stepsFrom(metrics), blocks, check: check && oneCall ? { ...check, oneCall } : check, degradedReasons };
 }
 
 function r2BucketSource(bucket: R2Bucket): RunRecordSource {

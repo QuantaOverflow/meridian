@@ -4,10 +4,11 @@
  */
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import { llmCallKey, workflowObservabilityKey } from '@meridian/contracts';
+import { llmCallKey, workflowObservabilityKey, type BriefBlockV6Check } from '@meridian/contracts';
 import { $brief_runs, eq } from '@meridian/database';
 import { getDb } from '../../src/lib/database';
 import { recordRunOpsSummary } from '../../src/lib/ops/run-summary';
+import { putBriefV3Record, writtenBlock } from '../fixtures/reader/fixture';
 
 if (!env.BACKEND_TEST_DB) {
   throw new Error('缺 BACKEND_TEST_DATABASE_URL（本机测试库，见 apps/backend/test/README.md「数据库」）');
@@ -45,6 +46,30 @@ async function putObservation(wf: string, metrics: Array<{ stepName: string; sta
     JSON.stringify({ summary: {}, detailedMetrics: metrics.map((m) => ({ workflowId: wf, ...m })) })
   );
 }
+
+/** 只有 `brief_blocks` 一条观测：核查计数从它来，一次调用核查的汇总从块记录来 */
+const putBlocksObservation = (wf: string) =>
+  putObservation(wf, [
+    {
+      stepName: 'brief_blocks',
+      status: 'completed',
+      timestamp: at(10),
+      data: {
+        expected: 3,
+        written: 3,
+        tiers: { lead: 1, more: 1, brief: 1 },
+        writeRejects: 0,
+        checkOutcomes: { off: 0, clean: 3, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+        uncheckedBlocks: 0,
+        checkRevisions: 0,
+      },
+    },
+  ]);
+
+/** 循环上线时的核查记录：没有一次调用核查的任何字段 */
+const oldCheck: BriefBlockV6Check = {
+  epochs: 1, outcome: 'clean', revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 6, neurons: 500, ms: 1_000,
+};
 
 const readRun = async (wf: string) => (await db.select().from($brief_runs).where(eq($brief_runs.workflow_id, wf)))[0];
 
@@ -204,5 +229,92 @@ describe('run 汇总', () => {
 
     expect(await recordRunOpsSummary(env, wf, [])).toBe(false);
     expect((await readRun(wf)).ops_summary).toBeNull();
+  });
+
+  it('块记录带一次调用核查的字段：核查次数、回退次数与原因、第一条报错、没按意思搜的块数、DashScope 花费进汇总', async () => {
+    const wf = uniq('wf-summary-one-call');
+    await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });
+    await putBlocksObservation(wf);
+    await putBriefV3Record(env.ARTICLES_BUCKET, wf, [
+      {
+        ...writtenBlock(0, 'a', 'lead'),
+        check: {
+          ...oldCheck,
+          mode: 'one_call',
+          paths: { oneCall: 10, agent: 2 },
+          fallbacks: [
+            { sentence: 3, round: 0, reason: 'provider_error', message: 'Request timed out' },
+            { sentence: 5, round: 1, reason: 'unreadable', message: '…so the verdict is' },
+          ],
+          meaningSearch: true,
+          maxEvidence: 31,
+          dashscope: { calls: 12, usd: 0.0031 },
+        },
+      },
+      {
+        ...writtenBlock(1, 'b', 'more'),
+        check: {
+          ...oldCheck,
+          mode: 'one_call',
+          paths: { oneCall: 7, agent: 1 },
+          fallbacks: [{ sentence: 1, round: 0, reason: 'provider_error', message: 'HTTP 503' }],
+          meaningSearch: false,
+          maxEvidence: 12,
+          dashscope: { calls: 8, usd: 0.0012 },
+        },
+      },
+      // 回滚到旧 ai-worker 写出的块、没写出来的块：都不带这些字段，不计入
+      { ...writtenBlock(2, 'c', 'brief'), check: oldCheck },
+      { storyIdx: 3, title: 'd', ok: false, error: 'write failed' },
+    ]);
+
+    expect(await recordRunOpsSummary(env, wf, [])).toBe(true);
+
+    expect((await readRun(wf)).ops_summary?.check).toEqual({
+      outcomes: { off: 0, clean: 3, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+      uncheckedBlocks: 0,
+      revisions: 0,
+      oneCall: {
+        checks: 20,
+        fallbacks: 3,
+        fallbackReasons: { provider_error: 2, unreadable: 1 },
+        fallbackMessage: 'Request timed out',
+        noMeaningSearchBlocks: 1,
+        dashscopeUsd: 0.0043,
+      },
+    });
+  });
+
+  it('一次调用核查全程没有回退：计数是 0，报错是 null', async () => {
+    const wf = uniq('wf-summary-one-call-clean');
+    await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });
+    await putBlocksObservation(wf);
+    await putBriefV3Record(env.ARTICLES_BUCKET, wf, [
+      {
+        ...writtenBlock(0, 'a', 'lead'),
+        check: { ...oldCheck, mode: 'one_call', paths: { oneCall: 9, agent: 0 }, fallbacks: [], meaningSearch: true, maxEvidence: 20, dashscope: { calls: 9, usd: 0.002 } },
+      },
+    ]);
+
+    expect(await recordRunOpsSummary(env, wf, [])).toBe(true);
+
+    expect((await readRun(wf)).ops_summary?.check?.oneCall).toEqual({
+      checks: 9, fallbacks: 0, fallbackReasons: {}, fallbackMessage: null, noMeaningSearchBlocks: 0, dashscopeUsd: 0.002,
+    });
+  });
+
+  it('各块都不带一次调用核查的字段（这之前的运行）：汇总里没有 oneCall 这一项', async () => {
+    const wf = uniq('wf-summary-no-one-call');
+    await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });
+    await putBlocksObservation(wf);
+    await putBriefV3Record(env.ARTICLES_BUCKET, wf, [{ ...writtenBlock(0, 'a', 'lead'), check: oldCheck }, writtenBlock(1, 'b', 'more')]);
+
+    expect(await recordRunOpsSummary(env, wf, [])).toBe(true);
+
+    expect((await readRun(wf)).ops_summary?.check).toEqual({
+      outcomes: { off: 0, clean: 3, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+      uncheckedBlocks: 0,
+      revisions: 0,
+    });
   });
 });

@@ -21,7 +21,8 @@ const closedCycle: OpsCost = {
   daily: [
     { day: '2026-09-04', byModel: { [GLM]: 68_109, [QWEN]: 10_832 } },
     { day: '2026-09-05', byModel: {} },
-    { day: '2026-10-03', byModel: { [V4]: 1_051_549, [GLM]: 2_536, [QWEN]: 6_510, [TRIAL]: 57_290 } },
+    // dashscope：那天生产运行在 DashScope 花的钱，按牌价折成 neurons（10,000 = $0.11）；不是 Workers AI 的用量
+    { day: '2026-10-03', byModel: { [V4]: 1_051_549, [GLM]: 2_536, [QWEN]: 6_510, [TRIAL]: 57_290, dashscope: 10_000 } },
   ],
   byModel: [
     { modelId: GLM, neurons: 1_144_059, share: 0.3841, usdAtList: 12.584649 },
@@ -181,6 +182,14 @@ describe('Cost 页', () => {
     await chart.locator('[data-day="2026-10-03"]').hover();
     await expect.poll(() => chart.locator('[role=tooltip]').innerText()).toContain('Oct 3');
     expect(await chart.locator('[role=tooltip]').innerText()).toContain('1,117,885');
+    // DashScope 在那天的读数里单占一行、按美元；不加进 Workers AI 的合计。图例和图下的说明也有它
+    expect(await chart.locator('[role=tooltip]').innerText()).toMatch(/\$0\.11\s+DashScope/);
+    expect(await chart.locator('[data-test=legend]').innerText()).toContain('DashScope');
+    expect(await chart.locator('[data-test=dashscope-note]').innerText()).toContain('$0.11');
+    // 没有它的日子不提
+    await chart.locator('[data-day="2026-09-04"]').hover();
+    await expect.poll(() => chart.locator('[role=tooltip]').innerText()).toContain('Sep 4');
+    expect(await chart.locator('[role=tooltip]').innerText()).not.toContain('DashScope');
 
     const steps = await panel(page, 'Last production run, by step').innerText();
     expect(steps).toContain('Oct 3');

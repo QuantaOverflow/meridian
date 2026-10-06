@@ -30,7 +30,7 @@ import { BAD_BODY_PCT, computeSourceStatuses, countByKind, JUNK_REASON_PREFIX, t
 /**
  * 运维台 health 端点：今天的生产运行、近 24 小时入库、各服务、来源、本周期花费、待处理清单、最近 14 次生产运行。
  * 响应类型 `OpsHealth` 在 @meridian/contracts。运行行与来源的判据各在 run-rows.ts / source-status.ts，
- * 这里只有 Health 页自己的几条：今天的状态、黏成一行的正文占比、Worker 报错、服务健康，以及把它们拼成待处理清单。
+ * 这里只有 Health 页自己的几条：今天的状态、逐句核查的回退、黏成一行的正文占比、Worker 报错、服务健康，以及把它们拼成待处理清单。
  * Cloudflare 读不到时受影响的面板给 `{ unavailable }`，端点照常回 200。
  *
  * 读 ml-service 的健康会唤醒它的容器并重置 10 分钟的休眠计时，所以这个端点只在打开页面时请求一次，页面不轮询。
@@ -43,6 +43,11 @@ const logger = new Logger({ module: 'ops-health' });
 const RUN_START_HOUR_BEIJING = 21;
 /** 近 24 小时记了行数的正文里，黏成一行的占比超过它（严格大于）就黄 */
 const SINGLE_LINE_YELLOW_PCT = 20;
+/**
+ * 一次运行里逐句核查回退到 agent 的占比超过它（严格大于）就黄。起步值，不是量出来的（ADR 0012）；
+ * 有一次回退的原因是 key 被拒就红，不看占比
+ */
+const CHECK_FALLBACK_YELLOW_PCT = 20;
 /** 运行表列多少次 */
 const RUNS_SHOWN = 14;
 /** 往回取多少天的运行来凑这张表（每天一次，留出缺跑的余量） */
@@ -146,6 +151,54 @@ function todayPanel(
     today: { state: row.status === 'RUNNING' ? 'running' : 'done', level: row.level, run: row, ...numbers },
     attention: row.level === 'ok' ? [] : [runAttention(row, record, judgedAgainst)],
   };
+}
+
+// ── 逐句核查的回退 ─────────────────────────────────────────────────────
+
+/** 回退原因（`BriefBlockV6CheckFallbackReason`）在清单里怎么写；不认识的原样写 */
+const FALLBACK_REASON_LABEL: Record<string, string> = {
+  auth: 'key rejected',
+  content_filter: 'content filter',
+  provider_error: 'provider error',
+  unreadable: 'unreadable reply',
+};
+
+/**
+ * 最近一次生产运行的逐句核查有没有大量回退到 agent（一次调用核查，ADR 0012）。看最近一次而不只看今天的：
+ * 每天只跑一次、21:00 才开跑，key 过期这类事要在下一期之前被看到。回退不改运行的状态——句子照样核查了，只是贵，
+ * 所以它不进运行那一行的灯，单占待处理清单的一行。汇总里没有这一项（之前的运行、还在跑的运行）就没有这一行。
+ */
+function checkFallbackAttention(records: BriefRunRecord[], now: Date): Attention[] {
+  const record = records[records.length - 1];
+  const oneCall = record?.ops_summary?.check?.oneCall;
+  if (!record || !oneCall || oneCall.fallbacks === 0) return [];
+
+  const keyRejected = (oneCall.fallbackReasons.auth ?? 0) > 0;
+  // 整数乘法比较，避开浮点误差
+  const many = oneCall.fallbacks * 100 > CHECK_FALLBACK_YELLOW_PCT * oneCall.checks;
+  if (!keyRejected && !many) return [];
+
+  const which = beijingDay(record.started_at) === beijingDay(now) ? "Today's run" : 'The last run';
+  const reasons = Object.entries(oneCall.fallbackReasons)
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, n]) => `${FALLBACK_REASON_LABEL[reason] ?? reason} ${n}`)
+    .join(', ');
+  const detail = [
+    `${oneCall.fallbacks} of ${oneCall.checks} sentence checks fell back to the agent`,
+    ...(keyRejected ? [] : [`limit ${CHECK_FALLBACK_YELLOW_PCT}%`]),
+    reasons,
+    ...(oneCall.fallbackMessage ? [`provider said: "${oneCall.fallbackMessage.slice(0, 200)}"`] : []),
+  ].join(' · ');
+  return [
+    {
+      level: keyRejected ? 'red' : 'yellow',
+      title: keyRejected
+        ? `${which}: DashScope rejected the API key`
+        : `${which}: ${Math.round((oneCall.fallbacks / oneCall.checks) * 100)}% of sentence checks fell back to the agent`,
+      detail,
+      link: { run: record.workflow_id },
+    },
+  ];
 }
 
 // ── 近 24 小时入库 ─────────────────────────────────────────────────────
@@ -393,8 +446,8 @@ export async function opsHealth(c: Context<{ Bindings: Env }>): Promise<Response
 
   const today = todayPanel(runs, now);
   const sources = sourcesPanel(statuses, now);
-  // 顺序：今天的运行、来源、入库、Worker 报错、服务；再把红的提到前面（sort 稳定，组内顺序不变）
-  const attention = [...today.attention, ...sources.attention, ...ingest.attention, ...workerErrors.attention, ...serviceAttention(services)].sort(
+  // 顺序：今天的运行、逐句核查的回退、来源、入库、Worker 报错、服务；再把红的提到前面（sort 稳定，组内顺序不变）
+  const attention = [...today.attention, ...checkFallbackAttention(runs.records, now), ...sources.attention, ...ingest.attention, ...workerErrors.attention, ...serviceAttention(services)].sort(
     (a, b) => Number(b.level === 'red') - Number(a.level === 'red')
   );
 

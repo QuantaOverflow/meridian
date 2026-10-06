@@ -38,7 +38,14 @@ async function loadBlocks(bucket: R2Bucket, workflowId: string): Promise<OpsRunD
             title: b.title,
             articles: b.articles,
             check: b.check
-              ? { outcome: b.check.outcome, revisions: b.check.revisions, unchecked: b.check.unchecked.length }
+              ? {
+                  outcome: b.check.outcome,
+                  revisions: b.check.revisions,
+                  unchecked: b.check.unchecked.length,
+                  // 一次调用核查的两项：记录里有才带，早于它的记录照旧只有上面三项
+                  ...(b.check.paths ? { paths: { oneCall: b.check.paths.oneCall, agent: b.check.paths.agent } } : {}),
+                  ...(Array.isArray(b.check.fallbacks) ? { fallbacks: b.check.fallbacks.length } : {}),
+                }
               : null,
             refusals: b.writeRejects.length,
             calls: b.llmCalls,

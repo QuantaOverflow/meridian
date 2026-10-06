@@ -143,14 +143,20 @@ function blocksFrom(metrics: ObservedMetric[]): Pick<RunOpsSummary, 'blocks' | '
   };
 }
 
+/**
+ * 这一块的逐句核查走的是不是一次调用核查（ADR 0012）。新记录每块都带 `mode` 和 `paths`，配成 agent、关掉核查时也带，
+ * 所以不能按「有没有这些字段」认：配成 agent 的、关掉核查的块，运维台上要和这之前的记录一个样
+ */
+export const usedOneCallCheck = (check: BriefBlockV6Check) => check.mode === 'one_call' && check.outcome !== 'off';
+
 type OneCallSummary = NonNullable<NonNullable<RunOpsSummary['check']>['oneCall']>;
 
 /**
  * 一次调用核查（ADR 0012）的 run 级汇总，从各块的核查记录加出来。
- * 没有任何块带这些字段（记录早于它，或 ai-worker 回滚到了旧版本）时返回 undefined：汇总里不写这一项，页面照旧。
+ * 只加真走了一次调用核查的块（`usedOneCallCheck`）。一块都没有时返回 undefined：汇总里不写这一项，页面和之前的运行一样。
  */
 function oneCallFrom(checks: BriefBlockV6Check[]): OneCallSummary | undefined {
-  const carrying = checks.filter(c => c.mode !== undefined || c.paths !== undefined || c.fallbacks !== undefined);
+  const carrying = checks.filter(usedOneCallCheck);
   if (carrying.length === 0) return undefined;
   const fallbacks = carrying.flatMap(c => (Array.isArray(c.fallbacks) ? c.fallbacks : []));
   const fallbackReasons: Record<string, number> = {};
@@ -159,7 +165,8 @@ function oneCallFrom(checks: BriefBlockV6Check[]): OneCallSummary | undefined {
     checks: carrying.reduce((n, c) => n + count(c.paths?.oneCall) + count(c.paths?.agent), 0),
     fallbacks: fallbacks.length,
     fallbackReasons,
-    fallbackMessage: fallbacks[0]?.message ?? null,
+    // key 被拒是红灯那行的标题，引的报错得是那一条；没有才引第一条
+    fallbackMessage: (fallbacks.find(f => f.reason === 'auth') ?? fallbacks[0])?.message ?? null,
     noMeaningSearchBlocks: carrying.filter(c => c.meaningSearch === false).length,
     // 留 6 位小数去掉浮点尾巴
     dashscopeUsd: Math.round(carrying.reduce((n, c) => n + count(c.dashscope?.usd), 0) * 1e6) / 1e6,

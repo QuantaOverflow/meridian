@@ -303,6 +303,75 @@ describe('run 汇总', () => {
     });
   });
 
+  it('有 key 被拒的回退时，报错引的是第一条 key 被拒的那条，不是排在它前面的别的回退', async () => {
+    const wf = uniq('wf-summary-one-call-auth');
+    await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });
+    await putBlocksObservation(wf);
+    await putBriefV3Record(env.ARTICLES_BUCKET, wf, [
+      {
+        ...writtenBlock(0, 'a', 'lead'),
+        check: {
+          ...oldCheck,
+          mode: 'one_call',
+          paths: { oneCall: 5, agent: 3 },
+          fallbacks: [
+            { sentence: 1, round: 0, reason: 'unreadable', message: '…so the verdict is' },
+            { sentence: 2, round: 0, reason: 'auth', message: 'Incorrect API key provided.' },
+            { sentence: 3, round: 0, reason: 'auth', message: 'Incorrect API key provided. (2)' },
+          ],
+        },
+      },
+    ]);
+
+    expect(await recordRunOpsSummary(env, wf, [])).toBe(true);
+
+    expect((await readRun(wf)).ops_summary?.check?.oneCall).toMatchObject({
+      fallbacks: 3,
+      fallbackReasons: { unreadable: 1, auth: 2 },
+      fallbackMessage: 'Incorrect API key provided.',
+    });
+  });
+
+  it('核查配成 agent 的运行、关掉核查的运行：块记录带 mode 和 paths，但汇总和之前一样，没有 oneCall 这一项', async () => {
+    const outcomes = { off: 0, clean: 3, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 };
+
+    const agent = uniq('wf-summary-agent-mode');
+    await db.insert($brief_runs).values({ workflow_id: agent, status: 'COMPLETED' });
+    await putBlocksObservation(agent);
+    await putBriefV3Record(env.ARTICLES_BUCKET, agent, [
+      { ...writtenBlock(0, 'a', 'lead'), check: { ...oldCheck, mode: 'agent', paths: { oneCall: 0, agent: 12 }, fallbacks: [] } },
+      { ...writtenBlock(1, 'b', 'more'), check: { ...oldCheck, mode: 'agent', paths: { oneCall: 0, agent: 7 }, fallbacks: [] } },
+    ]);
+    expect(await recordRunOpsSummary(env, agent, [])).toBe(true);
+    expect((await readRun(agent)).ops_summary?.check).toEqual({ outcomes, uncheckedBlocks: 0, revisions: 0 });
+
+    const off = uniq('wf-summary-check-off');
+    await db.insert($brief_runs).values({ workflow_id: off, status: 'COMPLETED' });
+    await putBlocksObservation(off);
+    await putBriefV3Record(env.ARTICLES_BUCKET, off, [
+      { ...writtenBlock(0, 'a', 'lead'), check: { ...oldCheck, epochs: 0, outcome: 'off', mode: 'one_call', paths: { oneCall: 0, agent: 0 }, fallbacks: [] } },
+      { ...writtenBlock(1, 'b', 'more'), check: { ...oldCheck, epochs: 0, outcome: 'off', mode: 'agent', paths: { oneCall: 0, agent: 0 }, fallbacks: [] } },
+    ]);
+    expect(await recordRunOpsSummary(env, off, [])).toBe(true);
+    expect((await readRun(off)).ops_summary?.check).toEqual({ outcomes, uncheckedBlocks: 0, revisions: 0 });
+  });
+
+  it('一期里只有一部分块走一次调用核查：只加这些块', async () => {
+    const wf = uniq('wf-summary-one-call-mixed');
+    await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });
+    await putBlocksObservation(wf);
+    await putBriefV3Record(env.ARTICLES_BUCKET, wf, [
+      { ...writtenBlock(0, 'a', 'lead'), check: { ...oldCheck, mode: 'one_call', paths: { oneCall: 9, agent: 0 }, fallbacks: [], meaningSearch: true, dashscope: { calls: 9, usd: 0.002 } } },
+      { ...writtenBlock(1, 'b', 'more'), check: { ...oldCheck, mode: 'agent', paths: { oneCall: 0, agent: 30 }, fallbacks: [], meaningSearch: false } },
+    ]);
+
+    expect(await recordRunOpsSummary(env, wf, [])).toBe(true);
+
+    expect((await readRun(wf)).ops_summary?.check?.oneCall).toEqual({
+      checks: 9, fallbacks: 0, fallbackReasons: {}, fallbackMessage: null, noMeaningSearchBlocks: 0, dashscopeUsd: 0.002,
+    });
+  });
+
   it('各块都不带一次调用核查的字段（这之前的运行）：汇总里没有 oneCall 这一项', async () => {
     const wf = uniq('wf-summary-no-one-call');
     await db.insert($brief_runs).values({ workflow_id: wf, status: 'COMPLETED' });

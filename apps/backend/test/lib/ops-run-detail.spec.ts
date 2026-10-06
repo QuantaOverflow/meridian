@@ -126,6 +126,23 @@ describe('GET /observability/ops/runs/:workflowId', () => {
     ]);
   });
 
+  it('核查配成 agent 的块、关掉核查的块：记录里有 mode 和 paths，带出来的仍只有三项', async () => {
+    await seedRun('cron-brief-6');
+    const base = { epochs: 1, outcome: 'clean' as const, revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 6, neurons: 500, ms: 1_000 };
+    await putRecord('cron-brief-6', [
+      { ...writtenBlock(0, 'agent mode', 'lead'), storyIdx: 1, check: { ...base, mode: 'agent', paths: { oneCall: 0, agent: 12 }, fallbacks: [] } },
+      { ...writtenBlock(1, 'check off', 'more'), storyIdx: 2, check: { ...base, epochs: 0, outcome: 'off', mode: 'one_call', paths: { oneCall: 0, agent: 0 }, fallbacks: [] } },
+    ]);
+
+    const body = (await (await get('cron-brief-6')).json()) as OpsRunDetail;
+
+    if (!Array.isArray(body.blocks)) throw new Error('应当有块');
+    expect(body.blocks.map(b => b.check)).toEqual([
+      { outcome: 'clean', revisions: 0, unchecked: 0 },
+      { outcome: 'off', revisions: 0, unchecked: 0 },
+    ]);
+  });
+
   it('没有块记录：blocks 是 unavailable，端点仍是 200', async () => {
     await seedRun('cron-brief-3');
     const res = await get('cron-brief-3');

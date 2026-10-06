@@ -174,8 +174,8 @@ function checkFallbackAttention(records: BriefRunRecord[], now: Date): Attention
   if (!record || !oneCall || oneCall.fallbacks === 0) return [];
 
   const keyRejected = (oneCall.fallbackReasons.auth ?? 0) > 0;
-  // 整数乘法比较，避开浮点误差
-  const many = oneCall.fallbacks * 100 > CHECK_FALLBACK_YELLOW_PCT * oneCall.checks;
+  // 整数乘法比较，避开浮点误差；核查次数是 0 时没有占比可言，不判
+  const many = oneCall.checks > 0 && oneCall.fallbacks * 100 > CHECK_FALLBACK_YELLOW_PCT * oneCall.checks;
   if (!keyRejected && !many) return [];
 
   const which = beijingDay(record.started_at) === beijingDay(now) ? "Today's run" : 'The last run';

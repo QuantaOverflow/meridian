@@ -11,6 +11,7 @@ import type { Env } from '../../index';
 import { getDb } from '../database';
 import { Logger } from '../core/logger';
 import { PRODUCTION_RUN_ID_PREFIX, loadProductionRuns, toRunRow, type BriefRunRecord } from './run-rows';
+import { usedOneCallCheck } from './run-summary';
 
 const logger = new Logger({ module: 'ops-run-detail' });
 /** 手动运行没有基线：慢 / 贵都不判 */
@@ -42,9 +43,11 @@ async function loadBlocks(bucket: R2Bucket, workflowId: string): Promise<OpsRunD
                   outcome: b.check.outcome,
                   revisions: b.check.revisions,
                   unchecked: b.check.unchecked.length,
-                  // 一次调用核查的两项：记录里有才带，早于它的记录照旧只有上面三项
-                  ...(b.check.paths ? { paths: { oneCall: b.check.paths.oneCall, agent: b.check.paths.agent } } : {}),
-                  ...(Array.isArray(b.check.fallbacks) ? { fallbacks: b.check.fallbacks.length } : {}),
+                  // 一次调用核查的两项：这块走的是它才带；早于它的记录、配成 agent 或关掉核查的块照旧只有上面三项
+                  ...(usedOneCallCheck(b.check) && b.check.paths
+                    ? { paths: { oneCall: b.check.paths.oneCall, agent: b.check.paths.agent } }
+                    : {}),
+                  ...(usedOneCallCheck(b.check) && Array.isArray(b.check.fallbacks) ? { fallbacks: b.check.fallbacks.length } : {}),
                 }
               : null,
             refusals: b.writeRejects.length,

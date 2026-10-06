@@ -87,6 +87,23 @@ const RUNS: Record<string, unknown> = {
       { index: 1, tier: 'lead', title: 'Timeouts', articles: 9, check: { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 28, agent: 12 }, fallbacks: 12 }, refusals: 0, calls: 20, neurons: 900, usd: 0.0099 },
     ],
   },
+  // 核查配成 agent 的运行：backend 给的和这之前的运行一样——汇总的 check 没有 oneCall，块的 check 只有三项
+  'cron-brief-agent': {
+    run: row('cron-brief-agent'),
+    params: null,
+    error: null,
+    summary: {
+      v: 1,
+      llm: { calls: 61, neurons: 2097, byPhase: {} },
+      steps: [],
+      blocks: null,
+      check: { outcomes: { off: 0, clean: 1, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 }, uncheckedBlocks: 0, revisions: 0 },
+      degradedReasons: [],
+    },
+    blocks: [
+      { index: 1, tier: 'lead', title: 'Checked by the agent', articles: 9, check: { outcome: 'clean', revisions: 0, unchecked: 0 }, refusals: 0, calls: 20, neurons: 900, usd: 0.0099 },
+    ],
+  },
   'cron-brief-bare': {
     run: row('cron-brief-bare', { calls: null, neurons: null, usd: null, blocks: null }),
     params: null, error: null, summary: null, blocks: { unavailable: 'block record not found' },
@@ -176,15 +193,16 @@ describe('运行详情页', () => {
     await page.close();
   });
 
-  it('这之前的运行（汇总和块都不带一次调用核查的字段）：没有逐句核查那一栏，块表也没有多出来的列', async () => {
-    const page = await adminPage('/admin/runs/cron-brief-full');
-    await page.waitForSelector('[data-test=block-row]');
-    expect(await page.locator('[data-test=sentence-check]').count()).toBe(0);
-    const table = await page.locator('[data-test=blocks]').innerText();
-    expect(table).not.toMatch(/fallback|one-call/i);
-    expect(await page.locator('[data-test=blocks] thead th').count()).toBe(10);
-    await page.close();
-  });
+  for (const id of ['cron-brief-full', 'cron-brief-agent']) {
+    it(`这之前的运行、核查配成 agent 的运行（${id}）：没有逐句核查那一栏，块表也没有多出来的列`, async () => {
+      const page = await adminPage(`/admin/runs/${id}`);
+      await page.waitForSelector('[data-test=block-row]');
+      expect(await page.locator('[data-test=sentence-check]').count()).toBe(0);
+      expect(await page.locator('main, body').first().innerText()).not.toMatch(/fell back|fallback|one-call/i);
+      expect(await page.locator('[data-test=blocks] thead th').count()).toBe(10);
+      await page.close();
+    });
+  }
 
   it('有一次调用核查的运行、key 被拒过：逐句核查那一栏写出回退次数、原因、厂商报错、没按意思搜的块数和 DashScope 花费；每块列出各路次数与回退', async () => {
     const page = await adminPage('/admin/runs/cron-brief-auth');

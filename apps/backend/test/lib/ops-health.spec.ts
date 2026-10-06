@@ -354,6 +354,25 @@ describe('逐句核查回退到 agent', () => {
     expect((await health()).attention).toEqual([]);
   });
 
+  it('核查次数是 0：不算占比、不亮黄灯；有 key 被拒的回退仍然红', async () => {
+    await run(20, { check: checkSummary({ checks: 0, fallbacks: 2, fallbackReasons: { provider_error: 2 }, fallbackMessage: 'HTTP 503' }) });
+    atBeijing('21:40:00');
+    expect((await health()).attention).toEqual([]);
+
+    await db.execute(sql`delete from brief_runs where workflow_id = 'cron-brief-20'`);
+    await run(20, { check: checkSummary({ checks: 0, fallbacks: 1, fallbackReasons: { auth: 1 }, fallbackMessage: 'Incorrect API key provided.' }) });
+    const { attention } = await health();
+    expect(attention).toEqual([
+      {
+        level: 'red',
+        title: "Today's run: DashScope rejected the API key",
+        detail: '1 of 0 sentence checks fell back to the agent · key rejected 1 · provider said: "Incorrect API key provided."',
+        link: { run: 'cron-brief-20' },
+      },
+    ]);
+    expect(JSON.stringify(attention)).not.toMatch(/Infinity|NaN/);
+  });
+
   it('今天还没跑：看最近一次生产运行，那行说明是上一次的', async () => {
     await run(19, { check: checkSummary({ fallbacks: 1, fallbackReasons: { auth: 1 }, fallbackMessage: null }) });
     atBeijing('09:00:00');

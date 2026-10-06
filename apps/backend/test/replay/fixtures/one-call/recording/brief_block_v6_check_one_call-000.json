@@ -1,0 +1,25 @@
+{
+ "trace_id": "fixture-one-call",
+ "phase": "brief_block_v6_check_one_call",
+ "call_index": 0,
+ "timestamp": "2026-10-06T01:00:00.000Z",
+ "request": {
+  "provider": "dashscope",
+  "model": "qwen3.8-flash",
+  "messages": [
+   { "role": "system", "content": "You check one sentence against the evidence." },
+   { "role": "user", "content": "SENTENCE\nThe harbour reopened on Monday.\n\nEVIDENCE\n[1:0] The harbour reopened on Monday.\n[1:1] Two ferries resumed service." }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 8000
+ },
+ "response": {
+  "content": "CHECKS\n1. reopened on Monday: [1:0] says so.\nRESULT\n{\"ok\":true}",
+  "finish_reason": "stop",
+  "usage": { "prompt_tokens": 4200, "completion_tokens": 600, "total_tokens": 4800, "usd": 0.000701, "neurons": 63.7 },
+  "provider_used": "dashscope",
+  "model_used": "qwen3.8-flash",
+  "processing_time_ms": 12000
+ },
+ "latency_ms": 12000
+}

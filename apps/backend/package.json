@@ -6,7 +6,8 @@
   "author": "QuantaOverflow",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "vitest run",
+    "test": "vitest run && pnpm -s test:replay",
+    "test:replay": "node --test test/replay/replay-server.test.mjs",
     "replay": "node test/replay/replay.mjs",
     "cf-typegen": "wrangler types",
     "typecheck": "wrangler types --check && tsc --noEmit && tsc --noEmit -p test/tsconfig.json"

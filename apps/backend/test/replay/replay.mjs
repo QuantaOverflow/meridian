@@ -3,7 +3,9 @@
 //
 // 把一次生产 brief run 在本地原样重跑：backend workflow + ai-worker 的代码全是真的，
 // 唯一被替换的是 LLM provider 边界——ai-worker 的 Workers AI binding `env.AI` 换成
-// replay-ai-worker.js（从录像作答）。跑完把产出与生产那次的产出逐字段比对。
+// replay-ai-worker.js，DashScope 的地址（DASHSCOPE_BASE_URL）指到 runner 的本地服务，chat 调用都从录像作答；
+// 句子向量不在录像里，从本地向量缓存作答，缓存没有的批次现调一次真模型（vector-cache.mjs）。
+// 跑完把产出与生产那次的产出逐字段比对。
 //
 // 用法：
 //   node replay.mjs <workflowId>            全链路重放 + 比对
@@ -15,16 +17,16 @@
 // 退出码：0 = 零 miss 且产出与生产一致；1 = 有 miss / 有差异 / 假通过守卫触发；2 = 用法或环境错误。
 import fs from 'node:fs';
 import path from 'node:path';
-import http from 'node:http';
 import net from 'node:net';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import {
-  HERE, BACKEND_DIR, AI_WORKER_DIR, ML_DIR, WRANGLER,
-  credentials, pg, parseJsonc, runDir, resolveLocalOnly, mapLimit,
-  requestKey, renderRequest, unifiedDiff, similarity,
+  HERE, BACKEND_DIR, AI_WORKER_DIR, ML_DIR, WRANGLER, CF_ACCOUNT_ID,
+  credentials, pg, parseJsonc, runDir, resolveLocalOnly, mapLimit, unifiedDiff,
 } from './lib.mjs';
 import { fetchRecording } from './fetch-recording.mjs';
+import { ReplayStore, startReplayServer, aiWorkerReplayEnv } from './replay-server.mjs';
+import { VectorCache } from './vector-cache.mjs';
 
 const args = process.argv.slice(2);
 const wf = args.find((a) => !a.startsWith('--'));
@@ -56,121 +58,21 @@ function freePort() {
   });
 }
 
-// ── 录像库 ────────────────────────────────────────────────────────────────
-class ReplayStore {
-  constructor(recDir) {
-    this.records = fs.readdirSync(recDir).filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(fs.readFileSync(path.join(recDir, f), 'utf8')))
-      .sort((a, b) => a.phase.localeCompare(b.phase) || a.call_index - b.call_index);
-    this.queues = new Map();
-    for (const r of this.records) {
-      if (r.error || !r.response) throw new Error(`录像 ${r.phase}-${r.call_index} 是失败调用（error=${r.error}），重放器暂不支持`);
-      const k = requestKey(r.request.model, r.request);
-      if (!this.queues.has(k)) this.queues.set(k, []);
-      this.queues.get(k).push(r);
-    }
-    this.served = [];
-    this.misses = [];
-    this.missSigs = new Set();
-    this.used = new Set();
-  }
-
-  answer(model, inputs) {
-    const k = requestKey(model, inputs);
-    const q = this.queues.get(k);
-    const rec = q?.find((r) => !this.used.has(r)) ?? null;
-    if (rec) {
-      this.used.add(rec);
-      this.served.push(`${rec.phase}-${rec.call_index}`);
-      const resp = rec.response;
-      // 形状对齐 glm-4.7-flash 经 env.AI binding 的返回（OpenAI 兼容、无 result 外壳、
-      // 关思维链后正文在 content）。ai-worker 的 capabilities/chat.ts 从这里解析。
-      return {
-        id: `replay-${rec.phase}-${rec.call_index}`,
-        object: 'chat.completion',
-        created: 0,
-        model,
-        choices: [{
-          index: 0,
-          message: { role: 'assistant', content: resp.content, reasoning_content: null, tool_calls: [] },
-          finish_reason: resp.finish_reason,
-        }],
-        usage: resp.usage,
-      };
-    }
-    // 同一请求被打了比录像更多次（录像同 key 已用完）也算 miss：生产没发过第二次。
-    return this.miss(model, inputs, q ? '同一请求的录像已用完（本地比生产多发了一次）' : '录像里没有这条请求');
-  }
-
-  miss(model, inputs, why) {
-    const actual = renderRequest(model, inputs);
-    let best = null;
-    let bestScore = -1;
-    for (const r of this.records) {
-      const s = similarity(renderRequest(r.request.model, r.request), actual);
-      if (s > bestScore) { bestScore = s; best = r; }
-    }
-    const n = this.misses.length + 1;
-    const closest = best ? `${best.phase}-${best.call_index}` : null;
-    const diff = best
-      ? unifiedDiff(renderRequest(best.request.model, best.request), actual, `recorded ${closest}`, 'replay request')
-      : actual;
-    const file = path.join(outDir, `miss-${n}.diff`);
-    fs.writeFileSync(file, `# ${why}\n# 最接近的录像: ${closest ?? '无'}（相似度 ${bestScore.toFixed(3)}）\n\n${diff}`);
-    // ai-worker 与 workflow 各自有重试，同一处改动会连带几十次 miss；diff 去掉 @@ 行号后
-    // 相同的只在终端打一次，免得刷屏（每次仍各落一个文件）。
-    const sig = diff.split('\n').filter((l) => /^[-+][^-+]/.test(l)).join('\n');
-    const first = !this.missSigs.has(sig);
-    this.missSigs.add(sig);
-    this.misses.push({ n, why, closest, file, first });
-    if (first) {
-      console.error(`\n[replay] ✗ MISS #${n}: ${why}；最接近 ${closest ?? '无'}。diff → ${file}`);
-      console.error(diff.split('\n').slice(0, 40).join('\n'));
-    }
-    return null;
-  }
-
-  unused() {
-    return this.records.filter((r) => !this.used.has(r)).map((r) => `${r.phase}-${r.call_index}`);
-  }
-}
-
-function startReplayServer(store, port) {
-  const server = http.createServer((req, res) => {
-    let body = '';
-    // 必须按流解码：逐块 `body += buffer` 会把跨块的多字节字符（如 ”）解成 ��，
-    // 造成偶发 replay miss（2026-09-24 实测 5 次里 2 次，都落在同一篇文章的同一个字符上）
-    req.setEncoding('utf8');
-    req.on('data', (c) => (body += c));
-    req.on('end', () => {
-      try {
-        const { model, inputs } = JSON.parse(body);
-        const out = store.answer(model, inputs);
-        if (!out) { res.writeHead(599); res.end('replay miss (see runner output)'); return; }
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify(out));
-      } catch (e) {
-        res.writeHead(500); res.end(String(e));
-      }
-    });
-  });
-  return new Promise((r) => server.listen(port, '127.0.0.1', () => r(server)));
-}
-
 // ── 生成重放用 wrangler 配置（只在 data/ 下，不动仓库里的配置） ─────────────
 function writeConfig(name, config, devVars) {
   const d = path.join(genDir, name);
   fs.mkdirSync(d, { recursive: true });
   fs.writeFileSync(path.join(d, 'wrangler.json'), JSON.stringify(config, null, 2));
   // .dev.vars 从 config 所在目录读。这里只放重放需要的值，**不含任何真实密钥**：
-  // ai-worker 唯一的模型通道是 AI binding，已指向替身，不可能绕过替身去打真模型。
+  // ai-worker 的两条模型通道都已改道——AI binding 指向替身，DashScope 的地址指向 runner 的本地服务、
+  // key 是占位值——不可能绕过去打真模型。
   fs.writeFileSync(path.join(d, '.dev.vars'), Object.entries(devVars).map(([k, v]) => `${k}=${v}`).join('\n') + '\n');
   return path.join(d, 'wrangler.json');
 }
 
 const BUCKET = 'meridian-replay-articles'; // 本地模拟桶；名字刻意与生产不同
 
-function generateConfigs({ replayPort, mlPort, apiToken }) {
+function generateConfigs({ store, replayPort, mlPort, apiToken }) {
   // backend：从仓库里的 wrangler.jsonc 派生，只改三处外部依赖
   const be = parseJsonc(fs.readFileSync(path.join(BACKEND_DIR, 'wrangler.jsonc'), 'utf8'));
   delete be.$schema;
@@ -197,6 +99,7 @@ function generateConfigs({ replayPort, mlPort, apiToken }) {
   const compat = toml.match(/^compatibility_date\s*=\s*"([^"]+)"/m)[1];
   const flags = JSON.parse(toml.match(/^compatibility_flags\s*=\s*(\[.*\])/m)[1]);
   if (!/^\[ai\]\s*\nbinding\s*=\s*"AI"/m.test(toml)) throw new Error('ai-worker wrangler.toml 的 [ai] binding 形状变了，更新重放配置');
+  const aiEnv = aiWorkerReplayEnv(store, replayPort);
   const aw = {
     name: 'meridian-ai-worker',
     main: path.join(AI_WORKER_DIR, 'src/index.ts'),
@@ -204,8 +107,10 @@ function generateConfigs({ replayPort, mlPort, apiToken }) {
     compatibility_flags: flags,
     services: [{ binding: 'AI', service: 'meridian-replay-ai', entrypoint: 'ReplayAI' }],
     r2_buckets: [{ binding: 'ARTICLES_BUCKET', bucket_name: BUCKET }],
+    // 第二条模型通道 DashScope 走 HTTP，不经 AI binding：把它的地址也指到 runner 的本地服务
+    vars: aiEnv.vars,
   };
-  const awPath = writeConfig('ai-worker', aw, {});
+  const awPath = writeConfig('ai-worker', aw, aiEnv.devVars);
 
   const ra = {
     name: 'meridian-replay-ai',
@@ -318,14 +223,18 @@ async function main() {
   const cred = credentials();
   if (!cred.databaseUrl) throw Object.assign(new Error('缺 REPLAY_DATABASE_URL（Neon 分支连接串）'), { exit: 2 });
 
-  const store = new ReplayStore(path.join(dir, 'recording'));
-  log(`录像 ${store.records.length} 条，唯一请求 ${store.queues.size} 个`);
+  const store = new ReplayStore(path.join(dir, 'recording'), outDir);
+  log(`录像 ${store.records.length} 条，唯一请求 ${store.queues.size} 个；逐句核查模式 ${store.checkMode}`);
   const expected = JSON.parse(fs.readFileSync(path.join(dir, 'expected.json'), 'utf8'));
 
   const [replayPort, mlPort, wranglerPort] = [await freePort(), await freePort(), await freePort()];
   const apiToken = crypto.randomBytes(16).toString('hex');
-  await startReplayServer(store, replayPort);
-  const configs = generateConfigs({ replayPort, mlPort, apiToken });
+  // 向量缓存跟着这一期走，跨重放复用；REPLAY_CF_API_BASE 只为把现算的请求指到别处（测试 / 排查）
+  const vectors = new VectorCache(path.join(dir, 'vectors'), {
+    apiBase: process.env.REPLAY_CF_API_BASE, accountId: CF_ACCOUNT_ID, token: cred.cfApiToken,
+  });
+  await startReplayServer(store, replayPort, vectors);
+  const configs = generateConfigs({ store, replayPort, mlPort, apiToken });
   const base = `http://127.0.0.1:${wranglerPort}`;
 
   if (SLICE) {
@@ -381,7 +290,7 @@ async function main() {
     }, 45 * 60_000);
     if (FAIL_FAST && store.misses.length > 0) {
       log('出现 miss，fail-fast 收尾（--no-fail-fast 可跑到底）');
-      return finish(store, expected, { run: run ?? null, report: null, stories: [], briefV3: null }, replayWf);
+      return finish(store, vectors, expected, { run: run ?? null, report: null, stories: [], briefV3: null }, replayWf);
     }
     // 最后几个 R2 落盘在 status 更新之后，给一点时间
     await new Promise((r) => setTimeout(r, 3000));
@@ -391,17 +300,18 @@ async function main() {
     const briefV3 = v3res.ok ? await v3res.json() : null;
     const actual = { run, report: report ?? null, stories, briefV3 };
     fs.writeFileSync(path.join(outDir, 'actual.json'), JSON.stringify(actual, null, 1));
-    return finish(store, expected, actual, replayWf);
+    return finish(store, vectors, expected, actual, replayWf);
   } finally {
     await sql.end({ timeout: 5 });
   }
 }
 
-function finish(store, expected, actual, replayWf) {
+function finish(store, vectors, expected, actual, replayWf) {
   const failures = [];
   // fail-fast 收尾时 workflow 还在半路，下面那些守卫与产出比对必然全红、全是噪声：只报 miss。
   const cutShort = FAIL_FAST && store.misses.length > 0;
   if (store.misses.length) failures.push(`replay miss ${store.misses.length} 次（本地发给 LLM 的请求与生产不同）`);
+  if (vectors.failures.length) failures.push(`向量调用失败 ${vectors.failures.length} 批: ${vectors.failures[0]}`);
   let diffs = [];
   if (!cutShort) {
     // 假通过守卫：取不到正文时 workflow 会提前结束（TERMINATED_NO_STORIES 或 FAILED），LLM 段一次都不跑
@@ -412,6 +322,8 @@ function finish(store, expected, actual, replayWf) {
     if (store.served.length === 0) failures.push('替身一次都没被调用——LLM 段没跑');
     const unused = store.unused();
     if (unused.length) failures.push(`录像里有 ${unused.length} 条没被用到（本地少发了请求）: ${unused.slice(0, 10).join(', ')}${unused.length > 10 ? '…' : ''}`);
+    const embedBatches = vectors.hits + vectors.computed;
+    if (embedBatches !== store.embedBatchesRecorded) failures.push(`向量调用 ${embedBatches} 批，生产那期记的是 ${store.embedBatchesRecorded} 批（本地送去算向量的文本与生产不同）`);
     diffs = compare(expected, actual);
     if (diffs.length) failures.push(`产出与生产有 ${diffs.length} 处差异`);
   }
@@ -421,7 +333,8 @@ function finish(store, expected, actual, replayWf) {
     `# replay ${wf} → ${replayWf}`,
     '',
     `- 结果：${failures.length ? '**FAIL**' : '**PASS**'}`,
-    `- 墙钟：${wall}s；替身作答 ${store.served.length} 次 / 录像 ${store.records.length} 条；miss ${store.misses.length}；LLM 花费 $0（无真实模型调用）`,
+    `- 墙钟：${wall}s；作答 ${store.served.length} 次 / 录像 ${store.entries.length} 次请求；miss ${store.misses.length}；chat 调用花费 $0（全部来自录像）`,
+    `- ${vectors.summary()}；生产那期记了 ${store.embedBatchesRecorded} 批`,
     `- workflow 状态：生产 ${expected.run.status} / 重放 ${actual.run?.status}`,
     ...failures.map((f) => `- ✗ ${f}`),
     ...store.misses.filter((m) => m.first).map((m) => `- miss #${m.n}（不同 diff 的首例）: ${m.why}（最接近 ${m.closest}）→ ${m.file}`),

@@ -116,8 +116,14 @@ export function renderRequest(model, req) {
   return [...head, ...msgs].join('\n') + '\n';
 }
 
+// 向量调用（binding 的一批）在本地向量缓存里的 key：模型 + 这一批文本，顺序也算（向量按位置交回）。同样不做文本归一化。
+export function embedKey(model, texts) {
+  return crypto.createHash('sha256').update(JSON.stringify({ model, text: texts })).digest('hex');
+}
+
 /** 两段文本的 unified diff（用系统 diff；相同则返回空串）。 */
 export function unifiedDiff(a, b, labelA, labelB) {
+  fs.mkdirSync(DATA_DIR, { recursive: true }); // 全链路重放时早就有了；单独跑测试的新 checkout 里还没有
   const tmp = fs.mkdtempSync(path.join(DATA_DIR, '.diff-'));
   const fa = path.join(tmp, 'a');
   const fb = path.join(tmp, 'b');

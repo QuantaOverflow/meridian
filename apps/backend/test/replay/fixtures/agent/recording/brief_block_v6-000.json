@@ -1,0 +1,25 @@
+{
+ "trace_id": "fixture-agent",
+ "phase": "brief_block_v6",
+ "call_index": 0,
+ "timestamp": "2026-10-05T13:11:37.967Z",
+ "request": {
+  "provider": "workers-ai",
+  "model": "@cf/zai-org/glm-4.7-flash",
+  "messages": [
+   { "role": "system", "content": "You write one brief block." },
+   { "role": "user", "content": "Sources:\n[1:0] The harbour reopened on Monday.\n[1:1] Two ferries resumed service." }
+  ],
+  "temperature": 0.3,
+  "max_tokens": 900
+ },
+ "response": {
+  "content": "The harbour reopened on Monday [1:0].",
+  "finish_reason": "stop",
+  "usage": { "prompt_tokens": 40, "completion_tokens": 12, "total_tokens": 52, "neurons": 1.5 },
+  "provider_used": "workers-ai",
+  "model_used": "@cf/zai-org/glm-4.7-flash",
+  "processing_time_ms": 800
+ },
+ "latency_ms": 800
+}

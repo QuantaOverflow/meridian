@@ -56,6 +56,7 @@
   "ignore": ["**/prototypes/**"],
 
   "ignoreIssues": {
-    "eval/cluster-to-brief/lib.mjs": ["duplicates"]
+    "eval/cluster-to-brief/lib.mjs": ["duplicates"],
+    "apps/backend/test/replay/lib.mjs": ["unlisted", "binaries"]
   }
 }

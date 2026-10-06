@@ -49,6 +49,7 @@ BRIEF_CHECK_EPOCHS = "1"
 # 缺省或写错按 agent 并打 warn。满负荷干跑通过之前保持 "agent"，切到 "one_call" 是部署那张票的事。
 BRIEF_CHECK_MODE = "agent"
 # DashScope 的 OpenAI 兼容入口（经 Cloudflare AI Gateway 的 custom provider），只有 one_call 核查用。
-# REPLACE_WITH_GATEWAY_ID 由部署那张票填成真实的 gateway id；key 与网关 token 是 secret（DASHSCOPE_API_KEY / AI_GATEWAY_TOKEN），不写在这里。
-DASHSCOPE_BASE_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/REPLACE_WITH_GATEWAY_ID/custom-dashscope/compatible-mode/v1"
+# 网关是 meridian-ai（开了鉴权）：2026-10-06 用一条小请求验过，custom provider `dashscope` 在、带网关 token 能通、不带是 401。
+# key 与网关 token 是 secret（DASHSCOPE_API_KEY / AI_GATEWAY_TOKEN），不写在这里。
+DASHSCOPE_BASE_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/meridian-ai/custom-dashscope/compatible-mode/v1"
 

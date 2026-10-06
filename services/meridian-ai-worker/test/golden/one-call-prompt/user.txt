@@ -1,0 +1,35 @@
+The articles in this cluster, oldest first:
+[14] published 2026-09-20 10:00 UTC: Dam maintenance records
+[11] published 2026-10-01 06:00 UTC: Dam fails in northern Varnia
+[12] published 2026-10-01 14:00 UTC: Death toll rises after dam failure
+[13] published 2026-10-02 09:00 UTC: Inquiry opens into dam collapse
+
+Source sentences from the cluster (17 of 19; the ones the item cites, their neighbours, the
+closest matches for each sentence, and every sentence that counts the same thing as a figure in the item), oldest report first:
+[14:1] (published 2026-09-20 10:00 UTC) Maintenance crews first patched spillway cracks across 2014 summer.
+[14:2] (published 2026-09-20 10:00 UTC) Budget cuts later halted further inspections.
+[14:3] (published 2026-09-20 10:00 UTC) Local farmers rely on the reservoir for irrigation.
+[11:1] (published 2026-10-01 06:00 UTC) A dam in northern Varnia failed on Tuesday night.
+[11:2] (published 2026-10-01 06:00 UTC) Officials said 12 people were killed in the flood.
+[11:3] (published 2026-10-01 06:00 UTC) Rescue teams searched the valley for survivors.
+[11:5] (published 2026-10-01 06:00 UTC) The government declared a state of emergency.
+[12:1] (published 2026-10-01 14:00 UTC) The death toll from the dam failure has risen to 31 people, officials said.
+[12:2] (published 2026-10-01 14:00 UTC) Another 40 people are still missing, local police said.
+[12:4] (published 2026-10-01 14:00 UTC) Engineers said the dam was built decades ago.
+[12:5] (published 2026-10-01 14:00 UTC) Residents were moved to shelters in nearby towns.
+[12:6] (published 2026-10-01 14:00 UTC) The prime minister visited the area on Wednesday.
+[13:1] (published 2026-10-02 09:00 UTC) An inquiry into the dam collapse opened on Thursday.
+[13:2] (published 2026-10-02 09:00 UTC) Investigators found cracks in the structure two years ago.
+[13:3] (published 2026-10-02 09:00 UTC) The interior ministry said 57 people died in total.
+[13:4] (published 2026-10-02 09:00 UTC) Opposition leaders demanded the minister resign.
+[13:5] (published 2026-10-02 09:00 UTC) A memorial service is planned for Sunday.
+
+The brief item — title: Dam failure in Varnia
+S1: A dam in northern Varnia failed on Tuesday night.
+S2: The dam, which engineers began repairing in 2015, failed on Tuesday night, killing 57 people.
+   cites: [13:3]
+   also relevant: [11:1] [12:4] [12:1] [13:1] [11:2] [12:5] [13:2] [12:6] [14:3] [12:2] [13:5] [13:4] [11:5] [14:1] [14:2] [11:3]
+   same thing counted, oldest report first: [11:2] [12:1] [12:2] [13:3]
+S3: Opposition leaders demanded the minister resign.
+
+Check S2. The other sentences are context.

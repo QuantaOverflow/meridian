@@ -1,0 +1,70 @@
+{
+  "note": "合成的小簇（水坝溃坝），给一次调用核查的取证与提示词测试用。embeddings 里的数是合成向量与基准方向的夹角（度），向量 = (cos, sin, 0)，已归一化。",
+  "articles": [
+    {
+      "id": 11,
+      "title": "Dam fails in northern Varnia",
+      "publishDate": "2026-10-01T06:00:00Z",
+      "sourceId": 1,
+      "sentences": [
+        "A dam in northern Varnia failed on Tuesday night.",
+        "Officials said 12 people were killed in the flood.",
+        "Rescue teams searched the valley for survivors.",
+        "Heavy rain had fallen across the region for a week.",
+        "The government declared a state of emergency."
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Death toll rises after dam failure",
+      "publishDate": "2026-10-01T14:00:00Z",
+      "sourceId": 2,
+      "sentences": [
+        "The death toll from the dam failure has risen to 31 people, officials said.",
+        "Another 40 people are still missing, local police said.",
+        "Hundreds of homes were destroyed by the water.",
+        "Engineers said the dam was built decades ago.",
+        "Residents were moved to shelters in nearby towns.",
+        "The prime minister visited the area on Wednesday."
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Inquiry opens into dam collapse",
+      "publishDate": "2026-10-02T09:00:00Z",
+      "sourceId": 3,
+      "sentences": [
+        "An inquiry into the dam collapse opened on Thursday.",
+        "Investigators found cracks in the structure two years ago.",
+        "The interior ministry said 57 people died in total.",
+        "Opposition leaders demanded the minister resign.",
+        "A memorial service is planned for Sunday."
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Dam maintenance records",
+      "publishDate": "2026-09-20T10:00:00Z",
+      "sourceId": 4,
+      "sentences": [
+        "Maintenance crews first patched spillway cracks across 2014 summer.",
+        "Budget cuts later halted further inspections.",
+        "Local farmers rely on the reservoir for irrigation."
+      ]
+    }
+  ],
+  "embeddings": {
+    "sentences": {
+      "11:1": 40, "11:2": 50, "11:3": 55, "11:4": 60, "11:5": 65,
+      "12:1": 45, "12:2": 52, "12:3": 58, "12:4": 35, "12:5": 70, "12:6": 75,
+      "13:1": 30, "13:2": 25, "13:3": 48, "13:4": 80, "13:5": 85,
+      "14:1": 2, "14:2": 20, "14:3": 88
+    },
+    "queries": {
+      "The dam, which engineers began repairing in 2015, failed on Tuesday night, killing 57 people.": 90,
+      "engineers began repairing in 2015": 0,
+      "failed on Tuesday night": 41,
+      "killing 57 people.": 49
+    }
+  }
+}

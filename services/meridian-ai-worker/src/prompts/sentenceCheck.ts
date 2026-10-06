@@ -71,7 +71,7 @@ const LOOKUP_TOOLS = `- search {"query": "words"}: the cluster sentences that be
 - read {"articleId": 123, "sentence": 4}: that sentence with two sentences before and after it, to see who is
   speaking and what "it", "also" or a heading refers to.`;
 
-function articleList(c: CheckCluster): string {
+export function articleList(c: CheckCluster): string {
   return [...c.articles]
     .sort((a, b) => a.published.localeCompare(b.published))
     .map(a => `[${a.id}] published ${when(a.published)}: ${a.title}`)

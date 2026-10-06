@@ -1,6 +1,8 @@
 # ADR 0011：运维台——只读、只看生产运行、只管流水线健康
 
-- 状态：已采纳，2026-10-06 上线（backend `57951f91`、ai-worker `89b18c53`、ml-service `8e021836`、Pages 提交 `d176c2f`）
+- 状态：已采纳，2026-10-06 上线（backend `57951f91`、ai-worker `89b18c53`、ml-service `8e021836`、Pages 提交 `d176c2f`）。
+  ADR 0012 决定 8 给决定 5 加了两条判据（逐句核查的 key 被拒 → 红，回退超过五分之一 → 黄，看最近一次生产运行），
+  给决定 6 加了一笔不在 Cloudflare 账单里的花费（DashScope，按美元单列，算生产占比时先减掉）
 - 日期：2026-10-06
 - 相关：`packages/contracts/src/ops-console.ts`（接口形状）、`apps/backend/src/lib/ops/`（读数与判据）、
   `apps/frontend/src/pages/admin/`（页面）、`scripts/deploy.sh`（部署带上提交信息）；术语在 `CONTEXT.md`「运维台」；

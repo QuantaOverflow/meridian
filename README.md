@@ -39,7 +39,7 @@ Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) +
 | Component | Role |
 |---|---|
 | `apps/backend` | Hono API, Durable Object scrapers, queue consumer, both Workflows, admin / observability routes |
-| `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`, mostly) via the `AI` binding, no AI Gateway. Called via service binding `AI_WORKER` |
+| `services/meridian-ai-worker` | Every LLM call; Workers AI (`@cf/zai-org/glm-4.7-flash`, mostly) via the `AI` binding. One exception: with `BRIEF_CHECK_MODE=one_call` the sentence check calls DashScope `qwen3.8-flash` through the Cloudflare AI Gateway and falls back to the Workers AI agent when that fails (ADR 0012). Called via service binding `AI_WORKER` |
 | `services/meridian-ml-service` | FastAPI on a Cloudflare Container: `multilingual-e5-small` embeddings and agglomerative cosine clustering |
 | `apps/frontend` | Nuxt 3 reader (map homepage for the latest issue, brief reading page, archive, story threads; English UI) + admin pages |
 | `packages/database` | Drizzle schema and migrations for Neon Postgres |
@@ -136,7 +136,7 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
    cd services/meridian-ai-worker
    ../../scripts/deploy.sh
    ```
-   No secrets needed — every model call goes through the Workers AI binding `AI`; per-phase models live in `src/services/call-llm.ts`'s `PHASE_DEFAULTS`.
+   No secrets needed while `BRIEF_CHECK_MODE` is `agent` — every model call goes through the Workers AI binding `AI`; per-phase models live in `src/services/call-llm.ts`'s `PHASE_DEFAULTS`. For `one_call`, set `DASHSCOPE_BASE_URL` in `wrangler.toml` to the AI Gateway's `custom-dashscope` endpoint and put `DASHSCOPE_API_KEY` (and `AI_GATEWAY_TOKEN` if the gateway requires one) with `wrangler secret put`.
 3. **ML Service** (`services/meridian-ml-service/cf-worker`) — one deploy is two things: the Durable Object shell (`cf-worker/src/index.ts`) and the container image built from `wrangler.jsonc`'s `"image": "../Dockerfile"` (the clustering/embedding code lives in the image). Needs Docker locally and a populated `services/meridian-ml-service/model-cache/` (gitignored, ~470MB — the Dockerfile `COPY`s it directly).
    ```bash
    cd services/meridian-ml-service/cf-worker
@@ -206,7 +206,7 @@ The route tables in `apps/backend/src/app.ts` + `src/routers/`, `services/meridi
 The `.dev.vars.example` files listed above are the source of truth for each Worker's variables. Key ones:
 
 - **Backend**: `API_TOKEN`
-- **AI Worker**: 无 secret（模型走 Workers AI binding）
+- **AI Worker**: `agent` 模式无 secret（模型走 Workers AI binding）；逐句核查配成 `one_call` 时要 `DASHSCOPE_API_KEY`，网关开了鉴权再加 `AI_GATEWAY_TOKEN`
 - **ML Service**: 无 secret（只能经 backend 的 `ML_SERVICE` binding 调到）
 
 Backend bindings (`apps/backend/wrangler.jsonc`): Durable Object `SOURCE_SCRAPER`, queue `ARTICLE_PROCESSING_QUEUE`, R2 `ARTICLES_BUCKET`, workflows `PROCESS_ARTICLES` and `AUTO_BRIEF` (the brief workflow), service bindings `AI_WORKER` and `ML_SERVICE`, Browser Run `BROWSER` (scraping fallback; `remote: true`, so local dev uses real Browser Run), `HYPERDRIVE`, cron `0 13 * * *`.

@@ -6,7 +6,7 @@
 - Monorepo: **pnpm + turbo**, Node ≥22, pnpm 10.9.0
 - `apps/backend` — CF Worker (Durable Objects + Workflows + Queue + Hyperdrive)
 - `apps/frontend` — Nuxt 3
-- `services/meridian-ai-worker` — CF Worker，LLM 只走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`
+- `services/meridian-ai-worker` — CF Worker，LLM 走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`；唯一的例外是逐句核查配成 `one_call` 时走 DashScope 的 `qwen3.8-flash`（ADR 0012）
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
 - `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现
@@ -20,7 +20,7 @@
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
 - DB: Neon `ap-southeast-1`，连接走 Hyperdrive
-- AI Gateway：现在没有任何调用经过它（2026-09-24 删掉了最后一个走 Gateway 的 DashScope）。要接非 CF 厂商时经 CF AI Gateway 接入；embedding 走 ml-service
+- AI Gateway：只有逐句核查的一次调用经过它去 DashScope（custom provider `dashscope`，关缓存；ADR 0012）。`BRIEF_CHECK_MODE` 是 `agent` 时没有任何调用经过它。再接非 CF 厂商也经它接入；文章 embedding 走 ml-service
 - Secrets：`wrangler secret put` 或 CF Secrets Store，**永不入库**
 - 本地 secrets 在每个 worker 的 `.dev.vars`（已 gitignored）
 
@@ -59,6 +59,7 @@
 - 找调研依据 → `docs/engineering-notes/README.md`（按问题索引）
 - 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `eval/cluster-to-brief/CONTRACTS.md`）
 - 改运维台（后台的 Health / Trends / Cost / Sources / 运行详情，判据与阈值）→ `docs/adr/0011-ops-console.md`
+- 改逐句核查（取证规则、一次调用的 prompt、DashScope 通道、回退）→ `docs/adr/0012-one-call-sentence-check.md`（读数、证伪清单、没验证的部分）
 - 架构决策记录 → `docs/adr/`
 
 ## 路径触发的规则（`.claude/rules/`）

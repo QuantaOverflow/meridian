@@ -62,7 +62,8 @@ paths:
   开发/验收脚本用。本地 `wrangler dev` 直连生产桶，不带这个头写了就是污染生产 R2
   （`services/meridian-ai-worker/src/services/observe.ts`）。
 - **LLM 调用走 `callLLM`**（`services/meridian-ai-worker/src/services/call-llm.ts`），经 `loggedChat` 才会挂进 span / 落 `llm-calls/`。
-  eslint 拦直接 import 底层 `chat()` 与直接调 `env.AI.run`；唯一豁免是 eval 透传口 `/meridian/chat`（不记，理由写在 import 处）。
+  eslint 拦直接 import 底层 `chat()` / `dashScopeChat()` 与直接调 `env.AI.run`；豁免只有两处：eval 透传口 `/meridian/chat`（不记，理由写在 import 处），
+  与句子向量的唯一入口 `services/meridian-ai-worker/src/services/embed-texts.ts`（向量调用套不进 chat，它自己记日志）。
 
 ## 4. LLM 调用
 
@@ -78,9 +79,10 @@ paths:
 - **`json_schema` 约束式解码（Workers AI）**：已用于生产（`services/meridian-ai-worker/src/services/brief-block-v6.ts`）。返回 200 不代表关键字生效——
   `pattern` 曾被静默忽略、`minLength` 生效；逐模型支持情况官方不给列表（`services/meridian-ai-worker/src/services/call-llm.ts` 注释）。
   加之前必须挂不加约束的对照臂测主线召回，格式干净不等于内容没丢。
-- **AI Gateway 已完全下线（2026-09-24）**：`env.AI` binding 直连 Workers AI，不再经过网关，
-  `skipCache`/`cache_ttl` 机制已随 DashScope 一并删除。历史上的"网关默认缓存吃掉 eval 样本量"不再是
-  这条路径上的风险——现在若怀疑样本不独立，先查是不是 `temperature` 传错（曾有 `|| 0.7` 吞掉 `0` 的先例）。
+- **只有一条调用经 AI Gateway**：逐句核查配成 `one_call` 时走 DashScope（`services/meridian-ai-worker/src/services/dashscope.ts`，ADR 0012），
+  每次都带 `cf-aig-skip-cache`——网关默认缓存会把同一句的多个核查 epoch 变成同一次回答。其余调用都是 `env.AI` binding 直连 Workers AI，
+  不经网关。若怀疑样本不独立，先查是不是 `temperature` 传错（曾有 `|| 0.7` 吞掉 `0` 的先例）。
+- **写作的复读检测别接到核查回复上**：`detectRepetition` 是给简报正文调的，核查回复逐部分抄原文，会被它误拒约 7%（ADR 0012 证伪清单）。
 - **只在 Workers 生产才炸的两类 bug**（通用 Workers 运行时约束，非本仓当前已知故障）：
   模块级缓存不能持有 I/O 对象（socket/stream/body），只能缓存纯数据——backend 的 `getDb()`
   都在请求内新建（`apps/backend/src/lib/database/index.ts`），新代码别改成模块级缓存连接池；

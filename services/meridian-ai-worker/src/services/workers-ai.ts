@@ -127,7 +127,7 @@ function mapResponse(body: any, modelName: string): ChatResponse {
 }
 
 /**
- * 唯一通道：workers-ai 经 env.AI binding。binding 的凭证由 Worker 部署关系授予，不依赖 API token。
+ * Workers AI 的通道：经 env.AI binding（另一条是逐句核查一次调用的 DashScope，services/dashscope.ts）。binding 的凭证由 Worker 部署关系授予，不依赖 API token。
  * 不经 AI Gateway（2026-09-24 删掉了最后一个走 Gateway 的 provider DashScope；
  * 以后要接非 CF 厂商，CF AI Gateway 本身支持直接接入）。
  *

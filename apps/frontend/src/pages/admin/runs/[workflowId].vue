@@ -51,6 +51,36 @@ const tiles = computed(() => {
   ];
 });
 
+// ── 逐句核查（一次调用核查，ADR 0012）：汇总和块记录里有这些项才显示，之前的运行照旧 ──
+const FALLBACK_REASON_LABEL: Record<string, string> = {
+  auth: 'key rejected',
+  content_filter: 'content filter',
+  provider_error: 'provider error',
+  unreadable: 'unreadable reply',
+};
+const sentenceCheck = computed(() => {
+  const c = summary.value?.check?.oneCall;
+  if (!c) return null;
+  const reasons = Object.entries(c.fallbackReasons)
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, n]) => `${FALLBACK_REASON_LABEL[reason] ?? reason} ${n}`)
+    .join(', ');
+  return {
+    checks: `${c.checks.toLocaleString('en-US')} ${c.checks === 1 ? 'check' : 'checks'}`,
+    fallbacks:
+      c.fallbacks === 0
+        ? 'none fell back to the agent'
+        : `${c.fallbacks.toLocaleString('en-US')} fell back to the agent (${c.checks > 0 ? Math.round((c.fallbacks / c.checks) * 100) : 0}%)`,
+    reasons,
+    message: c.fallbackMessage,
+    noMeaningSearch:
+      c.noMeaningSearchBlocks > 0 ? `${c.noMeaningSearchBlocks} ${c.noMeaningSearchBlocks === 1 ? 'block' : 'blocks'} without meaning search` : '',
+    dashscope: `DashScope $${c.dashscopeUsd.toFixed(4)}`,
+  };
+});
+/** 有哪一块带各路次数或回退次数，块表才多出这两列 */
+const showCheckPaths = computed(() => (blocks.value ?? []).some(b => b.check?.paths !== undefined || b.check?.fallbacks !== undefined));
+
 // 步骤放在同一条时间轴上：起点取最早开始，终点取最晚结束
 const timeline = computed(() => {
   const steps = summary.value?.steps;
@@ -176,6 +206,19 @@ const latencyOf = (c: OpsRunCall) => (c.latency_ms === undefined ? '-' : `${(c.l
         </ul>
       </section>
 
+      <section v-if="sentenceCheck" class="rounded border bg-white p-4" data-test="sentence-check">
+        <h3 class="text-base font-semibold">Sentence check</h3>
+        <p class="mt-1 text-sm text-gray-800">
+          {{ sentenceCheck.checks }} · {{ sentenceCheck.fallbacks }}<template v-if="sentenceCheck.reasons"> · {{ sentenceCheck.reasons }}</template>
+        </p>
+        <p v-if="sentenceCheck.message" class="mt-1 text-sm text-gray-800">
+          Provider said: <span class="break-words font-mono text-xs">{{ sentenceCheck.message }}</span>
+        </p>
+        <p class="mt-1 text-sm text-gray-600">
+          <template v-if="sentenceCheck.noMeaningSearch">{{ sentenceCheck.noMeaningSearch }} · </template>{{ sentenceCheck.dashscope }}
+        </p>
+      </section>
+
       <section class="rounded border bg-white p-4" data-test="steps">
         <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h3 class="text-base font-semibold">Steps</h3>
@@ -213,6 +256,8 @@ const latencyOf = (c: OpsRunCall) => (c.latency_ms === undefined ? '-' : `${(c.l
                 <th class="border-b p-2 font-medium">Block</th>
                 <th class="border-b p-2 text-right font-medium">Articles</th>
                 <th class="border-b p-2 font-medium">Check</th>
+                <th v-if="showCheckPaths" class="border-b p-2 font-medium">Check paths</th>
+                <th v-if="showCheckPaths" class="border-b p-2 text-right font-medium">Fallbacks</th>
                 <th class="border-b p-2 text-right font-medium">Revisions</th>
                 <th class="border-b p-2 text-right font-medium">Unchecked</th>
                 <th class="border-b p-2 text-right font-medium">Refusals</th>
@@ -227,6 +272,17 @@ const latencyOf = (c: OpsRunCall) => (c.latency_ms === undefined ? '-' : `${(c.l
                 <td class="border-b p-2 font-medium">{{ b.title }}</td>
                 <td class="border-b p-2 text-right tabular-nums">{{ b.articles }}</td>
                 <td class="border-b p-2">{{ b.check?.outcome ?? '-' }}</td>
+                <td v-if="showCheckPaths" class="border-b p-2 tabular-nums" data-test="paths">
+                  {{ b.check?.paths ? `${b.check.paths.oneCall} one-call · ${b.check.paths.agent} agent` : '-' }}
+                </td>
+                <td
+                  v-if="showCheckPaths"
+                  class="border-b p-2 text-right tabular-nums"
+                  :class="b.check?.fallbacks ? 'font-semibold text-yellow-700' : ''"
+                  data-test="fallbacks"
+                >
+                  {{ b.check?.fallbacks ?? '-' }}
+                </td>
                 <td class="border-b p-2 text-right tabular-nums">{{ b.check?.revisions ?? '-' }}</td>
                 <td class="border-b p-2 text-right tabular-nums" :class="b.check && b.check.unchecked > 0 ? 'font-semibold text-yellow-700' : ''">
                   {{ b.check?.unchecked ?? '-' }}

@@ -121,10 +121,19 @@ const isProductionRun = sql`${$brief_runs.workflow_id} like ${`${PRODUCTION_RUN_
 const startedBeforeEndOf = (cycle: BillingCycle) =>
   sql`${$brief_runs.started_at} < ${new Date(Date.parse(`${cycle.end}T00:00:00Z`) + DAY_MS).toISOString()}`;
 
-/** 周期内开始的生产运行：次数，以及记下了汇总的那些的 neurons 合计（没记汇总的不计入，也无从补） */
-export async function productionRunsIn(db: Db, cycle: BillingCycle): Promise<{ runs: number; runNeurons: number }> {
+const neuronsAtList = (usd: number) => (usd * 1000) / USD_PER_1K_NEURONS;
+
+/**
+ * 周期内开始的生产运行：次数，以及记下了汇总的那些的 Workers AI neurons 合计（没记汇总的不计入，也无从补）。
+ * 汇总里的 neurons 含按牌价折进去的 DashScope 花费，这里减掉——它不在 Cloudflare 的账户用量里，留着会把生产占比算高；
+ * 减掉的那部分按运行开始的北京日记在 `dashscopeUsdByDay`
+ */
+export async function productionRunsIn(
+  db: Db,
+  cycle: BillingCycle
+): Promise<{ runs: number; runNeurons: number; dashscopeUsdByDay: Map<string, number> }> {
   const rows = await db
-    .select({ summary: $brief_runs.ops_summary })
+    .select({ startedAt: $brief_runs.started_at, summary: $brief_runs.ops_summary })
     .from($brief_runs)
     .where(
       and(
@@ -133,7 +142,15 @@ export async function productionRunsIn(db: Db, cycle: BillingCycle): Promise<{ r
         startedBeforeEndOf(cycle)
       )
     );
-  return { runs: rows.length, runNeurons: rows.reduce((sum, r) => sum + (r.summary?.llm.neurons ?? 0), 0) };
+  let runNeurons = 0;
+  const dashscopeUsdByDay = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.summary) continue;
+    const usd = r.summary.check?.oneCall?.dashscopeUsd ?? 0;
+    runNeurons += Math.max(0, r.summary.llm.neurons - neuronsAtList(usd));
+    if (usd > 0) dashscopeUsdByDay.set(beijingDay(r.startedAt), (dashscopeUsdByDay.get(beijingDay(r.startedAt)) ?? 0) + usd);
+  }
+  return { runs: rows.length, runNeurons: Math.round(runNeurons), dashscopeUsdByDay };
 }
 
 /** 周期结束前最近一次记下了汇总的生产运行，按阶段拆开 */
@@ -195,9 +212,15 @@ function modelPanels(usage: NeuronsRow[], cycle: BillingCycle, production: { run
 
 /**
  * 每日用量图：按北京日。周期本身从 UTC 零点（北京 8 点）起止，所以第一根柱子只有 16 小时，
- * 已结束的周期最后多出一根 8 小时的柱子；各柱之和仍等于周期合计。没用量的日子是空对象（图上那天是空的，而不是被跳过）。
+ * 已结束的周期最后多出一根 8 小时的柱子；各柱的 Workers AI 模型之和仍等于周期合计。没用量的日子是空对象（图上那天是空的，而不是被跳过）。
+ * 有 DashScope 花费的日子多一项 `dashscopeUsd`（美元，来自生产运行的汇总，按运行开始的北京日归日），不在 `byModel` 和周期合计里。
  */
-function dailyPanel(rows: NeuronsRow[], since: Date, until: Date): Extract<OpsCost['daily'], unknown[]> {
+function dailyPanel(
+  rows: NeuronsRow[],
+  dashscopeUsdByDay: Map<string, number>,
+  since: Date,
+  until: Date
+): Extract<OpsCost['daily'], unknown[]> {
   const perDay = new Map<string, Record<string, number>>();
   const lastDay = beijingDay(new Date(until.getTime() - 1));
   for (let t = since.getTime(); beijingDay(new Date(t)) <= lastDay; t += DAY_MS) perDay.set(beijingDay(new Date(t)), {});
@@ -208,6 +231,8 @@ function dailyPanel(rows: NeuronsRow[], since: Date, until: Date): Extract<OpsCo
   return [...perDay].map(([day, byModel]) => ({
     day,
     byModel: Object.fromEntries(Object.entries(byModel).map(([model, n]) => [model, Math.round(n)])),
+    // 留 6 位小数去掉浮点尾巴
+    ...(dashscopeUsdByDay.has(day) ? { dashscopeUsd: Math.round(dashscopeUsdByDay.get(day)! * 1e6) / 1e6 } : {}),
   }));
 }
 
@@ -242,7 +267,7 @@ export async function opsCost(c: Context<{ Bindings: Env }>): Promise<Response> 
   const panels: ModelPanels = Array.isArray(usage)
     ? modelPanels(usage, cycle, production)
     : { account: usage, production: usage, byModel: usage };
-  const daily: OpsCost['daily'] = Array.isArray(hourly) ? dailyPanel(hourly, since, until) : hourly;
+  const daily: OpsCost['daily'] = Array.isArray(hourly) ? dailyPanel(hourly, production.dashscopeUsdByDay, since, until) : hourly;
 
   const body: OpsCost = { cycle, ...panels, daily, lastRunByStep: lastRun, otherItems };
   return c.json(body);

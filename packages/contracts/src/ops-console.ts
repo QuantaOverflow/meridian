@@ -41,7 +41,7 @@ export interface RunOpsSummary {
     /**
      * 一次调用核查（ADR 0012）的 run 级汇总；缺 = 这次运行早于它，或各块都没带这些字段。
      * `checks` 是逐句核查的总次数，`fallbacks` 是其中回退到 agent 的次数，`fallbackReasons` 按原因计数，
-     * `fallbackMessage` 是第一条回退的厂商报错（给人看），`noMeaningSearchBlocks` 是没用上按意思搜的块数，
+     * `fallbackMessage` 是给人看的厂商报错：有原因是 `auth` 的回退时取第一条 `auth` 的，否则取第一条回退的，`noMeaningSearchBlocks` 是没用上按意思搜的块数，
      * `dashscopeUsd` 是 DashScope 的花费（已折进 llm.neurons，这里是分项）。
      */
     oneCall?: {
@@ -184,8 +184,18 @@ export interface OpsCost {
   production:
     | { neurons: number; runs: number; runNeurons: number; analysisNeurons: number; share: number }
     | OpsUnavailable;
-  /** 按 UTC 日（与账单一致） */
-  daily: Array<{ day: string; byModel: Record<string, number> }> | OpsUnavailable;
+  /** 按北京日（账期合计仍按 Cloudflare 的 UTC 周期，所以第一根柱只有 16 小时，见 ADR 0011 第 7 条） */
+  daily:
+    | Array<{
+        day: string;
+        byModel: Record<string, number>;
+        /**
+         * 那天 DashScope 的花费（美元），从生产运行的汇总加出来；没有的日子不带这一项。
+         * 不在 `byModel` 里，也不在 Cloudflare 的合计里。
+         */
+        dashscopeUsd?: number;
+      }>
+    | OpsUnavailable;
   byModel: Array<{ modelId: string; neurons: number; share: number; usdAtList: number }> | OpsUnavailable;
   lastRunByStep: {
     workflowId: string;

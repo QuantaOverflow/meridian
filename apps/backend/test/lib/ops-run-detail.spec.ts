@@ -92,6 +92,57 @@ describe('GET /observability/ops/runs/:workflowId', () => {
     ]);
   });
 
+  it('块的核查记录带一次调用核查的字段：带出各路的次数和回退次数；不带的块照旧只有三项', async () => {
+    await seedRun('cron-brief-5');
+    const base = { epochs: 1, outcome: 'clean' as const, revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 6, neurons: 500, ms: 1_000 };
+    await putRecord('cron-brief-5', [
+      {
+        ...writtenBlock(0, 'fell back twice', 'lead'),
+        storyIdx: 1,
+        check: {
+          ...base,
+          mode: 'one_call',
+          paths: { oneCall: 10, agent: 2 },
+          fallbacks: [
+            { sentence: 3, round: 0, reason: 'auth', message: 'Incorrect API key provided' },
+            { sentence: 4, round: 0, reason: 'auth', message: 'Incorrect API key provided' },
+          ],
+          meaningSearch: true,
+          maxEvidence: 31,
+          dashscope: { calls: 10, usd: 0.003 },
+        },
+      },
+      { ...writtenBlock(1, 'no fallback', 'more'), storyIdx: 2, check: { ...base, mode: 'one_call', paths: { oneCall: 8, agent: 0 }, fallbacks: [] } },
+      { ...writtenBlock(2, 'old record', 'brief'), storyIdx: 3, check: base },
+    ]);
+
+    const body = (await (await get('cron-brief-5')).json()) as OpsRunDetail;
+
+    if (!Array.isArray(body.blocks)) throw new Error('应当有块');
+    expect(body.blocks.map(b => b.check)).toEqual([
+      { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 10, agent: 2 }, fallbacks: 2 },
+      { outcome: 'clean', revisions: 0, unchecked: 0, paths: { oneCall: 8, agent: 0 }, fallbacks: 0 },
+      { outcome: 'clean', revisions: 0, unchecked: 0 },
+    ]);
+  });
+
+  it('核查配成 agent 的块、关掉核查的块：记录里有 mode 和 paths，带出来的仍只有三项', async () => {
+    await seedRun('cron-brief-6');
+    const base = { epochs: 1, outcome: 'clean' as const, revisions: 0, unchecked: [], stillFlagged: [], draft: null, rounds: [], calls: 6, neurons: 500, ms: 1_000 };
+    await putRecord('cron-brief-6', [
+      { ...writtenBlock(0, 'agent mode', 'lead'), storyIdx: 1, check: { ...base, mode: 'agent', paths: { oneCall: 0, agent: 12 }, fallbacks: [] } },
+      { ...writtenBlock(1, 'check off', 'more'), storyIdx: 2, check: { ...base, epochs: 0, outcome: 'off', mode: 'one_call', paths: { oneCall: 0, agent: 0 }, fallbacks: [] } },
+    ]);
+
+    const body = (await (await get('cron-brief-6')).json()) as OpsRunDetail;
+
+    if (!Array.isArray(body.blocks)) throw new Error('应当有块');
+    expect(body.blocks.map(b => b.check)).toEqual([
+      { outcome: 'clean', revisions: 0, unchecked: 0 },
+      { outcome: 'off', revisions: 0, unchecked: 0 },
+    ]);
+  });
+
   it('没有块记录：blocks 是 unavailable，端点仍是 200', async () => {
     await seedRun('cron-brief-3');
     const res = await get('cron-brief-3');

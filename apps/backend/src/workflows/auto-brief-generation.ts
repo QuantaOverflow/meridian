@@ -331,7 +331,7 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
 
     // 运维台：run 结束（完成 / 无故事终止 / 失败）后把这次 run 的调用数、neurons、步骤耗时、块与核查计数
     // 汇总进 brief_runs.ops_summary（lib/ops/run-summary.ts）。一步读完 R2 里这次 run 的全部调用记录：
-    // 每条 1 次 get，外加每 1000 条 1 次 list、1 次读观测、1 次写库。
+    // 每条 1 次 get，外加每 1000 条 1 次 list、1 次读观测、1 次读块记录、1 次写库。
     // 纯观测：recordRunOpsSummary 自己吞错只打 warn；外层再包一层，是因为 step.do 本身也会抛
     // （超时、平台 canceled），不能让它把已经写好状态的 run 带进下面的 catch 改记成 FAILED。
     // 成功路径写过之后，后面的收尾再抛错进 catch 时不重写：那次重写不带降级原因，会把已记下的原因盖成空

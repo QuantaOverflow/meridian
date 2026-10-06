@@ -52,6 +52,17 @@ const summary = (neurons: number, byPhase: RunOpsSummary['llm']['byPhase'] = {})
   degradedReasons: [],
 });
 
+/** 一次调用核查上线后的汇总：DashScope 花了 `dashscopeUsd`，这笔钱已按牌价折进 `neurons` */
+const summaryWithDashscope = (neurons: number, dashscopeUsd: number): RunOpsSummary => ({
+  ...summary(neurons),
+  check: {
+    outcomes: { off: 0, clean: 25, fixed: 0, revise_failed: 0, still_flagged: 0, missing: 0 },
+    uncheckedBlocks: 0,
+    revisions: 0,
+    oneCall: { checks: 100, fallbacks: 0, fallbackReasons: {}, fallbackMessage: null, noMeaningSearchBlocks: 0, dashscopeUsd },
+  },
+});
+
 async function insertRun(workflowId: string, startedAt: string, opsSummary: RunOpsSummary | null) {
   await db.insert($brief_runs).values({ workflow_id: workflowId, status: 'COMPLETED', started_at: new Date(startedAt), ops_summary: opsSummary });
 }
@@ -310,6 +321,40 @@ describe('生产 = 周期内生产运行的汇总 + 文章分析模型的全账�
     at('2026-10-05T12:00:00Z');
     await insertRun('cron-brief-1004', '2026-10-04T13:00:00', null);
     expect((await getCost('current')).body.lastRunByStep).toBeNull();
+  });
+});
+
+describe('DashScope 的花费：Cloudflare 看不到，从生产运行的汇总来', () => {
+  it('每日用量里单列一项（美元），只出现在有它的北京日；手动运行和没有这一项的汇总不算', async () => {
+    at('2026-10-07T12:00:00Z');
+    await insertRun('cron-brief-1004', '2026-10-04T13:00:00', summary(80_000)); // 一次调用核查上线之前
+    await insertRun('cron-brief-1005', '2026-10-05T13:00:00', summaryWithDashscope(30_000, 0.11));
+    // UTC 6 日 16:30 = 北京 7 日 00:30：算在 7 日
+    await insertRun('cron-brief-1006', '2026-10-06T16:30:00', summaryWithDashscope(30_000, 0.055));
+    await insertRun('manual-brief-1005', '2026-10-05T14:00:00', summaryWithDashscope(30_000, 0.5));
+    cf.answer = onlyNeurons([neuronRow('2026-10-05', V4, 20_000)]);
+
+    const { body } = await getCost('current');
+
+    expect(body.daily).toEqual([
+      { day: '2026-10-04', byModel: {} },
+      { day: '2026-10-05', byModel: { [V4]: 20_000 }, dashscopeUsd: 0.11 },
+      { day: '2026-10-06', byModel: {} },
+      { day: '2026-10-07', byModel: {}, dashscopeUsd: 0.055 },
+    ]);
+    // Cloudflare 的账与按模型的表不含它
+    expect(body.account).toMatchObject({ neurons: 20_000 });
+    expect(body.byModel).toEqual([{ modelId: V4, neurons: 20_000, share: 1, usdAtList: 0.22 }]);
+  });
+
+  it('生产占比只算 Workers AI：运行汇总里折进去的 DashScope 那部分先减掉', async () => {
+    at('2026-10-07T12:00:00Z');
+    await insertRun('cron-brief-1005', '2026-10-05T13:00:00', summaryWithDashscope(30_000, 0.11));
+    cf.answer = onlyNeurons([neuronRow('2026-10-05', V4, 40_000)]);
+
+    const { body } = await getCost('current');
+
+    expect(body.production).toEqual({ neurons: 20_000, runs: 1, runNeurons: 20_000, analysisNeurons: 0, share: 0.5 });
   });
 });
 

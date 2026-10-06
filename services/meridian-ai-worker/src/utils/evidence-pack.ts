@@ -75,7 +75,8 @@ export const buildEvidencePack: BuildEvidencePack = (c, text, cited, embeddings)
     hits.push(...meaningHits(embeddings, text, SEMANTIC_HITS));
     for (const q of clauses) hits.push(...meaningHits(embeddings, q, SEMANTIC_CLAUSE_HITS));
   }
-  const figures = [...new Set(numberPack(text, c))].filter(k => c.byKey.has(k)).sort((a, b) => byTime(c.byKey.get(a)!, c.byKey.get(b)!));
+  // 照原型原样：按计数词分组、组内从早到晚，不去重不重排（读数是在这个顺序上测的）
+  const figures = numberPack(text, c);
   const citedHere = cited.filter(k => c.byKey.has(k));
   const shown = new Set<string>();
   for (const k of [...cited, ...context, ...hits, ...figures]) if (c.byKey.has(k)) shown.add(k);

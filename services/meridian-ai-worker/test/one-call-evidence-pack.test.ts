@@ -74,6 +74,12 @@ describe('buildEvidencePack', () => {
     expect(pack.figures).toEqual([]);
   });
 
+  it('一句有两个计数词：时间线按计数词分组、组内从早到晚，同一句原文出现两次也照列（原型的顺序）', () => {
+    const pack = buildEvidencePack(cluster, 'The dam failed, killing 57 people, with 40 missing.', ['13:3'], null);
+    // people 的时间线在前，missing 的在后；12:2 两个词都数到
+    expect(pack.figures).toEqual(['11:2', '12:1', '12:2', '13:3', '12:2']);
+  });
+
   it('同一个计数词超过 12 条时留最早 2 条和最晚 10 条', () => {
     const articles = Array.from({ length: 15 }, (_, i) => ({
       id: 100 + i,

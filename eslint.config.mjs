@@ -68,6 +68,10 @@ export default defineConfig(
           group: ['**/workers-ai'],
           importNames: ['chat'],
           message: '直接调 chat() 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。确需绕开（如 eval 透传口）就加 eslint-disable 注释写明原因。',
+        }, {
+          group: ['**/dashscope'],
+          importNames: ['dashScopeChat'],
+          message: '直接调 dashScopeChat() 不记 LLM 日志：改走 callLLM（provider 为 dashscope 的 phase）。',
         }],
       }],
       'no-restricted-syntax': ['error', {

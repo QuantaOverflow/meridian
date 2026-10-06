@@ -20,6 +20,8 @@ const CNY_PER_USD = 7.1
  * （services/workers-ai.ts）：等 2s、4s、8s，各加 0–1s 随机抖动，最多 3 次。
  */
 const RESEND_MAX_WAITS = 3
+/** 一次请求最多等多久。实测一次核查 12–15 秒、回复写满 8000 token 也在一分钟内，两分钟还没回就是挂住了。 */
+const REQUEST_TIMEOUT_MS = 120_000
 const resendWaitMs = (wait: number) => 2_000 * 2 ** wait + Math.floor(Math.random() * 1_000)
 
 export class DashScopeError extends Error implements DashScopeErrorShape {
@@ -35,7 +37,8 @@ type Attempt = { body: any } | { error: DashScopeError; resend: boolean }
 async function attempt(url: string, headers: Record<string, string>, payload: string): Promise<Attempt> {
   let res: Response
   try {
-    res = await fetch(url, { method: 'POST', headers, body: payload })
+    // 挂住的请求当成会过去的故障：到点掐断、走重发，免得一句核查拖住整块
+    res = await fetch(url, { method: 'POST', headers, body: payload, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
   } catch (e) {
     return { error: new DashScopeError('provider_error', `DashScope 连接中断: ${e instanceof Error ? e.message : String(e)}`), resend: true }
   }
@@ -92,7 +95,7 @@ function mapResponse(body: any, modelName: string): ChatResponse {
 export const dashScopeChat: DashScopeChat = async (env, request: ChatRequest) => {
   const startTime = Date.now()
   const modelName = request.model
-  if (!(modelName in DASHSCOPE_MODELS)) throw new DashScopeError('provider_error', `Model not found: ${modelName}`)
+  if (!Object.hasOwn(DASHSCOPE_MODELS, modelName)) throw new DashScopeError('provider_error', `Model not found: ${modelName}`)
   // 没配好按 key 无效处理：不发请求，调用方回退到 agent
   if (!env.DASHSCOPE_BASE_URL || !env.DASHSCOPE_API_KEY) {
     throw new DashScopeError('auth', `DashScope 未配置：缺 ${env.DASHSCOPE_BASE_URL ? 'DASHSCOPE_API_KEY' : 'DASHSCOPE_BASE_URL'}`)

@@ -28,7 +28,7 @@ export interface EvidencePack {
   cites: SentenceKey[];
   /** 搜索与数字时间线带进来、不在 cites 里的原句（去重，按取到的先后） */
   also: SentenceKey[];
-  /** 与句中计数词数的是同一件事的原句，发布时间从早到晚；没有计数词就是空 */
+  /** 与句中计数词数的是同一件事的原句：按计数词分组，组内发布时间从早到晚（一句有几个计数词时同一句原文可能出现几次，照原型不去重）；没有计数词就是空 */
   figures: SentenceKey[];
 }
 

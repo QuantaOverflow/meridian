@@ -120,5 +120,9 @@
 
 - 上线：用户建新的 DashScope key、确认网关（custom provider `dashscope`、关缓存）、放 secret，填好 `wrangler.toml` 里的网关地址，
   再把 `BRIEF_CHECK_MODE` 切到 `one_call`；首期跑完读运维台与调用日志。
+- **agent 这条路是留着用的，不是待删的旧代码**（清死代码时别按「平时没人走」删）：它是 `BRIEF_CHECK_MODE` 的另一档，
+  也是 `one_call` 下每一句的兜底，DashScope 一出故障就会走到。没有它，厂商故障那几天句子会不经核查发出去。
+  退役它要同时满足两条，并由用户拍板：一次调用在生产上稳定跑过一段时间、回退很少；接受 DashScope 故障时句子按「没核到」发草稿。
+  退役时一并删 `services/sentence-check.ts`、agent 的 prompt、`@cf/qwen/qwen3.8-27b` 与 `brief_block_v6_check` 这个 phase。
 - 核查 2 次现在每天只多约 $0.08（ADR 0010 里 2 次那臂是 0/152），但没在一次调用上测过；上线一周后再定。
 - 离 90% 还差的是写作：换写作模型是另一个决定，质量风险最大，本文不碰。

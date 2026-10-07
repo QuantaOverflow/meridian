@@ -12,6 +12,7 @@ useSeoMeta({ title: () => `${props.error.statusCode} | Meridian`, ogLocale: 'en_
 </script>
 
 <template>
+  <EnvBanner />
   <NuxtLayout>
     <ErrorState :status-code="error.statusCode" :message="message" />
   </NuxtLayout>

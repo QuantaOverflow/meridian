@@ -15,6 +15,7 @@
 ## 决定
 
 1. **两个用途**：上线前验证（跑一次 Staging 运行），和调试的落脚处（手动运行改在 staging 上做）。
+   上线前验证只用于大的功能或架构变更；小改动直接部署生产（每个改动都走会拖慢开发，用户 2026-10-07 定）。
 2. **隔离的边界**。staging 有自己的一份：backend 与 ai-worker 两个 worker、Postgres（Neon 分支 `staging`）、Hyperdrive、
    R2 bucket、队列与 DLQ、workflow 名、Durable Object namespace、AI Gateway（`meridian-ai`，生产是 `meridian-gateway`）、
    后台 token。前端用 Pages 的 preview 环境（分支 `staging`），不建第二个项目。

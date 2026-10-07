@@ -19,7 +19,7 @@
 
 - Staging：部署加 `--env staging`（只有 backend 与 ai-worker 有；ml-service 共用生产），前端 `wrangler pages deploy --branch staging`。
   跑一次 Staging 运行：`node scripts/staging-run.mjs`（先 reset Neon 分支 `staging`，`--no-reset` 跳过；配置在 gitignored 的 `.staging.env`）。
-  改生产链路的代码先过 staging 再部署生产；调试用的手动运行也在 staging 上做，不写生产的库与 bucket
+  大的功能或架构变更先过 staging 再部署生产，小改动直接部署；调试用的手动运行在 staging 上做，不写生产的库与 bucket
 
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
@@ -36,7 +36,7 @@
 - commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -m "…" -- <paths>`，`-m` 要在 `--` 前），不要等用户开口；push 只在用户要求时做。
   `.githooks/pre-commit`（快检查）与 `pre-push`（全仓检查 + 碰到的包的测试）自动跑，没过就按输出修。测试是 golden 快照（只拦「重构改了行为」，不判对错），手动跑：
   `pnpm -F @meridian/backend test`（要本机测试库，见 `apps/backend/test/README.md`「数据库」）、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
-  前端端到端 `pnpm -F @meridian/frontend test`（backend 由测试假冒）；整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量靠上线后读真实输出
+  前端端到端 `pnpm -F @meridian/frontend test`（backend 由测试假冒）；整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量靠读真实输出：大的功能或架构变更先在 staging 上跑一次读成稿，其余上线后读生产的
 - 报错先 `wrangler tail`，再加 console.log
 - knip `--production` 报「只剩测试 / 本地脚本在用」的导出：真没用就删；只为测试或 `apps/backend/scripts/` 导出的加 `@internal`
 - push 会被 Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）拦下并列出新增的源码文件、路由、binding/配置，按入口可达性复查后跑 `node .claude/hooks/push-reachability.mjs --mark` 再 push
@@ -75,7 +75,7 @@
 | 文件 | 触发路径 | 内容 |
 |---|---|---|
 | `eval.md` | `eval/**` | 判据不得带架构假设、sample 是视图、金标四件套与 `targetOf`/`labelBalance`、判官对齐、holdout 卫生 |
-| `workers.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | 本地验证（dev 直连生产 R2）、workflow step 规矩、观测、LLM 调用的坑、typecheck 的两个坑 |
+| `workers.md` | `apps/backend/**`、`services/meridian-ai-worker/**` | 本地验证（dev 直连生产 R2）、workflow step 规矩、观测、LLM 调用的坑、typecheck 的两个坑、哪些改动走 staging |
 | `prototypes.md` | `apps/*/prototypes/**`、`services/*/prototypes/**` | 三个子目录、`.gitignore` 模板、import 生产代码的风险、毕业约定 |
 
 ## 禁区（未明确要求不要碰；`.claude/hooks/forbidden-zones.mjs` 碰到时交用户确认）

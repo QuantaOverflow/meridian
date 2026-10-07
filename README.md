@@ -161,7 +161,7 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 - `scripts/deploy.sh` (`wrangler deploy` underneath) uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.
 - Upload succeeds but activation hangs: usually an OAuth token missing write scope; `wrangler whoami` will warn — `wrangler login` again.
 - ML Service also needs to pass `scripts/check-container-deploy.sh`.
-- "Deployed" isn't "ran": new brief-generation code only proves itself on a run — do a Staging run before deploying to production (below).
+- "Deployed" isn't "ran": new brief-generation code only proves itself on a run. For a large feature or an architecture change, do a Staging run before deploying to production (below); small changes go straight to production and are read there.
 
 **Staging** (ADR 0013) — a second copy of the backend and the AI Worker with their own data, for trying a change before production and for debug runs.
 

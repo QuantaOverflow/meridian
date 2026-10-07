@@ -88,3 +88,20 @@ paths:
   都在请求内新建（`apps/backend/src/lib/database/index.ts`），新代码别改成模块级缓存连接池；
   裸 `sql` 模板塞 `Date` 对象在 `nodejs_compat` 下会抛类型错，传参先 `.toISOString()`
   （仓内已有裸 sql 用法：`apps/backend/src/routers/events.router.ts`）。
+
+## 5. 上线前验证：staging（ADR 0013）
+
+- **大的功能或架构变更才走 staging，小改动直接部署生产**（用户 2026-10-07 定：每个改动都走会拖慢开发）。
+  小改动——调 prompt 措辞、改阈值、修小 bug——照旧直接上，上线后读真实输出。拿不准算大还是小时问用户，不要自己默认走 staging。
+- **怎么走**：两个 worker 各 `../../scripts/deploy.sh --env staging`，然后在仓库根 `node scripts/staging-run.mjs`。
+  它先把 staging 的库重置成生产的最新副本、跑 migration、拷近两天的正文，再走 cron 那条路跑一次，按运维台的标记判红黄绿。
+  绿或黄之后在 staging 读者页上读成稿（地址脚本会打印），再部署生产。
+- **不带 `--env` 就是部署生产**。这时当前提交最近一次 Staging 运行没通过（或没跑过），脚本会提醒但不拦；小改动没走 staging 时看到这条提醒是正常的。
+- **调试用的手动运行在 staging 上做**（`POST /admin/briefs/generate` 打 staging 的 backend），不写生产的库与 bucket。
+  同一份数据上连跑用 `--no-reset`；要用两天以前的文章先 `--body-days N` 把正文拷过去。
+- **staging 验不了的**：聚类与 embedding 的改动、backend 与 ml-service 之间接口的改动（ml-service 共用生产那一份）；抓取与文章处理链路（staging 不抓取）。这些仍只能上生产后看。
+- **北京时间 21:00 后约半小时别跑**：重置会把生产那条 RUNNING 的运行记录带进 staging，触发回 409。
+- **给 worker 加 binding 或变量，staging 段要跟着加**：wrangler 的 binding 与 `vars` 不继承，只写顶层的话 staging 上是 undefined，
+  而本地测试与生产都是好的。加完跑 `wrangler deploy --dry-run --env staging` 看 binding 列表。
+  staging 段里的资源名不得与生产相同，`scripts/check-staging-isolation.mjs`（在 `pnpm typecheck` 里）会拦。
+- **轮询中途断了**（脚本退出但运行还在跑）：`node scripts/staging-run.mjs --attach <运行 id>` 接上，不要重新触发。

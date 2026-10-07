@@ -1,2 +1,0 @@
-{"status":200,"path":"/reader/block-entities?ids=1,2,3,4"}
-{"items":[{"blockId":1,"entities":[{"key":"benjamin netanyahu","name":"Benjamin Netanyahu"}]},{"blockId":2,"entities":[{"key":"benjamin netanyahu","name":"Benjamin Netanyahu"}]},{"blockId":3,"entities":[{"key":"benjamin netanyahu","name":"Benjamin Netanyahu"}]},{"blockId":4,"entities":[{"key":"benjamin netanyahu","name":"Benjamin Netanyahu"}]}]}

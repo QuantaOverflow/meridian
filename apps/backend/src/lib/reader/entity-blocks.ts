@@ -12,7 +12,7 @@ import { entityKey } from './story-entities';
  */
 
 /**
- * 实体出现在至少这么多已发布的简报块里才有实体页。2026-10-08 在 staging 的读数与取这个数的理由见 ADR 0014「实体页」。
+ * 实体出现在至少这么多已发布的简报块里才有实体页。2026-10-08 在 staging 的读数与取这个数的理由见 ADR 0018。
  */
 const ENTITY_PAGE_MIN_BLOCKS = 5;
 

@@ -28,9 +28,25 @@ for (const file of readdirSync(BACKEND_GOLDEN)) {
   replies.set(meta.path, { status: meta.status, body: detokenizeDates(text.slice(newline + 1).trimEnd(), anchor) });
 }
 
+// 块下的实体链接（/reader/block-entities?ids=…）：backend 只录一份「fixture 里全部块」的快照，任意一批块号的请求
+// 从它里面按请求的顺序挑，与真接口同口径（没有实体的块不在结果里；顺序与子集的行为由 backend 的 reader.spec.ts 对真路由测）。
+// 请求里有没录到的块号时不回放（记进 unexpected）：说明 backend 的 fixture 加了块而那份快照没跟上
+const BLOCK_ENTITIES = '/reader/block-entities?ids=';
+const idsOf = (path: string) => path.slice(BLOCK_ENTITIES.length).split(',').map(Number);
+const allBlockEntities = [...replies].find(([path]) => path.startsWith(BLOCK_ENTITIES));
+if (allBlockEntities === undefined) throw new Error('backend 快照里没有 block-entities-all');
+const recordedBlockIds = new Set(idsOf(allBlockEntities[0]));
+const recordedBlockEntities = (JSON.parse(allBlockEntities[1].body) as { items: { blockId: number }[] }).items;
+function blockEntitiesReply(path: string): { status: number; body: string } | undefined {
+  if (!path.startsWith(BLOCK_ENTITIES)) return undefined;
+  const ids = idsOf(path);
+  if (ids.some(id => !recordedBlockIds.has(id))) return undefined;
+  return { status: 200, body: JSON.stringify({ items: ids.flatMap(id => recordedBlockEntities.filter(item => item.blockId === id)) }) };
+}
+
 const unexpected: string[] = [];
 const backend = http.createServer((req, res) => {
-  const reply = replies.get(req.url ?? '');
+  const reply = replies.get(req.url ?? '') ?? blockEntitiesReply(req.url ?? '');
   if (req.method !== 'GET' || req.headers.authorization !== `Bearer ${TOKEN}` || reply === undefined) {
     unexpected.push(`${req.method} ${req.url} (${req.headers.authorization})`);
     res.statusCode = 500;
@@ -718,7 +734,7 @@ describe('关注与 Following 页（浏览器）', () => {
   });
 });
 
-// ── 实体页：期望值写死自 backend 的 entity-* 与 block-entities-* 快照 ──────────
+// ── 实体页：期望值写死自 backend 的 entity-* 与 block-entities-all 快照 ──────────
 describe('实体页（SSR）', () => {
   const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
   /** 各块：[标题, 「读这一块」链接, 块下的实体链接] */

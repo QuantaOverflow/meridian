@@ -9,7 +9,7 @@
 - `services/meridian-ai-worker` — CF Worker，LLM 走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`；唯一的例外是逐句核查配成 `one_call` 时走 DashScope 的 `qwen3.8-flash`（ADR 0012）
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
-- `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现（例外：两侧必须算出同一结果的落点规则 `placement.ts`，见 ADR 0014）
+- `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现（例外：两侧必须算出同一结果的落点规则 `placement.ts`，见 ADR 0015）
 
 ## Commands（根目录）
 - `pnpm typecheck` / `pnpm format`
@@ -68,6 +68,7 @@
 - 改逐句核查（取证规则、一次调用的 prompt、DashScope 通道、回退）→ `docs/adr/0012-one-call-sentence-check.md`（读数、证伪清单、没验证的部分）
 - 改 staging 环境（隔离边界、Staging 运行、判定与部署提醒）→ `docs/adr/0013-staging-environment.md`
 - 改简报块的落库与回填（表 `brief_blocks`、块对外的形状、回填范围）→ `docs/adr/0014-brief-blocks-table.md`
+- 改建在简报块上的读者功能 → 国家页（落点、涉及的门槛）`docs/adr/0015-country-pages.md`；搜索 `docs/adr/0016-block-search.md`；关注与 Following 页 `docs/adr/0017-follows-and-following-page.md`；实体页（门槛、媒体名的表、入口）`docs/adr/0018-entity-pages.md`
 - 架构决策记录 → `docs/adr/`
 
 ## 路径触发的规则（`.claude/rules/`）

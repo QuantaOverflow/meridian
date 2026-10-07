@@ -89,11 +89,10 @@ const CASES: Record<string, string> = {
   'admin-source-404': '/admin/sources/999/details',
 };
 
-// 块下的实体链接：前端列块的每个接口（国家页、搜索、Following、实体页）拿到块之后都按块号问一次，
-// 上面每个列块的 case 对应的那批块号（升序）各录一份，前端 e2e 回放时才对得上
-for (const ids of ['1,4', '4,5', '5', '1,2,4', '2', '3', '1,2,3,4', '2,3', '1,2,3,4,5', '2,5']) {
-  CASES[`block-entities-${ids.replaceAll(',', '-')}`] = `/reader/block-entities?ids=${ids}`;
-}
+// 块下的实体链接：前端列块的每个接口（国家页、搜索、Following、实体页）拿到块之后都按块号问一次。
+// 只录一份「fixture 里全部块」的：前端 e2e 的假 backend 从它里面按请求的块号挑（见 frontend 的 reader-api-golden.test.ts），
+// 不必为每个列块的 case 各录一份。往 fixture 里加块时把块号补到这里；漏了的话前端回放会报「没录到的块号」
+CASES['block-entities-all'] = '/reader/block-entities?ids=1,2,3,4,5,6';
 
 describe('读者视图与后台源读数快照', () => {
   for (const [name, path] of Object.entries(CASES)) {

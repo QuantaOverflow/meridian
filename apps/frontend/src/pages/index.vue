@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { BriefMap, BriefMapCountryCoverage, BriefTier, MapTopic } from '@meridian/contracts';
-import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, linkEnds, place } from '~/lib/briefMap';
+import { place, type BriefMap, type BriefMapCountryCoverage, type BriefTier, type MapTopic } from '@meridian/contracts';
+import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, linkEnds } from '~/lib/briefMap';
 import type { GlobeDot, GlobeLink, GlobeTip } from '~/lib/globeScene';
 import type { BriefDetail } from '~/shared/types';
 

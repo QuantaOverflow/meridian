@@ -5,7 +5,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import type { BriefBlockDraft } from '@meridian/contracts';
-import { $brief_blocks, $brief_runs, $brief_stories, $reports, eq, sql } from '@meridian/database';
+import { $articles, $brief_blocks, $brief_runs, $brief_stories, $reports, $sources, eq, sql } from '@meridian/database';
 import { getDb } from '../../src/lib/database';
 import { saveBriefReport } from '../../src/lib/save-brief-report';
 
@@ -140,6 +140,57 @@ describe('saveBriefReport', () => {
     expect(await db.select().from($reports).where(eq($reports.title, title))).toEqual([]);
     const [run] = await db.select().from($brief_runs).where(eq($brief_runs.workflow_id, wf));
     expect(run.report_id).toBeNull();
+  });
+
+  it('块的落点国家与涉及国家在落库时按成员文章算好', async () => {
+    const wf = uniq('wf-blocks-countries');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const [source] = await db.insert($sources).values({ url: uniq('https://feeds.example.com/c'), name: 'C', category: 'news', scrape_frequency: 1 }).returning({ id: $sources.id });
+    const article = (location: string | null, entities: string[]) => ({
+      title: 'a', url: uniq('https://c.example.com/a'), sourceId: source.id, primary_location: location, key_entities: entities,
+    });
+    const ids = (
+      await db
+        .insert($articles)
+        .values([
+          // 故事 A：三篇都在韩国，其中两篇的关键实体提到朝鲜、一篇提到美国 → 落点 KR，涉及 KP（2/3），US 只有 1/3 不算
+          article('South Korea', ['North Korea', 'Kim Jong Un']),
+          article('South Korea', ['north korea', 'United States']),
+          article('South Korea', []),
+          // 故事 B：四篇分在四国，没有国家到 30% → 没有落点，铺开的几国都算涉及
+          article('France', []),
+          article('Germany', []),
+          article('Japan', []),
+          article('Brazil', []),
+        ])
+        .returning({ id: $articles.id })
+    ).map((r) => r.id);
+    const rows = await db
+      .insert($brief_stories)
+      .values([
+        { workflow_id: wf, cluster_id: 0, article_ids: ids.slice(0, 3) },
+        { workflow_id: wf, cluster_id: 1, article_ids: ids.slice(3) },
+        { workflow_id: wf, cluster_id: 2, article_ids: null },
+      ])
+      .returning({ id: $brief_stories.id });
+
+    const id = await saveBriefReport(
+      db,
+      wf,
+      report(uniq('blocks-countries')),
+      rows.map((r, position) => ({ storyId: r.id, tier: 'more' as const, position, title: `T${position}`, body: 'B.' }))
+    );
+
+    const saved = await db
+      .select({ placement: $brief_blocks.placement_country, mentions: $brief_blocks.mention_countries })
+      .from($brief_blocks)
+      .where(eq($brief_blocks.report_id, id))
+      .orderBy($brief_blocks.position);
+    expect(saved).toEqual([
+      { placement: 'KR', mentions: ['KP'] },
+      { placement: null, mentions: ['BR', 'DE', 'FR', 'JP'] },
+      { placement: null, mentions: [] },
+    ]);
   });
 
   it('块的标题与正文可按英文全文检索，词形不同也命中', async () => {

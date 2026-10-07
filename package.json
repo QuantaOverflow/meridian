@@ -7,7 +7,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "typecheck": "node scripts/check-rules.mjs && turbo run typecheck",
+    "typecheck": "node scripts/check-rules.mjs && node scripts/check-staging-isolation.mjs && turbo run typecheck",
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ apps/backend/src apps/backend/test services/meridian-ai-worker/src services/meridian-ai-worker/test services/meridian-ml-service/cf-worker/src",
     "prepare": "git config core.hooksPath .githooks",
     "knowledge": "node node_modules/.pnpm/tsx@4.19.3/node_modules/tsx/dist/cli.mjs scripts/knowledge/build.ts"

@@ -62,6 +62,14 @@ export interface BlockItem {
   entities: { name: string; href: string }[];
 }
 
+/** 阅读页每块下的实体链接，由 /api/briefs/:slug/entities 返回：条目的锚点 id（如 `story-1`）→ 这一块有实体页的实体 */
+export type BriefEntityLinks = Record<string, BlockItem['entities']>;
+
+/** 实体列表页，由 /api/entities 返回：全部有实体页的实体，块数多的在前 */
+export interface EntityIndexResponse {
+  items: { name: string; href: string; /** 这个实体的总块数 */ blocks: number }[];
+}
+
 /** 国家页、实体页上的一块，由 /api/countries/:code/blocks、/api/entities/blocks 返回 */
 interface CountryBlockItem extends BlockItem {
   /** 落点国家的英文名；跨地区或没有国家的故事为 null */

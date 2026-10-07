@@ -37,3 +37,16 @@ export const MAX_BLOCK_ENTITY_IDS = 500;
 export interface BlockEntitiesList {
   items: { blockId: number; entities: BlockEntity[] }[];
 }
+
+/** 实体列表页（backend `GET /reader/entities`）：全部有实体页的实体，块数多的在前，一样多按写法 */
+export interface EntityIndex {
+  items: (BlockEntity & { /** 这个实体在已发布各期的块数 */ blocks: number })[];
+}
+
+/**
+ * 一期里各块的相关实体（backend `GET /reader/briefs/:id/block-entities`），阅读页每块下的实体链接用。
+ * position 是块在这一期正文里的顺序（从 0 起）；只列有实体页的实体，没有的块不在其中。未发布或不存在的期是空的。
+ */
+export interface BriefBlockEntities {
+  items: { position: number; entities: BlockEntity[] }[];
+}

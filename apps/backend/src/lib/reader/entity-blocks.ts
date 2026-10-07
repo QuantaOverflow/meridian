@@ -1,4 +1,4 @@
-import type { BlockEntitiesList, BlockEntity, CountryBlock, EntityBlocksPage } from '@meridian/contracts';
+import type { BlockEntitiesList, BlockEntity, BriefBlockEntities, CountryBlock, EntityBlocksPage, EntityIndex } from '@meridian/contracts';
 import { $brief_blocks, $reports, and, desc, eq, inArray, sql } from '@meridian/database';
 import { isPublished } from './briefs';
 import type { Db } from './db';
@@ -128,4 +128,32 @@ export async function listBlockEntities(db: Db, blockIds: number[]): Promise<Blo
       return entities.length === 0 ? [] : [{ blockId, entities }];
     }),
   };
+}
+
+/** 实体列表页：全部有实体页的实体（门槛与显示写法同实体页），块数多的在前，一样多按写法 */
+export async function listEntities(db: Db): Promise<EntityIndex> {
+  const rows = (await db.execute(sql`
+    SELECT e.key, mode() WITHIN GROUP (ORDER BY e.name) AS name, count(*)::int AS blocks
+    FROM ${$brief_blocks}
+    JOIN ${$reports} ON ${$reports.id} = ${$brief_blocks.report_id}
+    CROSS JOIN LATERAL unnest(${$brief_blocks.entities}, ${$brief_blocks.entity_names}) AS e(key, name)
+    WHERE ${$reports.published_at} IS NOT NULL
+    GROUP BY e.key
+    HAVING count(*) >= ${ENTITY_PAGE_MIN_BLOCKS}
+    ORDER BY blocks DESC, e.key
+  `)) as unknown as { key: string; name: string | null; blocks: number }[];
+  return { items: rows.map(r => ({ key: r.key, name: r.name ?? r.key, blocks: r.blocks })) };
+}
+
+/** 一期里各块的相关实体，按块在正文里的顺序；阅读页每块下的实体链接用。未发布或不存在的期是空的 */
+export async function listBriefBlockEntities(db: Db, reportId: number): Promise<BriefBlockEntities> {
+  const blocks = await db
+    .select({ id: $brief_blocks.id, position: $brief_blocks.position })
+    .from($brief_blocks)
+    .where(eq($brief_blocks.report_id, reportId))
+    .orderBy($brief_blocks.position);
+  const positionOf = new Map(blocks.map(b => [b.id, b.position]));
+  // 已发布与门槛都在 listBlockEntities 里判；它按请求里的块号顺序回，这里就是正文顺序
+  const { items } = await listBlockEntities(db, blocks.map(b => b.id));
+  return { items: items.map(item => ({ position: positionOf.get(item.blockId)!, entities: item.entities })) };
 }

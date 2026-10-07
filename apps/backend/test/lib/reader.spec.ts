@@ -7,7 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
-import type { BlockEntitiesList, CountryBlocksPage, CountrySection, EntityBlocksPage, FollowingPage, SearchPage } from '@meridian/contracts';
+import type { BlockEntitiesList, BriefBlockEntities, CountryBlocksPage, CountrySection, EntityBlocksPage, EntityIndex, FollowingPage, SearchPage } from '@meridian/contracts';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
@@ -38,6 +38,8 @@ const CASES: Record<string, string> = {
   'brief-3-top-stories': '/reader/briefs/3',
   'brief-1-legacy': '/reader/briefs/1',
   'brief-2-artifacts': '/reader/briefs/2',
+  // 第 8 期有简报块：前端阅读页的测试拿它看块下的实体链接
+  'brief-8-with-blocks': '/reader/briefs/8',
   'brief-404': '/reader/briefs/999',
   // 地图首页的数据；边界情况在 reader-map.spec.ts
   'brief-8-map': '/reader/briefs/8/map',
@@ -64,6 +66,9 @@ const CASES: Record<string, string> = {
   'entity-netanyahu-page': '/reader/entities/blocks?name=benjamin%20netanyahu&limit=2&offset=1',
   'entity-hamas-below-threshold': '/reader/entities/blocks?name=hamas&limit=20&offset=0',
   'entity-iran-country': '/reader/entities/blocks?name=iran&limit=20&offset=0',
+  // 实体列表页与阅读页每块下的实体链接
+  'entities-list': '/reader/entities',
+  'brief-8-block-entities': '/reader/briefs/8/block-entities',
   'following-entity': '/reader/following?countries=&threads=&entities=benjamin%20netanyahu&limit=20&offset=0',
   'following-il-entity': '/reader/following?countries=IL&threads=&entities=benjamin%20netanyahu&limit=20&offset=0',
   'stories-list': '/reader/stories',
@@ -422,8 +427,41 @@ describe('边界', () => {
     });
   });
 
+  describe('实体列表', () => {
+    it('只列有实体页的实体，带块数（只数已发布的期）：没过门槛的 Hamas、媒体名、国家都不在', async () => {
+      const res = await exports.default.fetch('http://backend/reader/entities', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      expect(res.status).toBe(200);
+      expect((await res.json()) as EntityIndex).toEqual({ items: [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu', blocks: 5 }] });
+    });
+  });
+
+  describe('一期里各块的实体', () => {
+    const entitiesOf = async (id: string) => {
+      const res = await exports.default.fetch(`http://backend/reader/briefs/${id}/block-entities`, {
+        headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+      });
+      expect(res.status, id).toBe(200);
+      return (await res.json()) as BriefBlockEntities;
+    };
+
+    it('按块在正文里的顺序；只列有实体页的实体', async () => {
+      const netanyahu = [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' }];
+      expect(await entitiesOf('8')).toEqual({ items: [{ position: 0, entities: netanyahu }, { position: 1, entities: netanyahu }] });
+      expect(await entitiesOf('6')).toEqual({ items: [{ position: 0, entities: netanyahu }] });
+    });
+
+    it('未发布的期（第 9 期）、没有块的期、不存在的期：空', async () => {
+      for (const id of ['9', '1', '999', '0']) expect(await entitiesOf(id), id).toEqual({ items: [] });
+    });
+
+    it('期号不是整数：400', async () => {
+      const res = await exports.default.fetch('http://backend/reader/briefs/abc/block-entities', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      expect(res.status).toBe(400);
+    });
+  });
+
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/reader/following?countries=IL', '/reader/entities/blocks?name=hamas', '/reader/block-entities?ids=1', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/reader/following?countries=IL', '/reader/entities/blocks?name=hamas', '/reader/block-entities?ids=1', '/reader/entities', '/reader/briefs/8/block-entities', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });

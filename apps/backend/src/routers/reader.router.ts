@@ -6,7 +6,7 @@ import { getDb } from '../lib/database';
 import { listBriefs, loadBrief } from '../lib/reader/briefs';
 import { loadBriefMap } from '../lib/reader/brief-map';
 import { countryCode, listCountryBlocks } from '../lib/reader/country-blocks';
-import { listBlockEntities, listEntityBlocks } from '../lib/reader/entity-blocks';
+import { listBlockEntities, listBriefBlockEntities, listEntities, listEntityBlocks } from '../lib/reader/entity-blocks';
 import { listFollowingBlocks } from '../lib/reader/following-blocks';
 import { searchBlocks } from '../lib/reader/search-blocks';
 import { getStoryThread, listStoryThreads } from '../lib/reader/story-threads';
@@ -101,6 +101,16 @@ app.get('/entities/blocks', zValidator('query', entityBlocksQuerySchema), async 
   const page = await listEntityBlocks(getDb(c.env.HYPERDRIVE), c.req.valid('query'));
   if (page === null) return c.json({ error: 'Entity not found' }, 404);
   return c.json(page);
+});
+
+// 实体列表页（形状见 @meridian/contracts 的 EntityIndex）：全部有实体页的实体
+app.get('/entities', async c => {
+  return c.json(await listEntities(getDb(c.env.HYPERDRIVE)));
+});
+
+// 阅读页每块下的实体链接（形状见 @meridian/contracts 的 BriefBlockEntities）：这一期各块的相关实体
+app.get('/briefs/:id/block-entities', zValidator('param', idParamSchema), async c => {
+  return c.json(await listBriefBlockEntities(getDb(c.env.HYPERDRIVE), c.req.valid('param').id));
 });
 
 const blockEntitiesQuerySchema = z.object({

@@ -60,6 +60,7 @@ useSeoMeta({
 <template>
   <div class="mx-auto max-w-[700px] px-5 pt-[70px] pb-[140px] md:px-8">
     <h1 class="font-serif text-[28px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[42px] mb-[18px]">Search</h1>
+    <p class="mb-[18px] text-[12.5px] text-ink3"><NuxtLink to="/entities" class="border-rule hover:text-ink border-b transition-colors">Browse names in the news →</NuxtLink></p>
 
     <form role="search" action="/search" method="get" class="mb-4 flex gap-2" @submit.prevent="submit">
       <input

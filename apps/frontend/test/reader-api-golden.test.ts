@@ -125,6 +125,10 @@ const READER_CASES: Record<string, string> = {
   'entity-netanyahu-page': '/api/entities/blocks?name=benjamin%20netanyahu&limit=2&offset=1',
   'entity-hamas-below-threshold': '/api/entities/blocks?name=hamas',
   'entity-iran-country': '/api/entities/blocks?name=Iran',
+  // 实体列表页与阅读页每块下的实体链接
+  'entities-list': '/api/entities',
+  'brief-8-entities': '/api/briefs/8/entities',
+  'brief-entities-invalid-slug': '/api/briefs/abc/entities',
   'entity-missing-name': '/api/entities/blocks',
   'entity-empty-name': '/api/entities/blocks?name=%20',
   'entity-too-long': `/api/entities/blocks?name=${'a'.repeat(201)}`,
@@ -736,8 +740,8 @@ describe('实体页（SSR）', () => {
     expect(unexpected).toEqual([]);
   });
 
-  it('没过门槛的实体、没带写法、空写法：404', async () => {
-    for (const path of ['/entities?name=hamas', '/entities', '/entities?name=%20']) {
+  it('没过门槛的实体、超过 200 字的写法：404', async () => {
+    for (const path of ['/entities?name=hamas', `/entities?name=${'a'.repeat(201)}`]) {
       expect((await fetch(path)).status, path).toBe(404);
     }
     expect(unexpected).toEqual([]);
@@ -749,6 +753,57 @@ describe('实体页（SSR）', () => {
       expect(html, path).toMatch(/data-test="entity"[^>]*>\s*<a\b[^>]*href="\/entities\?name=benjamin%20netanyahu"[^>]*>\s*Benjamin Netanyahu\s*<\/a>/);
     }
     expect(unexpected).toEqual([]);
+  });
+});
+
+// ── 实体的入口：列表页、阅读页每块下的链接、导航 ──────────
+describe('实体的入口（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 阅读页各条目：[锚点 id, 条目下的实体链接] */
+  const storiesOf = (html: string) =>
+    [...html.matchAll(/<article\b[^>]*\bid="(story-\d+)"[^>]*>([\s\S]*?)<\/article>/g)].map(([, id, article]) => [
+      id,
+      [...article.matchAll(/data-test="entity"[^>]*>\s*<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, name]) => [text(name), href]),
+    ]);
+
+  it('列表页（不带写法、空写法都是它）：有实体页的实体，带块数，链到各自的页', async () => {
+    for (const path of ['/entities', '/entities?name=%20']) {
+      const res = await fetch(path);
+      expect(res.status, path).toBe(200);
+      const html = await res.text();
+      expect(html).toMatch(/<h1\b[^>]*>\s*Names in the news\s*<\/h1>/);
+      const rows = [...html.matchAll(/data-test="entity-row"[^>]*>\s*<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, inner]) => [href, text(inner)]);
+      expect(rows, path).toEqual([['/entities?name=benjamin%20netanyahu', 'Benjamin Netanyahu 5 stories']]);
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  it('阅读页：每个条目下列出它的实体，链到实体页', async () => {
+    const res = await fetch('/briefs/8');
+    expect(res.status).toBe(200);
+    const netanyahu = [['Benjamin Netanyahu', '/entities?name=benjamin%20netanyahu']];
+    expect(storiesOf(await res.text())).toEqual([['story-1', netanyahu], ['story-2', netanyahu]]);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('阅读页：实体取不到时正文照常，只是没有实体链接', async () => {
+    const saved = replies.get('/reader/briefs/8/block-entities')!;
+    replies.set('/reader/briefs/8/block-entities', { status: 500, body: '{"error":"boom"}' });
+    try {
+      const res = await fetch('/briefs/8');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('gaza ceasefire holds');
+      expect(storiesOf(html)).toEqual([['story-1', []], ['story-2', []]]);
+    } finally {
+      replies.set('/reader/briefs/8/block-entities', saved);
+    }
+  });
+
+  it('导航与搜索页上有进列表页的入口；实体页能回列表页', async () => {
+    for (const path of ['/', '/briefs', '/search', '/entities?name=benjamin%20netanyahu']) {
+      expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/entities"/);
+    }
   });
 });
 

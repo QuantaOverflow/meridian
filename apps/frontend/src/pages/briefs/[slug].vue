@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { BriefDetail } from '~/shared/types';
+import type { BriefDetail, BriefEntityLinks } from '~/shared/types';
 
 const route = useRoute();
 const slug = computed(() => String(route.params.slug ?? ''));
@@ -17,10 +17,13 @@ if (error.value) {
   });
 }
 
+// 块下的实体链接是正文之外的导航，单独取：取不到时正文照常，只是没有链接（失败在 server 路由里记日志）
+const { data: entityLinks } = await useFetch<BriefEntityLinks>(() => `/api/briefs/${slug.value}/entities`, { lazy: true });
+
 useBriefSeo(brief);
 </script>
 
 <template>
   <BriefSkeleton v-if="status === 'pending' || brief === null" />
-  <BriefArticle v-else :brief="brief" />
+  <BriefArticle v-else :brief="brief" :entity-links="entityLinks ?? undefined" />
 </template>

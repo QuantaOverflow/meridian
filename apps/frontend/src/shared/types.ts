@@ -58,15 +58,32 @@ export interface BlockItem {
   dateLabel: string;
   /** 阅读页上这一块的地址，如 `/briefs/8#story-1` */
   href: string;
+  /** 这一块的相关实体：只列有实体页的，href 是实体页 */
+  entities: { name: string; href: string }[];
 }
 
-/** 国家页上的一块，由 /api/countries/:code/blocks 返回 */
+/** 国家页、实体页上的一块，由 /api/countries/:code/blocks、/api/entities/blocks 返回 */
 interface CountryBlockItem extends BlockItem {
   /** 落点国家的英文名；跨地区或没有国家的故事为 null */
   placedIn: string | null;
   /** 这一块还涉及的其他国家（英文名），不含本页的国家 */
   alsoInvolves: string[];
 }
+
+/**
+ * 实体页的一页，由 /api/entities/blocks 返回。查的写法能归成国家时不开页（kind: 'country'），页面跳到 href 的国家页
+ */
+export type EntityBlocksResponse =
+  | {
+      kind: 'entity';
+      /** 归一后的写法（关注项按它记） */
+      key: string;
+      name: string;
+      /** 这个实体的总块数，与分页无关 */
+      total: number;
+      items: CountryBlockItem[];
+    }
+  | { kind: 'country'; href: string };
 
 /** 国家页的一节：落点在该国的块（placement）或涉及该国的块（mention） */
 export interface CountryBlocksResponse {
@@ -103,7 +120,7 @@ interface FollowingBlockItem extends BlockItem {
   /** 所属那一期的生成时刻（ISO）；页面拿它与上次访问的时刻比，标出 new */
   briefCreatedAt: string;
   /** 这一块命中的关注项（至少一个）。involved = 关注的是国家、而这一块只是涉及该国（落点在别处） */
-  matches: { kind: 'country' | 'thread'; label: string; href: string | null; involved: boolean }[];
+  matches: { kind: 'country' | 'thread' | 'entity'; label: string; href: string | null; involved: boolean }[];
 }
 
 /** Following 页的一页：命中任一关注项的块，最新的在前 */

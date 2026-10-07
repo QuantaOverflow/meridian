@@ -248,6 +248,16 @@ export const $brief_blocks = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // 这一块的实体（见 GLOSSARY.md「实体」），写块时按成员文章算好（算法在 backend lib/reader/story-entities.ts）；实体页按它查。
+    // entities 是归一后的写法（小写、去首尾空白），不含能归成国家的与媒体名；entity_names 是与它逐项对应的显示写法。回填脚本重跑即刷新
+    entities: text('entities')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    entity_names: text('entity_names')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     // 全文检索（英文）：标题权重 A、正文权重 B。生成列，写入方不管它
     search: tsvector('search')
       .notNull()
@@ -263,5 +273,6 @@ export const $brief_blocks = pgTable(
     index('brief_blocks_search_idx').using('gin', table.search),
     index('brief_blocks_placement_country_idx').on(table.placement_country),
     index('brief_blocks_mention_countries_idx').using('gin', table.mention_countries),
+    index('brief_blocks_entities_idx').using('gin', table.entities),
   ]
 );

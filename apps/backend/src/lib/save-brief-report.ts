@@ -12,13 +12,26 @@
 //
 // 简报块：这一期写出来的每一块在同一个事务里写进 brief_blocks（为什么另存一张表见 ADR 0014）。
 // 期与块同时出现或同时不出现；上面的幂等也盖住它——重试时直接返回，不会再写一遍块。
-// 每块的落点国家与涉及国家在这里按成员文章算好一并写入（国家页按它查，算法见 lib/reader/story-countries.ts）。
+// 每块的落点国家、涉及国家与实体在这里按成员文章算好一并写入（国家页、实体页按它查，算法见 lib/reader/story-countries.ts）。
 import type { BriefBlockDraft } from '@meridian/contracts';
 import { $brief_blocks, $brief_runs, $reports, eq } from '@meridian/database';
 import type { getDb } from './database';
-import { loadBlockCountries } from './reader/story-countries';
+import { loadBlockAttribution, type BlockAttribution } from './reader/story-countries';
 
 type Db = ReturnType<typeof getDb>;
+
+/**
+ * 存在块上的归属那几列
+ * @internal 只为回填脚本导出
+ */
+export function attributionColumns(a: BlockAttribution | undefined) {
+  return {
+    placement_country: a?.countries.placement ?? null,
+    mention_countries: a?.countries.mentions ?? [],
+    entities: a?.entities.map((e) => e.key) ?? [],
+    entity_names: a?.entities.map((e) => e.name) ?? [],
+  };
+}
 
 /**
  * 把一期的块写进 brief_blocks。调用方给事务（或连接）：保存简报与往期回填（scripts/backfill-brief-blocks.ts）共用这一份写法。
@@ -30,7 +43,7 @@ export async function insertBriefBlocks(
   blocks: BriefBlockDraft[]
 ): Promise<void> {
   if (blocks.length === 0) return;
-  const countries = await loadBlockCountries(tx, blocks.map((b) => b.storyId));
+  const attribution = await loadBlockAttribution(tx, blocks.map((b) => b.storyId));
   await tx.insert($brief_blocks).values(
     blocks.map((b) => ({
       report_id: reportId,
@@ -39,8 +52,7 @@ export async function insertBriefBlocks(
       position: b.position,
       title: b.title,
       body: b.body,
-      placement_country: countries.get(b.storyId)?.placement ?? null,
-      mention_countries: countries.get(b.storyId)?.mentions ?? [],
+      ...attributionColumns(attribution.get(b.storyId)),
     }))
   );
 }

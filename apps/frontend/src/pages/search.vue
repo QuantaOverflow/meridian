@@ -102,6 +102,7 @@ useSeoMeta({
             <NuxtLink v-if="group.thread && i === 0" :to="group.thread.href" class="border-rule hover:text-ink border-b transition-colors">
               {{ group.thread.title }} · {{ pluralize(group.thread.briefCount, 'issue') }}
             </NuxtLink>
+            <EntityLinks :entities="block.entities" />
           </p>
         </template>
 
@@ -113,8 +114,9 @@ useSeoMeta({
             <p class="mb-1 text-[12.5px] text-ink3"><time>{{ block.dateLabel }}</time></p>
             <h4 class="font-serif text-[17px] leading-[1.42] font-semibold text-ink mb-[6px]">{{ block.title }}</h4>
             <div class="block-body font-serif text-[15px] leading-[1.8] text-ink2 md:text-[16px]" v-html="block.bodyHtml" />
-            <p class="mt-[6px] text-[12.5px] text-ink3">
+            <p class="mt-[6px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
               <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
+              <EntityLinks :entities="block.entities" />
             </p>
           </div>
           <p v-if="group.blockCount > group.blocks.length" class="mt-4 text-[12.5px] text-ink3">

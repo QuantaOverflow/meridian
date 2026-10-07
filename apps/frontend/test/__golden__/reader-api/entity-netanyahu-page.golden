@@ -1,0 +1,2 @@
+{"status":200,"cache-control":null}
+{"kind":"entity","key":"benjamin netanyahu","name":"Benjamin Netanyahu","total":5,"items":[{"id":5,"title":"fed holds rates","bodyHtml":"<p>The Fed held rates at 4.25%.</p>","tier":"more","briefNumber":8,"dateLabel":"{D+0 long}","href":"/briefs/8#story-2","entities":[],"placedIn":"United States","alsoInvolves":[]},{"id":2,"title":"hostage deal","bodyHtml":"<p>A deal was reached.</p>","tier":"lead","briefNumber":7,"dateLabel":"{D-1 long}","href":"/briefs/7#story-1","entities":[],"placedIn":"Israel","alsoInvolves":[]}]}

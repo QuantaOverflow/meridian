@@ -10,7 +10,7 @@
  *   这期有 run；有 brief-v3 记录；每个写出来的块都对得上恰好一个故事；每块都有正文；每块的标题与正文都出现在 reports.content 里。
  * 可重跑、幂等：每期在一个事务里先删后写。跳过的期不删不写（它已有的块是保存时写的）。
  *
- * 块上的落点国家与涉及国家（国家页按它查）在写块时按成员文章算，所以重跑即刷新；跳过的期已有的块只重算这两列。
+ * 块上的落点国家、涉及国家与实体（国家页、实体页按它查）在写块时按成员文章算，所以重跑即刷新；跳过的期已有的块只重算这几列。
  *
  * 默认只读（dry-run），加 --write 才写库。R2 只读（只 GET 上面那个前缀）。
  * 目标库只认本机与 staging（主机名与 STAGING_DATABASE_URL 相同；取自环境变量或仓库根 .staging.env），
@@ -32,8 +32,8 @@ import { fileURLToPath } from 'node:url';
 import { briefV3RecordKey, type BriefV3Record, type BriefV3WrittenBlock } from '@meridian/contracts';
 import { $brief_blocks, eq, getDb, sql } from '@meridian/database';
 import { briefBlockDrafts } from '../src/lib/core/brief-v3';
-import { loadBlockCountries } from '../src/lib/reader/story-countries';
-import { insertBriefBlocks } from '../src/lib/save-brief-report';
+import { loadBlockAttribution } from '../src/lib/reader/story-countries';
+import { attributionColumns, insertBriefBlocks } from '../src/lib/save-brief-report';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -125,19 +125,18 @@ function storyOf(block: BriefV3WrittenBlock, stories: Story[]): number | null {
   return candidates.length === 1 ? candidates[0].id : null;
 }
 
-/** 跳过的期：已有的块（保存时写的）只重算落点国家与涉及国家，返回块数 */
-async function refreshCountries(db: ReturnType<typeof getDb>, reportId: number): Promise<number> {
+/** 跳过的期：已有的块（保存时写的）只重算落点国家、涉及国家与实体，返回块数 */
+async function refreshAttribution(db: ReturnType<typeof getDb>, reportId: number): Promise<number> {
   const blocks = await db
     .select({ id: $brief_blocks.id, storyId: $brief_blocks.story_id })
     .from($brief_blocks)
     .where(eq($brief_blocks.report_id, reportId));
-  const countries = await loadBlockCountries(db, blocks.map(b => b.storyId));
+  const attribution = await loadBlockAttribution(db, blocks.map(b => b.storyId));
   await db.transaction(async tx => {
     for (const b of blocks) {
-      const c = countries.get(b.storyId);
       await tx
         .update($brief_blocks)
-        .set({ placement_country: c?.placement ?? null, mention_countries: c?.mentions ?? [] })
+        .set(attributionColumns(attribution.get(b.storyId)))
         .where(eq($brief_blocks.id, b.id));
     }
   });
@@ -167,9 +166,9 @@ async function main() {
     for (const p of periods) {
       const label = `report ${p.id}（${p.day}）`;
       const skip = async (reason: string) => {
-        const refreshed = write ? await refreshCountries(db, p.id) : 0;
+        const refreshed = write ? await refreshAttribution(db, p.id) : 0;
         skipped.push(`${label}：${reason}`);
-        console.log(`${label}  跳过：${reason}${refreshed > 0 ? ` · 已有的 ${refreshed} 块重算了国家` : ''}`);
+        console.log(`${label}  跳过：${reason}${refreshed > 0 ? ` · 已有的 ${refreshed} 块重算了国家与实体` : ''}`);
       };
       if (p.workflow_id === null) {
         await skip('没有 run 指向这一期');

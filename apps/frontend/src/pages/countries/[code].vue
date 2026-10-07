@@ -122,6 +122,7 @@ useSeoMeta({
           <p class="mt-[9px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
             <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
             <span v-if="block.alsoInvolves.length">Also involves {{ block.alsoInvolves.join(', ') }}</span>
+            <EntityLinks :entities="block.entities" />
           </p>
         </article>
 

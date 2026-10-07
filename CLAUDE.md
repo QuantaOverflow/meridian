@@ -38,6 +38,7 @@
   `pnpm -F @meridian/backend test`（要本机测试库，见 `apps/backend/test/README.md`「数据库」）、`pnpm -F meridian-ai-worker test`、ml-service 目录下 `.venv/bin/python -m pytest test/`、
   前端端到端 `pnpm -F @meridian/frontend test`（backend 由测试假冒）；整期回放 `pnpm -F @meridian/backend replay <workflowId>`（见 `apps/backend/test/replay/README.md`）。LLM 输出质量靠读真实输出：大的功能或架构变更先在 staging 上跑一次读成稿，其余上线后读生产的
 - 报错先 `wrangler tail`，再加 console.log
+- 脚本（根目录 `scripts/`、各包的 `scripts/`）不是生产代码，不写测试；push 时只看它还有没有用，过时失效的直接删
 - knip `--production` 报「只剩测试 / 本地脚本在用」的导出：真没用就删；只为测试或 `apps/backend/scripts/` 导出的加 `@internal`
 - push 会被 Claude Code 的 PreToolUse hook（`.claude/hooks/push-reachability.mjs`）拦下并列出新增的源码文件、路由、binding/配置，按入口可达性复查后跑 `node .claude/hooks/push-reachability.mjs --mark` 再 push
 

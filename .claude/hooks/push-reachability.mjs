@@ -7,6 +7,8 @@
  * wrangler binding、DB 列。所以这里把**能机械算的部分**（本次 push 新增了哪些文件、路由、配置）算出来，
  * 拦下 push 并把清单交给模型；**判断**（每项有没有真实调用方）留给模型按全局 CLAUDE.md「Cleanup / purify」做。
  *
+ * 脚本（仓库根 scripts/）也列进清单：它们不是生产代码、不写测试（用户 2026-10-07 定），push 时只判断还有没有用，过时的删掉。
+ *
  * 流程：
  *   - 不是 git push、或没有要推的新 commit、或清单为空 → 放行（exit 0）
  *   - 清单非空且当前 HEAD 没复查过 → exit 2（拦下；stderr 交给模型）
@@ -79,7 +81,10 @@ const configFiles = lines(
     'apps/frontend/nuxt.config.ts', 'packages/database/src/schema.ts')
 );
 
-if (addedFiles.length + addedRoutes.length + configFiles.length === 0) process.exit(0);
+// 4. 脚本（仓库根 scripts/）：不是生产代码，不写测试；push 时只看它还有没有用
+const scriptFiles = lines(git('diff', '--name-only', '--diff-filter=AM', `${base}..HEAD`, '--', 'scripts'));
+
+if (addedFiles.length + addedRoutes.length + configFiles.length + scriptFiles.length === 0) process.exit(0);
 
 const section = (title, items) => (items.length ? `\n${title}\n${items.map((x) => `  - ${x}`).join('\n')}` : '');
 process.stderr.write(
@@ -87,8 +92,10 @@ process.stderr.write(
     section('新增的源码文件：', addedFiles) +
     section('新增的路由：', [...addedRoutes, ...addedFrontendApi.map((f) => `${f}（Nuxt 文件路由）`)]) +
     section('改动过的 binding / 配置 / Env / DB schema 文件：', configFiles) +
+    section('新增或改动的脚本（scripts/，不写测试，只看有没有用）：', scriptFiles) +
     `\n\n按全局 CLAUDE.md「Cleanup / purify」从入口往下追，只查工具看不见的：每条新路由要有真实调用方或文档化的维护入口；` +
     `类方法、按名查的注册项要追得到入口；新 binding / 变量 / 列要有代码读；只被测试引用的算死。` +
+    `\n脚本：每个都要有人用（package.json 的命令、git hook、另一个脚本、文档里写明的用法）；顺带扫一眼 scripts/ 里已经没人用的，过时失效的直接删。` +
     `\n模块级的导出与 import、未用依赖不用查——push 时 git 的 pre-push 会跑 knip，报错再修。` +
     `\n复查完（有死代码先删、commit），运行 \`node .claude/hooks/push-reachability.mjs --mark\` 记录，再重新 push。\n`
 );

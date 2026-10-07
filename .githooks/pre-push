@@ -34,10 +34,6 @@ check 路由对账 node scripts/check-routes.mjs
 check eslint pnpm -s lint
 check ruff sh -c 'cd services/meridian-ml-service && uv run --frozen ruff check src test'
 
-# scripts/ 下带测试的脚本：隔离检查、staging-run、deploy.sh 的部署提醒（ADR 0013）。wrangler 配置变了也跑（隔离检查读它们）
-if touched scripts/ || touched apps/backend/wrangler.jsonc || touched services/meridian-ai-worker/wrangler.toml; then
-  check "scripts 测试" pnpm -s test:scripts
-fi
 if touched apps/backend/ || touched packages/; then
   check "backend 测试" pnpm -s -F @meridian/backend test
 fi

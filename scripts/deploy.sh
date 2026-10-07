@@ -30,6 +30,14 @@
 #   scripts/deploy.sh [--print] [传给 wrangler deploy 的其他参数…]
 #   --print   只打印将要执行的命令（一行一个参数），不执行；有临时配置时再打印其中的 image_vars 行
 #
+# 部署生产的 backend 或 ai-worker（参数里没有 --env / -e）时：
+#   - 自动补 --env=（空串 = 显式指定顶层环境），消掉 wrangler 的 "Multiple environments are defined" warning；
+#     dry-run 实测与不带参数的 binding 列表一致。已带 --env staging / --env=staging 的原样透传，不补
+#   - 非 --print 时查仓库根 .staging-verdicts.jsonl（环境变量 STAGING_VERDICTS_FILE 可改路径）：没有一行 verdict 为
+#     green / yellow、且 backend 与 ai-worker 的 commit 都等于当前短哈希（按前缀比）、dirty 都为 false，
+#     或当前工作区 dirty，就往 stderr 打警告（提示 node scripts/staging-run.mjs），然后照常部署，退出码仍是 wrangler 的
+#   ml-service 不查、不补 --env=。
+#
 # 退出码：--print 时 0；否则是 wrangler 的退出码；2 = 用法或环境错误（在仓库根、没有 wrangler 配置、找不到 wrangler）。
 #
 # 部署成没成功仍只看输出里的 Current Version ID 有没有变（见根 README 的 Deployment）。
@@ -91,6 +99,25 @@ if grep -q '"image_vars"' "$CONFIG"; then
   ARGS+=(--config "$DEPLOY_CONFIG")
 fi
 
+# ---------- backend / ai-worker：环境参数与「部署生产」的判定 ----------
+# 这两个 service 的配置里有 env.staging 段（ADR 0013）。参数里没有 --env 就是部署生产（顶层）。
+
+REL_DIR="${SERVICE_DIR#"$REPO_ROOT"/}"
+DEPLOYS_PRODUCTION=0
+case "$REL_DIR" in
+  apps/backend|services/meridian-ai-worker)
+    ENV_GIVEN=0
+    for a in "$@"; do
+      case "$a" in --env|--env=*|-e|-e=*) ENV_GIVEN=1 ;; esac
+    done
+    if [ "$ENV_GIVEN" = 0 ]; then
+      DEPLOYS_PRODUCTION=1
+      # 空字符串 = 显式指定顶层环境（wrangler 4.141 dry-run 实测：binding 列表与不带参数时完全一致，且没有多环境 warning）
+      ARGS+=(--env=)
+    fi
+    ;;
+esac
+
 ARGS+=("$@")
 
 if [ "$PRINT_ONLY" = 1 ]; then
@@ -102,5 +129,31 @@ if [ "$PRINT_ONLY" = 1 ]; then
   exit 0
 fi
 
-echo "部署 ${SERVICE_DIR#"$REPO_ROOT"/}：${TAG} ${TITLE}" >&2
+# 部署生产的 backend / ai-worker：当前提交没有通过的 Staging 运行就提醒，不拦。
+# 判定记录由 scripts/staging-run.mjs 写入；文件不存在按「没有」。
+if [ "$DEPLOYS_PRODUCTION" = 1 ]; then
+  VERDICTS_FILE="${STAGING_VERDICTS_FILE:-$REPO_ROOT/.staging-verdicts.jsonl}"
+  if ! COMMIT="$COMMIT" DIRTY="$DIRTY" VERDICTS_FILE="$VERDICTS_FILE" node -e '
+    const fs = require("node:fs");
+    if (process.env.DIRTY === "true") process.exit(1);
+    let text = "";
+    try { text = fs.readFileSync(process.env.VERDICTS_FILE, "utf8"); } catch { process.exit(1); }
+    const head = process.env.COMMIT;
+    const ok = (s) => s && s.dirty === false && typeof s.commit === "string" && s.commit !== ""
+      && (s.commit.startsWith(head) || head.startsWith(s.commit));
+    for (const l of text.split("\n")) {
+      let r; try { r = JSON.parse(l); } catch { continue; }
+      if ((r?.verdict === "green" || r?.verdict === "yellow") && ok(r.services?.backend) && ok(r.services?.["ai-worker"])) process.exit(0);
+    }
+    process.exit(1);
+  '; then
+    {
+      echo "警告：当前提交 ${COMMIT}$([ "$DIRTY" = true ] && echo "（工作区 dirty）") 没有通过的 Staging 运行记录（backend 与 ai-worker 都要是这个提交、不 dirty、判定绿或黄）。"
+      echo "      先在仓库根跑：node scripts/staging-run.mjs"
+      echo "      部署照常进行（紧急回滚不被挡）。"
+    } >&2
+  fi
+fi
+
+echo "部署 ${REL_DIR}：${TAG} ${TITLE}" >&2
 "$WRANGLER" "${ARGS[@]}"

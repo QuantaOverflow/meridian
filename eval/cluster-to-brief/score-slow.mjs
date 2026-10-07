@@ -226,7 +226,7 @@ console.log('注:事实正确性由 codex 判(不是 LLM 自判),但臂也由 co
 console.log('注:归属类错误(主体/日期搬错)召回很低 —— 判定包写死「判不准标 ok 不硬猜」,所以硬错数是**下界**。自然错误实测 actor 占 60%,正是这类。');
 console.log('注:事件清单由 glm-flash 抽、未经人工核 → 覆盖率的绝对值打折读。');
 console.log('注:「引用不足」= citedSentenceSuffices=false 的 claim 数,只报不设门 —— 它量的是引用质量,不是事实正确性。');
-console.log('注:判定包带 scorer 指纹,尺一改旧判定自动作废(exit 2)—— 这是 CONTEXT.md 那条「判据变了旧读数作废」的机械形态。');
+console.log('注:判定包带 scorer 指纹,尺一改旧判定自动作废(exit 2)—— 这是 GLOSSARY.md 那条「判据变了旧读数作废」的机械形态。');
 console.log('注:「检索缺口」= 成稿引的句子没进 top-k 检索证据的条数。这个数大时,正确性读数里混着"判官没看到"而不是"写错了"。');
 
 const scoredN = Object.values(results).filter(r => r.scored !== false && !r.envProblems.length).length;

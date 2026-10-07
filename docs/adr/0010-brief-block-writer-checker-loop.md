@@ -3,7 +3,7 @@
 - 状态：已采纳（2026-10-04），2026-10-05 上线（ai-worker b543ee3d、backend 2a1bcf4f）。决定 2「逐句核查是一个小 agent」已由 ADR 0012 补充：
   可配成代码取证据 + 一次调用，agent 留作回退与开关的另一档
 - 日期：2026-10-04
-- 相关：ADR 0004（写作层与检测上限，本文修正了它的两条结论）、ADR 0003（一簇即一块）；用词见 `CONTEXT.md`「写作–核查循环」；
+- 相关：ADR 0004（写作层与检测上限，本文修正了它的两条结论）、ADR 0003（一簇即一块）；用词见 `GLOSSARY.md`「写作–核查循环」；
   原型在本地 `apps/backend/prototypes/writer-faithfulness/`（不入库，读数全在其 `out/ref/results.md`，本文是它的入库结论）
 
 ## 背景

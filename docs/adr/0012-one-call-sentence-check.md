@@ -3,7 +3,7 @@
 - 状态：已采纳（2026-10-06），代码已合入、**未上线**：生产配置仍是 `BRIEF_CHECK_MODE = "agent"`，切换等用户补好 key 与网关后再定
 - 日期：2026-10-06
 - 相关：ADR 0010（写作–核查循环，本文只换其中「逐句核查」这一步）、ADR 0011（运维台，本文给它加了两条判据和一笔花费）；
-  用词见 `CONTEXT.md`「写作–核查循环」；原型在本地 `apps/backend/prototypes/writer-faithfulness/`（不入库，读数在其
+  用词见 `GLOSSARY.md`「写作–核查循环」；原型在本地 `apps/backend/prototypes/writer-faithfulness/`（不入库，读数在其
   `out/ref/results.md` 2026-10-06 各节，本文是它的入库结论）；spec 与票在本地 `.scratch/one-call-sentence-check/`
 
 ## 背景

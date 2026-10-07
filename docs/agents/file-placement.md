@@ -18,7 +18,7 @@
 | 调研笔记（业界/学界调研、原始实测记录） | `docs/engineering-notes/`，按问题索引在其 `README.md` | ❌ 只留本地（根 `.gitignore` 挡） |
 | 探索记录卡片 | `docs/knowledge/nodes/` | ❌ 只留本地（根 `.gitignore` 挡） |
 | 决定与证伪清单 | `docs/adr/` | ✅ |
-| 术语表 | `CONTEXT.md` | ✅ |
+| 术语表 | `GLOSSARY.md` | ✅ |
 | 链路总览、部署、观测排错（给人读） | 根 `README.md` | ✅ |
 | 写代码时的硬规矩（给 agent） | `.claude/rules/<topic>.md`，`paths:` 写到包一级 | ✅ |
 | 给 agent 的流程说明（按需读，`CLAUDE.md` 留指针） | `docs/agents/<topic>.md` | ✅ |

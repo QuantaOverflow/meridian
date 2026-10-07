@@ -1,6 +1,6 @@
 /**
  * 运维台（Ops console）的接口约定：backend `/observability/ops/*` 的响应，前端 `/api/admin/ops/*` 原样转发。
- * 术语见根目录 CONTEXT.md「运维台」。日期一律是 UTC 的 ISO 字符串，换北京时间在前端做。
+ * 术语见根目录 GLOSSARY.md「运维台」。日期一律是 UTC 的 ISO 字符串，换北京时间在前端做。
  * 某块数据的来源（Cloudflare、R2）读不到时，该块给 `{ unavailable: 原因 }`，接口照常回 200。
  */
 

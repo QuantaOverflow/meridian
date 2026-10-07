@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * 写作–核查循环（ADR 0010；用词见 CONTEXT.md「写作–核查循环」）在块接口上的行为：
+ * 写作–核查循环（ADR 0010；用词见 GLOSSARY.md「写作–核查循环」）在块接口上的行为：
  * 走真实 BriefBlockV6Service.generate，只假 Workers AI binding 与记 key 的 R2。
  *
  * 假模型按模型与 prompt 形状应答：glm = 标重点；v4-pro 只有一条 user = 写作、带更早轮次 = 改写；

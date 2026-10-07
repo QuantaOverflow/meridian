@@ -230,7 +230,7 @@ node compare-verdicts.mjs out/arm-a/verdict-c43.judgeA.json out/arm-a/verdict-c4
 
 ### 判定包指纹:「判据变了旧读数作废」的机械形态(2026-09-19)
 
-CONTEXT.md 写着「实现层中途不得改判据;判据变了就是新的一把尺,**旧读数作废**」。
+GLOSSARY.md 写着「实现层中途不得改判据;判据变了就是新的一把尺,**旧读数作废**」。
 在 2026-09-19 之前这只是一句 prose —— 换了证据通道之后,全靠人记得把旧 verdict 移走。
 记不住的那一次,新旧读数会混在同一张表里比较,**而且不报错**:score-slow 照常算出一个看着正常的数。
 

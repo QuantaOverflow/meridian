@@ -5,7 +5,7 @@
   给决定 6 加了一笔不在 Cloudflare 账单里的花费（DashScope，按美元单列，算生产占比时先减掉）
 - 日期：2026-10-06
 - 相关：`packages/contracts/src/ops-console.ts`（接口形状）、`apps/backend/src/lib/ops/`（读数与判据）、
-  `apps/frontend/src/pages/admin/`（页面）、`scripts/deploy.sh`（部署带上提交信息）；术语在 `CONTEXT.md`「运维台」；
+  `apps/frontend/src/pages/admin/`（页面）、`scripts/deploy.sh`（部署带上提交信息）；术语在 `GLOSSARY.md`「运维台」；
   spec 与票在本地 `.scratch/ops-console/`（不入库，本文是它们的入库结论）
 
 ## 背景

@@ -13,6 +13,6 @@
 调研笔记、原型（2026-09-12 定）和探索记录卡片（2026-09-24 定）都只留本地、不入 git，所以**要让别人看得到的结论必须蒸馏进入库的文档**：
 - 探索记录（一次尝试或一个结论一条，JSON frontmatter + 正文）→ `docs/knowledge/nodes/`（**只留本地**，开发时检索用），详细产物用 `source` 指过去
 - 新决定、证伪路线、实测上限 → 对应的 `docs/adr/`（没有就新开一份）
-- 新形成的术语 → `CONTEXT.md`
+- 新形成的术语 → `GLOSSARY.md`
 - 进度与下一步 → `docs/ROADMAP.md`
 - 新调研笔记在本地 `docs/engineering-notes/README.md` 补一行索引；原型结论写进它自己的 README（本地）

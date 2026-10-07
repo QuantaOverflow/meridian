@@ -1,7 +1,7 @@
 /**
  * grading instructions —— 递给判官的评分守则那一段。
  *
- * 单独成一个模块,因为它是 scorer 的身份:CONTEXT.md 写着「改了它就等于换了一个 scorer」
+ * 单独成一个模块,因为它是 scorer 的身份:GLOSSARY.md 写着「改了它就等于换了一个 scorer」
  * (2026-09-18 实测,四档定义表被截断后重判,同一批句子有两句换了档)。
  * `scorer-id.mjs` 拿它算指纹 —— 放在 build-judge-pack.mjs 里算不出来,那个文件是脚本、有顶层副作用。
  */

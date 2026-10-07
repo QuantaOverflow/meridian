@@ -40,7 +40,7 @@
 ## Agent skills（mattpocock，由 `/setup-matt-pocock-skills` 配置）
 - Issue tracker：本地 markdown，spec 与票在 `.scratch/<功能名>/`（gitignored）。见 `docs/agents/issue-tracker.md`
 - Triage labels：默认五个角色名。见 `docs/agents/triage-labels.md`
-- Domain docs：single-context，根目录 `CONTEXT.md` + `docs/adr/`。见 `docs/agents/domain.md`
+- Domain docs：single-context，根目录 `GLOSSARY.md` + `docs/adr/`。见 `docs/agents/domain.md`
 
 ## 已知坑
 - `services/meridian-ml-service/model-cache/` gitignored，新机器按 `services/meridian-ml-service/README.md`「本地开发」一节手动下载模型文件（470MB）

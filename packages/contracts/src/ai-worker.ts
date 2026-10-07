@@ -196,7 +196,7 @@ interface BriefBlockV6CheckRound {
 }
 
 /**
- * 写作–核查循环的块级记录（ADR 0010；用词见 CONTEXT.md「写作–核查循环」）。
+ * 写作–核查循环的块级记录（ADR 0010；用词见 GLOSSARY.md「写作–核查循环」）。
  *
  * backend 原样存进 brief-v3 记录，只读 `outcome`、`unchecked` 与 `revisions`（run 级计数）；
  * 其余字段供事后复盘核查员与写作做得对不对。改这些字段不需要改 backend。

@@ -22,8 +22,12 @@
    两个限制：聚类或 embedding 的改动在 staging 验不了；同时改 backend 与 ml-service 之间接口的改动也验不了
    （staging 的新 backend 调到的是生产的旧 ml-service）。出现这两种情况时再补。
 4. **数据是生产库的分支，每次 Staging 运行前 reset**。staging 不抓取（Durable Object 不初始化、没有 cron）。
-   Neon 分支是写时复制的快照，reset 一次就拿到生产最新的文章、分析结果与事件追踪状态；简报 workflow 只读库、不读 R2 里的正文，
-   所以 bucket 不用拷。reset 之后对 staging 库跑一次 migrate，被测分支带的 migration 因此先在生产数据的副本上跑过。
+   Neon 分支是写时复制的快照，reset 一次就拿到生产最新的文章、分析结果与事件追踪状态。
+   文章正文不在库里：简报 workflow 严格从 R2 取正文、取不到不回退，所以 reset 之后还要把近两天文章的正文从生产 bucket 拷到
+   staging bucket（`scripts/staging-run.mjs` 经 Cloudflare REST 拷，只读生产、只写 staging，已有的跳过；REST 有限速，
+   头一次拷一两千篇要几分钟）。没给 staging 的 worker 配生产 bucket 的 binding 来省掉这一步：binding 没有只读的，配了就破了决定 6。
+   最初的设计以为不用拷，第一次 Staging 运行在聚类处报 `Dataset is empty` 才发现。
+   拷完对 staging 库跑一次 migrate，被测分支带的 migration 因此先在生产数据的副本上跑过。
    代价：之前的 Staging 运行从 staging 的读者页与运维台消失（各次运行在 bucket 里的详细记录不受影响）；
    staging 运维台的 Trends 显示的是生产的历史。调试时可以跳过 reset，在同一份数据上连跑。
 5. **Staging 运行走 cron 那条路**。成稿只在 `triggeredBy` 是 cron 时发布，运维台只按 `cron-brief-` 前缀认生产运行（ADR 0011 决定 4）。

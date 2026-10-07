@@ -181,11 +181,11 @@ cd services/meridian-ai-worker && ../../scripts/deploy.sh --env staging
 cd apps/backend               && ../../scripts/deploy.sh --env staging
 pnpm -F @meridian/frontend build && wrangler pages deploy --branch staging   # from the repo root
 
-# one Staging run: reset the Neon branch → migrate → trigger → wait → verdict
+# one Staging run: reset the Neon branch → migrate → copy recent article bodies prod bucket → staging bucket → trigger → wait → verdict
 node scripts/staging-run.mjs            # --no-reset keeps the current data (debugging)
 ```
 
-- `scripts/staging-run.mjs` reads `.staging.env` in the repo root (gitignored; template `.staging.env.example`). Exit code 0 = green or yellow (yellow flags are printed), 1 = red, 3 = timed out. It judges pipeline health only, from the flags the ops console already puts on a run; read the brief itself on the staging reader page.
+- `scripts/staging-run.mjs` reads `.staging.env` in the repo root (gitignored; template `.staging.env.example`) and needs `neonctl` and `psql` on the machine. The body copy goes through the Cloudflare REST API, which is rate limited: the first run copies a day or two of articles and can spend several minutes waiting; later runs copy only what is new. Exit code 0 = green or yellow (yellow flags are printed), 1 = red, 3 = timed out. It judges pipeline health only, from the flags the ops console already puts on a run; read the brief itself on the staging reader page.
 - A Staging run takes the cron path (`POST /admin/briefs/run-scheduled`, which exists only when `ENVIRONMENT` is `staging`), so it is published on the staging site and shows up in the staging ops console. Manual runs (`POST /admin/briefs/generate`) work on staging too and are not published.
 - Each run appends a line to `.staging-verdicts.jsonl` (gitignored, this machine only). `scripts/deploy.sh` reads it when deploying the production backend or AI Worker: if the current commit has no passing Staging run it prints a warning and deploys anyway.
 - Staging secrets are separate: `wrangler secret put API_TOKEN --env staging` (backend; its own value), `DASHSCOPE_API_KEY` and `AI_GATEWAY_TOKEN` with `--env staging` (AI Worker), and the four `NUXT_*` secrets with `wrangler pages secret put … --env preview`.

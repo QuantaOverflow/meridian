@@ -31,12 +31,14 @@ async function load() {
   failed.value = false;
   if (follows.value.length === 0) {
     data.value = null;
+    recordVisit();
     return;
   }
   try {
     const page = await fetchPage(0);
     if (request !== latest) return;
     data.value = page;
+    recordVisit();
   } catch (err) {
     if (request !== latest) return;
     console.error('Failed to load the Following page', err);
@@ -44,12 +46,25 @@ async function load() {
   }
 }
 
-onMounted(() => {
-  const storage = browserStorage();
-  previousVisit.value = readLastVisit(storage);
-  // 打开即算一次访问：下次来，这之后出的期才标 new
-  writeLastVisit(storage, new Date().toISOString());
-});
+let visitRead = false;
+/** 上次访问的时刻只读一次，且一定在本次访问写进去之前 */
+function readPreviousVisit() {
+  if (visitRead) return;
+  visitRead = true;
+  previousVisit.value = readLastVisit(browserStorage());
+}
+let visitRecorded = false;
+/**
+ * 这次打开算一次访问：下次来，这之后出的期才标 new。块取回来了（或没有关注项、本来就没什么可看）才算；
+ * 取数失败的那次读者什么都没看到，不算，否则那些块下次就不再标 new 了
+ */
+function recordVisit() {
+  if (visitRecorded) return;
+  visitRecorded = true;
+  readPreviousVisit();
+  writeLastVisit(browserStorage(), new Date().toISOString());
+}
+onMounted(readPreviousVisit);
 // ready 之后才知道关注了什么；之后每次增减关注项都重新取
 watch([ready, follows], () => ready.value && load(), { immediate: true });
 

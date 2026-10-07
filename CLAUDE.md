@@ -9,7 +9,7 @@
 - `services/meridian-ai-worker` — CF Worker，LLM 走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`；唯一的例外是逐句核查配成 `one_call` 时走 DashScope 的 `qwen3.8-flash`（ADR 0012）
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
-- `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现
+- `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现（例外：两侧必须算出同一结果的落点规则 `placement.ts`，见 ADR 0014）
 
 ## Commands（根目录）
 - `pnpm typecheck` / `pnpm format`

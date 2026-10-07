@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BriefDetail, BriefEntityLinks } from '~/shared/types';
 
-// entityLinks：每个条目下的实体链接（条目锚点 id → 链接），另一条请求取，没到或取不到时不显示
+// entityLinks：每个简报块下的实体链接（块的锚点 id → 链接），另一条请求取，没到或取不到时不显示
 const props = defineProps<{ brief: BriefDetail; entityLinks?: BriefEntityLinks }>();
 
 /**

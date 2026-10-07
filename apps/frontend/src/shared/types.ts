@@ -62,7 +62,7 @@ export interface BlockItem {
   entities: { name: string; href: string }[];
 }
 
-/** 阅读页每块下的实体链接，由 /api/briefs/:slug/entities 返回：条目的锚点 id（如 `story-1`）→ 这一块有实体页的实体 */
+/** 阅读页每块下的实体链接，由 /api/briefs/:slug/entities 返回：块的锚点 id（如 `story-1`）→ 这一块有实体页的实体 */
 export type BriefEntityLinks = Record<string, BlockItem['entities']>;
 
 /** 实体列表页，由 /api/entities 返回：全部有实体页的实体，块数多的在前 */

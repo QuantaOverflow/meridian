@@ -628,6 +628,21 @@ describe('关注与 Following 页（浏览器）', () => {
       expect(await newTitles(page)).toEqual([]);
     });
 
+    it('取数失败的那次不算访问：读者什么块都没看到，修好后再来，之前没看过的仍标 new', async () => {
+      const path = '/reader/following?countries=IL&threads=&limit=20&offset=0';
+      const saved = replies.get(path)!;
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: '2026-01-09T12:00:00.000Z' });
+      replies.set(path, { status: 500, body: '{"error":"boom"}' });
+      try {
+        await goto(page, '/following');
+        await page.waitForSelector('text=Could not load your stories right now');
+      } finally {
+        replies.set(path, saved);
+      }
+      await reload(page);
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds']);
+    });
+
     it('存着的上次访问不是时间：按第一次来算', async () => {
       const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: 'not-a-date' });
       await goto(page, '/following');

@@ -45,6 +45,7 @@ UPDATE_GOLDEN=1 npx tsx test/golden/update-golden.ts briefV3    # 单个 case
 `fixtures/reader/__golden__/*.golden`（首行是状态码与请求路径）。这些文件同时是前端 e2e 里假 backend 回放的响应，
 前端再与改动前的 `/api/*` 快照逐字节比对——两段接起来即端到端不变。日期换成相对「数据库今天」的记号（`fixtures/reader/dates.ts`）。
 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再跑前端测试确认 `/api/*` 的变化是预期的。
+列块的接口（国家页、搜索、Following、实体页）在前端各自还要按块号问一次 `/reader/block-entities`（块下的实体链接）：新加一个列块的 case，要在 `reader.spec.ts` 里把它那批块号（升序）也录一份 `block-entities-*`，前端回放才对得上。
 地图 `/reader/briefs/:id/map` 的正常一期是 `brief-8-map.golden`，边界情况（块对不上故事、没有 v3 记录 / run、地点不在归一表、主题兜底、线索门槛）在 `lib/reader-map.spec.ts`，它在同一份 fixture 上再加只给地图看的数据。
 
 ### 数据库（`lib/source-pause.spec.ts`、`lib/source-scraper-queue.spec.ts`、`lib/sources.spec.ts`、`lib/save-brief-report.spec.ts`、`lib/reader.spec.ts`、`lib/reader-map.spec.ts`、`lib/story-clusters.spec.ts`）

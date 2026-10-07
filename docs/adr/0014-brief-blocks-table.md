@@ -94,9 +94,43 @@
   `meridian-following-last-visit`（上次打开 Following 页的时刻）。读写都包着 try/catch：读不到、不是合法 JSON、条目形状不对都按没有算，写不进去时关注只在这次会话里生效。
 - **new 标记**：块所属那一期的生成时刻（`reports.created_at`，块的对外形状里只有它）严格晚于上次访问才标；第一次来一律不标（否则整页都是 new）。
   打开 Following 页即记一次访问，所以刷新后标记消失；页面开着的时候增减关注项不影响已标的。
-- Following 页的数据在浏览器里取（服务端不知道关注了什么），服务端只渲染外壳。实体的关注留给实体页那一步。
+- Following 页的数据在浏览器里取（服务端不知道关注了什么），服务端只渲染外壳。实体的关注见下面「实体页」。
 - staging 库上的读数（457 块）：关注伊朗得 31 块（落点 6、涉及 25），与库里直接数的一致，每块的归属都含伊朗；关注线索 2177 得 25 块，与库里一致；两者并集 56 块；
   把一期的 `published_at` 临时置空，它的块随即消失，放回后恢复。线索 2177 出现在 40 期里，但有块的只有回填过的 18 期——关注一条老线索，Following 页上只看得到 09-20 之后的块。
+
+## 实体页（2026-10-08 补）
+
+块多了两列：`entities`（实体归一后的写法，GIN 索引）与 `entity_names`（逐项对应的显示写法）。写块时按故事的成员文章的 `key_entities` 算好存下
+（`insertBriefBlocks` → `lib/reader/story-countries.ts` 的 `loadBlockAttribution` → `story-entities.ts`），保存简报与回填走同一份；回填脚本重跑即刷新。
+接口三处（`lib/reader/entity-blocks.ts`、`following-blocks.ts`）：`GET /reader/entities/blocks?name&limit&offset`（实体页）、
+`GET /reader/block-entities?ids`（一批块各自的实体链接）、`GET /reader/following` 多一个 `entities` 参数。
+
+- **写法只归一大小写与首尾空白，不合并别名**（用户定）：`Volodymyr Zelenskyy`（11 块）与 `Volodymyr Zelensky`、`Flavio Bolsonaro`（6 块）与 `Flávio Bolsonaro`（5 块）各是各的。实体页上写明「按原样的名字匹配，别的拼法另列」。
+  显示写法取各块存的写法里最常见的那种，同一个实体在实体页与各块下写法一致。
+- **一块的实体 = 被至少一半成员文章提到的写法**。「任一成员提到」时顺带一提的名字太多：staging 的 457 块上，出现在 ≥3 块的写法 740 种；按一半算剩 153 种（含国家）。
+  这个比例没有单独量过精度，是看分布定的。
+- **能归成国家的写法不是实体**（用户定）：写块时就不存，它的块在国家页（块上的落点与涉及）。查这种写法时接口回 `{ kind: 'country', country }`，页面 302 到国家页。
+  判定用地点归一表（`places.ts` 的 `countryOfEntity`），所以美国的州名、`Gaza`、`United Nations` 也按表归到对应的国家页。
+- **媒体名不是实体**（用户定）：`story-entities.ts` 里一张写法表（生产近 30 天出现 6 篇以上的媒体写法加源池里的名字，约 80 个）。源表 `sources.name` 是 `BBC World News` 这种，对不上关键实体里的 `BBC`，所以没有用它。
+  代价：媒体自己是新闻主角的块也不挂它（staging 上 `CNN` 有 12 块过得了一半这条线，其中有「CNN 被拒绝随行采访」这种）。表是手写的，会漏。
+- **门槛：出现在至少 5 个已发布的简报块里才有实体页**（`ENTITY_PAGE_MIN_BLOCKS`）。staging 上 19 期 457 块（448 块挂着至少一个实体，写法共 924 种）的分布：
+  ≥3 块 105 个、≥4 块 62 个、≥5 块 43 个、≥6 块 32 个、≥8 块 19 个、≥10 块 12 个。取 5：43 个逐个看过名字，没有媒体、没有国家、没有明显不是实体的；
+  取 3 时多出来的大多是只在一条线索里连着出现三天的人名，页的内容与线索页重复。门槛只数已发布的期，撤一期可能让一个实体掉到门槛以下（页变 404，关注它的人仍看得到它的块）。
+  期数会涨，同一个数将来放进来的实体会变多；到时候再看要不要改成按期数算。
+  过门槛的 43 个：Donald Trump（103 块）、Xi Jinping（18）、Houthis、Vladimir Putin（17）、Strait of Hormuz、White House（16）、Kyiv、Volodymyr Zelenskyy（11）、
+  Andy Burnham、Madrid、OpenAI、RAF Fairford（10）、Benjamin Netanyahu、Christa Pike、Cornell University、Emmanuel Macron、Jane Doe（9）、Flydubai、Pope Leo XIV（8）、
+  Abbas Araghchi、Chi Phi fraternity、Kathy Hochul、Marco Rubio、Maricarmen Abascal、Sam Altman（7）、Anthropic、Colleen Slemmer、Flavio Bolsonaro、Gyanesh Kumar、Jair Bolsonaro、
+  Masoud Pezeshkian、TPLF（6）、Abiy Ahmed、Bill Lee、Elon Musk、European Union、Flávio Bolsonaro、Hamas、Hurricane Polo、Kim Yo Jong、Lourdes、Moscow、NATO（5）。
+  其中不理想但没有拦的：`Jane Doe` 是一桩案子里原告的化名（9 块都是同一条线索）；地名（Kyiv、Madrid、Moscow、Lourdes）与人物、机构混在一起，关键实体没有类型，分不开。
+- **块下的实体链接另开一个接口，没有加进块的对外形状**：`BriefBlock` 在第 1 步定下后只读。国家页、搜索、Following、实体页的前端 server 路由拿到块之后，
+  按块号（去重、升序）问一次 `/reader/block-entities`，只列有实体页的实体。代价是每个列块的页多一趟到 backend 的往返。阅读页（整期正文）没有加实体链接。
+- **Following 的约定加了东西**（第 4 步定的 `FollowMatch` 多一种 `{ kind: 'entity', key, name }`，请求多一个 `entities` 参数）：spec 第 5 步要求 Following 支持实体，只能加在这里；原有的字段与取值没动。
+  实体的写法里可以有逗号，所以不是逗号分隔，而是一个实体一个 `entities=` 参数。关注一个实体命中挂着它的全部块，不论它过没过门槛。
+- **实体页的地址是 `/entities?name=…`**，写法放在查询串里：写法可以带斜杠（`Reuters/Ipsos` 这种），放进路径要靠 `%2F`，各层代理对它的处理不一致。
+- staging 库上的读数（回填 18 期 432 块 + 当晚 Staging 运行那期 25 块）：过门槛的 43 个实体，存下的块数都等于不经存下的列、直接按成员文章原始 `key_entities` 重算的块数；
+  抽 Donald Trump（103 块）、Kathy Hochul（7 块）、NATO（5 块）三页，每块都有至少一半成员文章的关键实体含它，Following 关注它命中的块数与实体页一致；
+  `Iran`、`us` 回国家页，`CNN` 与差一块的 `chatgpt`（4 块）404；最新 60 块的实体链接恰是各块存下的实体里过门槛的那些；
+  把一期的 `published_at` 临时置空，Donald Trump 从 103 块变成 92 块，放回后恢复。
 
 ## 没验证的
 
@@ -106,4 +140,7 @@
 - 搜索结果的排序合不合意、搜索页好不好用没有机器裁判；导航栏加了 Search 之后在窄屏（375px）会不会折行没有量过。
 - 关注与 Following 页的交互（点关注、刷新后仍在、new 标记的边界）只在本机的浏览器测试里跑过，staging 上只验了接口与页面能打开，没有在真浏览器里点过。
 - localStorage 一读就抛的浏览器（禁用站点数据）里整个站点起不来：`@nuxtjs/color-mode` 与 `nuxt-auth-utils` 读它没有保护，这在关注功能之前就是这样。关注自己的读写有保护，测试里只让本站的 key 抛。
+- 保存简报时算实体这条路只在 staging 上跑过一次整链路（运行 `cron-brief-1791403224409`，判定绿，$0.34：25 块里 24 块在保存时就写上了实体）。
+- 实体页的内容让不让人觉得对没有机器裁判：一半成员这条线、门槛 5、媒体名的表都是看分布定的，没有量过误报与漏报。
+- 实体页上的关注按钮、从一个实体页点到另一个实体页（同一路径只换查询串）只在本机的浏览器测试里跑过前者，后者没有测（fixture 里只有一个过门槛的实体）。
 - 读者页的导航栏在窄屏上本来就比屏幕宽（无头 Chromium、没有加载网络字体时量的：375px 宽的屏上这一行 516px），加了 Following 之后是 579px；地图首页的导航改成了折行。真机上长什么样没有看过。

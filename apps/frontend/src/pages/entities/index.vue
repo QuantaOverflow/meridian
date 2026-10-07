@@ -4,6 +4,9 @@ import type { EntityBlocksResponse } from '~/shared/types';
 // 实体页（/entities?name=…）：跨所有已发布的期，列出挂着这个人物、机构或地名的简报块，最新的在前。
 // 只有出现在足够多块里的实体才有页（门槛在 backend）；查的写法能归成国家时跳国家页。
 // 首屏第一页在服务端取，「Show more」在浏览器里接着取。
+// 实体的写法在查询串里：从一个实体页点到另一个时路径不变，按完整地址当 key 才会换页面实例重新取数
+definePageMeta({ key: route => route.fullPath });
+
 const route = useRoute();
 const raw = Array.isArray(route.query.name) ? route.query.name[0] : route.query.name;
 const query = (raw ?? '').trim();

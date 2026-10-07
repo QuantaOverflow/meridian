@@ -3,7 +3,7 @@
 - 状态：已采纳，2026-10-07
 - 日期：2026-10-07
 - 相关：`apps/backend/wrangler.jsonc` 与 `services/meridian-ai-worker/wrangler.toml` 的 staging 段、根 `wrangler.toml` 的 preview 段、
-  `scripts/check-staging-isolation.mjs`、`scripts/staging-run.mjs`（拷正文在 `scripts/staging-copy-bodies.mjs`，判定记录在 `scripts/staging-verdicts.mjs`）、`scripts/deploy.sh`；术语在 `CONTEXT.md`「运维台」的「Staging 运行」；
+  `scripts/check-staging-isolation.mjs`、`scripts/staging-run.mjs`（拷正文在 `scripts/staging-copy-bodies.mjs`，判定记录在 `scripts/staging-verdicts.mjs`）、`scripts/deploy.sh`；术语在 `GLOSSARY.md`「运维台」的「Staging 运行」；
   spec 与票在本地 `.scratch/staging-env/`（不入库，本文是它们的入库结论）
 
 ## 背景

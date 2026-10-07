@@ -32,9 +32,9 @@
 #
 # 部署生产的 backend 或 ai-worker（参数里没有 --env / -e）时：
 #   - 自动补 --env=（空串 = 显式指定顶层环境），消掉 wrangler 的 "Multiple environments are defined" warning；
-#     dry-run 实测与不带参数的 binding 列表一致。已带 --env staging / --env=staging 的原样透传，不补
-#   - 非 --print 时查仓库根 .staging-verdicts.jsonl（环境变量 STAGING_VERDICTS_FILE 可改路径）：没有一行 verdict 为
-#     green / yellow、且 backend 与 ai-worker 的 commit 都等于当前短哈希（按前缀比）、dirty 都为 false，
+#     dry-run 实测与不带参数的 binding 列表一致。已带 --env staging / --env=staging 的原样透传，不补；--env "" / --env= 仍按部署生产处理
+#   - 非 --print 时查仓库根 .staging-verdicts.jsonl（环境变量 STAGING_VERDICTS_FILE 可改路径）：取 backend 与 ai-worker 的 commit
+#     都等于当前短哈希（按前缀比）、dirty 都为 false 的最后一行，它的 verdict 不是 green / yellow（或没有这样的行），
 #     或当前工作区 dirty，就往 stderr 打警告（提示 node scripts/staging-run.mjs），然后照常部署，退出码仍是 wrangler 的
 #   ml-service 不查、不补 --env=。
 #
@@ -106,14 +106,23 @@ REL_DIR="${SERVICE_DIR#"$REPO_ROOT"/}"
 DEPLOYS_PRODUCTION=0
 case "$REL_DIR" in
   apps/backend|services/meridian-ai-worker)
+    # 只有给了非空的环境名才算「指定了环境」：--env "" / --env= 是 wrangler 里显式指定顶层的写法，仍是部署生产
     ENV_GIVEN=0
+    PREV=""
     for a in "$@"; do
-      case "$a" in --env|--env=*|-e|-e=*) ENV_GIVEN=1 ;; esac
+      case "$PREV" in --env|-e) [ -n "$a" ] && ENV_GIVEN=1 ;; esac
+      case "$a" in --env=?*|-e=?*) ENV_GIVEN=1 ;; esac
+      PREV="$a"
+    done
+    HAS_ENV_ARG=0
+    for a in "$@"; do
+      case "$a" in --env|--env=*|-e|-e=*) HAS_ENV_ARG=1 ;; esac
     done
     if [ "$ENV_GIVEN" = 0 ]; then
       DEPLOYS_PRODUCTION=1
-      # 空字符串 = 显式指定顶层环境（wrangler 4.141 dry-run 实测：binding 列表与不带参数时完全一致，且没有多环境 warning）
-      ARGS+=(--env=)
+      # 空字符串 = 显式指定顶层环境（wrangler 4.141 dry-run 实测：binding 列表与不带参数时完全一致，且没有多环境 warning）。
+      # 调用方自己已经写了空的 --env 就不再补
+      [ "$HAS_ENV_ARG" = 1 ] || ARGS+=(--env=)
     fi
     ;;
 esac
@@ -141,11 +150,13 @@ if [ "$DEPLOYS_PRODUCTION" = 1 ]; then
     const head = process.env.COMMIT;
     const ok = (s) => s && s.dirty === false && typeof s.commit === "string" && s.commit !== ""
       && (s.commit.startsWith(head) || head.startsWith(s.commit));
+    // 这个提交的最近一次 Staging 运行说了算：先绿后红的提交照样提醒
+    let last = null;
     for (const l of text.split("\n")) {
       let r; try { r = JSON.parse(l); } catch { continue; }
-      if ((r?.verdict === "green" || r?.verdict === "yellow") && ok(r.services?.backend) && ok(r.services?.["ai-worker"])) process.exit(0);
+      if (ok(r?.services?.backend) && ok(r?.services?.["ai-worker"])) last = r;
     }
-    process.exit(1);
+    process.exit(last && (last.verdict === "green" || last.verdict === "yellow") ? 0 : 1);
   '; then
     {
       echo "警告：当前提交 ${COMMIT}$([ "$DIRTY" = true ] && echo "（工作区 dirty）") 没有通过的 Staging 运行记录（backend 与 ai-worker 都要是这个提交、不 dirty、判定绿或黄）。"

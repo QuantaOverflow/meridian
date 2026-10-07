@@ -15,8 +15,8 @@ const opt = (name, dflt) => {
 const BACKEND = opt('--backend', path.join(ROOT, 'apps/backend/wrangler.jsonc'));
 const AI_WORKER = opt('--ai-worker', path.join(ROOT, 'services/meridian-ai-worker/wrangler.toml'));
 
-// 允许 staging 与生产共用的 service binding
-const SHARED_SERVICE_BINDINGS = new Set(['ML_SERVICE']);
+// 允许 staging 与生产共用的 service：binding 名 → 它必须指向的生产 service（ml-service 不存数据，ADR 0013 决定 3）
+const SHARED_SERVICES = { ML_SERVICE: 'meridian-ml-service' };
 
 // ---------- 解析 ----------
 
@@ -45,34 +45,28 @@ function parseJsonc(text) {
   return JSON.parse(out);
 }
 
-function parseTomlValue(raw) {
-  const v = raw.trim();
-  if (v.startsWith('"')) return JSON.parse(v.slice(0, v.lastIndexOf('"') + 1));
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  if (v.startsWith('[')) {
-    const body = v.replace(/#.*$/, '').trim();
-    return JSON.parse(body.replace(/'([^']*)'/g, '"$1"'));
-  }
-  const n = Number(v.replace(/#.*$/, '').trim());
-  return Number.isNaN(n) ? v : n;
-}
+// 只认这份 wrangler.toml 用到的写法：[a.b] / [[a.b]] 表头（裸 key）、`裸key = 值`，值是双引号字符串、true/false、数字、
+// 双引号字符串的单行数组。别的写法（单引号字符串、带引号的 key 或表头、点分 key、多行值、行内表）一律报错而不是跳过：
+// 这是道闸，看不懂的行里可能正写着生产的资源名。
+const TOML_HEADER = /^(\[\[?)([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)(\]\]?)\s*(?:#.*)?$/;
+const TOML_STRING = String.raw`"(?:[^"\\]|\\.)*"`;
+const TOML_PAIR = new RegExp(
+  String.raw`^([A-Za-z0-9_-]+)\s*=\s*(${TOML_STRING}|true|false|[+-]?\d+(?:\.\d+)?|\[\s*(?:${TOML_STRING}\s*(?:,\s*${TOML_STRING}\s*)*,?\s*)?\])\s*(?:#.*)?$`
+);
 
-// 只覆盖这份 wrangler.toml 用到的子集：[a.b] / [[a.b]] 表头、key = 单行值
 function parseToml(text) {
   const root = {};
   let cur = root;
-  for (const line of text.split('\n')) {
+  text.split('\n').forEach((line, idx) => {
     const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const arr = t.match(/^\[\[([^\]]+)\]\]/);
-    const tbl = !arr && t.match(/^\[([^\]]+)\]/);
-    if (arr || tbl) {
-      const keys = (arr || tbl)[1].split('.').map((k) => k.trim());
+    if (!t || t.startsWith('#')) return;
+    const h = t.match(TOML_HEADER);
+    if (h && h[1].length === h[3].length) {
+      const isArray = h[1] === '[[';
+      const keys = h[2].split('.');
       let node = root;
-      keys.forEach((k, idx) => {
-        const last = idx === keys.length - 1;
-        if (last && arr) {
+      keys.forEach((k, i) => {
+        if (i === keys.length - 1 && isArray) {
           node[k] ??= [];
           const item = {};
           node[k].push(item);
@@ -83,31 +77,49 @@ function parseToml(text) {
         }
       });
       cur = node;
-      continue;
+      return;
     }
-    const eq = t.indexOf('=');
-    if (eq > 0) cur[t.slice(0, eq).trim()] = parseTomlValue(t.slice(eq + 1));
-  }
+    const kv = t.match(TOML_PAIR);
+    if (!kv) throw new Error(`第 ${idx + 1} 行是这个检查不认识的 TOML 写法：${t}（改成双引号字符串 / 裸 key 的写法，或扩展 scripts/check-staging-isolation.mjs）`);
+    cur[kv[1]] = JSON.parse(kv[2].replace(/,\s*\]$/, ']').replace(/^[+]/, ''));
+  });
   return root;
 }
 
 // ---------- 提取与比较 ----------
 
-// 一个环境段里「带资源名的」项：{ 类别: [{ id, label }] }
-function resources(c) {
+const norm = (v) => String(v).trim().toLowerCase().replace(/\/+$/, '');
+
+// 生产（顶层）的资源标识：worker 名与每个带资源名的 binding。比较时不分类别——
+// 把生产的队列名填进 staging 的 DLQ、把生产的 worker 名填进 staging 的 script_name，同样是写到生产。
+function productionIds(top) {
   const list = (v) => (Array.isArray(v) ? v : []);
-  const r = { Hyperdrive: [], 'R2 bucket': [], 队列: [], DLQ: [], workflow: [], service: [] };
-  for (const h of list(c.hyperdrive)) r.Hyperdrive.push({ id: h.id, label: h.binding });
-  for (const b of list(c.r2_buckets)) r['R2 bucket'].push({ id: b.bucket_name, label: b.binding });
-  for (const p of list(c.queues?.producers)) r.队列.push({ id: p.queue, label: `producer ${p.binding}` });
-  for (const q of list(c.queues?.consumers)) {
-    r.队列.push({ id: q.queue, label: 'consumer' });
-    if (q.dead_letter_queue) r.DLQ.push({ id: q.dead_letter_queue, label: 'consumer' });
+  const ids = new Map(); // 归一化后的值 → 它在生产里是什么
+  const add = (v, what) => {
+    if (typeof v === 'string' && v.trim()) ids.set(norm(v), what);
+  };
+  add(top.name, 'worker 名');
+  for (const h of list(top.hyperdrive)) add(h.id, `Hyperdrive（${h.binding}）`);
+  for (const b of list(top.r2_buckets)) add(b.bucket_name, `R2 bucket（${b.binding}）`);
+  for (const p of list(top.queues?.producers)) add(p.queue, `队列（producer ${p.binding}）`);
+  for (const q of list(top.queues?.consumers)) {
+    add(q.queue, '队列（consumer）');
+    add(q.dead_letter_queue, 'DLQ');
   }
-  for (const w of list(c.workflows)) r.workflow.push({ id: w.name, label: w.binding });
-  for (const s of list(c.services)) r.service.push({ id: s.service, label: s.binding });
-  return r;
+  for (const w of list(top.workflows)) add(w.name, `workflow 名（${w.binding}）`);
+  for (const s of list(top.services)) add(s.service, `service（${s.binding}）`);
+  return ids;
 }
+
+// staging 段里所有字符串值，连同它的位置（不管挂在哪个 key 下）
+function* stringLeaves(node, at) {
+  if (typeof node === 'string') yield { value: node, at };
+  else if (Array.isArray(node)) for (let i = 0; i < node.length; i++) yield* stringLeaves(node[i], `${at}[${i}]`);
+  else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) yield* stringLeaves(v, at ? `${at}.${k}` : k);
+}
+
+// AI Gateway 地址里的网关名：…/v1/<account>/<gateway>/…
+const gatewayOf = (url) => (typeof url === 'string' ? url.match(/\/v1\/[^/]+\/([^/]+)\//)?.[1]?.toLowerCase() : undefined);
 
 function check(file, label, top, { requireCrons }) {
   const problems = [];
@@ -118,19 +130,21 @@ function check(file, label, top, { requireCrons }) {
     return problems;
   }
 
-  const prod = resources(top);
-  const staging = resources(stg);
-  for (const [kind, items] of Object.entries(staging)) {
-    const prodIds = new Set(prod[kind].map((x) => x.id));
-    for (const it of items) {
-      if (kind === 'service' && SHARED_SERVICE_BINDINGS.has(it.label)) continue;
-      if (prodIds.has(it.id)) bad(`staging 的 ${kind}（${it.label}）与生产相同：${it.id}`);
-    }
+  // 共用的 service：只放行「这个 binding 指向这个生产 service」这一种写法
+  const shared = new Set();
+  (Array.isArray(stg.services) ? stg.services : []).forEach((s, i) => {
+    if (SHARED_SERVICES[s?.binding] !== undefined && s.service === SHARED_SERVICES[s.binding]) shared.add(`services[${i}].service`);
+  });
+
+  const prod = productionIds(top);
+  for (const { value, at } of stringLeaves(stg, '')) {
+    const what = prod.get(norm(value));
+    if (what && !shared.has(at)) bad(`staging 的 ${at} 用了生产的${what}：${value}`);
   }
 
   const crons = stg.triggers?.crons;
   if (requireCrons && !Array.isArray(crons)) bad('staging 缺少 triggers.crons（必须显式写成空数组）');
-  else if (Array.isArray(crons) && crons.length > 0) bad(`staging 的 triggers.crons 必须为空，现为 ${JSON.stringify(crons)}`);
+  else if (stg.triggers !== undefined && !(Array.isArray(crons) && crons.length === 0)) bad(`staging 的 triggers.crons 必须为空数组，现为 ${JSON.stringify(crons)}`);
 
   if (top.vars?.ENVIRONMENT !== 'production') bad(`顶层 ENVIRONMENT 必须是 "production"，现为 ${JSON.stringify(top.vars?.ENVIRONMENT)}`);
   if (stg.vars?.ENVIRONMENT !== 'staging') bad(`staging 段 ENVIRONMENT 必须是 "staging"，现为 ${JSON.stringify(stg.vars?.ENVIRONMENT)}`);
@@ -153,8 +167,11 @@ const aiProblems = check(AI_WORKER, 'ai-worker', ai, { requireCrons: false });
 problems.push(...aiProblems);
 const stgUrl = ai.env?.staging?.vars?.DASHSCOPE_BASE_URL;
 if (ai.env?.staging) {
+  const prodUrl = ai.vars?.DASHSCOPE_BASE_URL;
   if (!stgUrl) problems.push(`ai-worker (${AI_WORKER}): staging 缺少 DASHSCOPE_BASE_URL`);
-  else if (stgUrl === ai.vars?.DASHSCOPE_BASE_URL) problems.push(`ai-worker (${AI_WORKER}): staging 的 DASHSCOPE_BASE_URL 与生产相同`);
+  else if (norm(stgUrl) === norm(prodUrl ?? '')) problems.push(`ai-worker (${AI_WORKER}): staging 的 DASHSCOPE_BASE_URL 与生产相同`);
+  // 地址不逐字相同也可能是同一个网关（多个斜杠、换了后半段）：按网关名再比一次
+  else if (gatewayOf(stgUrl) && gatewayOf(stgUrl) === gatewayOf(prodUrl)) problems.push(`ai-worker (${AI_WORKER}): staging 的 DASHSCOPE_BASE_URL 走的是生产的 AI Gateway（${gatewayOf(prodUrl)}）`);
 }
 
 if (problems.length) {

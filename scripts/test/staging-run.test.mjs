@@ -51,7 +51,7 @@ async function withBackend(behavior, fn) {
 function runScript(url, { env = {}, args = [] } = {}) {
   const verdicts = path.join(tmp, `v-${Math.random().toString(36).slice(2)}.jsonl`);
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [SCRIPT, '--no-reset', '--poll-interval-ms', '20', ...args], {
+    const child = spawn(process.execPath, [SCRIPT, '--no-reset', '--poll-interval-ms', '20', '--summary-wait-ms', '200', ...args], {
       env: {
         PATH: process.env.PATH,
         STAGING_BACKEND_URL: url,
@@ -147,7 +147,7 @@ test('绿：退出 0，打印读者页地址', async () => {
 test('先 404 两次、RUNNING 一次再给终态 -> 正常', async () => {
   const running = { status: 200, body: { run: { workflowId: ID, status: 'RUNNING', flags: [] } } };
   await withBackend(
-    { trigger: accepted, runs: [{ status: 404, body: {} }, { status: 404, body: {} }, running, done([])] },
+    { trigger: accepted, runs: [{ status: 404, body: {} }, { status: 404, body: {} }, running, withSummary([])] },
     async (url, seen) => {
       const r = await runScript(url);
       assert.equal(r.code, 0);
@@ -198,3 +198,53 @@ test('不认识的参数 -> 退出 2', async () => {
   const r = await runScript('http://127.0.0.1:1', { args: ['--bogus'] });
   assert.equal(r.code, 2);
 });
+
+// ---- 审查后补的（2026-10-07）----
+
+const SUMMARY = { llm: { calls: 1, neurons: 1 } };
+const withSummary = (flags, status = 'COMPLETED') => ({ status: 200, body: { run: { workflowId: ID, status, flags, usd: 0.31 }, summary: SUMMARY } });
+
+test('终态先到、运行汇总后到：等到汇总再判（costly 要看汇总）', async () => {
+  await withBackend({ trigger: accepted, runs: [done([]), done([]), withSummary(['costly'])] }, async (url) => {
+    const r = await runScript(url);
+    assert.equal(r.code, 0);
+    assertRecord(r.lines[0], 'yellow', ['costly']);
+    assert.ok(r.out.includes('$0.31'));
+  });
+});
+
+test('汇总一直不来：按已有的 flag 判，并说明花费未记', async () => {
+  await withBackend({ trigger: accepted, runs: [done([])] }, async (url) => {
+    const r = await runScript(url);
+    assert.equal(r.code, 0);
+    assertRecord(r.lines[0], 'green', []);
+    assert.ok(r.out.includes('运行汇总一直没写出来'));
+  });
+});
+
+test('轮询中途一次 500：不放弃，照常等到终态', async () => {
+  await withBackend({ trigger: accepted, runs: [{ status: 500, body: {} }, withSummary([])] }, async (url) => {
+    const r = await runScript(url);
+    assert.equal(r.code, 0);
+    assertRecord(r.lines[0], 'green', []);
+  });
+});
+
+test('轮询连续失败：退出 1，不写记录，提示用 --attach 接上', async () => {
+  await withBackend({ trigger: accepted, runs: [{ status: 500, body: {} }] }, async (url) => {
+    const r = await runScript(url);
+    assert.equal(r.code, 1);
+    assert.equal(r.lines.length, 0);
+    assert.ok(r.out.includes(`--attach ${ID}`));
+  });
+});
+
+test('--attach：不触发，接上已有运行并判定', async () => {
+  await withBackend({ trigger: accepted, runs: [withSummary(['degraded'], 'DEGRADED')] }, async (url, seen) => {
+    const r = await runScript(url, { args: ['--attach', ID] });
+    assert.equal(r.code, 0);
+    assert.equal(seen.triggers, 0);
+    assertRecord(r.lines[0], 'yellow', ['degraded']);
+  });
+});
+

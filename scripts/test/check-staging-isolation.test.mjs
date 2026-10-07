@@ -114,3 +114,75 @@ test('漏了 staging 段', () => {
   assert.equal(a.code, 1);
   assert.match(a.out, /staging/);
 });
+
+// ---- 审查找出的漏网写法（2026-10-07）：每一种都曾退出 0 ----
+
+const AI_STG_BUCKET = 'bucket_name = "meridian-articles-staging"';
+
+test('TOML 单引号字符串抄生产 bucket：不认识的写法直接报错', () => {
+  const r = run(null, read(AI).replace(AI_STG_BUCKET, "bucket_name = 'meridian-articles-prod'"));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /不认识的 TOML 写法/);
+});
+
+test('TOML 带引号的 key、带引号的表头、点分 key 都报错', () => {
+  for (const bad of [
+    read(AI).replace(AI_STG_BUCKET, '"bucket_name" = "meridian-articles-prod"'),
+    read(AI).replace('[[env.staging.r2_buckets]]', '[[env."staging".r2_buckets]]'),
+    read(AI).replace('[env.staging.vars]', '[env.staging]\ntriggers.crons = ["0 13 * * *"]\n\n[env.staging.vars]'),
+  ]) {
+    const r = run(null, bad);
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /不认识的 TOML 写法/);
+  }
+});
+
+test('ai-worker staging 带 cron', () => {
+  const r = run(null, read(AI).replace('[env.staging.vars]', '[env.staging.triggers]\ncrons = ["0 13 * * *"]\n\n[env.staging.vars]'));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /crons/);
+});
+
+test('把生产队列名填进 staging 的 DLQ，或把生产 DLQ 名填进 staging 的队列', () => {
+  const a = run(read(BACKEND).replace('"dead_letter_queue": "meridian-article-processing-dlq-staging"', '"dead_letter_queue": "meridian-article-processing-queue-prod"'));
+  assert.equal(a.code, 1);
+  assert.match(a.out, /dead_letter_queue/);
+  const b = run(read(BACKEND).replace('"producers": [{ "queue": "meridian-article-processing-queue-staging"', '"producers": [{ "queue": "meridian-article-processing-dlq"'));
+  assert.equal(b.code, 1);
+  assert.match(b.out, /meridian-article-processing-dlq/);
+});
+
+test('staging 段的 name 写成生产 worker 名', () => {
+  const r = run(read(BACKEND).replace('"staging": {', '"staging": {\n      "name": "meridian-backend",'));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /worker 名/);
+});
+
+test('staging 的 DO binding 用 script_name 指向生产脚本', () => {
+  const r = run(read(BACKEND).replace('"bindings": [{ "class_name": "SourceScraperDO", "name": "SOURCE_SCRAPER" }]', '"bindings": [{ "class_name": "SourceScraperDO", "name": "SOURCE_SCRAPER", "script_name": "meridian-backend" }]'));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /script_name/);
+});
+
+test('Hyperdrive id 抄生产值但换成大写', () => {
+  const r = run(read(BACKEND).replace('c2de49c847a54a6b8d390411f6359173', '7E8763D05A974473A3D371F7544593CE'));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Hyperdrive/);
+});
+
+test('ML_SERVICE 这个 binding 指向别的生产 service：白名单不放行', () => {
+  const r = run(read(BACKEND).replace('{ "binding": "ML_SERVICE", "service": "meridian-ml-service" },\n      ],\n    },', '{ "binding": "ML_SERVICE", "service": "meridian-ai-worker" },\n      ],\n    },'));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /meridian-ai-worker/);
+});
+
+test('staging 的 DASHSCOPE_BASE_URL 是生产网关地址加尾斜杠，或同一个网关换了后半段', () => {
+  const prod = read(AI).match(/^DASHSCOPE_BASE_URL = "([^"]+)"/m)[1];
+  const stgLine = read(AI).match(/^DASHSCOPE_BASE_URL = "[^"]+meridian-ai\/[^"]+"/m)[0];
+  for (const url of [prod + '/', prod.replace('/compatible-mode/v1', '/other')]) {
+    const r = run(null, read(AI).replace(stgLine, `DASHSCOPE_BASE_URL = "${url}"`));
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /DASHSCOPE_BASE_URL/);
+  }
+});
+

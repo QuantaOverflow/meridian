@@ -171,3 +171,29 @@ test('--print 的输出里也含 --env=', () => {
   const r = deploy(repo, 'apps/backend', ['--print']);
   assert.ok(r.stdout.split('\n').includes('--env='));
 });
+
+// ---- 审查后补的（2026-10-07）----
+
+test('同一提交先绿后红：最近一次说了算，警告', () => {
+  const repo = makeRepo();
+  writeFileSync(repo.verdictsFile, [line({ head: repo.head }), line({ head: repo.head, verdict: 'red' })].join('\n') + '\n');
+  const r = deploy(repo, 'apps/backend');
+  assert.ok(r.warned);
+  assert.ok(r.wranglerCalled);
+});
+
+test('同一提交先红后绿：不警告', () => {
+  const repo = makeRepo();
+  writeFileSync(repo.verdictsFile, [line({ head: repo.head, verdict: 'red' }), line({ head: repo.head })].join('\n') + '\n');
+  assert.ok(!deploy(repo, 'apps/backend').warned);
+});
+
+test('显式传空环境（--env "" 与 --env=）仍是部署生产：照样查，不重复追加 --env=', () => {
+  for (const args of [['--env', ''], ['--env=']]) {
+    const repo = makeRepo();
+    const r = deploy(repo, 'apps/backend', args);
+    assert.ok(r.warned, args.join(' '));
+    assert.ok(r.wranglerCalled);
+    assert.equal(r.calls.filter((c) => c === '--env=').length, args.includes('--env=') ? 1 : 0);
+  }
+});

@@ -35,17 +35,31 @@
    这个入口只在 `ENVIRONMENT` 是 `staging` 时存在，生产上回 404——否则生产上的手动运行能冒充生产运行，绕过「按触发方式认定」。
    生产上原有的手动运行入口不动：定时触发失败后的补救要靠它。
 6. **隔离靠检查脚本，不靠人看**。wrangler 的 binding 不继承，staging 漏配一项是 undefined 报错，不会落到生产；
-   会漏到生产的只有把生产的资源名或 id 抄进 staging 段。`scripts/check-staging-isolation.mjs` 断言 staging 段里每个带资源名的
-   binding 都与生产不同（白名单只有 `ML_SERVICE`）、staging 没有 cron、`ENVIRONMENT` 两边取值正确，挂在 `pnpm typecheck` 里。
+   会漏到生产的只有把生产的资源名或 id 抄进 staging 段。`scripts/check-staging-isolation.mjs` 挂在 `pnpm typecheck` 里，断言：
+   staging 段里任何位置的字符串值都不等于生产的 worker 名或任一资源标识（Hyperdrive id、bucket、队列、DLQ、workflow 名、service 名；
+   不分类别、不分大小写——把生产队列名填进 staging 的 DLQ 也算），唯一放行的是 `ML_SERVICE` 指向 `meridian-ml-service`；
+   staging 没有 cron；`ENVIRONMENT` 两边取值正确；ai-worker 的 staging 不走生产的 AI Gateway。
+   ai-worker 的配置是 TOML，脚本只认它用到的那几种写法，遇到不认识的写法（单引号字符串、带引号的 key、点分 key）直接报错而不是跳过。
+   它管的是两个 worker 的配置。管不到的一处：`.staging.env` 里拷正文用的 Cloudflare token 能读写账户下所有 bucket，
+   「只读生产、只写 staging」靠 `scripts/staging-run.mjs` 里写死的两个 bucket 名保证。
 7. **机器判流水线健康，人读成稿**。`scripts/staging-run.mjs` 跑完后读这次运行在运维台里已有的标记，不另写判据：
    失败或没选出新闻 → 红，命令非零退出；降级、慢、贵 → 黄，通过并打印；`late`（按日历的判据）忽略。
-   成稿质量在 staging 读者页上读。
+   成稿质量在 staging 读者页上读。运行的终态先写、汇总后写（隔几十秒），「贵」要看汇总，所以脚本到终态后再等汇总最多 5 分钟。
+   轮询中途断了（连续 5 次拿不到回答）不记判定，用 `--attach <运行 id>` 接上。
 8. **部署生产时提醒，不拦**。`scripts/deploy.sh` 部署生产的 backend 或 ai-worker 时，查当前提交有没有一次通过的 Staging 运行
-   （两个 worker 当时部署的都是这个提交、不 dirty），没有就打印警告，照常部署。硬拦会在紧急回滚时挡路；ml-service 不查，它本来就过不了 staging。
+   （两个 worker 当时部署的都是这个提交、不 dirty；同一提交跑过多次看最近一次），没有就打印警告，照常部署。硬拦会在紧急回滚时挡路；ml-service 不查，它本来就过不了 staging。
 9. **判定记录放本机**（`.staging-verdicts.jsonl`，gitignored）。它不能放 staging 的库，库每次运行前被重置；
    放 bucket 要给脚本加写 R2 的路。单人单机维护，本机文件够用；换机器不带过去，第一次部署会多看到一次提醒。
 10. **staging 的网页公开、不加登录**，每个页面有 STAGING 横幅并声明不让搜索引擎收录。读者数据接口与生产一样要后台 token，
     公开的只有网页本身。
+
+## 已知的限制
+
+- **reset 会把生产库里 RUNNING 的运行记录一起带过来**。cron 的并发保护只认「两小时内有 RUNNING 的行」，所以在生产运行进行中
+  （北京时间 21:00 后约半小时）reset，或生产有一次崩掉没回写终态的运行时，staging 的触发会回 409，挡着的是一个在 staging 永远不会结束的 id。
+  等生产那次跑完再 reset。
+- **只拷近两天的正文**。在 staging 上做手动运行、指定更早的日期或文章时取不到正文，先用 `--body-days N` 多拷几天。
+- 拷正文、reset、migrate 这三步没有自动化测试，只在真跑时验过。
 
 ## 没做的
 

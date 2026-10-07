@@ -4,7 +4,10 @@
 // 从生产 bucket 拷到 staging bucket（经 Cloudflare REST，只读生产、只写 staging；已有的跳过）。要本机有 psql。
 // 零依赖。配置读仓库根 .staging.env（KEY=VALUE），同名环境变量优先；模板见 .staging.env.example。
 //
-// 用法：node scripts/staging-run.mjs [--no-reset] [--poll-interval-ms 30000] [--timeout-min 60]
+// 用法：node scripts/staging-run.mjs [--no-reset] [--attach <运行 id>] [--body-days 2] [--poll-interval-ms 30000] [--timeout-min 60]
+//   --no-reset   不 reset、不 migrate、不拷正文，在现有数据上再跑一次（调试）
+//   --attach     不触发，接上一次已经在跑（或已跑完）的运行，等到终态后判定并记录——轮询中途断了用它
+//   --body-days  拷最近几天文章的正文（默认 2；手动运行要用更早的文章时调大）
 // 退出码：0 = green 或 yellow；1 = red / 失败 / 409；2 = 用法或配置错；3 = 超时。
 
 import fs from 'node:fs';
@@ -19,8 +22,11 @@ const KEYS = [
 ];
 const PROD_BUCKET = 'meridian-articles-prod';
 const STAGING_BUCKET = 'meridian-articles-staging';
-// cron 的窗口是 1 天（CRON_BRIEF_PARAMS.TIME_RANGE_DAYS）；多拷一天，窗口以后放宽到 2 天也够
-const BODY_COPY_DAYS = 2;
+// 默认拷 2 天（--body-days）：cron 的窗口是 1 天（CRON_BRIEF_PARAMS.TIME_RANGE_DAYS），多拷一天留余量
+// 轮询连续这么多次拿不到回答（网络断、5xx）才放弃；偶尔一次抖动不该丢掉一次三十分钟的运行
+const POLL_MAX_CONSECUTIVE_ERRORS = 5;
+// 终态先写、运行汇总后写（workflow 里隔几十秒）：贵不贵要看汇总，等它最多这么久（--summary-wait-ms）
+const SUMMARY_WAIT_MS = 5 * 60_000;
 const BODY_COPY_CONCURRENCY = 4;
 const R2_MAX_ATTEMPTS = 20;
 
@@ -30,14 +36,20 @@ function die(code, msg) {
 }
 
 function parseArgs(argv) {
-  const opts = { reset: true, pollMs: 30000, timeoutMin: 60 };
+  const opts = { reset: true, pollMs: 30000, timeoutMin: 60, bodyDays: 2, attach: '', summaryWaitMs: SUMMARY_WAIT_MS };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--no-reset') opts.reset = false;
-    else if (a === '--poll-interval-ms' || a === '--timeout-min') {
+    else if (a === '--attach') {
+      opts.attach = argv[++i] ?? '';
+      if (!opts.attach) die(2, '--attach 需要一个运行 id');
+      opts.reset = false;
+    } else if (a === '--poll-interval-ms' || a === '--timeout-min' || a === '--body-days' || a === '--summary-wait-ms') {
       const n = Number(argv[++i]);
       if (!(n > 0)) die(2, `${a} 需要一个正数`);
       if (a === '--poll-interval-ms') opts.pollMs = n;
+      else if (a === '--body-days') opts.bodyDays = n;
+      else if (a === '--summary-wait-ms') opts.summaryWaitMs = n;
       else opts.timeoutMin = n;
     } else die(2, `不认识的参数：${a}`);
   }
@@ -79,13 +91,14 @@ const backend = cfg.STAGING_BACKEND_URL.replace(/\/+$/, '');
 const reader = cfg.STAGING_READER_URL.replace(/\/+$/, '');
 const headers = { Authorization: `Bearer ${cfg.STAGING_API_TOKEN}` };
 
+// 网络错误不抛：status 0，由调用方决定是重试还是放弃
 async function call(method, urlPath) {
   try {
     const res = await fetch(backend + urlPath, { method, headers });
     const body = await res.json().catch(() => null);
     return { status: res.status, body };
   } catch (e) {
-    return die(1, `请求 ${method} ${urlPath} 失败：${e.message}`);
+    return { status: 0, body: null, error: e.message };
   }
 }
 
@@ -125,7 +138,7 @@ async function copyBodies() {
   const q = spawnSync(
     'psql',
     [cfg.STAGING_DATABASE_URL, '-At', '-c',
-      `select content_file_key from articles where content_file_key is not null and status = 'PROCESSED' and publish_date >= now() - interval '${BODY_COPY_DAYS} days'`],
+      `select content_file_key from articles where content_file_key is not null and status = 'PROCESSED' and publish_date >= now() - interval '${opts.bodyDays} days'`],
     { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
   );
   if (q.status !== 0) die(1, `查要拷的正文清单失败（psql 退出码 ${q.status ?? q.error?.message}）`);
@@ -161,47 +174,67 @@ async function copyBodies() {
 
 // ① ② 刷新数据并迁移
 if (opts.reset) {
-  console.log('[1/7] neonctl branches reset staging --parent');
+  console.log('[1/8] neonctl branches reset staging --parent');
   run('neonctl', ['branches', 'reset', 'staging', '--parent', '--project-id', cfg.NEON_PROJECT_ID]);
-  console.log('[2/7] migrate');
+  console.log('[2/8] migrate');
   run('pnpm', ['-F', '@meridian/database', 'migrate'], { DATABASE_URL: cfg.STAGING_DATABASE_URL });
 }
 
-// 拷正文（跟着 reset 走：--no-reset 时数据没变，不用再拷）
+// 拷正文（跟着 reset 走：--no-reset 时库没变，不用再拷）
 if (opts.reset) {
-  console.log('[2b] 拷正文 生产 bucket → staging bucket');
+  console.log('[3/8] 拷正文 生产 bucket → staging bucket');
   await copyBodies();
 }
 
-// ③ 触发
-console.log('[3/7] 触发 POST /admin/briefs/run-scheduled');
-const trig = await call('POST', '/admin/briefs/run-scheduled');
-if (trig.status === 409) die(1, `已有运行在飞，挡着的运行 id：${trig.body?.blockingWorkflowId ?? '（未知）'}`);
-if (trig.status !== 202 || !trig.body?.data?.workflowId) {
-  die(1, `触发失败：HTTP ${trig.status} ${trig.body?.error ?? ''}`);
+// 触发（--attach 时接已有的运行）
+let id = opts.attach;
+if (!id) {
+  console.log('[4/8] 触发 POST /admin/briefs/run-scheduled');
+  const trig = await call('POST', '/admin/briefs/run-scheduled');
+  if (trig.status === 409) {
+    die(1, `已有运行在飞，挡着的运行 id：${trig.body?.blockingWorkflowId ?? '（未知）'}\n` +
+      '（是 staging 自己的运行就用 --attach <id> 接上；是 reset 时从生产库带过来的 RUNNING 行，等它在生产跑完后重新 reset）');
+  }
+  if (trig.status !== 202 || !trig.body?.data?.workflowId) {
+    die(1, `触发失败：HTTP ${trig.status} ${trig.body?.error ?? trig.error ?? ''}`);
+  }
+  id = trig.body.data.workflowId;
 }
-const id = trig.body.data.workflowId;
 console.log(`运行 id：${id}`);
 
-// ④ 轮询
+// 轮询到终态；终态之后再等运行汇总写完
+console.log('[5/8] 等运行到终态');
 const deadline = Date.now() + opts.timeoutMin * 60_000;
 let detail;
+let errors = 0;
+let summaryDeadline = 0;
 for (;;) {
   const r = await call('GET', `/observability/ops/runs/${encodeURIComponent(id)}`);
-  if (r.status === 200 && r.body?.run?.status && r.body.run.status !== 'RUNNING') {
-    detail = r.body;
-    break;
+  if (r.status === 200 || r.status === 404) errors = 0;
+  else if (++errors >= POLL_MAX_CONSECUTIVE_ERRORS) {
+    die(1, `查运行详情连续 ${errors} 次失败（最后一次：${r.status ? `HTTP ${r.status}` : r.error}）。运行可能仍在跑，稍后用 --attach ${id} 接上`);
   }
-  if (r.status !== 200 && r.status !== 404) die(1, `查运行详情失败：HTTP ${r.status}`);
-  if (Date.now() + opts.pollMs > deadline) die(3, `超时（${opts.timeoutMin} 分钟）仍未到终态，运行 id：${id}`);
+  const status = r.status === 200 ? r.body?.run?.status : undefined;
+  if (status && status !== 'RUNNING') {
+    detail = r.body;
+    const finished = status === 'COMPLETED' || status === 'DEGRADED';
+    if (!finished || detail.summary) break;
+    summaryDeadline ||= Date.now() + opts.summaryWaitMs;
+    if (Date.now() + opts.pollMs > summaryDeadline) {
+      console.log('运行汇总一直没写出来：花费未记，「贵」判不了');
+      break;
+    }
+  } else if (Date.now() + opts.pollMs > deadline) {
+    die(3, `超时（${opts.timeoutMin} 分钟）仍未到终态，运行 id：${id}（稍后可用 --attach ${id} 接上）`);
+  }
   await new Promise((res) => setTimeout(res, opts.pollMs));
 }
 
-// ⑤ 判定
+// 判定
 const flags = detail.run.flags ?? [];
 const verdict = verdictOf(flags);
 
-// ⑥ 服务版本并追加判定记录
+// 服务版本并追加判定记录
 const svc = await call('GET', '/observability/ops/services');
 if (svc.status !== 200 || !Array.isArray(svc.body)) die(1, `读服务版本失败：HTTP ${svc.status}`);
 const services = {};
@@ -212,7 +245,7 @@ for (const name of ['backend', 'ai-worker']) {
 const verdictsFile = process.env.STAGING_VERDICTS_FILE || path.join(ROOT, '.staging-verdicts.jsonl');
 fs.appendFileSync(verdictsFile, JSON.stringify({ at: new Date().toISOString(), workflowId: id, verdict, flags, services }) + '\n');
 
-// ⑦ 打印
+// 打印
 console.log(`判定：${verdict}（状态 ${detail.run.status}，花费 ${detail.run.usd == null ? '未记' : '$' + detail.run.usd.toFixed(2)}）`);
 const shown = flags.filter((f) => f !== 'late');
 if (verdict !== 'green') console.log(`${verdict === 'red' ? '红' : '黄'}的 flag：${shown.join(', ')}`);

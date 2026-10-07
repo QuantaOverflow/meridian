@@ -162,7 +162,7 @@
         "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
         "ENVIRONMENT": "staging",
       },
-      // staging 不定时触发：只由 scripts/staging-run.sh（或手动运行入口）起
+      // staging 不定时触发：只由 scripts/staging-run.mjs（或手动运行入口）起
       "triggers": { "crons": [] },
       "durable_objects": {
         "bindings": [{ "class_name": "SourceScraperDO", "name": "SOURCE_SCRAPER" }],

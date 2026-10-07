@@ -38,7 +38,7 @@
    会漏到生产的只有把生产的资源名或 id 抄进 staging 段。`scripts/check-staging-isolation.mjs` 挂在 `pnpm typecheck` 里，断言：
    staging 段里任何位置的字符串值都不等于生产的 worker 名或任一资源标识（Hyperdrive id、bucket、队列、DLQ、workflow 名、service 名；
    不分类别、不分大小写——把生产队列名填进 staging 的 DLQ 也算），唯一放行的是 `ML_SERVICE` 指向 `meridian-ml-service`；
-   staging 没有 cron；`ENVIRONMENT` 两边取值正确；ai-worker 的 staging 不走生产的 AI Gateway。
+   staging 没有 cron；backend 的 `ENVIRONMENT` 两边取值正确（ai-worker 没有代码读它，不设）；ai-worker 的 staging 不走生产的 AI Gateway。
    ai-worker 的配置是 TOML，脚本只认它用到的那几种写法，遇到不认识的写法（单引号字符串、带引号的 key、点分 key）直接报错而不是跳过。
    它管的是两个 worker 的配置。管不到的一处：`.staging.env` 里拷正文用的 Cloudflare token 能读写账户下所有 bucket，
    「只读生产、只写 staging」靠 `scripts/staging-run.mjs` 里写死的两个 bucket 名保证。

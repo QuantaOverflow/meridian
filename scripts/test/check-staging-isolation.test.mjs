@@ -93,12 +93,6 @@ test('ENVIRONMENT 写反（backend）', () => {
   assert.match(r.out, /ENVIRONMENT/);
 });
 
-test('ENVIRONMENT 写反（ai-worker 顶层）', () => {
-  const r = run(null, read(AI).replace('ENVIRONMENT = "production"', 'ENVIRONMENT = "staging"'));
-  assert.equal(r.code, 1);
-  assert.match(r.out, /ENVIRONMENT/);
-});
-
 test('ai-worker staging 的 DASHSCOPE_BASE_URL 与生产相同', () => {
   const r = run(null, read(AI).replace('/meridian-ai/custom-dashscope', '/meridian-gateway/custom-dashscope'));
   assert.equal(r.code, 1);

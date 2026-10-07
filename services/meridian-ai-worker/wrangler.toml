@@ -42,8 +42,6 @@ head_sampling_rate = 1
 
 # BRIEF_CHECK_MODE 是 agent 时不需要 secret；切到 one_call 要先放 DASHSCOPE_API_KEY（网关开了鉴权再加 AI_GATEWAY_TOKEN）。
 [vars]
-# 跑在哪个环境："production"（顶层）或 "staging"（[env.staging]）。两边取值由 scripts/check-staging-isolation.mjs 断言
-ENVIRONMENT = "production"
 # 逐句核查的 epoch 数（写作–核查循环，ADR 0010）：每句独立核查几次，任一次判有问题就改写。
 # "0" = 不核查、不改写，只留 v4-pro 写作（回滚开关）；缺省或非法值按 1。改它不用改代码。
 BRIEF_CHECK_EPOCHS = "1"
@@ -72,7 +70,6 @@ binding = "ARTICLES_BUCKET"
 bucket_name = "meridian-articles-staging"
 
 [env.staging.vars]
-ENVIRONMENT = "staging"
 BRIEF_CHECK_EPOCHS = "1"
 BRIEF_CHECK_MODE = "one_call"
 # staging 走 meridian-ai 网关（本机开发用的那个），不进生产的 meridian-gateway，生产的日志与用量不被搅进来

@@ -121,7 +121,7 @@ function* stringLeaves(node, at) {
 // AI Gateway 地址里的网关名：…/v1/<account>/<gateway>/…
 const gatewayOf = (url) => (typeof url === 'string' ? url.match(/\/v1\/[^/]+\/([^/]+)\//)?.[1]?.toLowerCase() : undefined);
 
-function check(file, label, top, { requireCrons }) {
+function check(file, label, top, { requireCrons, hasEnvironmentVar }) {
   const problems = [];
   const bad = (msg) => problems.push(`${label} (${file}): ${msg}`);
   const stg = top.env?.staging;
@@ -146,6 +146,8 @@ function check(file, label, top, { requireCrons }) {
   if (requireCrons && !Array.isArray(crons)) bad('staging 缺少 triggers.crons（必须显式写成空数组）');
   else if (stg.triggers !== undefined && !(Array.isArray(crons) && crons.length === 0)) bad(`staging 的 triggers.crons 必须为空数组，现为 ${JSON.stringify(crons)}`);
 
+  // ENVIRONMENT 只有 backend 有（它的代码按这个变量决定 Staging 运行的触发入口存不存在）；ai-worker 没有代码读它，不设
+  if (!hasEnvironmentVar) return problems;
   if (top.vars?.ENVIRONMENT !== 'production') bad(`顶层 ENVIRONMENT 必须是 "production"，现为 ${JSON.stringify(top.vars?.ENVIRONMENT)}`);
   if (stg.vars?.ENVIRONMENT !== 'staging') bad(`staging 段 ENVIRONMENT 必须是 "staging"，现为 ${JSON.stringify(stg.vars?.ENVIRONMENT)}`);
   return problems;
@@ -162,8 +164,8 @@ try {
   process.exit(1);
 }
 
-problems.push(...check(BACKEND, 'backend', backend, { requireCrons: true }));
-const aiProblems = check(AI_WORKER, 'ai-worker', ai, { requireCrons: false });
+problems.push(...check(BACKEND, 'backend', backend, { requireCrons: true, hasEnvironmentVar: true }));
+const aiProblems = check(AI_WORKER, 'ai-worker', ai, { requireCrons: false, hasEnvironmentVar: false });
 problems.push(...aiProblems);
 const stgUrl = ai.env?.staging?.vars?.DASHSCOPE_BASE_URL;
 if (ai.env?.staging) {

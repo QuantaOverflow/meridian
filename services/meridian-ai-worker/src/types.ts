@@ -90,8 +90,6 @@ export type CloudflareEnv = {
   DASHSCOPE_API_KEY?: string
   /** AI Gateway 自己的鉴权 token（secret，网关开了鉴权才要）；有就带 `cf-aig-authorization` 头。 */
   AI_GATEWAY_TOKEN?: string
-  /** 跑在哪个环境（wrangler.toml 的 [vars] 与 [env.staging.vars]）。可选：单测里没有。 */
-  ENVIRONMENT?: 'production' | 'staging'
   /** 本次部署的版本 id 与时刻（wrangler.toml 的 [version_metadata]）。可选：单测里没有。 */
   CF_VERSION_METADATA?: WorkerVersionMetadata
   /** 部署的提交：短哈希、标题、工作区是否有未提交改动（"true"/"false"）。scripts/deploy.sh 用 --var 注入，不经脚本部署时没有。 */

@@ -126,7 +126,7 @@ const verdictsFile = process.env.STAGING_VERDICTS_FILE || path.join(ROOT, '.stag
 fs.appendFileSync(verdictsFile, JSON.stringify({ at: new Date().toISOString(), workflowId: id, verdict, flags, services }) + '\n');
 
 // ⑦ 打印
-console.log(`判定：${verdict}（状态 ${detail.run.status}）`);
+console.log(`判定：${verdict}（状态 ${detail.run.status}，花费 ${detail.run.usd == null ? '未记' : '$' + detail.run.usd.toFixed(2)}）`);
 const shown = flags.filter((f) => f !== 'late');
 if (verdict !== 'green') console.log(`${verdict === 'red' ? '红' : '黄'}的 flag：${shown.join(', ')}`);
 console.log(`运行详情：${reader}/admin/runs/${id}`);

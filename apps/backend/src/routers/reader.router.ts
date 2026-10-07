@@ -68,10 +68,12 @@ app.get(
 );
 
 const searchQuerySchema = z.object({
-  // 空查询与超过 200 字的查询回 400：前端在转发之前就拦下，到这里的只会是调用方写错了
-  q: z.string().trim().min(1).max(200),
+  // 空查询与超过 200 字的查询回 400：前端在转发之前就拦下，到这里的只会是调用方写错了。
+  // NUL 字符也拦：Postgres 的 text 存不了它，放过去是 500
+  q: z.string().trim().min(1).max(200).refine(q => !q.includes('\0')),
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
+  // 上界：没有上界时，超出 bigint 的 offset 到了 Postgres 是 500
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
 });
 
 // 搜索简报块（形状见 @meridian/contracts 的 SearchPage）：英文全文检索，只搜已发布各期的块，按线索折成组，分页按组数

@@ -5,10 +5,11 @@ import { toBlockItem } from '~/server/lib/blockItem';
 import type { SearchResponse } from '~/shared/types';
 
 const querySchema = z.object({
-  // 空查询与超过 200 字的查询直接 400，不转发（搜索页自己先判，不会带着这两种来）
-  q: z.string().trim().min(1).max(200),
+  // 空查询与超过 200 字的查询直接 400，不转发（搜索页自己先判，不会带着这两种来）。
+  // 带 NUL 字符的查询与过大的 offset 同样不转发：backend 也回 400（到了 Postgres 都是报错）
+  q: z.string().trim().min(1).max(200).refine(q => !q.includes('\0')),
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
 });
 
 /**

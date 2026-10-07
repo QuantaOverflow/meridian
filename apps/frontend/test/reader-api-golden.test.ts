@@ -97,7 +97,7 @@ const READER_CASES: Record<string, string> = {
   'country-404': '/api/countries/QQ/blocks',
   'country-invalid-code': '/api/countries/ISR/blocks',
   'country-invalid-query': '/api/countries/IL/blocks?section=both',
-  // 搜索：查询串去首尾空白、缺省的 limit / offset 补齐后转发；空查询与超长查询不转发，直接 400
+  // 搜索：查询串去首尾空白、缺省的 limit / offset 补齐后转发；空查询、超长查询、带 NUL 的查询与过大的 offset 不转发，直接 400
   'search-gaza': '/api/search?q=%20gaza%20',
   'search-holding-page': '/api/search?q=holding&limit=1&offset=1',
   'search-miss': '/api/search?q=zzz-no-match',
@@ -105,6 +105,9 @@ const READER_CASES: Record<string, string> = {
   'search-missing-query': '/api/search',
   'search-too-long': `/api/search?q=${'a'.repeat(201)}`,
   'search-invalid-query': '/api/search?q=gaza&limit=0',
+  // NUL 字符与过大的 offset 到了 Postgres 都是报错，同样不转发
+  'search-nul-query': '/api/search?q=a%00b',
+  'search-offset-too-large': '/api/search?q=gaza&offset=99999999999999999999',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',

@@ -174,8 +174,10 @@ describe('边界', () => {
       const second = await search('holding', '&limit=1&offset=1');
       expect(shape(second)).toEqual([[null, [[8, 16]]]]);
       expect([second.total, second.totalBlocks]).toEqual([2, 2]);
-      const beyond = await search('holding', '&offset=5');
-      expect([beyond.total, beyond.totalBlocks, beyond.items]).toEqual([2, 2, []]);
+      for (const offset of [5, 100000]) {
+        const beyond = await search('holding', `&offset=${offset}`);
+        expect([beyond.total, beyond.totalBlocks, beyond.items], String(offset)).toEqual([2, 2, []]);
+      }
     });
 
     it('查询串里的检索语法符号与只有停用词的查询：200，不报错', async () => {
@@ -183,8 +185,11 @@ describe('边界', () => {
       expect((await search('the')).total).toBe(0);
     });
 
-    it('空查询、只有空白、超过 200 字：400', async () => {
-      for (const path of ['/reader/search', '/reader/search?q=', '/reader/search?q=%20%20', `/reader/search?q=${'a'.repeat(201)}`]) {
+    it('空查询、只有空白、超过 200 字、带 NUL 字符（Postgres 的 text 存不了）：400', async () => {
+      for (const path of [
+        '/reader/search', '/reader/search?q=', '/reader/search?q=%20%20', `/reader/search?q=${'a'.repeat(201)}`,
+        '/reader/search?q=a%00b', '/reader/search?q=%00',
+      ]) {
         const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
         expect(res.status, path).toBe(400);
       }
@@ -203,6 +208,7 @@ describe('边界', () => {
       '/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/briefs/abc/map', '/reader/stories/1.5', '/admin/sources/abc/details',
       '/reader/countries/ISR/blocks', '/reader/countries/IL/blocks?section=both', '/reader/countries/IL/blocks?limit=51',
       '/reader/search?q=gaza&limit=51', '/reader/search?q=gaza&offset=-1',
+      '/reader/search?q=gaza&offset=100001', '/reader/search?q=gaza&offset=99999999999999999999',
     ]) {
       const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       expect(res.status, path).toBe(400);

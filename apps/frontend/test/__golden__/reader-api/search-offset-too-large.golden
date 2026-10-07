@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/search?q=gaza&offset=99999999999999999999",
+  "statusCode": 400,
+  "statusMessage": "Invalid query parameters",
+  "message": "Invalid query parameters"
+}

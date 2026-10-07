@@ -107,6 +107,12 @@ export class StoryLedger<W extends { idx: number } = { idx: number }> {
       .filter((x): x is number => typeof x === 'number');
   }
 
+  /** 选中下标（块的 idx）→ 该故事的 brief_stories 主键；简报块落库按它记所属故事。取不到返回 undefined。 */
+  rowIdOfSelected(idx: number): number | undefined {
+    const storyId = this.selectedStoryIds()[idx];
+    return storyId === undefined ? undefined : this.need(this.rowIds, '行 id')[storyId];
+  }
+
   /**
    * assignTiers 的输入。篇数取 story.articleIds.length（写作前拿不到 R2 真取到正文的篇数），
    * 源数钳到 [1, 篇数]。

@@ -4,7 +4,8 @@
  */
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import { $brief_runs, $reports, eq } from '@meridian/database';
+import type { BriefBlockDraft } from '@meridian/contracts';
+import { $brief_blocks, $brief_runs, $brief_stories, $reports, eq, sql } from '@meridian/database';
 import { getDb } from '../../src/lib/database';
 import { saveBriefReport } from '../../src/lib/save-brief-report';
 
@@ -17,13 +18,35 @@ let n = 0;
 const uniq = (p: string) => `${p}-${Date.now()}-${n++}`;
 const report = (title: string) => ({ title, content: 'body', usedArticles: 3, usedSources: 2, tldr_prose: null });
 
+
+/** 给本期 run 插 n 个故事，返回它们的 brief_stories.id */
+async function stories(wf: string, n: number): Promise<number[]> {
+  const rows = await db
+    .insert($brief_stories)
+    .values(Array.from({ length: n }, (_, i) => ({ workflow_id: wf, cluster_id: i })))
+    .returning({ id: $brief_stories.id });
+  return rows.map((r) => r.id);
+}
+const blocksOf = (reportId: number) =>
+  db
+    .select({
+      storyId: $brief_blocks.story_id,
+      tier: $brief_blocks.tier,
+      position: $brief_blocks.position,
+      title: $brief_blocks.title,
+      body: $brief_blocks.body,
+    })
+    .from($brief_blocks)
+    .where(eq($brief_blocks.report_id, reportId))
+    .orderBy($brief_blocks.position);
+
 describe('saveBriefReport', () => {
   it('插入 reports 并把 id 写进本期 brief_runs.report_id', async () => {
     const wf = uniq('wf-save');
     await db.insert($brief_runs).values({ workflow_id: wf });
     const title = uniq('brief');
 
-    const id = await saveBriefReport(db, wf, report(title));
+    const id = await saveBriefReport(db, wf, report(title), []);
 
     const [run] = await db.select().from($brief_runs).where(eq($brief_runs.workflow_id, wf));
     expect(run.report_id).toBe(id);
@@ -35,7 +58,7 @@ describe('saveBriefReport', () => {
     const wf = uniq('wf-cron');
     await db.insert($brief_runs).values({ workflow_id: wf, params: { triggeredBy: 'cron' } });
 
-    const id = await saveBriefReport(db, wf, report(uniq('cron')));
+    const id = await saveBriefReport(db, wf, report(uniq('cron')), []);
 
     const [row] = await db.select().from($reports).where(eq($reports.id, id));
     expect(row.published_at).toBeInstanceOf(Date);
@@ -46,7 +69,7 @@ describe('saveBriefReport', () => {
       const wf = uniq('wf-manual');
       await db.insert($brief_runs).values({ workflow_id: wf, params });
 
-      const id = await saveBriefReport(db, wf, report(uniq('manual')));
+      const id = await saveBriefReport(db, wf, report(uniq('manual')), []);
 
       const [row] = await db.select().from($reports).where(eq($reports.id, id));
       expect(row.published_at, JSON.stringify(params)).toBeNull();
@@ -57,7 +80,7 @@ describe('saveBriefReport', () => {
     const wf = uniq('wf-missing'); // 不插 brief_runs 行：关联必然命中 0 行
     const title = uniq('orphan');
 
-    await expect(saveBriefReport(db, wf, report(title))).rejects.toThrow();
+    await expect(saveBriefReport(db, wf, report(title), [])).rejects.toThrow();
 
     const rows = await db.select().from($reports).where(eq($reports.title, title));
     expect(rows).toEqual([]);
@@ -68,11 +91,75 @@ describe('saveBriefReport', () => {
     await db.insert($brief_runs).values({ workflow_id: wf });
     const title = uniq('retry');
 
-    const first = await saveBriefReport(db, wf, report(title));
-    const second = await saveBriefReport(db, wf, report(title));
+    const first = await saveBriefReport(db, wf, report(title), []);
+    const second = await saveBriefReport(db, wf, report(title), []);
 
     expect(second).toBe(first);
     const rows = await db.select().from($reports).where(eq($reports.title, title));
     expect(rows.map((r) => r.id)).toEqual([first]);
+  });
+
+  it('简报块与这一期一起落库', async () => {
+    const wf = uniq('wf-blocks');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const [a, b] = await stories(wf, 2);
+    const blocks: BriefBlockDraft[] = [
+      { storyId: a, tier: 'lead', position: 0, title: 'Ceasefire talks resume', body: 'Negotiators met in Doha on Tuesday.' },
+      { storyId: b, tier: 'brief', position: 1, title: 'Rates held', body: 'The central bank kept rates unchanged.' },
+    ];
+
+    const id = await saveBriefReport(db, wf, report(uniq('blocks')), blocks);
+
+    expect(await blocksOf(id)).toEqual(blocks);
+  });
+
+  it('step 在事务提交后重试：块不重复写', async () => {
+    const wf = uniq('wf-blocks-retry');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const [a] = await stories(wf, 1);
+    const blocks: BriefBlockDraft[] = [{ storyId: a, tier: 'lead', position: 0, title: 'T', body: 'B.' }];
+    const values = report(uniq('blocks-retry'));
+
+    const first = await saveBriefReport(db, wf, values, blocks);
+    const second = await saveBriefReport(db, wf, values, blocks);
+
+    expect(second).toBe(first);
+    expect(await blocksOf(first)).toEqual(blocks);
+  });
+
+  it('块写不进去时这一期一并回滚，不留下没有块的一期', async () => {
+    const wf = uniq('wf-blocks-fail');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const title = uniq('blocks-fail');
+    const missingStory = 2_000_000_000; // 没有这个故事：外键拒绝
+
+    await expect(
+      saveBriefReport(db, wf, report(title), [{ storyId: missingStory, tier: 'lead', position: 0, title: 'T', body: 'B.' }])
+    ).rejects.toThrow();
+
+    expect(await db.select().from($reports).where(eq($reports.title, title))).toEqual([]);
+    const [run] = await db.select().from($brief_runs).where(eq($brief_runs.workflow_id, wf));
+    expect(run.report_id).toBeNull();
+  });
+
+  it('块的标题与正文可按英文全文检索，词形不同也命中', async () => {
+    const wf = uniq('wf-blocks-search');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const [a, b] = await stories(wf, 2);
+    const id = await saveBriefReport(db, wf, report(uniq('blocks-search')), [
+      { storyId: a, tier: 'lead', position: 0, title: 'Ceasefire talks resume', body: 'Negotiators met in Doha on Tuesday.' },
+      { storyId: b, tier: 'more', position: 1, title: 'Rates held', body: 'The central bank kept rates unchanged.' },
+    ]);
+
+    const hits = (q: string) =>
+      db
+        .select({ position: $brief_blocks.position })
+        .from($brief_blocks)
+        .where(sql`${$brief_blocks.report_id} = ${id} and ${$brief_blocks.search} @@ websearch_to_tsquery('english', ${q})`);
+
+    expect(await hits('negotiator')).toEqual([{ position: 0 }]); // 正文，单复数
+    expect(await hits('resuming')).toEqual([{ position: 0 }]); // 标题，词形
+    expect(await hits('banks')).toEqual([{ position: 1 }]);
+    expect(await hits('earthquake')).toEqual([]);
   });
 });

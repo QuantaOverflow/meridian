@@ -1,6 +1,20 @@
-import { boolean, index, integer, jsonb, pgEnum, pgTable, real, serial, text, timestamp, vector } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  real,
+  serial,
+  text,
+  timestamp,
+  unique,
+  vector,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { EMBEDDING_DIM, type RunOpsSummary } from '@meridian/contracts';
+import { EMBEDDING_DIM, type BriefTier, type RunOpsSummary } from '@meridian/contracts';
 
 /**
  * Note: We use $ to denote the table objects
@@ -202,3 +216,42 @@ export const $brief_stories = pgTable(
   ]
 );
 
+
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
+
+// 简报块：每个写出来的块一行（为什么另存一张表而不是每次从 reports.content 里切，见 ADR 0014）。
+// 保存简报时与 reports 行同事务写入（backend lib/save-brief-report.ts）；往期由 apps/backend/scripts/backfill-brief-blocks.ts 回填。
+// 对读者可见与否跟所属那一期走（reports.published_at），靠 join 判，这里不另存状态。
+export const $brief_blocks = pgTable(
+  'brief_blocks',
+  {
+    id: serial('id').primaryKey(),
+    report_id: integer('report_id')
+      .notNull()
+      .references(() => $reports.id, { onDelete: 'cascade' }),
+    // 一个故事至多一块
+    story_id: integer('story_id')
+      .notNull()
+      .references(() => $brief_stories.id)
+      .unique(),
+    tier: text('tier').$type<BriefTier>().notNull(),
+    // 期内第几块（0 起，只数写出来的块），阅读页锚点 story-{position + 1}
+    position: integer('position').notNull(),
+    // 与读者页上那一块一致：标题是写作层起的（不是 brief_stories.title），正文是 reports.content 里那一段
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    // 全文检索（英文）：标题权重 A、正文权重 B。生成列，写入方不管它
+    search: tsvector('search')
+      .notNull()
+      .generatedAlwaysAs(
+        sql`setweight(to_tsvector('english', "title"), 'A') || setweight(to_tsvector('english', "body"), 'B')`
+      ),
+    created_at: timestamp('created_at', { mode: 'date' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  table => [
+    unique('brief_blocks_report_position_unique').on(table.report_id, table.position),
+    index('brief_blocks_search_idx').using('gin', table.search),
+  ]
+);

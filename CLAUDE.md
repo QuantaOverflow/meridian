@@ -54,6 +54,7 @@
 
 ## 何时读哪份 docs
 - 开发功能、选流程（matt skills、wayfinder）→ `docs/agents/dev-workflow.md`
+- 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ `docs/agents/lights-off.md`（完成标准、开跑前要问清的、按活的形状选工具）
 - 开工前查旧尝试、一轮 spike / goal 结束做蒸馏 → `docs/agents/knowledge-distillation.md`
 - 新增任何文件前（放哪、入不入 git）→ `docs/agents/file-placement.md`
 - 链路总览、部署、观测/排错 → 根 `README.md` 的 How It Works / Deployment / Monitoring 三节

@@ -54,3 +54,23 @@ BRIEF_CHECK_MODE = "one_call"
 # key 与网关 token 是 secret（DASHSCOPE_API_KEY / AI_GATEWAY_TOKEN），不写在这里。
 DASHSCOPE_BASE_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/meridian-gateway/custom-dashscope/compatible-mode/v1"
 
+# ---------- Staging 环境（ADR 0013）----------
+# `../../scripts/deploy.sh --env staging` 部署成 meridian-ai-worker-staging。binding 与 vars 不从顶层继承，每一项都要自己写；
+# workers_dev、observability、compatibility_* 从顶层继承。把生产的资源名抄进来由 scripts/check-staging-isolation.mjs 拦。
+# secret 要单独放一遍：wrangler secret put DASHSCOPE_API_KEY --env staging（AI_GATEWAY_TOKEN 同）。
+
+[env.staging.ai]
+binding = "AI"
+
+[env.staging.version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[[env.staging.r2_buckets]]
+binding = "ARTICLES_BUCKET"
+bucket_name = "meridian-articles-staging"
+
+[env.staging.vars]
+BRIEF_CHECK_EPOCHS = "1"
+BRIEF_CHECK_MODE = "one_call"
+# staging 走 meridian-ai 网关（本机开发用的那个），不进生产的 meridian-gateway，生产的日志与用量不被搅进来
+DASHSCOPE_BASE_URL = "https://gateway.ai.cloudflare.com/v1/c8317cfcb330d45b37b00ccd7e8a9936/meridian-ai/custom-dashscope/compatible-mode/v1"

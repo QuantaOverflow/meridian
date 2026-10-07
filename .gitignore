@@ -226,3 +226,7 @@ eval/*/prototypes/
 
 # scripts/deploy.sh 给 ml-service 生成的临时配置（image_vars 换成真值），跑完即删
 wrangler.deploy.jsonc
+
+# Staging 环境（ADR 0013）：本机的 staging 密钥与 Staging 判定记录，模板是 .staging.env.example
+.staging.env
+.staging-verdicts.jsonl

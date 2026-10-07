@@ -7,6 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
+import type { CountryBlocksPage, CountrySection } from '@meridian/contracts';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
@@ -40,6 +41,13 @@ const CASES: Record<string, string> = {
   'brief-404': '/reader/briefs/999',
   // 地图首页的数据；边界情况在 reader-map.spec.ts
   'brief-8-map': '/reader/briefs/8/map',
+  // 国家页：两节各自分页；JP 是表里有、但没有任何块的国家
+  'country-il-placement': '/reader/countries/IL/blocks?section=placement&limit=20&offset=0',
+  'country-il-placement-page': '/reader/countries/IL/blocks?section=placement&limit=1&offset=1',
+  'country-il-mention': '/reader/countries/IL/blocks?section=mention&limit=20&offset=0',
+  'country-jp-empty': '/reader/countries/JP/blocks?section=placement&limit=20&offset=0',
+  'country-jp-mention-empty': '/reader/countries/JP/blocks?section=mention&limit=20&offset=0',
+  'country-404': '/reader/countries/QQ/blocks?section=placement&limit=20&offset=0',
   'stories-list': '/reader/stories',
   'story-1-streak': '/reader/stories/1',
   'story-2-importance': '/reader/stories/2',
@@ -95,14 +103,41 @@ describe('边界', () => {
     }
   });
 
+  it('国家页：未发布的期的块不出现（第 9 期那块落点在以色列）；每块的落点或涉及确实含该国', async () => {
+    const get = async (section: CountrySection) => {
+      const res = await exports.default.fetch(`http://backend/reader/countries/IL/blocks?section=${section}`, {
+        headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+      });
+      expect(res.status).toBe(200);
+      return (await res.json()) as CountryBlocksPage;
+    };
+    const [placed, mentioned] = [await get('placement'), await get('mention')];
+
+    expect(placed.items.map(b => [b.brief.id, b.storyId])).toEqual([[8, 15], [7, 13], [6, 12]]);
+    expect(placed.total).toBe(3);
+    expect(placed.items.every(b => b.countries.placement === 'IL')).toBe(true);
+    expect(mentioned.items.map(b => [b.brief.id, b.storyId, b.countries])).toEqual([[7, 14, { placement: null, mentions: ['IL', 'IR'] }]]);
+    expect(mentioned.total).toBe(1);
+  });
+
+  it('国家页：代码不分大小写；缺 section 默认是落点那一节', async () => {
+    const res = await exports.default.fetch('http://backend/reader/countries/il/blocks', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+    expect(res.status).toBe(200);
+    const page = (await res.json()) as CountryBlocksPage;
+    expect([page.country, page.section, page.total]).toEqual(['IL', 'placement', 3]);
+  });
+
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });
 
   it('参数不合法：400', async () => {
-    for (const path of ['/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/briefs/abc/map', '/reader/stories/1.5', '/admin/sources/abc/details']) {
+    for (const path of [
+      '/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/briefs/abc/map', '/reader/stories/1.5', '/admin/sources/abc/details',
+      '/reader/countries/ISR/blocks', '/reader/countries/IL/blocks?section=both', '/reader/countries/IL/blocks?limit=51',
+    ]) {
       const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       expect(res.status, path).toBe(400);
     }

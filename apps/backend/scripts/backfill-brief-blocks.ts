@@ -8,7 +8,9 @@
  *
  * 范围：--since（默认 2026-09-01）起已发布的期。整期回填或整期跳过，下面任一条不满足就跳过并报原因：
  *   这期有 run；有 brief-v3 记录；每个写出来的块都对得上恰好一个故事；每块都有正文；每块的标题与正文都出现在 reports.content 里。
- * 可重跑、幂等：每期在一个事务里先删后写。没有记录的期不动（它已有的块是保存时写的）。
+ * 可重跑、幂等：每期在一个事务里先删后写。跳过的期不删不写（它已有的块是保存时写的）。
+ *
+ * 块上的落点国家与涉及国家（国家页按它查）在写块时按成员文章算，所以重跑即刷新；跳过的期已有的块只重算这两列。
  *
  * 默认只读（dry-run），加 --write 才写库。R2 只读（只 GET 上面那个前缀）。
  * 目标库只认本机与 staging（主机名与 STAGING_DATABASE_URL 相同；取自环境变量或仓库根 .staging.env），
@@ -30,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { briefV3RecordKey, type BriefV3Record, type BriefV3WrittenBlock } from '@meridian/contracts';
 import { $brief_blocks, eq, getDb, sql } from '@meridian/database';
 import { briefBlockDrafts } from '../src/lib/core/brief-v3';
+import { loadBlockCountries } from '../src/lib/reader/story-countries';
 import { insertBriefBlocks } from '../src/lib/save-brief-report';
 
 const args = process.argv.slice(2);
@@ -122,6 +125,25 @@ function storyOf(block: BriefV3WrittenBlock, stories: Story[]): number | null {
   return candidates.length === 1 ? candidates[0].id : null;
 }
 
+/** 跳过的期：已有的块（保存时写的）只重算落点国家与涉及国家，返回块数 */
+async function refreshCountries(db: ReturnType<typeof getDb>, reportId: number): Promise<number> {
+  const blocks = await db
+    .select({ id: $brief_blocks.id, storyId: $brief_blocks.story_id })
+    .from($brief_blocks)
+    .where(eq($brief_blocks.report_id, reportId));
+  const countries = await loadBlockCountries(db, blocks.map(b => b.storyId));
+  await db.transaction(async tx => {
+    for (const b of blocks) {
+      const c = countries.get(b.storyId);
+      await tx
+        .update($brief_blocks)
+        .set({ placement_country: c?.placement ?? null, mention_countries: c?.mentions ?? [] })
+        .where(eq($brief_blocks.id, b.id));
+    }
+  });
+  return blocks.length;
+}
+
 async function main() {
   const db = getDb(DATABASE_URL!);
   try {
@@ -144,17 +166,18 @@ async function main() {
     let blocksTotal = 0;
     for (const p of periods) {
       const label = `report ${p.id}（${p.day}）`;
-      const skip = (reason: string) => {
+      const skip = async (reason: string) => {
+        const refreshed = write ? await refreshCountries(db, p.id) : 0;
         skipped.push(`${label}：${reason}`);
-        console.log(`${label}  跳过：${reason}`);
+        console.log(`${label}  跳过：${reason}${refreshed > 0 ? ` · 已有的 ${refreshed} 块重算了国家` : ''}`);
       };
       if (p.workflow_id === null) {
-        skip('没有 run 指向这一期');
+        await skip('没有 run 指向这一期');
         continue;
       }
       const record = await readRecord(p.workflow_id);
       if (record === null) {
-        skip(`没有 brief-v3 记录（${p.workflow_id}）`);
+        await skip(`没有 brief-v3 记录（${p.workflow_id}）`);
         continue;
       }
       const written = record.blocks.filter((b): b is BriefV3WrittenBlock => b?.ok === true);
@@ -166,17 +189,17 @@ async function main() {
       const matched = written.map(b => ({ storyId: storyOf(b, stories), title: b.title, text: b.text, tier: b.tier }));
       const unmatched = matched.filter(b => b.storyId === null).length;
       if (unmatched > 0 || new Set(matched.map(b => b.storyId)).size !== matched.length) {
-        skip(`块与故事对不上（写出 ${written.length} 块，${unmatched} 块找不到唯一的故事）`);
+        await skip(`块与故事对不上（写出 ${written.length} 块，${unmatched} 块找不到唯一的故事）`);
         continue;
       }
       const drafts = briefBlockDrafts(matched);
       if (drafts.length !== written.length) {
-        skip(`${written.length - drafts.length} 块没有正文`);
+        await skip(`${written.length - drafts.length} 块没有正文`);
         continue;
       }
       const notInContent = drafts.filter(d => !p.content.includes(d.body) || !p.content.includes(`**${d.title}**`));
       if (notInContent.length > 0) {
-        skip(`${notInContent.length} 块的标题或正文不在这一期的正文里（记录与成稿不一致），第一块：「${notInContent[0].title}」`);
+        await skip(`${notInContent.length} 块的标题或正文不在这一期的正文里（记录与成稿不一致），第一块：「${notInContent[0].title}」`);
         continue;
       }
 

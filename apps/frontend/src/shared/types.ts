@@ -1,3 +1,4 @@
+import type { BriefTier, CountrySection } from '@meridian/contracts';
 import type { BriefSection } from '~/server/lib/briefContent';
 import type { BriefSource } from '~/server/lib/backend';
 
@@ -43,6 +44,34 @@ export interface BriefListResponse {
   total: number;
   /** 最早一期的日期，用于副标题「覆盖 X 至今」 */
   earliestDateLabel: string | null;
+}
+
+/** 国家页上的一块，由 /api/countries/:code/blocks 返回 */
+interface CountryBlockItem {
+  /** brief_blocks.id */
+  id: number;
+  title: string;
+  bodyHtml: string;
+  tier: BriefTier;
+  briefNumber: number;
+  /** "August 25, 2026" */
+  dateLabel: string;
+  /** 阅读页上这一块的地址，如 `/briefs/8#story-1` */
+  href: string;
+  /** 落点国家的英文名；跨地区或没有国家的故事为 null */
+  placedIn: string | null;
+  /** 这一块还涉及的其他国家（英文名），不含本页的国家 */
+  alsoInvolves: string[];
+}
+
+/** 国家页的一节：落点在该国的块（placement）或涉及该国的块（mention） */
+export interface CountryBlocksResponse {
+  country: string;
+  name: string;
+  section: CountrySection;
+  /** 这一节的总块数，与分页无关 */
+  total: number;
+  items: CountryBlockItem[];
 }
 
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */

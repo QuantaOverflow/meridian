@@ -4,11 +4,12 @@ import { zValidator } from '@hono/zod-validator';
 import { getDb } from '../lib/database';
 import { listBriefs, loadBrief } from '../lib/reader/briefs';
 import { loadBriefMap } from '../lib/reader/brief-map';
+import { countryCode, listCountryBlocks } from '../lib/reader/country-blocks';
 import { getStoryThread, listStoryThreads } from '../lib/reader/story-threads';
 import type { Env } from '../index';
 
 /**
- * 读者端（前端 /api/briefs*、/api/stories*）的数据。只出领域数据，展示（markdown 渲染、中文日期、
+ * 读者端（前端 /api/briefs*、/api/countries*、/api/stories*）的数据。只出领域数据，展示（markdown 渲染、中文日期、
  * 「N 天前更新」文案）在前端 server 路由里做。鉴权在 app.ts 的挂载处。
  */
 const app = new Hono<{ Bindings: Env }>();
@@ -44,6 +45,26 @@ app.get('/briefs/:id/map', zValidator('param', idParamSchema), async c => {
   if (map === null) return c.json({ error: 'Report not found' }, 404);
   return c.json(map);
 });
+
+const countryParamSchema = z.object({ code: z.string().regex(/^[A-Za-z]{2}$/) });
+const countryBlocksQuerySchema = z.object({
+  section: z.enum(['placement', 'mention']).default('placement'),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+// 国家页的一节（形状见 @meridian/contracts 的 CountryBlocksPage）：落点在该国的块或涉及该国的块，跨所有已发布的期。
+// 代码不在地点归一表里回 404；表里有、只是没有块的国家回空列表
+app.get(
+  '/countries/:code/blocks',
+  zValidator('param', countryParamSchema),
+  zValidator('query', countryBlocksQuerySchema),
+  async c => {
+    const country = countryCode(c.req.valid('param').code);
+    if (country === null) return c.json({ error: 'Country not found' }, 404);
+    return c.json(await listCountryBlocks(getDb(c.env.HYPERDRIVE), { country, ...c.req.valid('query') }));
+  }
+);
 
 app.get('/stories', async c => {
   return c.json(await listStoryThreads(getDb(c.env.HYPERDRIVE)));

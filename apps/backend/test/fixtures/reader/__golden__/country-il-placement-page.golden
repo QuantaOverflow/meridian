@@ -1,0 +1,2 @@
+{"status":200,"path":"/reader/countries/IL/blocks?section=placement&limit=1&offset=1"}
+{"country":"IL","section":"placement","total":3,"items":[{"id":2,"brief":{"id":7,"createdAt":"{D-1}T12:00:00.000Z"},"storyId":13,"tier":"lead","position":0,"title":"hostage deal","body":"A deal was reached.","countries":{"placement":"IL","mentions":[]}}]}

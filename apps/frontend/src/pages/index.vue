@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { place, type BriefMap, type BriefMapCountryCoverage, type BriefTier, type MapTopic } from '@meridian/contracts';
-import { TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, linkEnds } from '~/lib/briefMap';
+import { COUNTRIES, TOPIC_NAMES, countTopics, countryName, countrySummary, formatTopicCounts, leadSentences, linkEnds } from '~/lib/briefMap';
 import type { GlobeDot, GlobeLink, GlobeTip } from '~/lib/globeScene';
 import type { BriefDetail } from '~/shared/types';
 
@@ -95,7 +95,10 @@ const restAnchor = computed(() => {
 const topicTags = computed(() => countTopics(events.value).map(([key, count]) => ({ key, name: TOPIC_NAMES[key], count })));
 
 // ── 交互状态 ────────────────────────────────────────────────
-const locked = ref<string | null>(null);
+// 带 ?country=IL 打开时直接锁定那个国家（国家页的「在今天的地图上看」从这里回来）；不认得的代码当没带
+const route = useRoute();
+const initialCountry = typeof route.query.country === 'string' ? route.query.country.toUpperCase() : '';
+const locked = ref<string | null>(initialCountry in COUNTRIES ? initialCountry : null);
 const hovered = ref<string | null>(null);
 const topic = ref<MapTopic | null>(null);
 const showHeat = ref(true);
@@ -242,6 +245,7 @@ const lockedView = computed(() => {
               <button type="button" class="linkish" @click="locked = null">Back to all of today</button>
             </div>
             <div class="p-sub">{{ lockedView.summary }}</div>
+            <NuxtLink class="country-link" :to="`/countries/${locked}`">All coverage of {{ lockedView.name }} →</NuxtLink>
           </div>
           <div v-for="group in [
             { list: lockedView.main, title: 'In today’s brief', note: null },
@@ -389,6 +393,8 @@ const lockedView = computed(() => {
 .p-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .p-title h2 { font: 600 18px/1.2 var(--mono); letter-spacing: 0.12em; color: var(--lock); margin: 2px 0 0; }
 .p-sub { color: var(--ink2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.country-link { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--accent); }
+.country-link:hover { text-decoration: underline; }
 .linkish { background: none; border: 0; padding: 0; color: var(--ink3); cursor: pointer; font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 
 .chips { display: flex; gap: 6px; }

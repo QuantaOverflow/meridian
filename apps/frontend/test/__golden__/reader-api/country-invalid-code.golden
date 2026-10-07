@@ -1,0 +1,8 @@
+{"status":400,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/countries/ISR/blocks",
+  "statusCode": 400,
+  "statusMessage": "Invalid country code",
+  "message": "Invalid country code"
+}

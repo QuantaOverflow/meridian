@@ -98,7 +98,7 @@ const ALIAS: Record<string, string | null> = {
 /**
  * 归一可能产出的全部国家代码。前端的展示表（apps/frontend/src/lib/briefMap.ts）必须每个都有，
  * 否则该国上不了地球；由前端测试 test/place-tables.test.ts 对照，补表时两边一起补。
- * @internal
+ * 国家页（country-blocks.ts）也按它判一个代码是不是认得的国家。
  */
 export const PLACE_CODES: ReadonlySet<string> = new Set([
   ...CODES,

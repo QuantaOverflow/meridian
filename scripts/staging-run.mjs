@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// 跑一次 Staging 运行（ADR 0013）：reset Neon 分支 → migrate → 触发 → 轮询到终态 → 判定 → 记录 → 打印地址。
+// 跑一次 Staging 运行（ADR 0013）：reset Neon 分支 → migrate → 拷正文 → 触发 → 轮询到终态 → 判定 → 记录 → 打印地址。
+// 拷正文：简报 workflow 严格从 R2 取文章正文，而 staging 的 bucket 是自己的一份；重置后把近两天文章的正文
+// 从生产 bucket 拷到 staging bucket（经 Cloudflare REST，只读生产、只写 staging；已有的跳过）。要本机有 psql。
 // 零依赖。配置读仓库根 .staging.env（KEY=VALUE），同名环境变量优先；模板见 .staging.env.example。
 //
 // 用法：node scripts/staging-run.mjs [--no-reset] [--poll-interval-ms 30000] [--timeout-min 60]
@@ -11,7 +13,15 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const KEYS = ['STAGING_BACKEND_URL', 'STAGING_API_TOKEN', 'STAGING_DATABASE_URL', 'STAGING_READER_URL', 'NEON_PROJECT_ID'];
+const KEYS = [
+  'STAGING_BACKEND_URL', 'STAGING_API_TOKEN', 'STAGING_DATABASE_URL', 'STAGING_READER_URL', 'NEON_PROJECT_ID',
+  'CF_ACCOUNT_ID', 'CF_R2_API_TOKEN',
+];
+const PROD_BUCKET = 'meridian-articles-prod';
+const STAGING_BUCKET = 'meridian-articles-staging';
+// cron 的窗口是 1 天（CRON_BRIEF_PARAMS.TIME_RANGE_DAYS）；多拷一天，窗口以后放宽到 2 天也够
+const BODY_COPY_DAYS = 2;
+const BODY_COPY_CONCURRENCY = 16;
 
 function die(code, msg) {
   console.error(msg);
@@ -78,12 +88,82 @@ async function call(method, urlPath) {
   }
 }
 
+async function r2(method, bucket, suffix, body) {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${cfg.CF_ACCOUNT_ID}/r2/buckets/${bucket}/objects${suffix}`;
+  const init = { method, headers: { Authorization: `Bearer ${cfg.CF_R2_API_TOKEN}` }, body };
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok || res.status === 404 || attempt === 3) return res;
+    } catch (e) {
+      if (attempt === 3) throw e;
+    }
+  }
+}
+
+async function listKeys(bucket, prefix) {
+  const keys = new Set();
+  let cursor = '';
+  do {
+    const res = await r2('GET', bucket, `?per_page=1000&prefix=${encodeURIComponent(prefix)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+    if (!res.ok) die(1, `列 ${bucket} 的对象失败：HTTP ${res.status}`);
+    const json = await res.json();
+    for (const o of json.result ?? []) keys.add(o.key);
+    cursor = json.result_info?.is_truncated ? json.result_info.cursor : '';
+  } while (cursor);
+  return keys;
+}
+
+async function copyBodies() {
+  const q = spawnSync(
+    'psql',
+    [cfg.STAGING_DATABASE_URL, '-At', '-c',
+      `select content_file_key from articles where content_file_key is not null and status = 'PROCESSED' and publish_date >= now() - interval '${BODY_COPY_DAYS} days'`],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+  );
+  if (q.status !== 0) die(1, `查要拷的正文清单失败（psql 退出码 ${q.status ?? q.error?.message}）`);
+  const wanted = q.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // 正文的 key 是 年/月/日/id.txt：按日前缀列 staging 已有的，只拷缺的
+  const prefixes = [...new Set(wanted.map((k) => k.slice(0, k.lastIndexOf('/') + 1)))];
+  const have = new Set();
+  for (const p of prefixes) for (const k of await listKeys(STAGING_BUCKET, p)) have.add(k);
+  const todo = wanted.filter((k) => !have.has(k));
+
+  let missingInProd = 0;
+  const failed = [];
+  let next = 0;
+  await Promise.all(Array.from({ length: BODY_COPY_CONCURRENCY }, async () => {
+    while (next < todo.length) {
+      const key = todo[next++];
+      const path = '/' + encodeURIComponent(key);
+      try {
+        const got = await r2('GET', PROD_BUCKET, path);
+        if (got.status === 404) { missingInProd++; continue; }
+        if (!got.ok) { failed.push(`${key}（读 ${got.status}）`); continue; }
+        const put = await r2('PUT', STAGING_BUCKET, path, await got.arrayBuffer());
+        if (!put.ok) failed.push(`${key}（写 ${put.status}）`);
+      } catch (e) {
+        failed.push(`${key}（${e.message}）`);
+      }
+    }
+  }));
+  console.log(`正文：窗口内 ${wanted.length}，已有 ${wanted.length - todo.length}，拷了 ${todo.length - missingInProd - failed.length}，生产也没有 ${missingInProd}，失败 ${failed.length}`);
+  if (failed.length) die(1, `拷正文失败 ${failed.length} 个，前几个：${failed.slice(0, 5).join('; ')}`);
+}
+
 // ① ② 刷新数据并迁移
 if (opts.reset) {
   console.log('[1/7] neonctl branches reset staging --parent');
   run('neonctl', ['branches', 'reset', 'staging', '--parent', '--project-id', cfg.NEON_PROJECT_ID]);
   console.log('[2/7] migrate');
   run('pnpm', ['-F', '@meridian/database', 'migrate'], { DATABASE_URL: cfg.STAGING_DATABASE_URL });
+}
+
+// 拷正文（跟着 reset 走：--no-reset 时数据没变，不用再拷）
+if (opts.reset) {
+  console.log('[2b] 拷正文 生产 bucket → staging bucket');
+  await copyBodies();
 }
 
 // ③ 触发

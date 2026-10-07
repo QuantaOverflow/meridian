@@ -11,6 +11,7 @@ import {
   handleDatabaseError,
   validateDateRange
 } from '../lib/api/utils';
+import { runDailyBriefCron } from '../lib/scheduled/daily-brief';
 import { Logger } from '../lib/core/logger';
 import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../lib/core/constants';
 import type { Env } from '../index';
@@ -165,6 +166,18 @@ app.post('/briefs/generate', zValidator('json', briefGenerateSchema), async (c) 
     );
     return c.json(createErrorResponse(errorMsg), statusCode as any);
   }
+});
+
+// Staging 运行的触发入口：调 cron 用的同一个函数（同样的 id 前缀、并发保护、发布规则）。
+// 只在 staging 存在；生产上回 404，所以生产没有「手动触发却被算成生产运行」的入口。
+app.post('/briefs/run-scheduled', async (c) => {
+  if (c.env.ENVIRONMENT !== 'staging') return c.notFound();
+  const result = await runDailyBriefCron(c.env);
+  if (result.triggered) return c.json(createSuccessResponse({ workflowId: result.workflowId }), 202 as any);
+  if (result.reason === 'in-flight') {
+    return c.json({ ...createErrorResponse('已有简报运行在飞'), blockingWorkflowId: result.blockingWorkflowId }, 409);
+  }
+  return c.json(createErrorResponse(result.error), 500 as any);
 });
 
 // ========== 工作流手动触发 ==========

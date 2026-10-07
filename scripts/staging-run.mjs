@@ -21,7 +21,8 @@ const PROD_BUCKET = 'meridian-articles-prod';
 const STAGING_BUCKET = 'meridian-articles-staging';
 // cron 的窗口是 1 天（CRON_BRIEF_PARAMS.TIME_RANGE_DAYS）；多拷一天，窗口以后放宽到 2 天也够
 const BODY_COPY_DAYS = 2;
-const BODY_COPY_CONCURRENCY = 16;
+const BODY_COPY_CONCURRENCY = 4;
+const R2_MAX_ATTEMPTS = 20;
 
 function die(code, msg) {
   console.error(msg);
@@ -88,16 +89,22 @@ async function call(method, urlPath) {
   }
 }
 
+// Cloudflare REST 对每个账户限速（约 1200 次 / 5 分钟），一篇正文读写各一次：被限速（429）就按 retry-after 等了再试，
+// 所以头一次拷一两千篇会花几分钟；之后每次只拷新增的
 async function r2(method, bucket, suffix, body) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${cfg.CF_ACCOUNT_ID}/r2/buckets/${bucket}/objects${suffix}`;
   const init = { method, headers: { Authorization: `Bearer ${cfg.CF_R2_API_TOKEN}` }, body };
   for (let attempt = 1; ; attempt++) {
+    let res;
     try {
-      const res = await fetch(url, init);
-      if (res.ok || res.status === 404 || attempt === 3) return res;
+      res = await fetch(url, init);
     } catch (e) {
-      if (attempt === 3) throw e;
+      if (attempt >= R2_MAX_ATTEMPTS) throw e;
     }
+    if (res && (res.ok || res.status === 404 || attempt >= R2_MAX_ATTEMPTS)) return res;
+    const retryAfter = Number(res?.headers.get('retry-after'));
+    const waitMs = res?.status === 429 ? (retryAfter > 0 ? retryAfter * 1000 : 30_000) : 2_000;
+    await new Promise((r) => setTimeout(r, waitMs));
   }
 }
 

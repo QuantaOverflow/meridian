@@ -19,6 +19,8 @@
   "vars": {
     "CF_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
     "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
+    // 跑在哪个环境："production"（顶层）或 "staging"（env.staging）。两边取值由 scripts/check-staging-isolation.mjs 断言
+    "ENVIRONMENT": "production",
   },
   "migrations": [
     {
@@ -141,5 +143,59 @@
       "binding": "ML_SERVICE",
       "service": "meridian-ml-service"
     }
-  ]
+  ],
+  /**
+   * Staging 环境（ADR 0013）：`../../scripts/deploy.sh --env staging` 部署成 meridian-backend-staging。
+   * binding 与 vars 不从顶层继承，这里每一项都要自己写；漏写是 undefined 报错，不会落到生产。
+   * 会漏到生产的只有把生产的资源名 / id 抄进来——scripts/check-staging-isolation.mjs 拦这个
+   * （唯一的白名单是 ML_SERVICE：ml-service 不存数据，staging 共用生产那份）。
+   * observability、placement、migrations、compatibility_* 从顶层继承；secrets 不继承。
+   */
+  "env": {
+    "staging": {
+      // secret 要单独放一遍：wrangler secret put API_TOKEN --env staging（值与生产不同）
+      "secrets": { "required": ["API_TOKEN", "CF_ANALYTICS_TOKEN"] },
+      "vars": {
+        "CF_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
+        "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
+        "ENVIRONMENT": "staging",
+      },
+      // staging 不定时触发：只由 scripts/staging-run.sh（或手动运行入口）起
+      "triggers": { "crons": [] },
+      "durable_objects": {
+        "bindings": [{ "class_name": "SourceScraperDO", "name": "SOURCE_SCRAPER" }],
+      },
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          // meridian-staging → Neon 分支 staging（每次 Staging 运行前 reset 到 production）
+          "id": "c2de49c847a54a6b8d390411f6359173",
+          "localConnectionString": "postgresql://shiwenjie:dev@localhost:5432/meridian_local",
+        },
+      ],
+      "queues": {
+        "producers": [{ "queue": "meridian-article-processing-queue-staging", "binding": "ARTICLE_PROCESSING_QUEUE" }],
+        "consumers": [
+          {
+            "queue": "meridian-article-processing-queue-staging",
+            "max_batch_size": 100,
+            "max_batch_timeout": 30,
+            "max_retries": 5,
+            "dead_letter_queue": "meridian-article-processing-dlq-staging",
+          },
+        ],
+      },
+      "r2_buckets": [{ "binding": "ARTICLES_BUCKET", "bucket_name": "meridian-articles-staging" }],
+      "browser": { "binding": "BROWSER" },
+      "workflows": [
+        { "name": "meridian_process_articles_staging", "binding": "PROCESS_ARTICLES", "class_name": "ProcessArticles" },
+        { "name": "auto_brief_generation_staging", "binding": "AUTO_BRIEF", "class_name": "AutoBriefGenerationWorkflow" },
+      ],
+      "services": [
+        { "binding": "AI_WORKER", "service": "meridian-ai-worker-staging" },
+        { "binding": "ML_SERVICE", "service": "meridian-ml-service" },
+      ],
+    },
+  },
 }

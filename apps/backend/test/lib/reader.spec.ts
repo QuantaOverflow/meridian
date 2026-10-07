@@ -7,7 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
-import type { CountryBlocksPage, CountrySection, SearchPage } from '@meridian/contracts';
+import type { CountryBlocksPage, CountrySection, FollowingPage, SearchPage } from '@meridian/contracts';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
@@ -53,6 +53,12 @@ const CASES: Record<string, string> = {
   'search-holding': '/reader/search?q=holding&limit=20&offset=0',
   'search-holding-page': '/reader/search?q=holding&limit=1&offset=1',
   'search-miss': '/reader/search?q=zzz-no-match&limit=20&offset=0',
+  // Following：关注以色列与线索 2——落点在以色列的三块、涉及以色列的一块（它同时命中线索 2）
+  'following-il': '/reader/following?countries=IL&threads=&limit=20&offset=0',
+  'following-il-thread-2': '/reader/following?countries=IL&threads=2&limit=20&offset=0',
+  'following-il-thread-2-page': '/reader/following?countries=IL&threads=2&limit=2&offset=1',
+  'following-thread-1': '/reader/following?countries=&threads=1&limit=20&offset=0',
+  'following-miss': '/reader/following?countries=JP&threads=&limit=20&offset=0',
   'stories-list': '/reader/stories',
   'story-1-streak': '/reader/stories/1',
   'story-2-importance': '/reader/stories/2',
@@ -197,8 +203,97 @@ describe('边界', () => {
     });
   });
 
+  describe('Following', () => {
+    const following = async (query: string) => {
+      const res = await exports.default.fetch(`http://backend/reader/following?${query}`, {
+        headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+      });
+      expect(res.status, query).toBe(200);
+      return (await res.json()) as FollowingPage;
+    };
+    /** 每块：[期号, 故事号] */
+    const blocks = (page: FollowingPage) => page.items.map(b => [b.brief.id, b.storyId]);
+
+    it('关注一个国家 = 落点在该国的块 + 涉及该国的块，后者标 mention；最新的在前，同一期内按正文顺序', async () => {
+      const page = await following('countries=IL');
+      expect(page.items.map(b => [b.brief.id, b.storyId, b.matches])).toEqual([
+        [8, 15, [{ kind: 'country', code: 'IL', via: 'placement' }]],
+        [7, 13, [{ kind: 'country', code: 'IL', via: 'placement' }]],
+        [7, 14, [{ kind: 'country', code: 'IL', via: 'mention' }]],
+        [6, 12, [{ kind: 'country', code: 'IL', via: 'placement' }]],
+      ]);
+      expect(page.total).toBe(4);
+      expect(page.items[2].countries).toEqual({ placement: null, mentions: ['IL', 'IR'] });
+    });
+
+    it('关注一条线索：它在各期的块；带回线索现在的标题与期数', async () => {
+      const page = await following('threads=1');
+      expect(page.items.map(b => [b.brief.id, b.storyId, b.matches])).toEqual([
+        [8, 15, [{ kind: 'thread', id: 1 }]],
+        [7, 13, [{ kind: 'thread', id: 1 }]],
+        [6, 12, [{ kind: 'thread', id: 1 }]],
+      ]);
+      expect(page.threads).toEqual([{ id: 1, title: 'Gaza — ceasefire holds', briefCount: 3 }]);
+    });
+
+    it('几个关注项取并集，一块只出现一次，命中的关注项都列出（国家在前）', async () => {
+      const page = await following('countries=ir,IL&threads=2,1');
+      expect(blocks(page)).toEqual([[8, 15], [7, 13], [7, 14], [6, 12]]);
+      expect(page.items[0].matches).toEqual([{ kind: 'country', code: 'IL', via: 'placement' }, { kind: 'thread', id: 1 }]);
+      expect(page.items[2].matches).toEqual([
+        { kind: 'country', code: 'IL', via: 'mention' },
+        { kind: 'country', code: 'IR', via: 'mention' },
+        { kind: 'thread', id: 2 },
+      ]);
+      expect(page.threads.map(t => t.id)).toEqual([1, 2]);
+    });
+
+    it('未发布的期的块不出现（第 9 期那块落点在以色列、属于线索 1）', async () => {
+      const page = await following('countries=IL&threads=1');
+      expect(page.items.some(b => b.brief.id === 9)).toBe(false);
+      expect(page.total).toBe(4);
+    });
+
+    it('没过线索门槛的簇（簇 5 只出现在一期）：块照常命中，但不在 threads 里；不存在的线索号什么都不命中', async () => {
+      const page = await following('threads=5,999');
+      expect(blocks(page)).toEqual([[8, 16]]);
+      expect(page.threads).toEqual([]);
+    });
+
+    it('没带关注项、关注项都不认得（地点归一表里没有的代码）：200，空页', async () => {
+      for (const query of ['', 'countries=&threads=', 'countries=QQ']) {
+        expect(await following(query), query).toEqual({ total: 0, items: [], threads: [] });
+      }
+      // 不认得的代码不影响其余关注项
+      expect(blocks(await following('countries=QQ,IR'))).toEqual([[7, 14]]);
+    });
+
+    it('分页按块数；翻过头是空页，总数不变', async () => {
+      const second = await following('countries=IL&limit=2&offset=1');
+      expect(blocks(second)).toEqual([[7, 13], [7, 14]]);
+      expect(second.total).toBe(4);
+      const beyond = await following('countries=IL&offset=50');
+      expect([beyond.total, beyond.items]).toEqual([4, []]);
+    });
+
+    it('关注项写法不对、每类超过 100 个：400', async () => {
+      const many = (n: number) => Array.from({ length: n }, (_, i) => i + 1).join(',');
+      for (const path of [
+        '/reader/following?countries=ISR', '/reader/following?countries=IL;IR', '/reader/following?threads=abc',
+        '/reader/following?threads=1.5', '/reader/following?threads=-1', '/reader/following?threads=99999999999999999999',
+        `/reader/following?threads=${many(101)}`, `/reader/following?countries=${Array.from({ length: 101 }, () => 'IL').join(',')}`,
+        '/reader/following?countries=IL&limit=51', '/reader/following?countries=IL&offset=100001',
+      ]) {
+        const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+        expect(res.status, path).toBe(400);
+      }
+      // 恰好 100 个照常：线索 1、2 与簇 5 在已发布各期共 5 块
+      expect((await following(`threads=${many(100)}`)).total).toBe(5);
+    });
+  });
+
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/reader/following?countries=IL', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });

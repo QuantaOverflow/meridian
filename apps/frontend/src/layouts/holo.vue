@@ -16,6 +16,7 @@ useHead({
         <NuxtLink to="/briefs">Archive</NuxtLink>
         <NuxtLink to="/stories">Stories</NuxtLink>
         <NuxtLink to="/search">Search</NuxtLink>
+        <NuxtLink to="/following">Following</NuxtLink>
       </nav>
     </header>
     <slot />
@@ -87,7 +88,9 @@ html[data-skin='holo'] :focus-visible {
 
 .holo .nav {
   display: flex;
-  gap: 18px;
+  /* 五个入口在 375px 宽的屏上一行放不下：折行，不把页面撑宽 */
+  flex-wrap: wrap;
+  gap: 8px 18px;
   font-size: 14px;
   color: var(--ink3);
 }

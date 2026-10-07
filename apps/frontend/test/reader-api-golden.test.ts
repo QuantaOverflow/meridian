@@ -1,5 +1,5 @@
 /**
- * 读者与后台读接口（`/api/briefs*`、`/api/countries*`、`/api/search`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
+ * 读者与后台读接口（`/api/briefs*`、`/api/countries*`、`/api/following`、`/api/search`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
  * 真实构建并启动 Nuxt 服务（node-server preset），backend 用本文件起的 HTTP 服务假冒：它回放 backend 自己的快照
  * （apps/backend/test/fixtures/reader/__golden__/，由 backend 的 reader.spec.ts 对同一份 fixture 跑真实路由生成），
  * 前端的输出再与 `__golden__/reader-api/` 比对。后者是前端还直连数据库时对同一份 fixture 录下的，
@@ -10,7 +10,7 @@ import http from 'node:http';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import { fetch, setup } from '@nuxt/test-utils/e2e';
+import { createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
 import { anchorFromDate, detokenizeDates, tokenizeDates } from '../../backend/test/fixtures/reader/dates';
 
 // 回放用的「今天」取一个固定日期：前端不再依赖当前时间（天数由 backend 算好）。
@@ -48,6 +48,8 @@ const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
 await setup({
   rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  // Following 页的关注项在浏览器的 localStorage 里，那一组要真浏览器
+  browser: true,
   nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     // 与生产（Cloudflare，UTC）一致
@@ -108,6 +110,15 @@ const READER_CASES: Record<string, string> = {
   // NUL 字符与过大的 offset 到了 Postgres 都是报错，同样不转发
   'search-nul-query': '/api/search?q=a%00b',
   'search-offset-too-large': '/api/search?q=gaza&offset=99999999999999999999',
+  // Following：关注项去重、排序、国家代码转大写、缺省的 limit / offset 补齐后转发；没有关注项不转发，直接回空页
+  'following-il': '/api/following?countries=il',
+  'following-il-thread-2': '/api/following?threads=2&countries=IL,il',
+  'following-il-thread-2-page': '/api/following?countries=IL&threads=2,2&limit=2&offset=1',
+  'following-thread-1': '/api/following?threads=1',
+  'following-miss': '/api/following?countries=JP',
+  'following-none': '/api/following',
+  'following-invalid-country': '/api/following?countries=ISR',
+  'following-invalid-thread': '/api/following?threads=1,abc',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',
@@ -377,6 +388,256 @@ describe('搜索页（SSR）', () => {
     for (const path of ['/search', '/stories', '/']) {
       expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/search"/);
     }
+  });
+});
+
+// ── 关注与 Following 页：关注项与上次访问的时刻在浏览器的 localStorage 里，用真浏览器走 ──────────
+// 期望值写死自 backend 的 following-* 快照；回放的「今天」是 2026-01-10，第 8、7、6 期分别生成于 01-10、01-09、01-08 的 12:00（UTC）
+describe('关注与 Following 页（浏览器）', () => {
+  type Page = Awaited<ReturnType<typeof createPage>>;
+  const FOLLOWS_KEY = 'meridian-follows';
+  const LAST_VISIT_KEY = 'meridian-following-last-visit';
+  const IL = JSON.stringify([{ kind: 'country', code: 'IL' }]);
+
+  /** 新的浏览器上下文（localStorage 是空的）；init 在每次打开页面、页面脚本之前跑 */
+  async function openBrowser(init?: { script: (stored: Record<string, string>) => void; stored?: Record<string, string> }) {
+    const page = await createPage();
+    // 只放行本地服务：页面 <head> 引 Google Fonts，外网慢时 goto 会等到超时
+    await page.route('**/*', route => {
+      const host = new URL(route.request().url()).hostname;
+      return host === '127.0.0.1' || host === 'localhost' ? route.continue() : route.abort();
+    });
+    if (init) await page.addInitScript(init.script, init.stored ?? {});
+    return page;
+  }
+  /** 带着预先存好的 localStorage 条目打开；只在这个上下文第一次打开页面时写，之后的刷新不覆盖页面自己写的 */
+  const openWith = (stored: Record<string, string>) =>
+    openBrowser({
+      stored,
+      script: entries => {
+        if (sessionStorage.getItem('seeded')) return;
+        sessionStorage.setItem('seeded', '1');
+        for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value);
+      },
+    });
+
+  const followButton = (page: Page) => page.locator('[data-follow-button]');
+  const pressed = (page: Page) => followButton(page).getAttribute('aria-pressed');
+  /** 浏览器接管页面之后按钮才点得动：等 Nuxt 挂载完 */
+  async function goto(page: Page, path: string) {
+    await page.goto(url(path), { waitUntil: 'hydration' });
+  }
+  /** 刷新：重新打开当前地址（整页重新加载，关注项只能从 localStorage 读回来） */
+  const reload = (page: Page) => goto(page, new URL(page.url()).pathname);
+  /** Following 页上各块：[标题, 有没有 new 标记, 命中的关注项] */
+  async function listed(page: Page) {
+    await page.waitForSelector('[data-test=block], [data-test=empty], [data-test=no-blocks]');
+    return page.locator('[data-test=block]').evaluateAll(blocks =>
+      blocks.map(b => [
+        b.querySelector('h3')!.textContent!.trim(),
+        b.querySelector('[data-test=new]') !== null,
+        [...b.querySelectorAll('[data-test=match]')].map(m => m.textContent!.replace(/\s+/g, ' ').trim()),
+      ])
+    );
+  }
+  const followedNames = (page: Page) => page.locator('[data-test=follow] a').allInnerTexts();
+
+  it('国家页上关注、刷新后仍在；Following 页列出落点在该国与涉及该国的块，后者标 Involves；取消后回到空状态', async () => {
+    const page = await openBrowser();
+    await goto(page, '/countries/IL');
+    expect(await pressed(page)).toBe('false');
+    expect(await followButton(page).innerText()).toBe('Follow');
+
+    await followButton(page).click();
+    expect(await pressed(page)).toBe('true');
+    expect(await followButton(page).innerText()).toBe('Following');
+
+    await reload(page);
+    await page.waitForSelector('[data-follow-button][aria-pressed=true]');
+    // 别的国家没被关注
+    await goto(page, '/countries/JP');
+    expect(await pressed(page)).toBe('false');
+
+    await goto(page, '/following');
+    expect(await listed(page)).toEqual([
+      ['gaza ceasefire holds', false, ['Israel']],
+      ['hostage deal', false, ['Israel']],
+      ['iran sanctions', false, ['Involves Israel']],
+      ['gaza talks in cairo', false, ['Israel']],
+    ]);
+    expect(await followedNames(page)).toEqual(['Israel']);
+    expect(await page.locator('[data-test=summary]').innerText()).toBe('4 stories');
+    expect(await page.locator('[data-test=block] a[href="/briefs/7#story-2"]').count()).toBe(1);
+
+    await page.click('button[aria-label="Stop following Israel"]');
+    await page.waitForSelector('[data-test=empty]');
+    expect(await listed(page)).toEqual([]);
+    // 取消也是持久的：刷新后仍是空状态，国家页上的按钮回到未关注
+    await reload(page);
+    await page.waitForSelector('[data-test=empty]');
+    await goto(page, '/countries/IL');
+    expect(await pressed(page)).toBe('false');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('线索页上关注；Following 页把国家与线索的块并在一起，一块命中两个关注项时都写出；在线索页上再点一次取消', async () => {
+    const page = await openWith({ [FOLLOWS_KEY]: IL });
+    await goto(page, '/stories/2');
+    expect(await pressed(page)).toBe('false');
+    await followButton(page).click();
+    expect(await pressed(page)).toBe('true');
+
+    await goto(page, '/following');
+    expect(await listed(page)).toEqual([
+      ['gaza ceasefire holds', false, ['Israel']],
+      ['hostage deal', false, ['Israel']],
+      ['iran sanctions', false, ['Involves Israel', 'Iran — new sanctions']],
+      ['gaza talks in cairo', false, ['Israel']],
+    ]);
+    expect(await followedNames(page)).toEqual(['Israel', 'Iran — new sanctions']);
+    expect(await page.locator('[data-test=follow] a').evaluateAll(links => links.map(a => a.getAttribute('href')))).toEqual([
+      '/countries/IL',
+      '/stories/2',
+    ]);
+
+    await goto(page, '/stories/2');
+    await page.waitForSelector('[data-follow-button][aria-pressed=true]');
+    await followButton(page).click();
+    expect(await pressed(page)).toBe('false');
+    await goto(page, '/following');
+    expect(await followedNames(page)).toEqual(['Israel']);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('关注了、但还没有任何块：写明还没有，不是「没有关注项」的空状态', async () => {
+    const page = await openWith({ [FOLLOWS_KEY]: JSON.stringify([{ kind: 'country', code: 'JP' }]) });
+    await goto(page, '/following');
+    expect(await listed(page)).toEqual([]);
+    expect(await page.locator('[data-test=no-blocks]').innerText()).toBe('No stories yet about what you follow.');
+    expect(await followedNames(page)).toEqual(['Japan']);
+    expect(unexpected).toEqual([]);
+  });
+
+  describe('new 标记：所属那一期生成于上次访问之后的块', () => {
+    const newTitles = async (page: Page) => (await listed(page)).filter(([, isNew]) => isNew).map(([title]) => title);
+
+    it('第一次来（没有上次访问）：都不标；这次访问被记下', async () => {
+      const page = await openWith({ [FOLLOWS_KEY]: IL });
+      const before = Date.now();
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual([]);
+      const saved = Date.parse((await page.evaluate(key => localStorage.getItem(key), LAST_VISIT_KEY)) ?? '');
+      expect(saved).toBeGreaterThanOrEqual(before);
+      expect(saved).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('上次访问恰好等于一期的生成时刻：那一期不算新，只有更晚的那期标 new', async () => {
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: '2026-01-09T12:00:00.000Z' });
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds']);
+      expect(await page.locator('[data-test=summary]').innerText()).toBe('4 stories · 1 new since your last visit');
+    });
+
+    it('上次访问早一毫秒：那一期的两块也标 new；更早的一期不标', async () => {
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: '2026-01-09T11:59:59.999Z' });
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds', 'hostage deal', 'iran sanctions']);
+    });
+
+    it('上次访问晚于所有的期：都不标', async () => {
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: '2026-01-10T12:00:00.000Z' });
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual([]);
+    });
+
+    it('标过的在刷新后不再标（刷新就是又一次访问）；在页面上取消一个关注项不影响已标的', async () => {
+      const page = await openWith({
+        [FOLLOWS_KEY]: JSON.stringify([{ kind: 'country', code: 'IL' }, { kind: 'thread', id: 2, title: 'Iran' }]),
+        [LAST_VISIT_KEY]: '2026-01-09T12:00:00.000Z',
+      });
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds']);
+      await page.click('button[aria-label="Stop following Iran — new sanctions"]');
+      await page.waitForFunction(() => document.querySelectorAll('[data-test=follow]').length === 1);
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds']);
+
+      await reload(page);
+      expect((await listed(page)).length).toBe(4);
+      expect(await newTitles(page)).toEqual([]);
+    });
+
+    it('存着的上次访问不是时间：按第一次来算', async () => {
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: 'not-a-date' });
+      await goto(page, '/following');
+      expect(await newTitles(page)).toEqual([]);
+    });
+  });
+
+  describe('localStorage 用不了', () => {
+    // 本站自己的条目（meridian-*）读写都抛——浏览器禁用站点数据、隐私模式写满配额时 localStorage 的表现。
+    // 别的 key 放行：两个第三方模块（@nuxtjs/color-mode 3.5.2、nuxt-auth-utils 0.5.20）在浏览器里读 localStorage 没有保护，
+    // 它们一抛整个站点都起不来，那是关注功能之前就有的问题，不在这里测
+    const openWithoutStorage = () =>
+      openBrowser({
+        script: () => {
+          for (const method of ['getItem', 'setItem'] as const) {
+            const original = Storage.prototype[method];
+            Storage.prototype[method] = function (this: Storage, key: string, ...rest: string[]) {
+              if (this === window.localStorage && key.startsWith('meridian-')) throw new DOMException('denied', 'SecurityError');
+              return (original as (...args: string[]) => unknown).call(this, key, ...rest);
+            } as never;
+          }
+        },
+      });
+
+    it('国家页、线索页、Following 页照常渲染；关注在这次会话里生效，只是不持久', async () => {
+      const page = await openWithoutStorage();
+      const errors: string[] = [];
+      page.on('pageerror', err => errors.push(String(err)));
+
+      await goto(page, '/stories/1');
+      expect(await page.locator('h1').innerText()).toBe('Gaza — ceasefire holds');
+      await goto(page, '/following');
+      await page.waitForSelector('[data-test=empty]');
+
+      await goto(page, '/countries/IL');
+      expect(await page.locator('[data-section=placement] h3').count()).toBe(3);
+      await followButton(page).click();
+      expect(await pressed(page)).toBe('true');
+      // 站内跳转（不重新加载页面）：这次会话里的关注项还在
+      await page.click('a[href="/following"]');
+      expect((await listed(page)).map(([title]) => title)).toEqual(['gaza ceasefire holds', 'hostage deal', 'iran sanctions', 'gaza talks in cairo']);
+
+      await reload(page);
+      await page.waitForSelector('[data-test=empty]');
+      expect(errors).toEqual([]);
+      expect(unexpected).toEqual([]);
+    });
+
+    it('存着的关注项不是合法的 JSON、或条目形状不对：按没有那些关注项算，页面照常', async () => {
+      const broken = await openWith({ [FOLLOWS_KEY]: '{oops' });
+      await goto(broken, '/following');
+      await broken.waitForSelector('[data-test=empty]');
+
+      const mixed = await openWith({
+        [FOLLOWS_KEY]: JSON.stringify([{ kind: 'topic', key: 'economy' }, null, { kind: 'country', code: 'il' }, { kind: 'thread', id: 1, title: 'Gaza' }, { kind: 'thread', id: 1 }]),
+      });
+      await goto(mixed, '/following');
+      expect((await listed(mixed)).map(([title]) => title)).toEqual(['gaza ceasefire holds', 'hostage deal', 'gaza talks in cairo']);
+      expect(await followedNames(mixed)).toEqual(['Gaza — ceasefire holds']);
+      expect(unexpected).toEqual([]);
+    });
+  });
+
+  it('服务端渲染出的 Following 页只有外壳（关注项只在浏览器里），不去问 backend；导航栏有 Following 入口', async () => {
+    const res = await fetch('/following');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toMatch(/<h1\b[^>]*>\s*Following\s*<\/h1>/);
+    for (const path of ['/following', '/stories', '/search', '/']) {
+      expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/following"/);
+    }
+    expect(unexpected).toEqual([]);
   });
 });
 

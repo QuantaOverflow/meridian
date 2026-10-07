@@ -153,8 +153,10 @@
    */
   "env": {
     "staging": {
-      // secret 要单独放一遍：wrangler secret put API_TOKEN --env staging（值与生产不同）
-      "secrets": { "required": ["API_TOKEN", "CF_ANALYTICS_TOKEN"] },
+      // secret 要单独放一遍：wrangler secret put API_TOKEN --env staging（值与生产不同）。
+      // CF_ANALYTICS_TOKEN 不放：它只供运维台读账户用量，而那些读数按生产的脚本名查，在 staging 上没有意义；
+      // 缺了它相关面板显示 unavailable，别的不受影响（lib/ops/cloudflare.ts）。
+      "secrets": { "required": ["API_TOKEN"] },
       "vars": {
         "CF_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
         "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",

@@ -23,6 +23,7 @@ function toggleTheme() {
 
 <template>
   <div class="min-h-screen bg-paper">
+    <EnvBanner />
     <!-- 路由切换时顶部走一条进度线，让「点了但还没到」这段时间可见 -->
     <NuxtLoadingIndicator color="var(--accent)" :height="2" />
     <header class="bg-paper border-rule-soft sticky top-0 z-60 border-b">

@@ -9,6 +9,7 @@ useHead({
 
 <template>
   <div class="holo">
+    <EnvBanner />
     <header class="mast">
       <NuxtLink to="/" class="brand">Meridian</NuxtLink>
       <nav class="nav">

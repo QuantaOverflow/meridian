@@ -29,12 +29,15 @@ async function login(event: Event) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center h-screen py-12">
-    <form @submit.prevent="login" class="flex flex-col justify-center gap-4 items-center border p-4">
-      <input type="text" name="username" placeholder="username" class="border border-black p-1" />
-      <input type="password" name="password" placeholder="password" class="border border-black p-1" />
-      <p v-if="errorMessage" class="text-red-500">{{ errorMessage }}</p>
-      <button type="submit" class="bg-black text-white w-full py-px">Login</button>
-    </form>
+  <div>
+    <EnvBanner />
+    <div class="flex flex-col items-center justify-center h-screen py-12">
+      <form @submit.prevent="login" class="flex flex-col justify-center gap-4 items-center border p-4">
+        <input type="text" name="username" placeholder="username" class="border border-black p-1" />
+        <input type="password" name="password" placeholder="password" class="border border-black p-1" />
+        <p v-if="errorMessage" class="text-red-500">{{ errorMessage }}</p>
+        <button type="submit" class="bg-black text-white w-full py-px">Login</button>
+      </form>
+    </div>
   </div>
 </template>

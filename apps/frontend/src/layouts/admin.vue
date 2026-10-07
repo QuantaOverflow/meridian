@@ -32,6 +32,7 @@ async function logout() {
 <template>
   <!-- 后台固定浅色底，所以文字颜色也在这里定死：不然系统是深色模式时，没单独写颜色的文字会继承正文的浅色，在浅底上几乎看不见 -->
   <div class="admin-shell min-h-screen bg-gray-50 p-4 text-gray-900">
+    <EnvBanner class="-mx-4 -mt-4 mb-4" />
     <div class="flex flex-wrap justify-between items-center gap-x-6 gap-y-2 mb-4 border-b pb-2">
       <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
         <NuxtLink to="/admin">

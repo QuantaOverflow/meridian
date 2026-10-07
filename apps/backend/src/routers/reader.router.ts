@@ -5,11 +5,12 @@ import { getDb } from '../lib/database';
 import { listBriefs, loadBrief } from '../lib/reader/briefs';
 import { loadBriefMap } from '../lib/reader/brief-map';
 import { countryCode, listCountryBlocks } from '../lib/reader/country-blocks';
+import { searchBlocks } from '../lib/reader/search-blocks';
 import { getStoryThread, listStoryThreads } from '../lib/reader/story-threads';
 import type { Env } from '../index';
 
 /**
- * 读者端（前端 /api/briefs*、/api/countries*、/api/stories*）的数据。只出领域数据，展示（markdown 渲染、中文日期、
+ * 读者端（前端 /api/briefs*、/api/countries*、/api/search、/api/stories*）的数据。只出领域数据，展示（markdown 渲染、中文日期、
  * 「N 天前更新」文案）在前端 server 路由里做。鉴权在 app.ts 的挂载处。
  */
 const app = new Hono<{ Bindings: Env }>();
@@ -65,6 +66,18 @@ app.get(
     return c.json(await listCountryBlocks(getDb(c.env.HYPERDRIVE), { country, ...c.req.valid('query') }));
   }
 );
+
+const searchQuerySchema = z.object({
+  // 空查询与超过 200 字的查询回 400：前端在转发之前就拦下，到这里的只会是调用方写错了
+  q: z.string().trim().min(1).max(200),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+// 搜索简报块（形状见 @meridian/contracts 的 SearchPage）：英文全文检索，只搜已发布各期的块，按线索折成组，分页按组数
+app.get('/search', zValidator('query', searchQuerySchema), async c => {
+  return c.json(await searchBlocks(getDb(c.env.HYPERDRIVE), c.req.valid('query')));
+});
 
 app.get('/stories', async c => {
   return c.json(await listStoryThreads(getDb(c.env.HYPERDRIVE)));

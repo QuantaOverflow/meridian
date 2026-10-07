@@ -2,8 +2,7 @@ import { z } from 'zod';
 import type { CountryBlocksPage } from '@meridian/contracts';
 import { countryName } from '~/lib/briefMap';
 import { readFromBackend } from '~/server/lib/backend';
-import { renderBlockBody } from '~/server/lib/briefContent';
-import { ensureDate, formatReportDate } from '~/server/lib/utils';
+import { toBlockItem } from '~/server/lib/blockItem';
 import type { CountryBlocksResponse } from '~/shared/types';
 
 const querySchema = z.object({
@@ -38,13 +37,7 @@ export default defineEventHandler(async (event): Promise<CountryBlocksResponse> 
     section: page.section,
     total: page.total,
     items: page.items.map(block => ({
-      id: block.id,
-      title: block.title,
-      bodyHtml: renderBlockBody(block.body),
-      tier: block.tier,
-      briefNumber: block.brief.id,
-      dateLabel: formatReportDate(ensureDate(block.brief.createdAt)),
-      href: `/briefs/${block.brief.id}#story-${block.position + 1}`,
+      ...toBlockItem(block),
       placedIn: block.countries.placement === null ? null : countryName(block.countries.placement),
       alsoInvolves: block.countries.mentions.filter(c => c !== page.country).map(countryName),
     })),

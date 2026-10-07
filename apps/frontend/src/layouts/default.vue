@@ -13,6 +13,7 @@ const navItems = computed(() => [
   { label: "Today's brief", short: 'Today', to: '/', active: route.path === '/' || route.path.startsWith('/briefs/') },
   { label: 'Archive', short: 'Archive', to: '/briefs', active: route.path === '/briefs' },
   { label: 'Story threads', short: 'Threads', to: '/stories', active: route.path.startsWith('/stories') },
+  { label: 'Search', short: 'Search', to: '/search', active: route.path === '/search' },
 ]);
 
 function toggleTheme() {

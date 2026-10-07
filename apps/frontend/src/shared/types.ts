@@ -46,8 +46,8 @@ export interface BriefListResponse {
   earliestDateLabel: string | null;
 }
 
-/** 国家页上的一块，由 /api/countries/:code/blocks 返回 */
-interface CountryBlockItem {
+/** 列在国家页、搜索页上的一块的共同部分（server/lib/blockItem.ts 从 backend 的块算出） */
+export interface BlockItem {
   /** brief_blocks.id */
   id: number;
   title: string;
@@ -58,6 +58,10 @@ interface CountryBlockItem {
   dateLabel: string;
   /** 阅读页上这一块的地址，如 `/briefs/8#story-1` */
   href: string;
+}
+
+/** 国家页上的一块，由 /api/countries/:code/blocks 返回 */
+interface CountryBlockItem extends BlockItem {
   /** 落点国家的英文名；跨地区或没有国家的故事为 null */
   placedIn: string | null;
   /** 这一块还涉及的其他国家（英文名），不含本页的国家 */
@@ -72,6 +76,26 @@ export interface CountryBlocksResponse {
   /** 这一节的总块数，与分页无关 */
   total: number;
   items: CountryBlockItem[];
+}
+
+/** 搜索结果的一组：同一线索的块归在一起（没并进线索的块自成一组） */
+interface SearchGroupItem {
+  /** 所属线索；没有线索页的为 null */
+  thread: { id: number; title: string; briefCount: number; href: string } | null;
+  /** 这一组命中的总块数；blocks 只带最新的若干块时比它的长度大 */
+  blockCount: number;
+  /** 命中的块，最新的在前 */
+  blocks: BlockItem[];
+}
+
+/** 搜索简报块的一页，由 /api/search 返回；分页按组数 */
+export interface SearchResponse {
+  query: string;
+  /** 命中的组数 */
+  total: number;
+  /** 命中的总块数 */
+  totalBlocks: number;
+  items: SearchGroupItem[];
 }
 
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */

@@ -153,7 +153,7 @@ async function loadEvents(
       places: placesOf(ids, locationOf, (id, raw) => noteUnmapped(unmapped, id, raw)),
       mentions: mentionsOf(ids, locationOf, entitiesOf),
       topics: topicsOf(ids, tagsOf),
-      thread: stats === undefined ? null : { id: story.threadId as number, ...stats },
+      thread: stats === undefined ? null : { id: story.threadId as number, briefCount: stats.briefCount, durationDays: stats.durationDays },
     });
   });
   return { events, members };

@@ -24,6 +24,7 @@
 | `POST /admin/sources` | token | 前端 | 新建 RSS 源：`{url, name?, category?, scrape_frequency?}`（默认 `Unknown` / `news` / 2）；URL 重复回 409。插入后立即启动该源的 DO，启动失败则撤销插入、回 500 |
 | `PUT /admin/sources/:id` | token | 运维 | 部分更新同上字段；改 url 会停掉旧 url 的 DO、按新 url 启动，改档位会重新初始化 DO（暂停中的源只改表） |
 | `POST /admin/briefs/generate` | token | 运维 | 启动 `AutoBriefGenerationWorkflow`，回 202 + `workflowId`；空体也要传 `{}`。可选字段见下 |
+| `POST /admin/briefs/run-scheduled` | token | 运维 | 只在 staging 存在（`ENVIRONMENT` 不是 `staging` 时 404）：调 cron 用的同一个触发函数，起一次 Staging 运行，回 202 + `workflowId`；已有运行在飞回 409 + `blockingWorkflowId`。调用方是 `scripts/staging-run.mjs`（ADR 0013） |
 | `POST /admin/articles/process` | token | 运维 | `{article_ids: number[]}`（≥1）→ 启动 `ProcessArticles` workflow，回 202 |
 | `POST /do/admin/source/:sourceId/init` | token | 前端 | 按数据库里的源（数字 id）初始化它的 `SourceScraperDO` |
 | `POST /do/admin/source/:sourceId/pause` | token | 前端 | 暂停自动抓取：记 `paused_at`、停掉 DO；源与已有文章保留 |

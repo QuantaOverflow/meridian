@@ -20,7 +20,7 @@ useSeoMeta({
   title: () => (thread.value ? `${thread.value.title} | Story threads` : 'Story threads | Meridian'),
   description: () =>
     thread.value
-      ? `Running ${pluralize(thread.value.durationDays, 'day')}, across ${pluralize(thread.value.briefCount, 'issue')}`
+      ? `Running ${pluralize(thread.value.durationDays, 'day')}, across ${pluralize(thread.value.briefCount, 'brief')}`
       : '',
   ogLocale: 'en_US',
 });

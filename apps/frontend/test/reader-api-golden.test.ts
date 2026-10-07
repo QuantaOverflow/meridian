@@ -202,7 +202,7 @@ describe('地图首页（SSR）', () => {
 
     expect(links).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
     expect(links).toContainEqual({ href: '/briefs', text: 'Past briefs' });
-    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · issue 3' });
+    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · 3 briefs' });
     // 头条卡片只有 story 15；不是头条的 story 16 不出卡片，算进「其余 1 条」
     expect(links.filter(l => l.text === 'Read this part →').map(l => l.href)).toEqual(['/briefs/8#story-1']);
     expect(links).toContainEqual({ href: '/briefs/8#story-2', text: '1 more in the brief →' });
@@ -349,7 +349,7 @@ describe('搜索页（SSR）', () => {
 
     expect(groups(html)).toEqual([
       {
-        thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'],
+        thread: ['/stories/1', 'Gaza — ceasefire holds · 3 briefs'],
         shown: [['gaza ceasefire holds', '/briefs/8#story-1']],
         folded: [['gaza talks in cairo', '/briefs/6#story-1']],
       },
@@ -366,7 +366,7 @@ describe('搜索页（SSR）', () => {
   it('两组：有线索的一组带线索链接，没有线索的一组不带', async () => {
     const html = await (await fetch('/search?q=holding')).text();
     expect(groups(html)).toEqual([
-      { thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'], shown: [['gaza ceasefire holds', '/briefs/8#story-1']], folded: [] },
+      { thread: ['/stories/1', 'Gaza — ceasefire holds · 3 briefs'], shown: [['gaza ceasefire holds', '/briefs/8#story-1']], folded: [] },
       { thread: null, shown: [['fed holds rates', '/briefs/8#story-2']], folded: [] },
     ]);
     expect(unexpected).toEqual([]);

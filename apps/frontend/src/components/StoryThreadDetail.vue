@@ -37,7 +37,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
 
     <p class="border-rule-soft mb-11 border-b pb-7 text-[13px] text-ink3">
       First seen {{ thread.firstSeenLabel }} · Last updated {{ thread.lastSeenLabel }} ·
-      {{ pluralize(thread.entryCount, 'entry', 'entries') }} · {{ pluralize(thread.briefCount, 'issue') }}
+      {{ pluralize(thread.entryCount, 'entry', 'entries') }} · {{ pluralize(thread.briefCount, 'brief') }}
     </p>
 
     <ol>
@@ -65,7 +65,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
           </p>
           <!-- 只写「未进入简报」读者会以为是被删掉或不可信的内容。
                说清楚它其实是当天识别出来、但没被选进简报的候选故事。 -->
-          <p class="text-[12.5px] leading-[1.6] text-ink3">Not in the brief · identified that day but not selected for the issue</p>
+          <p class="text-[12.5px] leading-[1.6] text-ink3">Not in the brief · identified that day but not selected for it</p>
         </div>
 
         <div v-else>
@@ -79,7 +79,7 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
             {{ entry.description }}
           </p>
           <NuxtLink :to="`/briefs/${entry.briefSlug}`" class="border-rule text-ink3 hover:text-ink border-b text-[12.5px] transition-colors">
-            Issue {{ entry.briefNumber }}
+            Brief {{ entry.briefNumber }}
           </NuxtLink>
         </div>
       </li>

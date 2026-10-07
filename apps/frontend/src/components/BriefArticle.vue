@@ -43,7 +43,7 @@ const showAllArticles = ref(false);
     <!-- 正文列在视口正中，侧栏是绝对定位浮在左侧留白里的，不占文档流也就不会把正文推偏 -->
     <div class="mx-auto max-w-[668px] pt-[70px] pb-[140px]">
       <header>
-        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Daily intelligence brief · Issue {{ brief.id }}</p>
+        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Daily intelligence brief · No. {{ brief.id }}</p>
 
         <h1
           class="font-serif text-[28px] leading-[1.24] font-semibold tracking-[-0.01em] text-ink md:text-[44px] mb-[18px]"

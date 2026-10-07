@@ -1,6 +1,6 @@
 /**
  * 「N word」/「N words」：count === 1 用单数，否则用 plural（默认 `${singular}s`）。
- * 统计类文案（N stories / N issues / N days…）统一走这里，不在每个组件各写一遍三元。
+ * 统计类文案（N stories / N briefs / N days…）统一走这里，不在每个组件各写一遍三元。
  */
 export function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;

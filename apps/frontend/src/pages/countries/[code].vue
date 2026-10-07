@@ -120,7 +120,7 @@ useSeoMeta({
           <!-- 正文 markdown 由 server 路由渲染（与阅读页同一来源），工具类挂不到段落上，段距见下方 scoped 样式 -->
           <div class="block-body font-serif text-[16px] leading-[1.85] tracking-[0.01em] text-ink2 md:text-[18px]" v-html="block.bodyHtml" />
           <p class="mt-[9px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
-            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
+            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Brief {{ block.briefNumber }} →</NuxtLink>
             <span v-if="block.alsoInvolves.length">Also involves {{ block.alsoInvolves.join(', ') }}</span>
             <EntityLinks :entities="block.entities" />
           </p>

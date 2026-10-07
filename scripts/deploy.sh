@@ -30,6 +30,13 @@
 #   scripts/deploy.sh [--print] [传给 wrangler deploy 的其他参数…]
 #   --print   只打印将要执行的命令（一行一个参数），不执行；有临时配置时再打印其中的 image_vars 行
 #
+# backend 与 ai-worker 的配置里有 staging 环境（ADR 0013）：带 `--env staging` 部署 staging，不带就是部署生产。部署生产时：
+#   - 补上 --env=（空串 = 显式指定顶层环境），消掉 wrangler 的 "Multiple environments are defined" warning；
+#     dry-run 实测与不带参数的 binding 列表一致
+#   - 当前提交最近一次 Staging 运行没通过（或没有）就往 stderr 打警告，然后照常部署，退出码仍是 wrangler 的
+#     （--print 时不查）
+#   ml-service 没有 staging 环境，两样都不做。
+#
 # 退出码：--print 时 0；否则是 wrangler 的退出码；2 = 用法或环境错误（在仓库根、没有 wrangler 配置、找不到 wrangler）。
 #
 # 部署成没成功仍只看输出里的 Current Version ID 有没有变（见根 README 的 Deployment）。
@@ -91,6 +98,32 @@ if grep -q '"image_vars"' "$CONFIG"; then
   ARGS+=(--config "$DEPLOY_CONFIG")
 fi
 
+# ---------- backend / ai-worker：环境参数与「部署生产」的判定 ----------
+# 这两个 service 的配置里有 env.staging 段（ADR 0013）。参数里没有 --env 就是部署生产（顶层）。
+
+REL_DIR="${SERVICE_DIR#"$REPO_ROOT"/}"
+DEPLOYS_PRODUCTION=0
+case "$REL_DIR" in
+  apps/backend|services/meridian-ai-worker)
+    # 给了非空的环境名才算「指定了环境」；--env "" / --env= 是 wrangler 里显式指定顶层的写法，仍是部署生产
+    ENV_GIVEN=0   # 指定了某个环境（如 staging）
+    ENV_ARG=0     # 参数里出现过 --env / -e（含空值）
+    PREV=""
+    for a in "$@"; do
+      case "$a" in --env|--env=*|-e|-e=*) ENV_ARG=1 ;; esac
+      case "$a" in --env=?*|-e=?*) ENV_GIVEN=1 ;; esac
+      case "$PREV" in --env|-e) [ -n "$a" ] && ENV_GIVEN=1 ;; esac
+      PREV="$a"
+    done
+    if [ "$ENV_GIVEN" = 0 ]; then
+      DEPLOYS_PRODUCTION=1
+      # 空字符串 = 显式指定顶层环境（wrangler 4.141 dry-run 实测：binding 列表与不带参数时完全一致，且没有多环境 warning）。
+      # 调用方自己已经写了空的 --env 就不再补
+      [ "$ENV_ARG" = 1 ] || ARGS+=(--env=)
+    fi
+    ;;
+esac
+
 ARGS+=("$@")
 
 if [ "$PRINT_ONLY" = 1 ]; then
@@ -102,5 +135,18 @@ if [ "$PRINT_ONLY" = 1 ]; then
   exit 0
 fi
 
-echo "部署 ${SERVICE_DIR#"$REPO_ROOT"/}：${TAG} ${TITLE}" >&2
+# 部署生产的 backend / ai-worker：当前提交最近一次 Staging 运行没通过（或没有）就提醒，不拦（ADR 0013 决定 8）。
+# 记录由 scripts/staging-run.mjs 写，怎么算「通过」在 scripts/staging-verdicts.mjs。工作区 dirty 时部署的不是那个提交，同样提醒。
+if [ "$DEPLOYS_PRODUCTION" = 1 ]; then
+  SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  if [ "$DIRTY" = true ] || ! node "$SCRIPTS_DIR/staging-verdicts.mjs" passed "$COMMIT"; then
+    {
+      echo "警告：当前提交 ${COMMIT}$([ "$DIRTY" = true ] && echo "（工作区 dirty）") 没有通过的 Staging 运行记录（backend 与 ai-worker 都要是这个提交、不 dirty、判定绿或黄）。"
+      echo "      先在仓库根跑：node scripts/staging-run.mjs"
+      echo "      部署照常进行（紧急回滚不被挡）。"
+    } >&2
+  fi
+fi
+
+echo "部署 ${REL_DIR}：${TAG} ${TITLE}" >&2
 "$WRANGLER" "${ARGS[@]}"

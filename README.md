@@ -161,7 +161,37 @@ Deploy in dependency order: DB migration → AI Worker → ML Service → backen
 - `scripts/deploy.sh` (`wrangler deploy` underneath) uploads a version and activates a deployment. **Only trust the `Current Version ID` in the output changing from the previous one** — an `Uploaded` line or a zero exit code don't mean it activated.
 - Upload succeeds but activation hangs: usually an OAuth token missing write scope; `wrangler whoami` will warn — `wrangler login` again.
 - ML Service also needs to pass `scripts/check-container-deploy.sh`.
-- "Deployed" isn't "ran": new brief-generation code only proves itself on the next cron run (or a manual `POST /admin/briefs/generate`).
+- "Deployed" isn't "ran": new brief-generation code only proves itself on a run — do a Staging run before deploying to production (below).
+
+**Staging** (ADR 0013) — a second copy of the backend and the AI Worker with their own data, for trying a change before production and for debug runs.
+
+| | production | staging |
+|---|---|---|
+| Workers | `meridian-backend`, `meridian-ai-worker` | `meridian-backend-staging`, `meridian-ai-worker-staging` |
+| ML Service | `meridian-ml-service` | the same one (it stores nothing) |
+| Postgres | Neon branch `production` | Neon branch `staging`, reset to `production` before each Staging run |
+| R2 / queues / workflow names | `…-prod` | their own (`meridian-articles-staging`, `…-queue-staging`, `…_staging`) |
+| Cron | daily | none; no scraping either |
+| AI Gateway | `meridian-gateway` | `meridian-ai` |
+| Frontend | Pages production | Pages preview branch `staging` → `https://staging.meridian-reader.pages.dev` (STAGING banner, `noindex`) |
+
+```bash
+# deploy the branch under test (same script, plus --env staging)
+cd services/meridian-ai-worker && ../../scripts/deploy.sh --env staging
+cd apps/backend               && ../../scripts/deploy.sh --env staging
+pnpm -F @meridian/frontend build && wrangler pages deploy --branch staging   # from the repo root
+
+# one Staging run: reset the Neon branch → migrate → copy recent article bodies prod bucket → staging bucket → trigger → wait → verdict
+node scripts/staging-run.mjs            # --no-reset keeps the current data (debugging); --attach <run id> picks up a run whose polling got cut off
+```
+
+- `scripts/staging-run.mjs` reads `.staging.env` in the repo root (gitignored; template `.staging.env.example`: staging backend URL and token, staging database URL, reader URL, Neon project id, and a Cloudflare account id plus an API token that can read and write R2 objects) and needs `neonctl` and `psql` on the machine. The body copy goes through the Cloudflare REST API, which is rate limited: the first run copies a day or two of articles and can spend several minutes waiting; later runs copy only what is new. Exit code 0 = green or yellow (yellow flags are printed), 1 = red, 3 = timed out. It judges pipeline health only, from the flags the ops console already puts on a run; read the brief itself on the staging reader page.
+- A Staging run takes the cron path (`POST /admin/briefs/run-scheduled`, which exists only when `ENVIRONMENT` is `staging`), so it is published on the staging site and shows up in the staging ops console. Manual runs (`POST /admin/briefs/generate`) work on staging too and are not published.
+- Each run appends a line to `.staging-verdicts.jsonl` (gitignored, this machine only). `scripts/deploy.sh` reads it when deploying the production backend or AI Worker: if the latest Staging run of the current commit did not pass (or there is none) it prints a warning and deploys anyway.
+- Staging secrets are separate: `wrangler secret put API_TOKEN --env staging` (backend; its own value), `DASHSCOPE_API_KEY` and `AI_GATEWAY_TOKEN` with `--env staging` (AI Worker), and the four `NUXT_*` secrets with `wrangler pages secret put … --env preview`.
+- `scripts/check-staging-isolation.mjs` (part of `pnpm typecheck`) fails if the staging section of a Worker config reuses a production resource name or id, or gains a cron.
+- Don't reset while the production run is in progress (about 21:00–21:40 Beijing time): the reset copies its `RUNNING` row and the staging trigger answers 409 until production finishes and you reset again.
+- Not covered by staging: ML Service changes (clustering, embeddings) and changes to the backend ↔ ML Service interface.
 
 **CI**: none. Nothing deploys automatically; every step above is manual.
 

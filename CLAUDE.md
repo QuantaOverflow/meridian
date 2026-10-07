@@ -17,6 +17,10 @@
 - `pnpm -F @meridian/database generate` / `migrate` / `studio`
 - 部署：进对应 service 目录（`apps/backend`、`services/meridian-ai-worker`、`services/meridian-ml-service/cf-worker`）跑 `scripts/deploy.sh`（包一层 `wrangler deploy`，把提交短哈希、标题、dirty 带上去，运维台靠它显示各服务的版本；`--print` 只打印命令），**永不从 root 部署**——脚本在根目录会拒绝（唯一例外：前端 Pages 的配置就在根目录 `wrangler.toml`，见 README）
 
+- Staging：部署加 `--env staging`（只有 backend 与 ai-worker 有；ml-service 共用生产），前端 `wrangler pages deploy --branch staging`。
+  跑一次 Staging 运行：`node scripts/staging-run.mjs`（先 reset Neon 分支 `staging`，`--no-reset` 跳过；配置在 gitignored 的 `.staging.env`）。
+  改生产链路的代码先过 staging 再部署生产；调试用的手动运行也在 staging 上做，不写生产的库与 bucket
+
 ## 部署环境
 - CF account: `swj299792458`（子域 `swj299792458.workers.dev`）
 - DB: Neon `ap-southeast-1`，连接走 Hyperdrive
@@ -60,6 +64,7 @@
 - 做 eval / 定判据 / 派判官 → `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`（硬规矩在 `.claude/rules/eval.md`，改 eval 代码时自动载入；字段与签名的参考在 `eval/cluster-to-brief/CONTRACTS.md`）
 - 改运维台（后台的 Health / Trends / Cost / Sources / 运行详情，判据与阈值）→ `docs/adr/0011-ops-console.md`
 - 改逐句核查（取证规则、一次调用的 prompt、DashScope 通道、回退）→ `docs/adr/0012-one-call-sentence-check.md`（读数、证伪清单、没验证的部分）
+- 改 staging 环境（隔离边界、Staging 运行、判定与部署提醒）→ `docs/adr/0013-staging-environment.md`
 - 架构决策记录 → `docs/adr/`
 
 ## 路径触发的规则（`.claude/rules/`）

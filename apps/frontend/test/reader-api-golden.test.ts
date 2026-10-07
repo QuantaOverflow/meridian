@@ -184,6 +184,28 @@ describe('地图首页（SSR）', () => {
     expect(unexpected).toEqual([]);
   });
 
+  // 首页从 @meridian/contracts 引落点规则（运行时 import）；contracts 的入口把 ai-worker.ts 的 zod schema 也带出来，
+  // 打包器摇不掉的话每个读者首屏都要多下一个约 60KB 的库
+  it('首屏的脚本（页面引的 chunk 及它们静态 import 的）里没有 zod', async () => {
+    const html = await (await fetch('/')).text();
+    const queue = [...html.matchAll(/(?:href|src)="(\/_nuxt\/[^"]+\.js)"/g)].map(m => m[1]);
+    expect(queue.length).toBeGreaterThan(0);
+    const seen = new Set<string>();
+    const withZod: string[] = [];
+    while (queue.length > 0) {
+      const path = queue.pop()!;
+      if (seen.has(path)) continue;
+      seen.add(path);
+      const res = await fetch(path);
+      expect(res.status, path).toBe(200);
+      const code = await res.text();
+      if (code.includes('ZodError')) withZod.push(path);
+      // 只跟静态 import（`import"./x.js"`、`from"./x.js"`）；`import("./x.js")` 是按需加载，不算首屏
+      for (const m of code.matchAll(/(?:import|from)\s*"\.\/([^"]+\.js)"/g)) queue.push(`/_nuxt/${m[1]}`);
+    }
+    expect(withZod).toEqual([]);
+  });
+
   it('地图数据取不到：顶部与阅读入口照常，面板处写明', async () => {
     const saved = replies.get('/reader/briefs/8/map')!;
     replies.set('/reader/briefs/8/map', { status: 500, body: '{"error":"boom"}' });

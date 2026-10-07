@@ -67,6 +67,7 @@
 - 改运维台（后台的 Health / Trends / Cost / Sources / 运行详情，判据与阈值）→ `docs/adr/0011-ops-console.md`
 - 改逐句核查（取证规则、一次调用的 prompt、DashScope 通道、回退）→ `docs/adr/0012-one-call-sentence-check.md`（读数、证伪清单、没验证的部分）
 - 改 staging 环境（隔离边界、Staging 运行、判定与部署提醒）→ `docs/adr/0013-staging-environment.md`
+- 改简报块的落库与回填（表 `brief_blocks`、块对外的形状、回填范围）→ `docs/adr/0014-brief-blocks-table.md`
 - 架构决策记录 → `docs/adr/`
 
 ## 路径触发的规则（`.claude/rules/`）

@@ -86,7 +86,10 @@ export default defineNuxtConfig({
     session: { password: process.env.SESSION_PASSWORD || 'dev_only_session_password_change_me' }, // NUXT_SESSION_PASSWORD
 
     // IMPORTANT: all "public" config is exposed to the client
-    public: { WORKER_API: process.env.NUXT_PUBLIC_WORKER_API || 'http://localhost:8787' }, // NUXT_PUBLIC_WORKER_API
+    public: {
+      WORKER_API: process.env.NUXT_PUBLIC_WORKER_API || 'http://localhost:8787', // NUXT_PUBLIC_WORKER_API
+      ENVIRONMENT: process.env.NUXT_PUBLIC_ENVIRONMENT || 'production', // NUXT_PUBLIC_ENVIRONMENT：production | staging，非 production 时显示 STAGING 横幅并声明 noindex
+    },
   },
 
   srcDir: 'src',

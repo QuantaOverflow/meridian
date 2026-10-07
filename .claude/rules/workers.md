@@ -96,7 +96,7 @@ paths:
 - **怎么走**：两个 worker 各 `../../scripts/deploy.sh --env staging`，然后在仓库根 `node scripts/staging-run.mjs`。
   它先把 staging 的库重置成生产的最新副本、跑 migration、拷近两天的正文，再走 cron 那条路跑一次，按运维台的标记判红黄绿。
   绿或黄之后在 staging 读者页上读成稿（地址脚本会打印），再部署生产。
-- **不带 `--env` 就是部署生产**。这时当前提交最近一次 Staging 运行没通过（或没跑过），脚本会提醒但不拦；小改动没走 staging 时看到这条提醒是正常的。
+- **不带 `--env` 就是部署生产**。这时当前提交最近一次 Staging 运行没通过（或没跑过），脚本会提示一行但不拦；小改动没走 staging 时看到这条提示是正常的。
 - **调试用的手动运行在 staging 上做**（`POST /admin/briefs/generate` 打 staging 的 backend），不写生产的库与 bucket。
   同一份数据上连跑用 `--no-reset`；要用两天以前的文章先 `--body-days N` 把正文拷过去。
 - **staging 验不了的**：聚类与 embedding 的改动、backend 与 ml-service 之间接口的改动（ml-service 共用生产那一份）；抓取与文章处理链路（staging 不抓取）。这些仍只能上生产后看。

@@ -33,7 +33,7 @@
 # backend 与 ai-worker 的配置里有 staging 环境（ADR 0013）：带 `--env staging` 部署 staging，不带就是部署生产。部署生产时：
 #   - 补上 --env=（空串 = 显式指定顶层环境），消掉 wrangler 的 "Multiple environments are defined" warning；
 #     dry-run 实测与不带参数的 binding 列表一致
-#   - 当前提交最近一次 Staging 运行没通过（或没有）就往 stderr 打警告，然后照常部署，退出码仍是 wrangler 的
+#   - 当前提交最近一次 Staging 运行没通过（或没有）就往 stderr 提示一行，然后照常部署，退出码仍是 wrangler 的
 #     （--print 时不查）
 #   ml-service 没有 staging 环境，两样都不做。
 #
@@ -135,16 +135,13 @@ if [ "$PRINT_ONLY" = 1 ]; then
   exit 0
 fi
 
-# 部署生产的 backend / ai-worker：当前提交最近一次 Staging 运行没通过（或没有）就提醒，不拦（ADR 0013 决定 8）。
+# 部署生产的 backend / ai-worker：当前提交最近一次 Staging 运行没通过（或没有）就提示一行，不拦（ADR 0013 决定 8）。
 # 记录由 scripts/staging-run.mjs 写，怎么算「通过」在 scripts/staging-verdicts.mjs。工作区 dirty 时部署的不是那个提交，同样提醒。
 if [ "$DEPLOYS_PRODUCTION" = 1 ]; then
   SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
   if [ "$DIRTY" = true ] || ! node "$SCRIPTS_DIR/staging-verdicts.mjs" passed "$COMMIT"; then
-    {
-      echo "警告：当前提交 ${COMMIT}$([ "$DIRTY" = true ] && echo "（工作区 dirty）") 没有通过的 Staging 运行记录（backend 与 ai-worker 都要是这个提交、不 dirty、判定绿或黄）。"
-      echo "      先在仓库根跑：node scripts/staging-run.mjs"
-      echo "      部署照常进行（紧急回滚不被挡）。"
-    } >&2
+    # 一行、语气放轻：只有大的功能或架构变更才走 staging（.claude/rules/workers.md 第 5 节），小改动每次部署都会看到它
+    echo "提示：提交 ${COMMIT}$([ "$DIRTY" = true ] && echo "（工作区 dirty）")没在 staging 上跑通过。大的功能或架构变更建议先跑 node scripts/staging-run.mjs，小改动可忽略。" >&2
   fi
 fi
 

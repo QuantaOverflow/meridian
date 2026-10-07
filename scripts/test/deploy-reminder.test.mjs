@@ -197,3 +197,14 @@ test('显式传空环境（--env "" 与 --env=）仍是部署生产：照样查�
     assert.equal(r.calls.filter((c) => c === '--env=').length, args.includes('--env=') ? 1 : 0);
   }
 });
+
+test('提示只占一行、不叫「警告」：小改动不走 staging，每次部署都会看到它', () => {
+  const repo = makeRepo();
+  const r = deploy(repo, 'apps/backend');
+  const lines = r.stderr.split('\n').filter((l) => l.includes('staging'));
+  assert.equal(lines.length, 1, r.stderr);
+  assert.match(lines[0], /^提示：/);
+  assert.match(lines[0], new RegExp(repo.head));
+  assert.ok(!r.stderr.includes('警告'));
+});
+

@@ -13,7 +13,8 @@ import { runWindowWhere, type RunWindow } from '../core/run-corpus';
 import type { BriefGenerationParams } from '../../workflows/auto-brief-generation';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { countryOfEntity, normalizePlace } from './places';
+import { normalizePlace } from './places';
+import { entityNames, memberIds, mentionsOf, placesOf } from './story-countries';
 import { threadStatsByIds } from './story-threads';
 import { articleTopics, assignTopics, normalizeTags } from './topics';
 
@@ -25,12 +26,6 @@ import { articleTopics, assignTopics, normalizeTags } from './topics';
 const logger = new Logger({ module: 'reader-brief-map' });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** article_ids 是 jsonb，历史行里可能是 null、非数组或有重复：只取去重后的整数 id */
-function memberIds(articleIds: unknown): number[] {
-  if (!Array.isArray(articleIds)) return [];
-  return [...new Set(articleIds.filter((id): id is number => Number.isInteger(id)))];
-}
 
 /**
  * 归一表里没有的地点值（含空值）：文章 id → 原值。按 id 记，同一篇既是故事成员又在当期窗口里也只算一次；
@@ -51,50 +46,6 @@ function unmappedSummary(log: UnmappedLog): string {
     .slice(0, 20)
     .map(([raw, n]) => `${raw}=${n}`)
     .join('|');
-}
-
-/**
- * 成员按国家的占比；降序，同占比按代码。与原型 build.py / places.py 的 place() 同口径：
- * 分母是地点非空的成员数（只写了地区、表里没有的值在分母里、不进分子），空值成员不进分母；没有非空地点时为 []。
- */
-function placesOf(members: number[], locationOf: Map<number, string | null>, unmapped: UnmappedLog): BriefMapEvent['places'] {
-  const counts = new Map<string, number>();
-  let located = 0;
-  for (const id of members) {
-    const raw = locationOf.get(id) ?? null;
-    if (raw !== null && raw.trim() !== '') located++;
-    const place = normalizePlace(raw);
-    if (place.kind === 'country') counts.set(place.country, (counts.get(place.country) ?? 0) + 1);
-    else if (place.kind === 'unmapped') noteUnmapped(unmapped, id, raw);
-  }
-  return [...counts]
-    .map(([country, n]) => ({ country, share: Math.round((n / located) * 1000) / 1000 }))
-    .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country));
-}
-
-/**
- * 成员文章提到各国的比例：每篇的地点与关键实体里能归一成国家的各算一次，分母是全部成员；降序（同占比按代码），至多 5 个。
- * 一事的报道几乎都填同一个地点（115 期 21 个故事里 20 个地点 100% 同一国），第二个国家只出现在关键实体里。
- */
-function mentionsOf(
-  members: number[],
-  locationOf: Map<number, string | null>,
-  entitiesOf: Map<number, string[]>
-): BriefMapEvent['mentions'] {
-  const counts = new Map<string, number>();
-  for (const id of members) {
-    const located = normalizePlace(locationOf.get(id) ?? null);
-    const countries = new Set(located.kind === 'country' ? [located.country] : []);
-    for (const entity of entitiesOf.get(id) ?? []) {
-      const country = countryOfEntity(entity);
-      if (country !== null) countries.add(country);
-    }
-    for (const country of countries) counts.set(country, (counts.get(country) ?? 0) + 1);
-  }
-  return [...counts]
-    .map(([country, n]) => ({ country, share: Math.round((n / members.length) * 1000) / 1000 }))
-    .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country))
-    .slice(0, 5);
 }
 
 /** 故事的主题：按成员逐个标签计数后交给 assignTopics */
@@ -173,9 +124,7 @@ async function loadEvents(
   ]);
   const locationOf = new Map(memberRows.map(a => [a.id, a.location]));
   const tagsOf = new Map(memberRows.map(a => [a.id, normalizeTags(a.tags)]));
-  const entitiesOf = new Map(
-    memberRows.map(a => [a.id, Array.isArray(a.entities) ? a.entities.filter((e): e is string => typeof e === 'string') : []])
-  );
+  const entitiesOf = new Map(memberRows.map(a => [a.id, entityNames(a.entities)]));
   const byCluster = new Map(stories.filter(s => s.clusterId !== null).map(s => [s.clusterId as number, s]));
 
   // blockIndex = 在写出来的块里的位置（= 正文里的位置，阅读页锚点 story-{n+1}），对不上故事的块也占位
@@ -201,7 +150,7 @@ async function loadEvents(
       tier: block.tier,
       title: block.title,
       articleCount: ids.length,
-      places: placesOf(ids, locationOf, unmapped),
+      places: placesOf(ids, locationOf, (id, raw) => noteUnmapped(unmapped, id, raw)),
       mentions: mentionsOf(ids, locationOf, entitiesOf),
       topics: topicsOf(ids, tagsOf),
       thread: stats === undefined ? null : { id: story.threadId as number, ...stats },

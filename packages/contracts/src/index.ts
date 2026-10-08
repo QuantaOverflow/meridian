@@ -1,12 +1,14 @@
 /**
  * @meridian/contracts —— 跨 service 的约定只写一份：ai-worker 路由的数据类型、
- * articleAnalysisSchema、R2 key、brief-v3 记录类型、简报块的对外形状、读者地图接口类型、运维台接口类型、embedding 维度。只放约定，不放实现。
+ * articleAnalysisSchema、R2 key、brief-v3 记录类型、简报块的对外形状、读者地图与国家页接口类型、落点规则、运维台接口类型、embedding 维度。只放约定，不放实现。
  */
 export * from './ai-worker';
 export * from './r2-keys';
 export * from './brief-v3-record';
 export * from './brief-block';
 export * from './reader-map';
+export * from './placement';
+export * from './reader-country';
 export * from './ops-console';
 
 /**

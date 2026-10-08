@@ -1,0 +1,8 @@
+{"status":404,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/countries/QQ/blocks",
+  "statusCode": 404,
+  "statusMessage": "Country not found",
+  "message": "Country not found"
+}

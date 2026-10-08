@@ -89,6 +89,14 @@ const READER_CASES: Record<string, string> = {
   'brief-404': '/api/briefs/999',
   'brief-invalid-slug': '/api/briefs/abc',
   'brief-8-map': '/api/briefs/8/map',
+  // 国家页的一节：代码转大写、缺省的 limit / offset 补齐后转发
+  'country-il-placement': '/api/countries/IL/blocks?section=placement',
+  'country-il-placement-page': '/api/countries/il/blocks?section=placement&limit=1&offset=1',
+  'country-il-mention': '/api/countries/IL/blocks?section=mention',
+  'country-jp-empty': '/api/countries/JP/blocks',
+  'country-404': '/api/countries/QQ/blocks',
+  'country-invalid-code': '/api/countries/ISR/blocks',
+  'country-invalid-query': '/api/countries/IL/blocks?section=both',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',
@@ -176,6 +184,28 @@ describe('地图首页（SSR）', () => {
     expect(unexpected).toEqual([]);
   });
 
+  // 首页从 @meridian/contracts 引落点规则（运行时 import）；contracts 的入口把 ai-worker.ts 的 zod schema 也带出来，
+  // 打包器摇不掉的话每个读者首屏都要多下一个约 60KB 的库
+  it('首屏的脚本（页面引的 chunk 及它们静态 import 的）里没有 zod', async () => {
+    const html = await (await fetch('/')).text();
+    const queue = [...html.matchAll(/(?:href|src)="(\/_nuxt\/[^"]+\.js)"/g)].map(m => m[1]);
+    expect(queue.length).toBeGreaterThan(0);
+    const seen = new Set<string>();
+    const withZod: string[] = [];
+    while (queue.length > 0) {
+      const path = queue.pop()!;
+      if (seen.has(path)) continue;
+      seen.add(path);
+      const res = await fetch(path);
+      expect(res.status, path).toBe(200);
+      const code = await res.text();
+      if (code.includes('ZodError')) withZod.push(path);
+      // 只跟静态 import（`import"./x.js"`、`from"./x.js"`）；`import("./x.js")` 是按需加载，不算首屏
+      for (const m of code.matchAll(/(?:import|from)\s*"\.\/([^"]+\.js)"/g)) queue.push(`/_nuxt/${m[1]}`);
+    }
+    expect(withZod).toEqual([]);
+  });
+
   it('地图数据取不到：顶部与阅读入口照常，面板处写明', async () => {
     const saved = replies.get('/reader/briefs/8/map')!;
     replies.set('/reader/briefs/8/map', { status: 500, body: '{"error":"boom"}' });
@@ -189,6 +219,69 @@ describe('地图首页（SSR）', () => {
     } finally {
       replies.set('/reader/briefs/8/map', saved);
     }
+  });
+});
+
+// ── 国家页：两节（落点在该国 / 涉及该国），期望值写死自 backend 的 country-il-* 快照 ──────────
+describe('国家页（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 一节里各块的标题与「读这一块」链接，按页面顺序 */
+  const blocksIn = (html: string, section: string) => {
+    const start = html.indexOf(`data-section="${section}"`);
+    if (start === -1) return null;
+    const rest = html.slice(start);
+    const end = rest.indexOf('</section>');
+    const part = rest.slice(0, end === -1 ? undefined : end);
+    return [...part.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<a\b[^>]*?href="(\/briefs\/[^"]*)"/g)].map(([, title, href]) => [text(title), href]);
+  };
+
+  it('以色列：落点在该国的三块按期倒序，涉及该国的一块单列并写明落点不在该国；未发布那期的块不出现', async () => {
+    const res = await fetch('/countries/IL');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+
+    expect(html).toMatch(/<h1\b[^>]*>\s*Israel\s*<\/h1>/);
+    expect(blocksIn(html, 'placement')).toEqual([
+      ['gaza ceasefire holds', '/briefs/8#story-1'],
+      ['hostage deal', '/briefs/7#story-1'],
+      ['gaza talks in cairo', '/briefs/6#story-1'],
+    ]);
+    expect(blocksIn(html, 'mention')).toEqual([['iran sanctions', '/briefs/7#story-2']]);
+    // 正文按段落渲染
+    expect(html).toContain('<p>The ceasefire held for a third day.</p>');
+    expect(html).toContain('<p>Aid deliveries rose.</p>');
+    // 涉及的那块：还涉及伊朗
+    expect(text(html)).toContain('Also involves Iran');
+    expect(html).not.toContain('ukraine debug');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('小写代码照常打开', async () => {
+    const html = await (await fetch('/countries/il')).text();
+    expect(blocksIn(html, 'placement')?.length).toBe(3);
+  });
+
+  it('表里有、但没有任何块的国家：200，写明还没有', async () => {
+    const res = await fetch('/countries/JP');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toMatch(/<h1\b[^>]*>\s*Japan\s*<\/h1>/);
+    expect(text(html)).toContain('No stories about Japan in the briefs yet.');
+    expect(blocksIn(html, 'placement')).toBeNull();
+    expect(blocksIn(html, 'mention')).toBeNull();
+    expect(unexpected).toEqual([]);
+  });
+
+  it('不认得的国家代码：404', async () => {
+    expect((await fetch('/countries/QQ')).status).toBe(404);
+    expect((await fetch('/countries/ISR')).status).toBe(404);
+  });
+
+  it('地图首页锁定一个国家后，面板里有进国家页的入口（?country= 打开时即锁定）', async () => {
+    const html = await (await fetch('/?country=IL')).text();
+    expect(html).toMatch(/<a\b[^>]*href="\/countries\/IL"[^>]*>[\s\S]*?All coverage of Israel/);
+    // 没锁定时没有这个入口
+    expect(await (await fetch('/')).text()).not.toContain('href="/countries/');
   });
 });
 

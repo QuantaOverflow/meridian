@@ -1,9 +1,9 @@
 /**
- * 地图首页的展示规则与展示表（spec「Frontend: map homepage」）：落点阈值、国家代码 → 英文名 / 坐标 / 底图名、
- * 主题 → 英文名。backend 只给每个故事按国家的占比（BriefMap），怎么落点、怎么叫都在这里。
+ * 地图首页的展示表（spec「Frontend: map homepage」）：国家代码 → 英文名 / 坐标 / 底图名、主题 → 英文名。
+ * backend 只给每个故事按国家的占比（BriefMap）；落点规则在 @meridian/contracts 的 placement.ts（backend 按国家查块也用它），怎么叫在这里。
  * 表从原型 prototypes/globe 的 places.py（C + EN_NAME）与 topics.py（EN）搬来。
  */
-import type { BriefMapEvent, MapTopic } from '@meridian/contracts';
+import type { MapTopic } from '@meridian/contracts';
 import { pluralize } from '~/utils/format';
 
 export interface Country {
@@ -149,30 +149,6 @@ export const formatTopicCounts = (counts: [MapTopic, number][]) =>
 /** 「2 in the brief · 9 articles that day」：一个国家的故事数与当天文章数（悬停提示与锁定面板共用） */
 export const countrySummary = (stories: number, articles: number) =>
   `${stories ? `${stories} in the brief` : 'No story here'} · ${pluralize(articles, 'article')} that day`;
-
-// 落点与原型 places.py 的 place() 同口径；连线的第二个国家改看 mentions（ADR 0009 决定 4）
-const PLACE_MIN = 0.3; // 头号国家占比达到它 → 标在这个国家
-// 标在一国时，另一国被至少 2/3 的成员提到、且不与下一名并列 → 画关联线。原型按地点占比 ≥15% 连，
-// 但一事的报道几乎都填同一个地点，几乎连不出线；111–115 期量过这条规则：连出 30 条，无强行关联
-const MENTION_LINK_MIN = 2 / 3;
-const SPREAD_MIN = 0.1; // 没有国家达到 PLACE_MIN 时，占比达到它的国家两两连线
-
-export interface Placement {
-  primary: string | null;
-  secondary: string | null;
-  /** 跨地区：至少两国才算，否则为空 */
-  spread: string[];
-}
-
-/** places、mentions 都已按占比降序（契约保证）；mentions 的占比是三位小数，2/3 给的是 0.667 */
-export function place(places: BriefMapEvent['places'], mentions: BriefMapEvent['mentions']): Placement {
-  const [first] = places;
-  const primary = first && first.share >= PLACE_MIN ? first.country : null;
-  const [top, next] = primary ? mentions.filter(m => m.country !== primary) : [];
-  const secondary = top && top.share >= MENTION_LINK_MIN - 0.001 && next?.share !== top.share ? top.country : null;
-  const spread = primary ? [] : places.filter(p => p.share >= SPREAD_MIN).slice(0, 4).map(p => p.country);
-  return { primary, secondary, spread: spread.length >= 2 ? spread : [] };
-}
 
 /** 连线端点里没有故事落点的国家（去重、按出现顺序）：给它们画终点标记 */
 export function linkEnds(links: { a: string; b: string }[], dotted: { has(key: string): boolean }): string[] {

@@ -240,6 +240,14 @@ export const $brief_blocks = pgTable(
     // 与读者页上那一块一致：标题是写作层起的（不是 brief_stories.title），正文是 reports.content 里那一段
     title: text('title').notNull(),
     body: text('body').notNull(),
+    // 这一块对国家的归属，写块时按成员文章算好（规则在 @meridian/contracts 的 blockCountries，算法在 backend lib/reader/story-countries.ts）；
+    // 国家页按这两列查。代码是 ISO 3166-1 alpha-2（联合国 UN）。回填脚本重跑即刷新
+    placement_country: text('placement_country'),
+    // 涉及的国家：不含落点国家
+    mention_countries: text('mention_countries')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     // 全文检索（英文）：标题权重 A、正文权重 B。生成列，写入方不管它
     search: tsvector('search')
       .notNull()
@@ -253,5 +261,7 @@ export const $brief_blocks = pgTable(
   table => [
     unique('brief_blocks_report_position_unique').on(table.report_id, table.position),
     index('brief_blocks_search_idx').using('gin', table.search),
+    index('brief_blocks_placement_country_idx').on(table.placement_country),
+    index('brief_blocks_mention_countries_idx').using('gin', table.mention_countries),
   ]
 );

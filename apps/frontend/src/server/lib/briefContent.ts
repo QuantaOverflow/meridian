@@ -65,6 +65,11 @@ function renderBlock(lines: string[]): string {
   return text === '' ? '' : md.render(text).trim();
 }
 
+/** 一个简报块的正文（brief_blocks.body，与读者页上那一块同一段 markdown）→ HTML。国家页等按块列出的页面用 */
+export function renderBlockBody(body: string): string {
+  return renderBlock([body]);
+}
+
 /** 把一段已渲染的 HTML 拆成「首段」与「其余」，用于速读/深读分层 */
 function splitLeadParagraph(html: string): { leadHtml: string; restHtml: string } {
   if (html === '') return { leadHtml: '', restHtml: '' };

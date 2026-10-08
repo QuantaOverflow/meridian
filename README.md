@@ -30,25 +30,40 @@ Meridian reads a fixed set of news feeds, groups articles about the same event, 
 
 ## How it works
 
-The pipeline is a fixed workflow written in code. Models are not asked to run it; they are placed at the specific steps that need judgement, each with one narrow job, a small input and an output that code validates.
-
+```mermaid
+flowchart LR
+  feeds([RSS feeds]) --> scrapers[Scrapers]
+  scrapers --> queue[[Queue]] --> articles[Article workflow]
+  cron([Cron, daily]) --> brief[Brief workflow]
+  articles --> pg[(Postgres)]
+  articles --> r2[(R2)]
+  pg --> brief
+  r2 --> brief
+  articles -.-> ai[AI Worker]
+  brief -.-> ai
+  brief -.-> ml[ML Service]
+  ai -.-> wai{{Workers AI}}
+  ai -.-> gw{{AI Gateway}}
+  brief --> pg
+  pg --> api[Backend API]
+  r2 --> api
+  api --> reader[Reader]
+  api --> ops[Ops console]
 ```
-RSS feeds ─► one Durable Object per feed ─► queue ─► ProcessArticles workflow
-                                                       fetch page → extract text → analyse (LLM)
-                                                       text to R2, metadata to Postgres
 
-cron 13:00 UTC ─► AutoBriefGeneration workflow
-   embed ─► cluster ─► judge each cluster (LLM) ─► rank by importance (LLM)
-                                                         │
-                         for each selected cluster, one workflow step:
-                         ┌──────────────────────────────────────────────┐
-                         │  writer ──► draft ──► checker, per sentence  │
-                         │    ▲                        │                │
-                         │    └── objections with ◄────┘ at most        │
-                         │        the evidence          two rounds      │
-                         └──────────────────────────────────────────────┘
-                                                         │
-   assemble tiers (code) ─► title and summary (LLM) ─► Postgres ─► reader
+Four deployable units on Cloudflare: a backend Worker (one Durable Object per feed, a queue, two Workflows, the API), an AI Worker that owns every model call, an ML service in a Container for embeddings and clustering, and a Nuxt app on Pages. Postgres (Neon, pgvector) holds metadata and published briefs; R2 holds article text and a record of every run.
+
+The pipeline itself is a fixed workflow written in code. Models are not asked to run it. They are placed at the specific steps that need judgement, each with one narrow job, a small input and an output that code validates.
+
+```mermaid
+flowchart LR
+  a([~500 articles]) --> e[Embed] --> c[Cluster] --> j[Judge] --> r[Rank]
+  r --> w[Writer]
+  subgraph loop [one workflow step per block]
+    w --> d[Draft] --> k{Checker}
+    k -- objections + evidence --> w
+  end
+  k -- passed --> t[Assemble] --> s[Title, summary] --> b([Brief, ~25 blocks])
 ```
 
 **The writer–checker loop** is the centre of it. A block is written from one cluster's articles by a writer model. Then every sentence of the draft goes to a checker, a different model, that looks only at that sentence and the cluster's source text and answers one question: is this supported, and if not, what is wrong and which source sentences show it. Objections go back into the writer's own conversation and it rewrites the block; only the changed sentences are checked again, for at most two rounds. If something fails along the way, the best version so far is published and the downgrade is recorded.
@@ -68,6 +83,20 @@ The checker began as a small agent with three retrieval tools over the cluster. 
 | Tiers, order, citations, the final document | Code |
 
 A typical run turns about 500 articles into 25 blocks in 10 to 30 minutes, for roughly 30,000 Workers AI neurons (about $0.33 at list price, not counting per-article analysis). The full pipeline is in [`docs/how-it-works.md`](docs/how-it-works.md).
+
+## Built to run unattended
+
+The happy path above is the small part. Most of the work is in what happens when something goes wrong, and in being able to tell.
+
+- **Scraping that expects to be blocked.** Per-domain rate limiting, a browser-rendering fallback for pages that need it, and detectors for block pages, login walls and player shells so they are skipped instead of analysed. The detectors score precision 1.0 on a hand-labelled set.
+- **Failures stay small and visible.** Each block is its own workflow step, because the platform cancels a small share of step invocations and one blip should not cost a whole brief. A step that cannot do its best publishes the best version it has and records the downgrade; a run with downgrades is marked degraded with the reasons.
+- **Every model call is kept.** Request and response of each call go to R2, keyed by run. The ops console shows health, trends, cost and sources, and opens any run down to the individual model calls.
+- **Any production run can be replayed.** A run's recorded model output is fed back through the whole workflow locally and the result compared field by field with what production wrote. It runs as a regression test on every push.
+- **A staging copy that cannot touch production.** Its own database branch, reset from production before each run, its own bucket and queue. A check in the type-check step fails if the two environments share any resource.
+- **Decisions are measured and written down.** Eleven hand-labelled test sets under [`eval/`](eval), and eighteen decision records in [`docs/adr/`](docs/adr). Each record gives the measurements and the list of approaches that were tried and dropped.
+- **Over 700 automated tests** across the four units, run before every push and in CI.
+
+As of October 2026: 14 feeds, 51,000 articles processed, 47 briefs published since August, and every scheduled run since the current pipeline went live on September 21 has completed.
 
 ## Stack
 

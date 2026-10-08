@@ -1,7 +1,7 @@
 // 一行一个 JSON 对象，键扁平（Workers Logs 按顶层字段过滤）。与 backend 的
 // apps/backend/src/lib/core/logger.ts 同形状、同键名：level / message / timestamp / service，
 // 上下文键平铺在同一层（trace_id / request_id …），有异常时带 error: { message, stack?, cause? }。
-// 各 Worker 各留一份——packages/contracts 只放跨 service 约定，不放实现。键名见根 README「Monitoring」。
+// 各 Worker 各留一份——packages/contracts 只放跨 service 约定，不放实现。键名见 docs/monitoring.md。
 const SERVICE = 'meridian-ai-worker'
 
 type Level = 'debug' | 'info' | 'warn' | 'error'

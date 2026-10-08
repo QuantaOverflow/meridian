@@ -42,7 +42,7 @@
 #
 # 退出码：--print 时 0；否则是 wrangler 的退出码；2 = 用法或环境错误（在仓库根、没有 wrangler 配置、找不到 wrangler、不在 main 上部署生产）。
 #
-# 部署成没成功仍只看输出里的 Current Version ID 有没有变（见根 README 的 Deployment）。
+# 部署成没成功仍只看输出里的 Current Version ID 有没有变（见 docs/deployment.md）。
 
 set -euo pipefail
 

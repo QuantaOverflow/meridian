@@ -55,7 +55,7 @@ paths:
   请求级观测靠 `observeMiddleware` 按 `AsyncLocalStorage` 自动挂（`services/meridian-ai-worker/src/services/observe.ts`）。
 - **日志走 `Logger`，不写裸 `console.*`**：backend 用 `apps/backend/src/lib/core/logger.ts`，ai-worker 用
   `services/meridian-ai-worker/src/utils/logger.ts`（同形状的两份副本，不放 contracts）。一行一个扁平 JSON，
-  键名表见根 README「Monitoring」的 Logs & traces；上下文里的错误字符串用 `error_message`，`error` 留给异常对象。
+  键名表见 `docs/monitoring.md` 的 Logs & traces；上下文里的错误字符串用 `error_message`，`error` 留给异常对象。
 - **`logStep` 可在 step 外调用、重放安全**：它每次读 R2 已有指标再合并写回，workflow 重放时已记过的条目保留原样；
   别再往 `WorkflowObservability` 里加只存在内存、跨 step 累积的状态。
 - **本地调 ai-worker 带 `x-observe: inline`**（不写 R2）：记录随响应 JSON 的 `observation` 字段带回，

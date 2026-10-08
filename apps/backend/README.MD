@@ -25,7 +25,7 @@ embedding 与聚类交给 `services/meridian-ml-service`（service binding `ML_S
    `blockImportance` + `/meridian/stories/rank` 排序 → 每块 `/meridian/brief-block-v6` →
    `/meridian/brief-title`、`/meridian/generate-brief-summary` → 写 `reports`。
 
-编排细节见根 `README.md` 的「How It Works」一节；
+编排细节见`docs/how-it-works.md`；
 现行链路与已证伪路线见 [`docs/adr/0003-cluster-as-brief-block.md`](../../docs/adr/0003-cluster-as-brief-block.md)。
 跨服务调用的契约是 `src/lib/services/ai-services.ts` 里的客户端方法。
 
@@ -85,6 +85,6 @@ docs/API_GUIDE.md          HTTP 路由表
 
 ## 相关文档
 
-- 部署：根 `README.md` 的「Deployment」一节
-- 观测与排错：根 `README.md` 的「Monitoring & Observability」一节
+- 部署：`docs/deployment.md`
+- 观测与排错：`docs/monitoring.md`
 - 数据表：[`packages/database/README.MD`](../../packages/database/README.MD)

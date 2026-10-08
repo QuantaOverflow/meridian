@@ -19,7 +19,8 @@
 | 探索记录卡片 | `docs/knowledge/nodes/` | ❌ 只留本地（根 `.gitignore` 挡） |
 | 决定与证伪清单 | `docs/adr/` | ✅ |
 | 术语表 | `GLOSSARY.md` | ✅ |
-| 链路总览、部署、观测排错（给人读） | 根 `README.md` | ✅ |
+| 链路总览、部署、观测排错（给人读） | `docs/how-it-works.md`、`docs/deployment.md`、`docs/monitoring.md`、`docs/development.md` | ✅ |
+| 给外部读者的门面（是什么、截图、线上地址、出处） | 根 `README.md`，截图在 `docs/assets/` | ✅ |
 | 写代码时的硬规矩（给 agent） | `.claude/rules/<topic>.md`，`paths:` 写到包一级 | ✅ |
 | 给 agent 的流程说明（按需读，`CLAUDE.md` 留指针） | `docs/agents/<topic>.md` | ✅ |
 | 路线图、技术债 | `docs/ROADMAP.md`、`docs/debt.md` | ✅ |

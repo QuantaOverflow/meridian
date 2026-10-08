@@ -93,4 +93,4 @@ curl -X POST http://localhost:8787/do/admin/source/<id>/init -H "Authorization: 
 ## 相关
 
 - 服务总览：[`../README.MD`](../README.MD)
-- 观测路由怎么用：根 `README.md` 的「Monitoring & Observability」一节
+- 观测路由怎么用：`docs/monitoring.md`

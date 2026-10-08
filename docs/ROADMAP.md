@@ -15,7 +15,7 @@
 ## 2026-09-24 · 现状（代码层面）
 
 - **简报链路已切到 v6**（`961aeca`，2026-09-21）：簇判定 → LLM 重要性排序（三轮洗牌 + Borda，`86633c5` / `0ae2592`）
-  → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见根 `README.md` 的「How It Works」一节
+  → 每个选中簇一块 `/meridian/brief-block-v6` → 代码拼三节。现行链路见 `docs/how-it-works.md`
 - **已删代码**：情报报告层、b′ 分段写、整篇合成 + 忠实度门 + RARR + 覆盖对账、story-validation、候选分组、debug 路由与一批无调用方的 admin/observability 路由
 - **eval 只剩 4 个 harness**（`cluster-to-brief`、`clustering`、`scorer-recall`、`scrape-quality`）；
   `selection`、`faithfulness`、`intel-grounding`、`coverage-judge`、`offline-review` 等 9 个因结构上验不了 v6 删除（`0fcbd9a`）

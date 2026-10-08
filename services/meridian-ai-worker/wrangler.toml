@@ -24,7 +24,7 @@ bucket_name = "meridian-articles-prod"
 # 代价是本地 dev 的写入也落生产桶。
 remote = true
 
-# 日志与 trace 全量（采样率 1），取值与用量/费用依据见根 README「Monitoring」的 Logs & traces。
+# 日志与 trace 全量（采样率 1），取值与用量/费用依据见 docs/monitoring.md 的 Logs & traces。
 [observability]
 enabled = true
 

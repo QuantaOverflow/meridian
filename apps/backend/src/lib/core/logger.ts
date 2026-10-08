@@ -2,7 +2,7 @@
 //   level / message / timestamp / service，上下文键平铺在同一层（workflow_id / trace_id / source_id …），
 //   有异常时带 error: { message, stack?, cause? }。
 // ai-worker 有一份同形状的副本（services/meridian-ai-worker/src/utils/logger.ts）；
-// 不放 packages/contracts——那里只放跨 service 约定，不放实现。键名见根 README「Monitoring」。
+// 不放 packages/contracts——那里只放跨 service 约定，不放实现。键名见 docs/monitoring.md。
 const SERVICE = 'meridian-backend';
 
 type Level = 'debug' | 'info' | 'warn' | 'error';

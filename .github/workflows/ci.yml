@@ -1,0 +1,67 @@
+# Runs the same checks as .githooks/pre-push, for pushes and pull requests.
+name: CI
+
+on:
+  push:
+    branches: [main, meridian-dev]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workers:
+    name: typecheck, lint, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meridian_backend_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The backend tests refuse any database that is not on localhost.
+      BACKEND_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/meridian_backend_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate the test database
+        run: pnpm -F @meridian/database migrate
+        env:
+          DATABASE_URL: ${{ env.BACKEND_TEST_DATABASE_URL }}
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm exec knip --no-progress
+      - run: pnpm exec knip --production --no-progress
+      - run: node scripts/check-routes.mjs
+      - run: node eval/_data/check.mjs
+      - run: pnpm -F meridian-ai-worker test
+      - run: pnpm -F @meridian/backend test
+      - run: pnpm -F @meridian/frontend test
+
+  ml-service:
+    name: ml-service
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/meridian-ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff check src test
+      - run: uv run --frozen python -m pytest -q -x test/

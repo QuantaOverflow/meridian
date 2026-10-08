@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Meridian reads a fixed set of news feeds, groups articles about the same event, and has an LLM write a few conclusion-first sentences per event. Each sentence carries citations back to the articles it came from and is checked against them before it is published. One brief comes out every day at 13:00 UTC, entirely on Cloudflare's developer platform.
+Meridian reads a fixed set of news feeds, groups articles about the same event, and has an LLM write a few conclusion-first sentences per event. Each sentence carries citations back to the articles it came from, and a second model checks it against them before it is published. One brief comes out every day at 13:00 UTC, entirely on Cloudflare's developer platform.
 
 **Live: [meridian-reader.pages.dev](https://meridian-reader.pages.dev)**
 
@@ -30,32 +30,51 @@ Meridian reads a fixed set of news feeds, groups articles about the same event, 
 
 ## How it works
 
+The pipeline is a fixed workflow written in code. Models are not asked to run it; they are placed at the specific steps that need judgement, each with one narrow job, a small input and an output that code validates.
+
 ```
 RSS feeds ─► one Durable Object per feed ─► queue ─► ProcessArticles workflow
-                                                       fetch page → extract text → LLM analysis
+                                                       fetch page → extract text → analyse (LLM)
                                                        text to R2, metadata to Postgres
 
 cron 13:00 UTC ─► AutoBriefGeneration workflow
-                    embed → cluster → judge clusters → rank by importance
-                    → write one block per cluster, check each sentence against its sources
-                    → assemble tiers → title and summary → Postgres
-
-Postgres + R2 ─► backend API ─► Nuxt reader on Cloudflare Pages
+   embed ─► cluster ─► judge each cluster (LLM) ─► rank by importance (LLM)
+                                                         │
+                         for each selected cluster, one workflow step:
+                         ┌──────────────────────────────────────────────┐
+                         │  writer ──► draft ──► checker, per sentence  │
+                         │    ▲                        │                │
+                         │    └── objections with ◄────┘ at most        │
+                         │        the evidence          two rounds      │
+                         └──────────────────────────────────────────────┘
+                                                         │
+   assemble tiers (code) ─► title and summary (LLM) ─► Postgres ─► reader
 ```
 
-- **Clustering instead of asking the model what happened.** Articles are embedded with `multilingual-e5-small` and grouped by cosine agglomerative clustering; an LLM only judges whether a cluster is one event and how much it matters.
-- **One cluster, one block.** Each block is written from that cluster's articles alone, so a mistake stays inside one block.
-- **Write, then check.** Every sentence of a draft is checked against the source text. When a sentence fails, the block goes back to the writer with the evidence and is rewritten.
-- **Deterministic assembly.** Tiers, ordering, citations and the final document are put together by code, not by a model.
+**The writer–checker loop** is the centre of it. A block is written from one cluster's articles by a writer model. Then every sentence of the draft goes to a checker, a different model, that looks only at that sentence and the cluster's source text and answers one question: is this supported, and if not, what is wrong and which source sentences show it. Objections go back into the writer's own conversation and it rewrites the block; only the changed sentences are checked again, for at most two rounds. If something fails along the way, the best version so far is published and the downgrade is recorded.
 
-A typical run turns about 500 articles into 25 blocks in 10 to 30 minutes, for roughly 30,000 Workers AI neurons (about $0.33 at list price, not counting per-article analysis). The full pipeline is described in [`docs/how-it-works.md`](docs/how-it-works.md).
+On a held-out set of 152 sentences reviewed blind, the writer alone got 6 wrong; with one round of checking 2; with two rounds none ([ADR 0010](docs/adr/0010-brief-block-writer-checker-loop.md)).
+
+The checker began as a small agent with three retrieval tools over the cluster. In production the retrieval is now done by code, which assembles an evidence pack by fixed rules, and the model makes a single call on it; the agent remains as the fallback ([ADR 0012](docs/adr/0012-one-call-sentence-check.md)). Handing the whole writing step to one free-running agent was tried and dropped: fewer errors, but a third of the lead blocks never got written.
+
+| Step | Who does it |
+|---|---|
+| Analyse an article | `qwen3-30b`, falling back to `glm-4.7-flash` |
+| Group articles into events | Code: `multilingual-e5-small` embeddings, cosine agglomerative clustering |
+| Is this cluster one event, and what is it | `glm-4.7-flash`, one call per cluster |
+| Which events matter most | `glm-4.7-flash`, three shuffled rounds combined by Borda count |
+| Write a block | `deepseek-v4-pro` |
+| Check each sentence | `qwen3.8-flash` on an evidence pack built by code; fallback: a `qwen3.8-27b` agent with search, timeline and read tools |
+| Tiers, order, citations, the final document | Code |
+
+A typical run turns about 500 articles into 25 blocks in 10 to 30 minutes, for roughly 30,000 Workers AI neurons (about $0.33 at list price, not counting per-article analysis). The full pipeline is in [`docs/how-it-works.md`](docs/how-it-works.md).
 
 ## Stack
 
 | Part | Built with |
 |---|---|
 | [`apps/backend`](apps/backend) | Cloudflare Workers, Durable Objects, Workflows, Queues, Hono |
-| [`services/meridian-ai-worker`](services/meridian-ai-worker) | Every LLM call, on Workers AI |
+| [`services/meridian-ai-worker`](services/meridian-ai-worker) | Every LLM call: Workers AI, plus DashScope through AI Gateway for the sentence check |
 | [`services/meridian-ml-service`](services/meridian-ml-service) | FastAPI on a Cloudflare Container: embeddings and clustering |
 | [`apps/frontend`](apps/frontend) | Nuxt 3 on Cloudflare Pages |
 | [`packages/database`](packages/database) | Drizzle ORM, Neon Postgres with pgvector, via Hyperdrive |

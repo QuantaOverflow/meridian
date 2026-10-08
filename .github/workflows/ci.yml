@@ -50,6 +50,8 @@ jobs:
       - run: node eval/_data/check.mjs
       - run: pnpm -F meridian-ai-worker test
       - run: pnpm -F @meridian/backend test
+      - name: Install the browser the frontend tests drive
+        run: pnpm -F @meridian/frontend exec playwright-core install --with-deps chromium-headless-shell
       - run: pnpm -F @meridian/frontend test
 
   ml-service:
@@ -62,6 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --frozen
+      # pytest is declared under the optional "dev" extra, ruff under the dev dependency group
+      - run: uv sync --frozen --extra dev
       - run: uv run --frozen ruff check src test
-      - run: uv run --frozen python -m pytest -q -x test/
+      - run: uv run --frozen --extra dev python -m pytest -q -x test/

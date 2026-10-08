@@ -96,7 +96,7 @@ The happy path above is the small part. Most of the work is in what happens when
 - **Decisions are measured and written down.** Eleven hand-labelled test sets under [`eval/`](eval), and eighteen decision records in [`docs/adr/`](docs/adr). Each record gives the measurements and the list of approaches that were tried and dropped.
 - **Over 700 automated tests** across the four units, run before every push and in CI.
 
-As of October 2026: 14 feeds, 51,000 articles processed, 47 briefs published since August, and every scheduled run since the current pipeline went live on September 21 has completed.
+As of October 2026: 14 feeds, 51,000 articles processed, 48 briefs published since August, and every scheduled run since the current pipeline went live on September 21 has completed.
 
 ## Stack
 

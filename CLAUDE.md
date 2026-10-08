@@ -30,7 +30,7 @@
 
 ## 工作规则
 - 分支：`meridian-dev` 是主干（没有 `main`）。主会话的改动直接提交到当前分支；写代码的 subagent 用 `isolation: "worktree"`，由主会话合回。
-  `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit
+  `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit。叠起来的一串 PR 从底往上逐个合并（步骤见 `docs/agents/lights-off.md`「叠起来」下一条）
 - 不主动新建 eval harness。要建，先在真实输出上做过错误分析、拿到修了 prompt / 代码仍残留的失败类别，并经用户同意（为什么见 `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）。错误分析怎么做照 Hamel Husain 的方法：原文 https://hamel.dev/blog/posts/evals-faq/why-is-error-analysis-so-important-in-llm-evals-and-how-is-it-performed.html ，本仓落点 `docs/engineering-notes/eval-playbook.md` §1（仅本地）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
 - commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -m "…" -- <paths>`，`-m` 要在 `--` 前），不要等用户开口；push 只在用户要求时做。

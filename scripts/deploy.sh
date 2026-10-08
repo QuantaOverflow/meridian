@@ -37,7 +37,10 @@
 #     （--print 时不查）
 #   ml-service 没有 staging 环境，两样都不做。
 #
-# 退出码：--print 时 0；否则是 wrangler 的退出码；2 = 用法或环境错误（在仓库根、没有 wrangler 配置、找不到 wrangler）。
+# 生产只从 main 部署：部署生产（不带 --env 的 backend / ai-worker，以及 ml-service）时当前分支不是 main 就拒绝。
+# main 永远等于线上跑的那一版；开发与 staging 在 meridian-dev 上，验证过再合进 main（CLAUDE.md「工作规则」）。--print 不查。
+#
+# 退出码：--print 时 0；否则是 wrangler 的退出码；2 = 用法或环境错误（在仓库根、没有 wrangler 配置、找不到 wrangler、不在 main 上部署生产）。
 #
 # 部署成没成功仍只看输出里的 Current Version ID 有没有变（见根 README 的 Deployment）。
 
@@ -103,6 +106,7 @@ fi
 
 REL_DIR="${SERVICE_DIR#"$REPO_ROOT"/}"
 DEPLOYS_PRODUCTION=0
+TO_STAGING=0
 case "$REL_DIR" in
   apps/backend|services/meridian-ai-worker)
     # 给了非空的环境名才算「指定了环境」；--env "" / --env= 是 wrangler 里显式指定顶层的写法，仍是部署生产
@@ -120,6 +124,8 @@ case "$REL_DIR" in
       # 空字符串 = 显式指定顶层环境（wrangler 4.141 dry-run 实测：binding 列表与不带参数时完全一致，且没有多环境 warning）。
       # 调用方自己已经写了空的 --env 就不再补
       [ "$ENV_ARG" = 1 ] || ARGS+=(--env=)
+    else
+      TO_STAGING=1
     fi
     ;;
 esac
@@ -133,6 +139,12 @@ if [ "$PRINT_ONLY" = 1 ]; then
     grep '"image_vars"' "$DEPLOY_CONFIG"
   fi
   exit 0
+fi
+
+# 生产只从 main 部署（ml-service 没有 staging 环境，每次部署都是生产）
+if [ "$TO_STAGING" = 0 ]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  [ "$BRANCH" = main ] || die "生产只从 main 部署，当前在 ${BRANCH}。先把验证过的 meridian-dev 合进 main；部署 staging 加 --env staging"
 fi
 
 # 部署生产的 backend / ai-worker：当前提交最近一次 Staging 运行没通过（或没有）就提示一行，不拦（ADR 0013 决定 8）。

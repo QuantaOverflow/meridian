@@ -35,10 +35,9 @@ set -euo pipefail
 CONTAINER_NAME_DEFAULT="meridian-ml-service"
 # git 里 ml-service 的路径
 ML_SERVICE_PATH="services/meridian-ml-service"
-# 默认拿哪个 ref 的代码时间：meridian-dev 是本仓库主干（没有 main）。
-# 线上跑的应该是主干代码，所以默认对主干比，不是对当前 HEAD
-# （在 worktree / feature 分支上跑时，HEAD 可能落后于主干，比出来的结论没意义）。
-CODE_REF_DEFAULT="meridian-dev"
+# 默认拿哪个 ref 的代码时间：生产只从 main 部署（scripts/deploy.sh），线上跑的应该是 main 的代码，
+# 所以默认对 main 比，不是对当前 HEAD（在 worktree / 开发分支上跑时，HEAD 与线上不是一回事）。
+CODE_REF_DEFAULT="main"
 
 CODE_TIME_OVERRIDE=""
 IMAGE_TIME_OVERRIDE=""

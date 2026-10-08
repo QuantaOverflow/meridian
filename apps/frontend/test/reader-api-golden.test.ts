@@ -1,5 +1,5 @@
 /**
- * 读者与后台读接口（`/api/briefs*`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
+ * 读者与后台读接口（`/api/briefs*`、`/api/countries*`、`/api/search`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
  * 真实构建并启动 Nuxt 服务（node-server preset），backend 用本文件起的 HTTP 服务假冒：它回放 backend 自己的快照
  * （apps/backend/test/fixtures/reader/__golden__/，由 backend 的 reader.spec.ts 对同一份 fixture 跑真实路由生成），
  * 前端的输出再与 `__golden__/reader-api/` 比对。后者是前端还直连数据库时对同一份 fixture 录下的，
@@ -97,6 +97,17 @@ const READER_CASES: Record<string, string> = {
   'country-404': '/api/countries/QQ/blocks',
   'country-invalid-code': '/api/countries/ISR/blocks',
   'country-invalid-query': '/api/countries/IL/blocks?section=both',
+  // 搜索：查询串去首尾空白、缺省的 limit / offset 补齐后转发；空查询、超长查询、带 NUL 的查询与过大的 offset 不转发，直接 400
+  'search-gaza': '/api/search?q=%20gaza%20',
+  'search-holding-page': '/api/search?q=holding&limit=1&offset=1',
+  'search-miss': '/api/search?q=zzz-no-match',
+  'search-empty-query': '/api/search?q=%20',
+  'search-missing-query': '/api/search',
+  'search-too-long': `/api/search?q=${'a'.repeat(201)}`,
+  'search-invalid-query': '/api/search?q=gaza&limit=0',
+  // NUL 字符与过大的 offset 到了 Postgres 都是报错，同样不转发
+  'search-nul-query': '/api/search?q=a%00b',
+  'search-offset-too-large': '/api/search?q=gaza&offset=99999999999999999999',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',
@@ -282,6 +293,90 @@ describe('国家页（SSR）', () => {
     expect(html).toMatch(/<a\b[^>]*href="\/countries\/IL"[^>]*>[\s\S]*?All coverage of Israel/);
     // 没锁定时没有这个入口
     expect(await (await fetch('/')).text()).not.toContain('href="/countries/');
+  });
+});
+
+// ── 搜索页：结果按线索折叠，期望值写死自 backend 的 search-* 快照 ──────────
+describe('搜索页（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 每组：线索链接（没有为 null）、直接露出的块、折在「展开」里的块；块 = [标题, 读这一块的链接] */
+  const groups = (html: string) =>
+    html.split('data-search-group').slice(1).map(part => {
+      const end = part.indexOf('</article>');
+      const group = part.slice(0, end === -1 ? undefined : end);
+      const blocks = (chunk: string) =>
+        [...chunk.matchAll(/<h[34]\b[^>]*>([\s\S]*?)<\/h[34]>[\s\S]*?<a\b[^>]*?href="(\/briefs\/[^"]*)"/g)].map(([, title, href]) => [text(title), href]);
+      const fold = group.indexOf('<details');
+      const thread = /<a\b[^>]*?href="(\/stories\/\d+)"[^>]*>([\s\S]*?)<\/a>/.exec(group);
+      return {
+        thread: thread === null ? null : [thread[1], text(thread[2])],
+        shown: blocks(fold === -1 ? group : group.slice(0, fold)),
+        folded: fold === -1 ? [] : blocks(group.slice(fold)),
+      };
+    });
+
+  it('同一线索的两块折成一组：最新那块直接露出，另一块在展开里；带线索页的链接', async () => {
+    const res = await fetch('/search?q=gaza');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+
+    expect(groups(html)).toEqual([
+      {
+        thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'],
+        shown: [['gaza ceasefire holds', '/briefs/8#story-1']],
+        folded: [['gaza talks in cairo', '/briefs/6#story-1']],
+      },
+    ]);
+    expect(text(html)).toContain('1 more from this thread');
+    expect(text(html)).toContain('2 matching stories');
+    // 搜索框里留着查询串；正文按段落渲染
+    const box = /<input\b[^>]*name="q"[^>]*>/.exec(html)?.[0];
+    expect(box).toContain('value="gaza"');
+    expect(html).toContain('<p>Aid deliveries rose.</p>');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('两组：有线索的一组带线索链接，没有线索的一组不带', async () => {
+    const html = await (await fetch('/search?q=holding')).text();
+    expect(groups(html)).toEqual([
+      { thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'], shown: [['gaza ceasefire holds', '/briefs/8#story-1']], folded: [] },
+      { thread: null, shown: [['fed holds rates', '/briefs/8#story-2']], folded: [] },
+    ]);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('没命中：200，写明没有结果', async () => {
+    const res = await fetch('/search?q=zzz-no-match');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(text(html)).toContain('No stories match “zzz-no-match”.');
+    expect(groups(html)).toEqual([]);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('没带查询串、只有空白：只出搜索框与说明，不去问 backend', async () => {
+    for (const path of ['/search', '/search?q=', '/search?q=%20%20']) {
+      const res = await fetch(path);
+      expect(res.status, path).toBe(200);
+      const html = await res.text();
+      expect(html, path).toMatch(/<input\b[^>]*name="q"/);
+      expect(text(html), path).toContain('Search the stories in every published brief.');
+      expect(groups(html), path).toEqual([]);
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  it('查询串超过 200 字：写明上限，不去问 backend', async () => {
+    const res = await fetch(`/search?q=${'a'.repeat(201)}`);
+    expect(res.status).toBe(200);
+    expect(text(await res.text())).toContain('Search queries can be at most 200 characters.');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('导航栏有搜索入口：读者页与地图首页', async () => {
+    for (const path of ['/search', '/stories', '/']) {
+      expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/search"/);
+    }
   });
 });
 

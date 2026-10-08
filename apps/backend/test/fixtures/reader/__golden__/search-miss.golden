@@ -1,0 +1,2 @@
+{"status":200,"path":"/reader/search?q=zzz-no-match&limit=20&offset=0"}
+{"query":"zzz-no-match","total":0,"totalBlocks":0,"items":[]}

@@ -1,0 +1,2 @@
+{"status":200,"cache-control":null}
+{"query":"holding","total":2,"totalBlocks":2,"items":[{"thread":null,"blockCount":1,"blocks":[{"id":5,"title":"fed holds rates","bodyHtml":"<p>The Fed held rates at 4.25%.</p>","tier":"more","briefNumber":8,"dateLabel":"{D+0 long}","href":"/briefs/8#story-2"}]}]}

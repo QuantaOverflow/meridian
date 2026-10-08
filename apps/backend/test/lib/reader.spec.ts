@@ -7,7 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
-import type { CountryBlocksPage, CountrySection } from '@meridian/contracts';
+import type { CountryBlocksPage, CountrySection, SearchPage } from '@meridian/contracts';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
@@ -48,6 +48,11 @@ const CASES: Record<string, string> = {
   'country-jp-empty': '/reader/countries/JP/blocks?section=placement&limit=20&offset=0',
   'country-jp-mention-empty': '/reader/countries/JP/blocks?section=mention&limit=20&offset=0',
   'country-404': '/reader/countries/QQ/blocks?section=placement&limit=20&offset=0',
+  // 搜索：gaza 命中线索 1 的两块（折成一组）；holding 靠词形还原命中两组（线索 1 与没过线索门槛的簇 5）
+  'search-gaza': '/reader/search?q=gaza&limit=20&offset=0',
+  'search-holding': '/reader/search?q=holding&limit=20&offset=0',
+  'search-holding-page': '/reader/search?q=holding&limit=1&offset=1',
+  'search-miss': '/reader/search?q=zzz-no-match&limit=20&offset=0',
   'stories-list': '/reader/stories',
   'story-1-streak': '/reader/stories/1',
   'story-2-importance': '/reader/stories/2',
@@ -127,8 +132,73 @@ describe('边界', () => {
     expect([page.country, page.section, page.total]).toEqual(['IL', 'placement', 3]);
   });
 
+  describe('搜索', () => {
+    const search = async (q: string, extra = '') => {
+      const res = await exports.default.fetch(`http://backend/reader/search?q=${encodeURIComponent(q)}${extra}`, {
+        headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+      });
+      expect(res.status, q).toBe(200);
+      return (await res.json()) as SearchPage;
+    };
+    /** 每组：线索号（没有为 null）与组内各块的 [期号, 故事号] */
+    const shape = (page: SearchPage) => page.items.map(g => [g.thread?.id ?? null, g.blocks.map(b => [b.brief.id, b.storyId])]);
+
+    it('同一线索的块折成一组，组内最新的在前；带线索的标题与期数', async () => {
+      const page = await search('gaza');
+      expect(shape(page)).toEqual([[1, [[8, 15], [6, 12]]]]);
+      expect(page.items[0].thread).toEqual({ id: 1, title: 'Gaza — ceasefire holds', briefCount: 3 });
+      expect([page.query, page.total, page.totalBlocks, page.items[0].blockCount]).toEqual(['gaza', 1, 2, 2]);
+    });
+
+    it('词形还原：搜 holding 命中写着 holds 的块，搜 sanction 命中 sanctions；正文与标题都搜', async () => {
+      // 簇 5 只出现在一期，不到线索门槛：照常成组，但不带线索
+      expect(shape(await search('holding'))).toEqual([[1, [[8, 15]]], [null, [[8, 16]]]]);
+      expect(shape(await search('sanction'))).toEqual([[2, [[7, 14]]]]);
+      // deliveries 只在正文里
+      expect(shape(await search('delivery'))).toEqual([[1, [[8, 15]]]]);
+    });
+
+    it('多个词是「都要有」；引号是短语；首尾空白与大小写不计', async () => {
+      expect(shape(await search('  Gaza Cairo '))).toEqual([[1, [[6, 12]]]]);
+      expect((await search('gaza cairo')).query).toBe('gaza cairo');
+      expect(shape(await search('"held rates"'))).toEqual([[null, [[8, 16]]]]);
+      expect(shape(await search('"rates held"'))).toEqual([]);
+    });
+
+    it('未发布的期的块不出现（第 9 期那块写着 debug）', async () => {
+      const page = await search('debug');
+      expect([page.total, page.totalBlocks, page.items]).toEqual([0, 0, []]);
+    });
+
+    it('分页按组数；翻过头是空页，总数不变', async () => {
+      const second = await search('holding', '&limit=1&offset=1');
+      expect(shape(second)).toEqual([[null, [[8, 16]]]]);
+      expect([second.total, second.totalBlocks]).toEqual([2, 2]);
+      for (const offset of [5, 100000]) {
+        const beyond = await search('holding', `&offset=${offset}`);
+        expect([beyond.total, beyond.totalBlocks, beyond.items], String(offset)).toEqual([2, 2, []]);
+      }
+    });
+
+    it('查询串里的检索语法符号与只有停用词的查询：200，不报错', async () => {
+      for (const q of ["gaza & | ! ( ' :*", 'the', '100%', '"']) await search(q);
+      expect((await search('the')).total).toBe(0);
+    });
+
+    it('空查询、只有空白、超过 200 字、带 NUL 字符（Postgres 的 text 存不了）：400', async () => {
+      for (const path of [
+        '/reader/search', '/reader/search?q=', '/reader/search?q=%20%20', `/reader/search?q=${'a'.repeat(201)}`,
+        '/reader/search?q=a%00b', '/reader/search?q=%00',
+      ]) {
+        const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+        expect(res.status, path).toBe(400);
+      }
+      expect((await search('a'.repeat(200))).total).toBe(0);
+    });
+  });
+
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });
@@ -137,6 +207,8 @@ describe('边界', () => {
     for (const path of [
       '/reader/briefs?limit=0', '/reader/briefs/abc', '/reader/briefs/abc/map', '/reader/stories/1.5', '/admin/sources/abc/details',
       '/reader/countries/ISR/blocks', '/reader/countries/IL/blocks?section=both', '/reader/countries/IL/blocks?limit=51',
+      '/reader/search?q=gaza&limit=51', '/reader/search?q=gaza&offset=-1',
+      '/reader/search?q=gaza&offset=100001', '/reader/search?q=gaza&offset=99999999999999999999',
     ]) {
       const res = await exports.default.fetch(`http://backend${path}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
       expect(res.status, path).toBe(400);

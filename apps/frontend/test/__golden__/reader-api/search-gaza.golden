@@ -1,0 +1,2 @@
+{"status":200,"cache-control":null}
+{"query":"gaza","total":1,"totalBlocks":2,"items":[{"thread":{"id":1,"title":"Gaza — ceasefire holds","briefCount":3,"href":"/stories/1"},"blockCount":2,"blocks":[{"id":4,"title":"gaza ceasefire holds","bodyHtml":"<p>The ceasefire held for a third day.</p>\n<p>Aid deliveries rose.</p>","tier":"lead","briefNumber":8,"dateLabel":"{D+0 long}","href":"/briefs/8#story-1"},{"id":1,"title":"gaza talks in cairo","bodyHtml":"<p>Talks resumed.</p>","tier":"lead","briefNumber":6,"dateLabel":"{D-2 long}","href":"/briefs/6#story-1"}]}]}

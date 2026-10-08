@@ -29,6 +29,8 @@ const latestEntryId = computed(() => props.thread.entries[0]?.id ?? null);
       {{ thread.title }}
     </h1>
 
+    <p class="mb-[22px]"><FollowButton :follow="{ kind: 'thread', id: thread.id, title: thread.title }" /></p>
+
     <p v-if="lead" class="font-serif text-[18px] leading-[1.9] tracking-[0.01em] text-ink md:text-[20.5px] mb-[22px]">
       {{ lead }}
     </p>

@@ -14,6 +14,7 @@ const navItems = computed(() => [
   { label: 'Archive', short: 'Archive', to: '/briefs', active: route.path === '/briefs' },
   { label: 'Story threads', short: 'Threads', to: '/stories', active: route.path.startsWith('/stories') },
   { label: 'Search', short: 'Search', to: '/search', active: route.path === '/search' },
+  { label: 'Following', short: 'Following', to: '/following', active: route.path === '/following' },
 ]);
 
 function toggleTheme() {

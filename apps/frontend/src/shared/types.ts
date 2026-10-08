@@ -98,6 +98,23 @@ export interface SearchResponse {
   items: SearchGroupItem[];
 }
 
+/** Following 页上的一块，由 /api/following 返回 */
+interface FollowingBlockItem extends BlockItem {
+  /** 所属那一期的生成时刻（ISO）；页面拿它与上次访问的时刻比，标出 new */
+  briefCreatedAt: string;
+  /** 这一块命中的关注项（至少一个）。involved = 关注的是国家、而这一块只是涉及该国（落点在别处） */
+  matches: { kind: 'country' | 'thread'; label: string; href: string | null; involved: boolean }[];
+}
+
+/** Following 页的一页：命中任一关注项的块，最新的在前 */
+export interface FollowingResponse {
+  /** 命中的总块数，与分页无关 */
+  total: number;
+  items: FollowingBlockItem[];
+  /** 关注的线索现在的标题（只含现在有线索页的） */
+  threads: { id: number; title: string }[];
+}
+
 /** 事件追踪的线索状态。「暂无更新」不是「已平息」——系统只知道没有新报道并入 */
 export type StoryThreadStatus = 'active' | 'dormant';
 

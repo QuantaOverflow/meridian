@@ -91,9 +91,12 @@ useSeoMeta({
     </NuxtLink>
 
     <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Country</p>
-    <h1 class="font-serif text-[28px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[42px] mb-[18px]">
-      {{ name }}
-    </h1>
+    <div class="mb-[18px] flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
+      <h1 class="font-serif text-[28px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[42px]">
+        {{ name }}
+      </h1>
+      <FollowButton :follow="{ kind: 'country', code }" />
+    </div>
 
     <p v-if="status === 'pending' || !data" class="text-[13px] text-ink3" aria-busy="true" aria-live="polite">Loading…</p>
 

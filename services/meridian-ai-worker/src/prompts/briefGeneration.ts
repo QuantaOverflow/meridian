@@ -9,7 +9,15 @@ export function getBriefTitlePrompt(briefText: string): string {
 ${briefText}
 </brief>
 
-create a title for the brief. construct it using the main topics. it should be short/punchy/not clickbaity etc. make sure to not use "short text: longer text here for some reason" i HATE it, under no circumstance should there be colons in the title. make sure it's not too vague/generic either bc there might be many stories. maybe don't focus on like restituting what happened in the title, just do like the major entities/actors/things that happened. like "[person A], [thing 1], [org B] & [person O]" etc. try not to use verbs. state topics instead of stating topics + adding "shakes world order". always use lowercase.
+Write the headline for this daily brief. It appears on the brief's page and in the list of past briefs, where it is all a reader has to tell one day from another.
+
+- Name the one or two most consequential developments of the day. The brief is ordered by importance, so they are in its first section. Do not try to cover every story.
+- Say what happened: each development needs its actor and what they did, not just a topic. "France's school protests draw 250,000" tells the reader something; "France, schools" does not.
+- One line, at most 14 words. Join two developments with "as", "while" or a comma.
+- Sentence case: capitalise the first word and proper nouns, nothing else. No full stop at the end.
+- No colon anywhere. No "X: Y" shape.
+- Plain and specific. No hype words ("shakes", "stuns", "rocks"), no verdict about what it all means, no question.
+- Use only what the brief states, and keep the status of each claim: a demand is not an agreement, a proposal is not a decision, an arrest is not a conviction.
 
 return exclusively a JSON object with the following format:
 \`\`\`json

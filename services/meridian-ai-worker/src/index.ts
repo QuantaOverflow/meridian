@@ -394,7 +394,7 @@ app.post('/meridian/brief-block-v6', async (c) => {
 })
 
 // 简报整篇标题。v3 链路的拼装在 backend 用代码做（三节、<u> 条目全是确定性的），
-// 只剩「给整篇起个名」这一次调用，沿用旧链路同一个 prompt，标题风格不变。
+// 只剩「给整篇起个名」这一次调用。2026-10-08 起标题是一句话的新闻标题（当天最要紧的一两件事），不再是全小写的话题串。
 app.post('/meridian/brief-title', async (c) => {
   try {
     const body = await c.req.json<Partial<BriefTitleRequest>>()

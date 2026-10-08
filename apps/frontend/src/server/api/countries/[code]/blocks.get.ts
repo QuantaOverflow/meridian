@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { CountryBlocksPage } from '@meridian/contracts';
 import { countryName } from '~/lib/briefMap';
 import { readFromBackend } from '~/server/lib/backend';
-import { toBlockItem } from '~/server/lib/blockItem';
+import { loadEntityLinks, toBlockItem } from '~/server/lib/blockItem';
 import type { CountryBlocksResponse } from '~/shared/types';
 
 const querySchema = z.object({
@@ -30,6 +30,7 @@ export default defineEventHandler(async (event): Promise<CountryBlocksResponse> 
     `/reader/countries/${code.toUpperCase()}/blocks?section=${section}&limit=${limit}&offset=${offset}`,
     'Country not found'
   );
+  const entityLinks = await loadEntityLinks(page.items);
 
   return {
     country: page.country,
@@ -37,7 +38,7 @@ export default defineEventHandler(async (event): Promise<CountryBlocksResponse> 
     section: page.section,
     total: page.total,
     items: page.items.map(block => ({
-      ...toBlockItem(block),
+      ...toBlockItem(block, entityLinks),
       placedIn: block.countries.placement === null ? null : countryName(block.countries.placement),
       alsoInvolves: block.countries.mentions.filter(c => c !== page.country).map(countryName),
     })),

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { BriefDetail } from '~/shared/types';
+import type { BriefDetail, BriefEntityLinks } from '~/shared/types';
 
-const props = defineProps<{ brief: BriefDetail }>();
+// entityLinks：每个简报块下的实体链接（块的锚点 id → 链接），另一条请求取，没到或取不到时不显示
+const props = defineProps<{ brief: BriefDetail; entityLinks?: BriefEntityLinks }>();
 
 /**
  * 目录按板块分组——分组信息正文里本来就有（`## top stories` / `## more news` / `## in brief`
@@ -42,7 +43,7 @@ const showAllArticles = ref(false);
     <!-- 正文列在视口正中，侧栏是绝对定位浮在左侧留白里的，不占文档流也就不会把正文推偏 -->
     <div class="mx-auto max-w-[668px] pt-[70px] pb-[140px]">
       <header>
-        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Daily intelligence brief · Issue {{ brief.id }}</p>
+        <p class="mb-4 text-[12.5px] tracking-[0.1em] text-ink3">Daily intelligence brief · No. {{ brief.id }}</p>
 
         <h1
           class="font-serif text-[28px] leading-[1.24] font-semibold tracking-[-0.01em] text-ink md:text-[44px] mb-[18px]"
@@ -98,6 +99,9 @@ const showAllArticles = ref(false);
           <div class="brief-prose" v-html="story.leadHtml" />
           <!-- 第二段起属于深读；速读模式由 [data-mode='skim'] .deep-only 隐藏 -->
           <div v-if="story.restHtml" class="brief-prose deep-only mt-6" v-html="story.restHtml" />
+          <p v-if="entityLinks?.[story.id]?.length" data-test="story-entities" class="mt-[14px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
+            <EntityLinks :entities="entityLinks[story.id]!" />
+          </p>
         </article>
       </section>
 

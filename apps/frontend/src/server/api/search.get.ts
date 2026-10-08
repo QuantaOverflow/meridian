@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { SearchPage } from '@meridian/contracts';
 import { readFromBackend } from '~/server/lib/backend';
-import { toBlockItem } from '~/server/lib/blockItem';
+import { loadEntityLinks, toBlockItem } from '~/server/lib/blockItem';
 import type { SearchResponse } from '~/shared/types';
 
 const querySchema = z.object({
@@ -24,6 +24,7 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
   const { q, limit, offset } = parsed.data;
 
   const page = await readFromBackend<SearchPage>(`/reader/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`);
+  const entityLinks = await loadEntityLinks(page.items.flatMap(group => group.blocks));
 
   return {
     query: page.query,
@@ -32,7 +33,7 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     items: page.items.map(group => ({
       thread: group.thread === null ? null : { ...group.thread, href: `/stories/${group.thread.id}` },
       blockCount: group.blockCount,
-      blocks: group.blocks.map(toBlockItem),
+      blocks: group.blocks.map(block => toBlockItem(block, entityLinks)),
     })),
   };
 });

@@ -72,6 +72,20 @@
 - 现象：简报 workflow 每期把读回的向量卸到 R2 `datasetEmbeddingsKey(workflowId)`（`auto-brief-generation.ts` 数据集步），之后没有任何代码删它；每期约 2.5MB 量级，只增不减。（删源时 R2 正文已由 `lib/sources.ts` 一并删除，不在此列。）
 - 待裁决：加 R2 lifecycle 规则按前缀过期，还是一期结束时显式删；replay 与观测是否还要读旧期数据集要先确认。
 
+### D18. 读者接口的参数上限在 HTTP 两侧各写一遍（2026-10-08）
+- 位置：`apps/backend/src/routers/reader.router.ts` 与前端 `apps/frontend/src/server/api/` 下的 `search.get.ts`、`following.get.ts`、`entities/blocks.get.ts`、`countries/` 的路由。
+- 现象：查询词至多 200 字、不含 NUL、`limit` 至多 50、`offset` 至多 100000 这四个上限，前端服务端与 backend 路由各校验一遍，数字各写各的；`packages/contracts` 里只有关注项数与块号的上限。往期列表的 `q` / `limit` 校验是更早的同类写法。
+- 代价：改一个上限要改两处，漏改一处时前端放行、backend 回 400（或反过来白拦）。
+- 选项：四个上限进 `packages/contracts`，两侧引用，仍各自校验。
+- 裁决（2026-10-08）：延后。上限定下后没改过，两侧不一致的后果是一次 400，不是错数据。触发条件：要改其中任一个上限，或再加一个带同样参数的读者接口。
+
+### D19. 四个读者页面各带一份「加载更多」（2026-10-08）
+- 位置：`apps/frontend/src/pages/countries/[code].vue`、`pages/search.vue`、`pages/following.vue`、`components/EntityDetail.vue`；更早的同类写法在 `components/BriefArchive.vue` 的 `loadMore`。
+- 现象：取下一页、按块号去重的逻辑每个页面抄了一份（函数叫 `showMore`）。服务端一侧块的展示已经只有一份（`toBlockItem`）。
+- 代价：分页的 bug 要修四处。
+- 选项：收成一个组合函数。
+- 裁决（2026-10-08）：延后。四份写法一致，危害只在以后改的时候。触发条件：其中一份出了分页的 bug，或要加第五个带分页的块列表页。
+
 ---
 
 ## 命名 / 死代码

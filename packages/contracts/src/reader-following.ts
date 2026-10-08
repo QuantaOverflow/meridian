@@ -2,7 +2,8 @@
  * Following 页的数据：backend `GET /reader/following` 的响应体，前端 `/api/following` 在它之上加展示字段。
  * 写方：backend lib/reader/following-blocks.ts。读方：frontend Following 页。
  * 关注项（见 GLOSSARY.md「关注项」）只记在读者的浏览器里，每次请求由前端带上来：`countries` 是逗号分隔的国家代码，
- * `threads` 是逗号分隔的线索号。返回命中任一关注项的块，只含已发布各期的块，最新的在前。
+ * `threads` 是逗号分隔的线索号，`entities` 是实体归一后的写法（写法里可以有逗号，所以一个实体一个 `entities=` 参数）。
+ * 返回命中任一关注项的块，只含已发布各期的块，最新的在前。
  */
 import type { BriefBlock } from './brief-block';
 import type { BlockCountries } from './placement';
@@ -14,11 +15,14 @@ export const MAX_FOLLOWS_PER_KIND = 100;
 
 /**
  * 一块命中了哪个关注项。关注一个国家 = 落点在该国的块（via: placement）+ 涉及该国的块（via: mention），
- * 后者在页面上标注「涉及」。
+ * 后者在页面上标注「涉及」。关注一个实体 = 挂着这个实体的块（name 是这一块存的显示写法）。
  */
-export type FollowMatch = { kind: 'country'; code: string; via: CountrySection } | { kind: 'thread'; id: number };
+export type FollowMatch =
+  | { kind: 'country'; code: string; via: CountrySection }
+  | { kind: 'thread'; id: number }
+  | { kind: 'entity'; key: string; name: string };
 
-/** 列在 Following 页上的一块：块本身、它对国家的归属、命中的关注项（至少一个；国家在前，线索在后） */
+/** 列在 Following 页上的一块：块本身、它对国家的归属、命中的关注项（至少一个；先国家，再线索，再实体） */
 export interface FollowingBlock extends BriefBlock {
   countries: BlockCountries;
   matches: FollowMatch[];

@@ -1,11 +1,9 @@
-import { blockCountries, type BlockCountries, type BriefMapEvent } from '@meridian/contracts';
-import { $articles, $brief_stories, inArray } from '@meridian/database';
-import type { Db } from './db';
+import type { BriefMapEvent } from '@meridian/contracts';
 import { countryOfEntity, normalizePlace } from './places';
 
 /**
  * 一个故事的成员文章在各国的占比，与由它定出的「块对国家的归属」。只有这一份：
- * 地图接口（brief-map.ts）给前端的 places / mentions、写简报块时存在块上的落点国家与涉及国家（loadBlockCountries）都从这里算。
+ * 地图接口（lib/reader/brief-map.ts）给前端的 places / mentions、写简报块时存在块上的落点国家与涉及国家（brief-blocks.ts）都从这里算。
  * 落点规则本身在 @meridian/contracts 的 placement.ts。
  */
 
@@ -67,32 +65,4 @@ export function mentionsOf(
     .map(([country, n]) => ({ country, share: Math.round((n / members.length) * 1000) / 1000 }))
     .sort((a, b) => b.share - a.share || a.country.localeCompare(b.country))
     .slice(0, 5);
-}
-
-/**
- * 一批故事（brief_stories.id）各自的块对国家的归属，按成员文章现算。写简报块时调用（lib/save-brief-report.ts），
- * 结果存在块上；没有成员、成员都没有地点的故事是 { placement: null, mentions: [] }。
- */
-export async function loadBlockCountries(db: Pick<Db, 'select'>, storyIds: number[]): Promise<Map<number, BlockCountries>> {
-  if (storyIds.length === 0) return new Map();
-  const stories = await db
-    .select({ id: $brief_stories.id, articleIds: $brief_stories.article_ids })
-    .from($brief_stories)
-    .where(inArray($brief_stories.id, storyIds));
-  const allMembers = [...new Set(stories.flatMap(s => memberIds(s.articleIds)))];
-  const articles =
-    allMembers.length === 0
-      ? []
-      : await db
-          .select({ id: $articles.id, location: $articles.primary_location, entities: $articles.key_entities })
-          .from($articles)
-          .where(inArray($articles.id, allMembers));
-  const locationOf = new Map(articles.map(a => [a.id, a.location]));
-  const entitiesOf = new Map(articles.map(a => [a.id, entityNames(a.entities)]));
-  return new Map(
-    stories.map(s => {
-      const members = memberIds(s.articleIds);
-      return [s.id, blockCountries(placesOf(members, locationOf), mentionsOf(members, locationOf, entitiesOf))];
-    })
-  );
 }

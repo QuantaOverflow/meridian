@@ -1,0 +1,8 @@
+{"status":404,"cache-control":"no-cache"}
+{
+  "error": true,
+  "url": "{server}/api/entities/blocks?name=hamas",
+  "statusCode": 404,
+  "statusMessage": "Entity not found",
+  "message": "Entity not found"
+}

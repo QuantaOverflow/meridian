@@ -256,7 +256,7 @@ const lockedView = computed(() => {
             <div v-for="e in group.list" :key="e.storyId" class="event">
               <div class="chips">
                 <span class="chip" :class="e.tier === 'lead' ? 'esc' : 'act'">{{ SECTION[e.tier] }}</span>
-                <span v-if="e.thread" class="chip">Tracking · issue {{ e.thread.briefCount }}</span>
+                <span v-if="e.thread" class="chip">Tracking · {{ pluralize(e.thread.briefCount, 'brief') }}</span>
               </div>
               <h3>{{ e.title }}</h3>
               <p>{{ e.lead }}</p>
@@ -321,7 +321,7 @@ const lockedView = computed(() => {
             >
               <div class="hmeta">
                 <span>{{ where(e) }}{{ topic ? ` · ${SECTION[e.tier]}` : '' }}</span>
-                <NuxtLink v-if="e.thread" class="chip" :to="`/stories/${e.thread.id}`">Tracking · issue {{ e.thread.briefCount }}</NuxtLink>
+                <NuxtLink v-if="e.thread" class="chip" :to="`/stories/${e.thread.id}`">Tracking · {{ pluralize(e.thread.briefCount, 'brief') }}</NuxtLink>
               </div>
               <h3>{{ e.title }}</h3>
               <p>{{ e.lead }}</p>

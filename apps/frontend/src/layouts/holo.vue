@@ -15,6 +15,7 @@ useHead({
         <NuxtLink to="/">Today</NuxtLink>
         <NuxtLink to="/briefs">Archive</NuxtLink>
         <NuxtLink to="/stories">Stories</NuxtLink>
+        <NuxtLink to="/entities">Names</NuxtLink>
         <NuxtLink to="/search">Search</NuxtLink>
         <NuxtLink to="/following">Following</NuxtLink>
       </nav>

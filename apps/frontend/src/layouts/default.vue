@@ -14,6 +14,8 @@ const navItems = computed(() => [
   { label: 'Archive', short: 'Archive', to: '/briefs', active: route.path === '/briefs' },
   { label: 'Story threads', short: 'Threads', to: '/stories', active: route.path.startsWith('/stories') },
   { label: 'Search', short: 'Search', to: '/search', active: route.path === '/search' },
+  // 窄屏上导航已经放不下，Names 只在宽屏显示；窄屏从搜索页进
+  { label: 'Names', short: 'Names', to: '/entities', active: route.path === '/entities', wideOnly: true },
   { label: 'Following', short: 'Following', to: '/following', active: route.path === '/following' },
 ]);
 
@@ -41,7 +43,7 @@ function toggleTheme() {
             :key="item.to"
             :to="item.to"
             :aria-current="item.active ? 'page' : undefined"
-            :class="item.active ? 'text-ink' : 'text-ink3 hover:text-ink'"
+            :class="[item.active ? 'text-ink' : 'text-ink3 hover:text-ink', item.wideOnly ? 'hidden md:inline' : '']"
             class="whitespace-nowrap transition-colors"
           >
             <span class="md:hidden">{{ item.short }}</span>

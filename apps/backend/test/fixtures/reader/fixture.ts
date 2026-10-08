@@ -21,10 +21,14 @@
  * brief_stories.cluster_id、wf-r8 的 params（时间窗放到 4 天，让第 -3 天的 Alpha 文章落进当期窗口），
  * 以及 R2 里 wf-r8 的 brief-v3 记录（putBrief8Record）。改这些不动其它 golden。
  *
- * 国家页（/reader/countries/:code/blocks）读简报块：第 6–9 期各有几块，经生产的写法（insertBriefBlocks）落库，
+ * 国家页（/reader/countries/:code/blocks）读简报块：第 6–9 期各有几块，经生产的写法（writeBriefBlocks）落库，
  * 落点国家与涉及国家由它按成员文章算。以色列：落点在该国的三块（第 8、7、6 期）、涉及该国的一块（第 7 期的 story 14，
- * 成员没有地点、关键实体里都提到 Israel 与 Iran）；未发布的第 9 期那块不该出现。Beta 102 / 111 的 key_entities 只为这一块设，
- * 别的 golden 不读。
+ * 成员没有地点、关键实体里都提到 Israel 与 Iran）；未发布的第 9 期那块不该出现。
+ *
+ * 实体页（/reader/entities/blocks、/reader/block-entities）读块上的实体，同样由 writeBriefBlocks 按成员文章的 key_entities 算：
+ * Benjamin Netanyahu 在已发布的 5 块里都有（恰好过门槛，有实体页）；Hamas 在已发布的 4 块加未发布的第 9 期那块里
+ *（把未发布的算进去才够 5 块，不该有页）；Federal Reserve 只在 1 块；Reuters 是媒体名、Iran 与 Israel 是国家，都不是实体。
+ * key_entities 只有这几处读，别的 golden 不读。
  */
 import { briefV3RecordKey, type BriefBlockDraft, type BriefTier, type BriefV3Record, type BriefV3WrittenBlock } from '@meridian/contracts';
 import {
@@ -37,7 +41,7 @@ import {
   sql,
   type getDb,
 } from '@meridian/database';
-import { insertBriefBlocks } from '../../../src/lib/save-brief-report';
+import { writeBriefBlocks } from '../../../src/lib/core/brief-blocks';
 
 type Db = ReturnType<typeof getDb>;
 
@@ -96,6 +100,13 @@ export function buildReaderFixture(anchor: Date) {
     109: ['Smoke reached Italy.'],
   };
   const locations: Record<number, string> = { 101: 'Israel', 112: 'Gaza', 105: 'United States' };
+  // 关键实体：国家的那几个给第 7 期 story 14 算「涉及」；其余给实体页（见文件头）
+  const entities: Record<number, string[]> = {
+    101: ['Benjamin Netanyahu', 'Hamas', 'Reuters'],
+    102: ['Iran', 'Israel', 'Benjamin Netanyahu', 'Hamas'],
+    111: ['Iran', 'Israel', 'Benjamin Netanyahu'],
+    105: [' benjamin netanyahu ', 'Federal Reserve'],
+  };
   for (let id = 101; id <= 112; id++) {
     articles.push({
       id,
@@ -112,7 +123,7 @@ export function buildReaderFixture(anchor: Date) {
       topic_tags: id === 101 || id === 112 ? ['Security', 'Conflict', 'World Affairs'] : id === 105 ? ['Economy', 'Politics'] : null,
       // 第 8 期正文故事的成员：story 15 = Israel + Gaza（落在一国、第二国过连线门槛），story 16 = 美国
       primary_location: locations[id] ?? null,
-      key_entities: id === 102 || id === 111 ? ['Iran', 'Israel', 'Benjamin Netanyahu'] : null,
+      key_entities: entities[id] ?? null,
     });
   }
 
@@ -354,7 +365,7 @@ export async function seedReaderFixture(db: Db, anchor: Date) {
   await db.insert($story_clusters).values(f.clusters);
   await db.insert($brief_stories).values(f.briefStories);
   for (const [reportId, blocks] of Object.entries(f.briefBlocks)) {
-    await insertBriefBlocks(db, Number(reportId), blocks.map((b, position) => ({ ...b, position })));
+    await writeBriefBlocks(db, Number(reportId), blocks.map((b, position) => ({ ...b, position })));
   }
   // 上面按固定 id 插入不会推进自增序列；不同步的话，之后别的测试（同一个库、同一个 worker）
   // 不带 id 插入会从 1 开始撞主键。

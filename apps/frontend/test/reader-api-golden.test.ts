@@ -1,5 +1,5 @@
 /**
- * 读者与后台读接口（`/api/briefs*`、`/api/countries*`、`/api/following`、`/api/search`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
+ * 读者与后台读接口（`/api/briefs*`、`/api/countries*`、`/api/entities*`、`/api/following`、`/api/search`、`/api/stories*`、`/api/admin/sources*` 的 GET）的响应快照。
  * 真实构建并启动 Nuxt 服务（node-server preset），backend 用本文件起的 HTTP 服务假冒：它回放 backend 自己的快照
  * （apps/backend/test/fixtures/reader/__golden__/，由 backend 的 reader.spec.ts 对同一份 fixture 跑真实路由生成），
  * 前端的输出再与 `__golden__/reader-api/` 比对。后者是前端还直连数据库时对同一份 fixture 录下的，
@@ -28,9 +28,25 @@ for (const file of readdirSync(BACKEND_GOLDEN)) {
   replies.set(meta.path, { status: meta.status, body: detokenizeDates(text.slice(newline + 1).trimEnd(), anchor) });
 }
 
+// 块下的实体链接（/reader/block-entities?ids=…）：backend 只录一份「fixture 里全部块」的快照，任意一批块号的请求
+// 从它里面按请求的顺序挑，与真接口同口径（没有实体的块不在结果里；顺序与子集的行为由 backend 的 reader.spec.ts 对真路由测）。
+// 请求里有没录到的块号时不回放（记进 unexpected）：说明 backend 的 fixture 加了块而那份快照没跟上
+const BLOCK_ENTITIES = '/reader/block-entities?ids=';
+const idsOf = (path: string) => path.slice(BLOCK_ENTITIES.length).split(',').map(Number);
+const allBlockEntities = [...replies].find(([path]) => path.startsWith(BLOCK_ENTITIES));
+if (allBlockEntities === undefined) throw new Error('backend 快照里没有 block-entities-all');
+const recordedBlockIds = new Set(idsOf(allBlockEntities[0]));
+const recordedBlockEntities = (JSON.parse(allBlockEntities[1].body) as { items: { blockId: number }[] }).items;
+function blockEntitiesReply(path: string): { status: number; body: string } | undefined {
+  if (!path.startsWith(BLOCK_ENTITIES)) return undefined;
+  const ids = idsOf(path);
+  if (ids.some(id => !recordedBlockIds.has(id))) return undefined;
+  return { status: 200, body: JSON.stringify({ items: ids.flatMap(id => recordedBlockEntities.filter(item => item.blockId === id)) }) };
+}
+
 const unexpected: string[] = [];
 const backend = http.createServer((req, res) => {
-  const reply = replies.get(req.url ?? '');
+  const reply = replies.get(req.url ?? '') ?? blockEntitiesReply(req.url ?? '');
   if (req.method !== 'GET' || req.headers.authorization !== `Bearer ${TOKEN}` || reply === undefined) {
     unexpected.push(`${req.method} ${req.url} (${req.headers.authorization})`);
     res.statusCode = 500;
@@ -119,6 +135,22 @@ const READER_CASES: Record<string, string> = {
   'following-none': '/api/following',
   'following-invalid-country': '/api/following?countries=ISR',
   'following-invalid-thread': '/api/following?threads=1,abc',
+  // 实体页：写法归一（小写、去首尾空白）、缺省的 limit / offset 补齐后转发；没过门槛 404；能归成国家的回国家页的地址；
+  // 缺写法、空写法、超长的写法不转发，直接 400
+  'entity-netanyahu': '/api/entities/blocks?name=%20Benjamin%20NETANYAHU%20',
+  'entity-netanyahu-page': '/api/entities/blocks?name=benjamin%20netanyahu&limit=2&offset=1',
+  'entity-hamas-below-threshold': '/api/entities/blocks?name=hamas',
+  'entity-iran-country': '/api/entities/blocks?name=Iran',
+  // 实体列表页与阅读页每块下的实体链接
+  'entities-list': '/api/entities',
+  'brief-8-entities': '/api/briefs/8/entities',
+  'brief-entities-invalid-slug': '/api/briefs/abc/entities',
+  'entity-missing-name': '/api/entities/blocks',
+  'entity-empty-name': '/api/entities/blocks?name=%20',
+  'entity-too-long': `/api/entities/blocks?name=${'a'.repeat(201)}`,
+  // Following 带实体：一个实体一个参数，归一、去重后转发
+  'following-entity': '/api/following?entities=Benjamin%20Netanyahu&entities=benjamin%20netanyahu',
+  'following-invalid-entity': '/api/following?entities=%20',
   'stories-list': '/api/stories',
   'story-1-streak': '/api/stories/1',
   'story-2-importance': '/api/stories/2',
@@ -186,7 +218,7 @@ describe('地图首页（SSR）', () => {
 
     expect(links).toContainEqual({ href: '/briefs/8', text: 'Read today’s brief →' });
     expect(links).toContainEqual({ href: '/briefs', text: 'Past briefs' });
-    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · issue 3' });
+    expect(links).toContainEqual({ href: '/stories/1', text: 'Tracking · 3 briefs' });
     // 头条卡片只有 story 15；不是头条的 story 16 不出卡片，算进「其余 1 条」
     expect(links.filter(l => l.text === 'Read this part →').map(l => l.href)).toEqual(['/briefs/8#story-1']);
     expect(links).toContainEqual({ href: '/briefs/8#story-2', text: '1 more in the brief →' });
@@ -333,7 +365,7 @@ describe('搜索页（SSR）', () => {
 
     expect(groups(html)).toEqual([
       {
-        thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'],
+        thread: ['/stories/1', 'Gaza — ceasefire holds · 3 briefs'],
         shown: [['gaza ceasefire holds', '/briefs/8#story-1']],
         folded: [['gaza talks in cairo', '/briefs/6#story-1']],
       },
@@ -350,7 +382,7 @@ describe('搜索页（SSR）', () => {
   it('两组：有线索的一组带线索链接，没有线索的一组不带', async () => {
     const html = await (await fetch('/search?q=holding')).text();
     expect(groups(html)).toEqual([
-      { thread: ['/stories/1', 'Gaza — ceasefire holds · 3 issues'], shown: [['gaza ceasefire holds', '/briefs/8#story-1']], folded: [] },
+      { thread: ['/stories/1', 'Gaza — ceasefire holds · 3 briefs'], shown: [['gaza ceasefire holds', '/briefs/8#story-1']], folded: [] },
       { thread: null, shown: [['fed holds rates', '/briefs/8#story-2']], folded: [] },
     ]);
     expect(unexpected).toEqual([]);
@@ -509,6 +541,52 @@ describe('关注与 Following 页（浏览器）', () => {
     expect(unexpected).toEqual([]);
   });
 
+  it('实体页上关注、刷新后仍在；Following 页列出挂着它的块，命中的实体带实体页链接、不在块下再列一遍；取消后回到空状态', async () => {
+    const page = await openBrowser();
+    await goto(page, '/entities?name=benjamin%20netanyahu');
+    expect(await pressed(page)).toBe('false');
+    await followButton(page).click();
+    expect(await pressed(page)).toBe('true');
+
+    await page.goto(url('/entities?name=benjamin%20netanyahu'), { waitUntil: 'hydration' });
+    await page.waitForSelector('[data-follow-button][aria-pressed=true]');
+
+    await goto(page, '/following');
+    expect(await listed(page)).toEqual([
+      ['gaza ceasefire holds', false, ['Benjamin Netanyahu']],
+      ['fed holds rates', false, ['Benjamin Netanyahu']],
+      ['hostage deal', false, ['Benjamin Netanyahu']],
+      ['iran sanctions', false, ['Benjamin Netanyahu']],
+      ['gaza talks in cairo', false, ['Benjamin Netanyahu']],
+    ]);
+    expect(await followedNames(page)).toEqual(['Benjamin Netanyahu']);
+    expect(await page.locator('[data-test=follow] a').getAttribute('href')).toBe('/entities?name=benjamin%20netanyahu');
+    expect(await page.locator('[data-test=match] a[href="/entities?name=benjamin%20netanyahu"]').count()).toBe(5);
+    expect(await page.locator('[data-test=block] [data-test=entity]').count()).toBe(0);
+
+    await page.click('button[aria-label="Stop following Benjamin Netanyahu"]');
+    await page.waitForSelector('[data-test=empty]');
+    await page.goto(url('/entities?name=benjamin%20netanyahu'), { waitUntil: 'hydration' });
+    expect(await pressed(page)).toBe('false');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('实体与国家一起关注：块并在一起，命中两个关注项时都写出', async () => {
+    const page = await openWith({
+      [FOLLOWS_KEY]: JSON.stringify([{ kind: 'country', code: 'IL' }, { kind: 'entity', key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' }]),
+    });
+    await goto(page, '/following');
+    expect(await listed(page)).toEqual([
+      ['gaza ceasefire holds', false, ['Israel', 'Benjamin Netanyahu']],
+      ['fed holds rates', false, ['Benjamin Netanyahu']],
+      ['hostage deal', false, ['Israel', 'Benjamin Netanyahu']],
+      ['iran sanctions', false, ['Involves Israel', 'Benjamin Netanyahu']],
+      ['gaza talks in cairo', false, ['Israel', 'Benjamin Netanyahu']],
+    ]);
+    expect(await followedNames(page)).toEqual(['Israel', 'Benjamin Netanyahu']);
+    expect(unexpected).toEqual([]);
+  });
+
   it('关注了、但还没有任何块：写明还没有，不是「没有关注项」的空状态', async () => {
     const page = await openWith({ [FOLLOWS_KEY]: JSON.stringify([{ kind: 'country', code: 'JP' }]) });
     await goto(page, '/following');
@@ -566,6 +644,21 @@ describe('关注与 Following 页（浏览器）', () => {
       expect(await newTitles(page)).toEqual([]);
     });
 
+    it('取数失败的那次不算访问：读者什么块都没看到，修好后再来，之前没看过的仍标 new', async () => {
+      const path = '/reader/following?countries=IL&threads=&limit=20&offset=0';
+      const saved = replies.get(path)!;
+      const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: '2026-01-09T12:00:00.000Z' });
+      replies.set(path, { status: 500, body: '{"error":"boom"}' });
+      try {
+        await goto(page, '/following');
+        await page.waitForSelector('text=Could not load your stories right now');
+      } finally {
+        replies.set(path, saved);
+      }
+      await reload(page);
+      expect(await newTitles(page)).toEqual(['gaza ceasefire holds']);
+    });
+
     it('存着的上次访问不是时间：按第一次来算', async () => {
       const page = await openWith({ [FOLLOWS_KEY]: IL, [LAST_VISIT_KEY]: 'not-a-date' });
       await goto(page, '/following');
@@ -620,7 +713,7 @@ describe('关注与 Following 页（浏览器）', () => {
       await broken.waitForSelector('[data-test=empty]');
 
       const mixed = await openWith({
-        [FOLLOWS_KEY]: JSON.stringify([{ kind: 'topic', key: 'economy' }, null, { kind: 'country', code: 'il' }, { kind: 'thread', id: 1, title: 'Gaza' }, { kind: 'thread', id: 1 }]),
+        [FOLLOWS_KEY]: JSON.stringify([{ kind: 'topic', key: 'economy' }, null, { kind: 'country', code: 'il' }, { kind: 'entity', key: 'Hamas' }, { kind: 'entity', key: '' }, { kind: 'thread', id: 1, title: 'Gaza' }, { kind: 'thread', id: 1 }]),
       });
       await goto(mixed, '/following');
       expect((await listed(mixed)).map(([title]) => title)).toEqual(['gaza ceasefire holds', 'hostage deal', 'gaza talks in cairo']);
@@ -638,6 +731,110 @@ describe('关注与 Following 页（浏览器）', () => {
       expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/following"/);
     }
     expect(unexpected).toEqual([]);
+  });
+});
+
+// ── 实体页：期望值写死自 backend 的 entity-* 与 block-entities-all 快照 ──────────
+describe('实体页（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 各块：[标题, 「读这一块」链接, 块下的实体链接] */
+  const blocksOf = (html: string) =>
+    [...html.matchAll(/<article\b[^>]*data-test="block"[^>]*>([\s\S]*?)<\/article>/g)].map(([, article]) => [
+      text(/<h3\b[^>]*>([\s\S]*?)<\/h3>/.exec(article)![1]),
+      /href="(\/briefs\/[^"]*)"/.exec(article)![1],
+      [...article.matchAll(/data-test="entity"[^>]*>\s*<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, name]) => [text(name), href]),
+    ]);
+
+  it('过门槛的实体：名字用最常见的写法，它的块按期倒序；本页的实体不在块下再列一遍；未发布那期的块不出现', async () => {
+    const res = await fetch('/entities?name=Benjamin%20Netanyahu');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+
+    expect(html).toMatch(/<h1\b[^>]*>\s*Benjamin Netanyahu\s*<\/h1>/);
+    expect(blocksOf(html)).toEqual([
+      ['gaza ceasefire holds', '/briefs/8#story-1', []],
+      ['fed holds rates', '/briefs/8#story-2', []],
+      ['hostage deal', '/briefs/7#story-1', []],
+      ['iran sanctions', '/briefs/7#story-2', []],
+      ['gaza talks in cairo', '/briefs/6#story-1', []],
+    ]);
+    expect(text(html)).toContain('5 stories where most of the coverage mentions Benjamin Netanyahu');
+    expect(html).toContain('data-follow-button');
+    expect(html).not.toContain('ukraine debug');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('能归成国家的写法：跳到国家页', async () => {
+    const res = await fetch('/entities?name=Iran', { redirect: 'manual' });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/countries/IR');
+    expect(unexpected).toEqual([]);
+  });
+
+  it('没过门槛的实体、超过 200 字的写法：404', async () => {
+    for (const path of ['/entities?name=hamas', `/entities?name=${'a'.repeat(201)}`]) {
+      expect((await fetch(path)).status, path).toBe(404);
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  it('国家页、搜索页的块下有实体链接，指向实体页', async () => {
+    for (const path of ['/countries/IL', '/search?q=gaza']) {
+      const html = await (await fetch(path)).text();
+      expect(html, path).toMatch(/data-test="entity"[^>]*>\s*<a\b[^>]*href="\/entities\?name=benjamin%20netanyahu"[^>]*>\s*Benjamin Netanyahu\s*<\/a>/);
+    }
+    expect(unexpected).toEqual([]);
+  });
+});
+
+// ── 实体的入口：列表页、阅读页每块下的链接、导航 ──────────
+describe('实体的入口（SSR）', () => {
+  const text = (inner: string) => inner.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  /** 阅读页各条目：[锚点 id, 条目下的实体链接] */
+  const storiesOf = (html: string) =>
+    [...html.matchAll(/<article\b[^>]*\bid="(story-\d+)"[^>]*>([\s\S]*?)<\/article>/g)].map(([, id, article]) => [
+      id,
+      [...article.matchAll(/data-test="entity"[^>]*>\s*<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, name]) => [text(name), href]),
+    ]);
+
+  it('列表页（不带写法、空写法都是它）：有实体页的实体，带块数，链到各自的页', async () => {
+    for (const path of ['/entities', '/entities?name=%20']) {
+      const res = await fetch(path);
+      expect(res.status, path).toBe(200);
+      const html = await res.text();
+      expect(html).toMatch(/<h1\b[^>]*>\s*Names in the news\s*<\/h1>/);
+      const rows = [...html.matchAll(/data-test="entity-row"[^>]*>\s*<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].map(([, href, inner]) => [href, text(inner)]);
+      expect(rows, path).toEqual([['/entities?name=benjamin%20netanyahu', 'Benjamin Netanyahu 5 stories']]);
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  it('阅读页：每个条目下列出它的实体，链到实体页', async () => {
+    const res = await fetch('/briefs/8');
+    expect(res.status).toBe(200);
+    const netanyahu = [['Benjamin Netanyahu', '/entities?name=benjamin%20netanyahu']];
+    expect(storiesOf(await res.text())).toEqual([['story-1', netanyahu], ['story-2', netanyahu]]);
+    expect(unexpected).toEqual([]);
+  });
+
+  it('阅读页：实体取不到时正文照常，只是没有实体链接', async () => {
+    const saved = replies.get('/reader/briefs/8/block-entities')!;
+    replies.set('/reader/briefs/8/block-entities', { status: 500, body: '{"error":"boom"}' });
+    try {
+      const res = await fetch('/briefs/8');
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('gaza ceasefire holds');
+      expect(storiesOf(html)).toEqual([['story-1', []], ['story-2', []]]);
+    } finally {
+      replies.set('/reader/briefs/8/block-entities', saved);
+    }
+  });
+
+  it('导航与搜索页上有进列表页的入口；实体页能回列表页', async () => {
+    for (const path of ['/', '/briefs', '/search', '/entities?name=benjamin%20netanyahu']) {
+      expect(await (await fetch(path)).text(), path).toMatch(/<a\b[^>]*href="\/entities"/);
+    }
   });
 });
 

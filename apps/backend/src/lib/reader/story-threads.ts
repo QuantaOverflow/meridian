@@ -1,4 +1,5 @@
-import { $articles, $brief_runs, $brief_stories, $reports, $story_clusters, and, desc, eq, inArray, isNotNull, sql } from '@meridian/database';
+import { $articles, $brief_runs, $brief_stories, $reports, $story_clusters, and, desc, eq, inArray, sql } from '@meridian/database';
+import { isPublished } from './briefs';
 import { pgTimestamp, type Db } from './db';
 
 /**
@@ -154,7 +155,7 @@ const threadStatsQuery = sql`
     JOIN ${$reports} ON ${$reports.id} = ${$brief_runs.report_id}
     WHERE ${$brief_stories.story_cluster_id} IS NOT NULL
       -- 只算读者看得到的期：手动触发的调试期与撤回的期不构成线索的条目（见 schema.ts 的 published_at）
-      AND ${$reports.published_at} IS NOT NULL
+      AND ${isPublished}
   ),
   briefed AS (SELECT * FROM members WHERE selected_for_intel),
   latest AS (
@@ -316,7 +317,7 @@ export async function getStoryThread(db: Db, id: number): Promise<StoryThreadDet
       .innerJoin($reports, eq($reports.id, $brief_runs.report_id))
       // 同上：取该故事的代表文章
       .leftJoin($articles, eq($articles.id, $brief_stories.lead_article_id))
-      .where(and(eq($brief_stories.story_cluster_id, id), isNotNull($reports.published_at)))
+      .where(and(eq($brief_stories.story_cluster_id, id), isPublished))
       .orderBy(
         desc($reports.createdAt),
         desc($brief_stories.selected_for_intel),

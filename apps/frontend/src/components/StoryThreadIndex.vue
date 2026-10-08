@@ -32,7 +32,7 @@ const threads = computed(() => {
     </h1>
 
     <p class="font-serif text-[17px] leading-[1.85] tracking-[0.01em] text-ink2 md:text-[19px] mb-9">
-      The same story often spans many issues. This combines scattered coverage into one thread, so you don't have to start from zero every day.
+      The same story often spans many briefs. This combines scattered coverage into one thread, so you don't have to start from zero every day.
     </p>
 
     <div class="border-rule-soft flex gap-6 border-b text-[14px]">
@@ -51,7 +51,7 @@ const threads = computed(() => {
 
     <!-- 两个阈值都要对读者可见：数字来自接口，改配置时这行会跟着变 -->
     <p class="mt-3 text-[12px] text-ink3">
-      A thread needs to appear in at least {{ pluralize(data?.minBriefs ?? 2, 'issue') }} · active means new progress
+      A thread needs to appear in at least {{ pluralize(data?.minBriefs ?? 2, 'brief') }} · active means new progress
       within {{ pluralize(data?.activeWindowDays ?? 7, 'day') }}
     </p>
 
@@ -85,7 +85,7 @@ const threads = computed(() => {
           <p v-if="thread.summary" class="mb-3 text-[15.5px] leading-[1.78] text-ink2">{{ thread.summary }}</p>
 
           <p class="text-[12.5px] text-ink3">
-            {{ pluralize(thread.durationDays, 'day') }} running · {{ pluralize(thread.briefCount, 'issue') }} ·
+            {{ pluralize(thread.durationDays, 'day') }} running · {{ pluralize(thread.briefCount, 'brief') }} ·
             {{ thread.updateLabel }}
           </p>
         </NuxtLink>

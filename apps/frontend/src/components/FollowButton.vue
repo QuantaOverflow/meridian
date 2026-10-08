@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Follow } from '~/lib/follows';
 
-// 关注按钮（国家页、线索页）。关注项只在浏览器里：服务端渲染出的是未关注的样子，浏览器读过存储后再更新
+// 关注按钮（国家页、线索页、实体页）。关注项只在浏览器里：服务端渲染出的是未关注的样子，浏览器读过存储后再更新
 const props = defineProps<{ follow: Follow }>();
 const { isFollowing, toggle } = useFollows();
 const following = computed(() => isFollowing(props.follow));

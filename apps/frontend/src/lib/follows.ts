@@ -1,11 +1,17 @@
 /**
- * 关注项（见 GLOSSARY.md「关注项」）：读者标记要持续看的国家与线索。没有账号，只记在这台设备的浏览器里（localStorage）。
+ * 关注项（见 GLOSSARY.md「关注项」）：读者标记要持续看的国家、线索与实体。没有账号，只记在这台设备的浏览器里（localStorage）。
  * 这里是读写与判定的纯函数，存储由调用方传进来；页面状态在 composables/useFollows.ts。
  * localStorage 可能不存在或一碰就抛（隐私模式、被禁用）：读不到按「没有关注项」算，写不进去只是不持久，都不报错。
  */
 
-/** 线索的标题在关注时记一份，Following 页列关注项时不用再去取；实际显示以后端带回的最新标题为准 */
-export type Follow = { kind: 'country'; code: string } | { kind: 'thread'; id: number; title: string };
+/**
+ * 线索的标题在关注时记一份，Following 页列关注项时不用再去取；实际显示以后端带回的最新标题为准。
+ * 实体按归一后的写法（key）记，name 是关注时页面上的显示写法。
+ */
+export type Follow =
+  | { kind: 'country'; code: string }
+  | { kind: 'thread'; id: number; title: string }
+  | { kind: 'entity'; key: string; name: string };
 
 type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -21,7 +27,8 @@ export function browserStorage(): KeyValueStore | null {
   }
 }
 
-export const followKey = (follow: Follow) => (follow.kind === 'country' ? `country:${follow.code}` : `thread:${follow.id}`);
+export const followKey = (follow: Follow) =>
+  follow.kind === 'country' ? `country:${follow.code}` : follow.kind === 'thread' ? `thread:${follow.id}` : `entity:${follow.key}`;
 
 function parseFollow(raw: unknown): Follow | null {
   if (typeof raw !== 'object' || raw === null) return null;
@@ -31,6 +38,10 @@ function parseFollow(raw: unknown): Follow | null {
   }
   if (item.kind === 'thread' && Number.isInteger(item.id) && (item.id as number) > 0) {
     return { kind: 'thread', id: item.id as number, title: typeof item.title === 'string' ? item.title : '' };
+  }
+  // 写法要已经归一（小写、无首尾空白）且不超过接口的上限，否则带上去整条请求会被拒
+  if (item.kind === 'entity' && typeof item.key === 'string' && item.key !== '' && item.key.length <= 200 && item.key === item.key.trim().toLowerCase()) {
+    return { kind: 'entity', key: item.key, name: typeof item.name === 'string' && item.name !== '' ? item.name : item.key };
   }
   return null;
 }

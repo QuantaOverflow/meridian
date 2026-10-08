@@ -1,5 +1,5 @@
 /**
- * articles.primary_location 原值 → ISO 3166-1 alpha-2（联合国为 `UN`）。地图（brief-map.ts）用。
+ * articles.primary_location 原值 → ISO 3166-1 alpha-2（联合国为 `UN`）。地图（lib/reader/brief-map.ts）用。
  *
  * 原值很乱（`USA` / `United States`、美国各州、十几种尼泊尔–西藏写法），所以要归一。表从地图原型的
  * places.py 搬来（2026-09-29 的 111 期跑过：532 篇全部落表）；国家名、坐标、底图名是展示，在前端。

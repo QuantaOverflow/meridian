@@ -60,7 +60,7 @@ async function loadMore() {
 const subtitle = computed(() => {
   if (data.value === null) return '';
   const coverage = data.value.earliestDateLabel === null ? '' : ` · since ${data.value.earliestDateLabel}`;
-  return `${pluralize(data.value.total, 'issue')}${coverage}`;
+  return `${pluralize(data.value.total, 'brief')}${coverage}`;
 });
 </script>
 
@@ -84,7 +84,7 @@ const subtitle = computed(() => {
 
     <div class="border-rule-soft mt-[6px] border-b" :class="query === '' ? '' : 'py-[14px]'">
       <p v-if="query !== '' && data" class="text-[13px] text-ink3">
-        {{ pluralize(data.matched, 'issue') }} match "{{ query }}"
+        {{ pluralize(data.matched, 'brief') }} match "{{ query }}"
       </p>
     </div>
 
@@ -108,7 +108,7 @@ const subtitle = computed(() => {
       <li v-for="brief in items" :key="brief.id" class="border-rule-soft border-b">
         <NuxtLink :to="`/briefs/${brief.slug}`" class="group block py-7">
           <p class="mb-[9px] text-[12.5px] text-ink3">
-            {{ brief.dateShortLabel }} · Issue {{ brief.id }} · {{ pluralize(brief.storyCount, 'story', 'stories') }} ·
+            {{ brief.dateShortLabel }} · Brief {{ brief.id }} · {{ pluralize(brief.storyCount, 'story', 'stories') }} ·
             {{ brief.readingMinutes }} min
           </p>
 

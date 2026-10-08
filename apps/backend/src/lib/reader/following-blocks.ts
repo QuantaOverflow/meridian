@@ -2,19 +2,21 @@ import type { FollowMatch, FollowingBlock, FollowingPage } from '@meridian/contr
 import { $brief_blocks, $brief_stories, $reports, and, desc, eq, inArray, sql } from '@meridian/database';
 import { isPublished } from './briefs';
 import type { Db } from './db';
+import { entityKey } from '../core/block-entities';
 import { threadStatsByIds } from './story-threads';
 
 /**
  * Following 页（响应形状见 @meridian/contracts 的 FollowingPage）：命中任一关注项的块，最新的在前。
- * 关注一个国家 = 落点在该国的块 + 涉及该国的块；关注一条线索 = 所属故事并进这条线索的块。
- * 国家归属是写块时存在块上的两列（同国家页），线索靠 join brief_stories 判。只含已发布各期的块：可见性跟所属那一期走。
+ * 关注一个国家 = 落点在该国的块 + 涉及该国的块；关注一条线索 = 所属故事并进这条线索的块；关注一个实体 = 挂着它的块
+ *（不论它过没过实体页的门槛）。国家归属与实体是写块时存在块上的列（同国家页、实体页），线索靠 join brief_stories 判。只含已发布各期的块：可见性跟所属那一期走。
  */
 export async function listFollowingBlocks(
   db: Db,
-  params: { countries: string[]; threads: number[]; limit: number; offset: number }
+  params: { countries: string[]; threads: number[]; entities: string[]; limit: number; offset: number }
 ): Promise<FollowingPage> {
   const { countries, threads } = params;
-  if (countries.length === 0 && threads.length === 0) return { total: 0, items: [], threads: [] };
+  const entities = [...new Set(params.entities.map(entityKey))].sort();
+  if (countries.length === 0 && threads.length === 0 && entities.length === 0) return { total: 0, items: [], threads: [] };
 
   const hits = [];
   if (countries.length > 0) {
@@ -24,6 +26,9 @@ export async function listFollowingBlocks(
     hits.push(sql`${$brief_blocks.mention_countries} && ${list}`);
   }
   if (threads.length > 0) hits.push(inArray($brief_stories.story_cluster_id, threads));
+  if (entities.length > 0) {
+    hits.push(sql`${$brief_blocks.entities} && ARRAY[${sql.join(entities.map(e => sql`${e}`), sql`, `)}]::text[]`);
+  }
   const where = and(isPublished, sql`(${sql.join(hits, sql` OR `)})`);
 
   // 三条查询互不依赖，并行发省往返
@@ -41,6 +46,8 @@ export async function listFollowingBlocks(
         placement: $brief_blocks.placement_country,
         mentions: $brief_blocks.mention_countries,
         threadId: $brief_stories.story_cluster_id,
+        entities: $brief_blocks.entities,
+        entityNames: $brief_blocks.entity_names,
       })
       .from($brief_blocks)
       .innerJoin($reports, eq($reports.id, $brief_blocks.report_id))
@@ -69,6 +76,10 @@ export async function listFollowingBlocks(
         else if (r.mentions.includes(code)) matches.push({ kind: 'country', code, via: 'mention' });
       }
       if (r.threadId !== null && followedThreads.has(r.threadId)) matches.push({ kind: 'thread', id: r.threadId });
+      for (const key of entities) {
+        const i = r.entities.indexOf(key);
+        if (i !== -1) matches.push({ kind: 'entity', key, name: r.entityNames[i] ?? key });
+      }
       return {
         id: r.id,
         brief: { id: r.reportId, createdAt: r.reportCreatedAt.toISOString() },

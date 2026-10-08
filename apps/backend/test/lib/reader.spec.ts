@@ -7,7 +7,7 @@
  * 每个文件首行记着请求路径，路径就是前端 server 路由转发时拼出来的那条。两段接起来 = 端到端不变。
  * 行为有意改了才重写：`pnpm -F @meridian/backend test test/lib/reader.spec.ts -u`，再看 git diff。
  */
-import type { CountryBlocksPage, CountrySection, FollowingPage, SearchPage } from '@meridian/contracts';
+import type { BlockEntitiesList, BriefBlockEntities, CountryBlocksPage, CountrySection, EntityBlocksPage, EntityIndex, FollowingPage, SearchPage } from '@meridian/contracts';
 import { env, exports } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../../src/lib/database';
@@ -38,6 +38,8 @@ const CASES: Record<string, string> = {
   'brief-3-top-stories': '/reader/briefs/3',
   'brief-1-legacy': '/reader/briefs/1',
   'brief-2-artifacts': '/reader/briefs/2',
+  // 第 8 期有简报块：前端阅读页的测试拿它看块下的实体链接
+  'brief-8-with-blocks': '/reader/briefs/8',
   'brief-404': '/reader/briefs/999',
   // 地图首页的数据；边界情况在 reader-map.spec.ts
   'brief-8-map': '/reader/briefs/8/map',
@@ -59,6 +61,16 @@ const CASES: Record<string, string> = {
   'following-il-thread-2-page': '/reader/following?countries=IL&threads=2&limit=2&offset=1',
   'following-thread-1': '/reader/following?countries=&threads=1&limit=20&offset=0',
   'following-miss': '/reader/following?countries=JP&threads=&limit=20&offset=0',
+  // 实体页：Benjamin Netanyahu 恰好过门槛（已发布的 5 块）；Hamas 差一块，404；Iran 能归成国家，不开页
+  'entity-netanyahu': '/reader/entities/blocks?name=benjamin%20netanyahu&limit=20&offset=0',
+  'entity-netanyahu-page': '/reader/entities/blocks?name=benjamin%20netanyahu&limit=2&offset=1',
+  'entity-hamas-below-threshold': '/reader/entities/blocks?name=hamas&limit=20&offset=0',
+  'entity-iran-country': '/reader/entities/blocks?name=iran&limit=20&offset=0',
+  // 实体列表页与阅读页每块下的实体链接
+  'entities-list': '/reader/entities',
+  'brief-8-block-entities': '/reader/briefs/8/block-entities',
+  'following-entity': '/reader/following?countries=&threads=&entities=benjamin%20netanyahu&limit=20&offset=0',
+  'following-il-entity': '/reader/following?countries=IL&threads=&entities=benjamin%20netanyahu&limit=20&offset=0',
   'stories-list': '/reader/stories',
   'story-1-streak': '/reader/stories/1',
   'story-2-importance': '/reader/stories/2',
@@ -76,6 +88,11 @@ const CASES: Record<string, string> = {
   'admin-source-3-paused-empty': '/admin/sources/3/details',
   'admin-source-404': '/admin/sources/999/details',
 };
+
+// 块下的实体链接：前端列块的每个接口（国家页、搜索、Following、实体页）拿到块之后都按块号问一次。
+// 只录一份「fixture 里全部块」的：前端 e2e 的假 backend 从它里面按请求的块号挑（见 frontend 的 reader-api-golden.test.ts），
+// 不必为每个列块的 case 各录一份。往 fixture 里加块时把块号补到这里；漏了的话前端回放会报「没录到的块号」
+CASES['block-entities-all'] = '/reader/block-entities?ids=1,2,3,4,5,6';
 
 describe('读者视图与后台源读数快照', () => {
   for (const [name, path] of Object.entries(CASES)) {
@@ -276,6 +293,36 @@ describe('边界', () => {
       expect([beyond.total, beyond.items]).toEqual([4, []]);
     });
 
+    it('关注一个实体：挂着它的块，不论它有没有实体页（Hamas 没过门槛，块照常命中）；写法只归一大小写与首尾空白', async () => {
+      const page = await following('entities=%20HAMAS');
+      expect(page.items.map(b => [b.brief.id, b.storyId, b.matches])).toEqual([
+        [8, 15, [{ kind: 'entity', key: 'hamas', name: 'Hamas' }]],
+        [7, 13, [{ kind: 'entity', key: 'hamas', name: 'Hamas' }]],
+        [7, 14, [{ kind: 'entity', key: 'hamas', name: 'Hamas' }]],
+        [6, 12, [{ kind: 'entity', key: 'hamas', name: 'Hamas' }]],
+      ]);
+      expect(page.total).toBe(4);
+    });
+
+    it('实体与国家、线索取并集；几个实体用重复的参数带；命中的关注项里实体排在最后', async () => {
+      const page = await following('countries=IR&threads=5&entities=hamas&entities=federal%20reserve');
+      expect(blocks(page)).toEqual([[8, 15], [8, 16], [7, 13], [7, 14], [6, 12]]);
+      expect(page.items[1].matches).toEqual([{ kind: 'thread', id: 5 }, { kind: 'entity', key: 'federal reserve', name: 'Federal Reserve' }]);
+      expect(page.items[3].matches).toEqual([
+        { kind: 'country', code: 'IR', via: 'mention' },
+        { kind: 'entity', key: 'hamas', name: 'Hamas' },
+      ]);
+    });
+
+    it('实体写法是空的、超过 200 字、带 NUL、超过 100 个：400', async () => {
+      const many = (n: number) => Array.from({ length: n }, (_, i) => `entities=e${i}`).join('&');
+      for (const query of ['entities=', 'entities=%20', `entities=${'a'.repeat(201)}`, 'entities=a%00b', many(101)]) {
+        const res = await exports.default.fetch(`http://backend/reader/following?${query}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+        expect(res.status, query.slice(0, 40)).toBe(400);
+      }
+      expect((await following(many(100))).total).toBe(0);
+    });
+
     it('关注项写法不对、每类超过 100 个：400', async () => {
       const many = (n: number) => Array.from({ length: n }, (_, i) => i + 1).join(',');
       for (const path of [
@@ -292,8 +339,128 @@ describe('边界', () => {
     });
   });
 
+  describe('实体页', () => {
+    const get = (query: string) =>
+      exports.default.fetch(`http://backend/reader/entities/blocks?${query}`, { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+    const page = async (query: string) => {
+      const res = await get(query);
+      expect(res.status, query).toBe(200);
+      return (await res.json()) as EntityBlocksPage;
+    };
+
+    it('过门槛的实体：它在已发布各期的块，最新的在前；显示写法取最常见的那种', async () => {
+      const result = await page('name=benjamin%20netanyahu');
+      if (result.kind !== 'entity') throw new Error('应是实体页');
+      expect(result.entity).toEqual({ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' });
+      expect(result.items.map(b => [b.brief.id, b.storyId])).toEqual([[8, 15], [8, 16], [7, 13], [7, 14], [6, 12]]);
+      expect(result.total).toBe(5);
+    });
+
+    it('查的写法只归一大小写与首尾空白', async () => {
+      const result = await page(`name=${encodeURIComponent('  BENJAMIN Netanyahu ')}`);
+      expect(result.kind === 'entity' && result.total).toBe(5);
+      // 别名不合并：少一个词就是另一个实体
+      expect((await get('name=netanyahu')).status).toBe(404);
+    });
+
+    it('门槛只数已发布的期：Hamas 把未发布的第 9 期那块算上才够，没有页；只出现一块的、媒体名、没人提过的也没有', async () => {
+      for (const name of ['hamas', 'federal reserve', 'reuters', 'nobody']) {
+        const res = await get(`name=${encodeURIComponent(name)}`);
+        expect(res.status, name).toBe(404);
+        expect(await res.json(), name).toEqual({ error: 'Entity not found' });
+      }
+    });
+
+    it('能归成国家的写法不开页，告诉页面去哪个国家页', async () => {
+      expect(await page('name=Iran')).toEqual({ kind: 'country', country: 'IR' });
+      expect(await page('name=united%20states')).toEqual({ kind: 'country', country: 'US' });
+    });
+
+    it('分页按块数；翻过头是空页，总数不变', async () => {
+      const second = await page('name=benjamin%20netanyahu&limit=2&offset=1');
+      if (second.kind !== 'entity') throw new Error('应是实体页');
+      expect(second.items.map(b => [b.brief.id, b.storyId])).toEqual([[8, 16], [7, 13]]);
+      expect(second.total).toBe(5);
+      const beyond = await page('name=benjamin%20netanyahu&offset=50');
+      expect(beyond.kind === 'entity' && [beyond.total, beyond.items]).toEqual([5, []]);
+    });
+
+    it('缺写法、空写法、超过 200 字、带 NUL 字符：400', async () => {
+      for (const query of ['', 'name=', 'name=%20', `name=${'a'.repeat(201)}`, 'name=a%00b', 'name=x&limit=51', 'name=x&offset=100001']) {
+        expect((await get(query)).status, query).toBe(400);
+      }
+    });
+
+    describe('块下的实体链接', () => {
+      const entitiesOf = async (ids: string) => {
+        const res = await exports.default.fetch(`http://backend/reader/block-entities?ids=${ids}`, {
+          headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+        });
+        expect(res.status, ids).toBe(200);
+        return (await res.json()) as BlockEntitiesList;
+      };
+
+      it('只列有实体页的实体（Hamas、Federal Reserve 没过门槛，不列）；按请求里的顺序；显示写法各块一致（块 5 自己存的是小写）', async () => {
+        expect(await entitiesOf('5,3')).toEqual({
+          items: [
+            { blockId: 5, entities: [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' }] },
+            { blockId: 3, entities: [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' }] },
+          ],
+        });
+      });
+
+      it('未发布的期的块（块 6）、不存在的块不在结果里', async () => {
+        expect((await entitiesOf('6,999')).items).toEqual([]);
+      });
+
+      it('没带块号、写法不对、超过 500 个：400', async () => {
+        const many = (n: number) => Array.from({ length: n }, (_, i) => i + 1).join(',');
+        for (const query of ['', '?ids=', '?ids=abc', '?ids=1;2', '?ids=99999999999999999999', `?ids=${many(501)}`]) {
+          const res = await exports.default.fetch(`http://backend/reader/block-entities${query}`, {
+            headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+          });
+          expect(res.status, query).toBe(400);
+        }
+        expect((await entitiesOf(many(500))).items.length).toBe(5);
+      });
+    });
+  });
+
+  describe('实体列表', () => {
+    it('只列有实体页的实体，带块数（只数已发布的期）：没过门槛的 Hamas、媒体名、国家都不在', async () => {
+      const res = await exports.default.fetch('http://backend/reader/entities', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      expect(res.status).toBe(200);
+      expect((await res.json()) as EntityIndex).toEqual({ items: [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu', blocks: 5 }] });
+    });
+  });
+
+  describe('一期里各块的实体', () => {
+    const entitiesOf = async (id: string) => {
+      const res = await exports.default.fetch(`http://backend/reader/briefs/${id}/block-entities`, {
+        headers: { Authorization: `Bearer ${env.API_TOKEN}` },
+      });
+      expect(res.status, id).toBe(200);
+      return (await res.json()) as BriefBlockEntities;
+    };
+
+    it('按块在正文里的顺序；只列有实体页的实体', async () => {
+      const netanyahu = [{ key: 'benjamin netanyahu', name: 'Benjamin Netanyahu' }];
+      expect(await entitiesOf('8')).toEqual({ items: [{ position: 0, entities: netanyahu }, { position: 1, entities: netanyahu }] });
+      expect(await entitiesOf('6')).toEqual({ items: [{ position: 0, entities: netanyahu }] });
+    });
+
+    it('未发布的期（第 9 期）、没有块的期、不存在的期：空', async () => {
+      for (const id of ['9', '1', '999', '0']) expect(await entitiesOf(id), id).toEqual({ items: [] });
+    });
+
+    it('期号不是整数：400', async () => {
+      const res = await exports.default.fetch('http://backend/reader/briefs/abc/block-entities', { headers: { Authorization: `Bearer ${env.API_TOKEN}` } });
+      expect(res.status).toBe(400);
+    });
+  });
+
   it('不带 token：401', async () => {
-    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/reader/following?countries=IL', '/admin/sources/1/details']) {
+    for (const path of ['/reader/briefs', '/reader/stories/1', '/reader/countries/IL/blocks', '/reader/search?q=gaza', '/reader/following?countries=IL', '/reader/entities/blocks?name=hamas', '/reader/block-entities?ids=1', '/reader/entities', '/reader/briefs/8/block-entities', '/admin/sources/1/details']) {
       expect((await exports.default.fetch(`http://backend${path}`)).status, path).toBe(401);
     }
   });

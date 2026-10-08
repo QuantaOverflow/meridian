@@ -60,6 +60,7 @@ useSeoMeta({
 <template>
   <div class="mx-auto max-w-[700px] px-5 pt-[70px] pb-[140px] md:px-8">
     <h1 class="font-serif text-[28px] leading-[1.26] font-semibold tracking-[-0.01em] text-ink md:text-[42px] mb-[18px]">Search</h1>
+    <p class="mb-[18px] text-[12.5px] text-ink3"><NuxtLink to="/entities" class="border-rule hover:text-ink border-b transition-colors">Browse names in the news →</NuxtLink></p>
 
     <form role="search" action="/search" method="get" class="mb-4 flex gap-2" @submit.prevent="submit">
       <input
@@ -98,10 +99,11 @@ useSeoMeta({
           <!-- 正文 markdown 由 server 路由渲染（与阅读页同一来源），工具类挂不到段落上，段距见下方 scoped 样式 -->
           <div class="block-body font-serif text-[16px] leading-[1.85] tracking-[0.01em] text-ink2 md:text-[18px]" v-html="block.bodyHtml" />
           <p class="mt-[9px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
-            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
+            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Brief {{ block.briefNumber }} →</NuxtLink>
             <NuxtLink v-if="group.thread && i === 0" :to="group.thread.href" class="border-rule hover:text-ink border-b transition-colors">
-              {{ group.thread.title }} · {{ pluralize(group.thread.briefCount, 'issue') }}
+              {{ group.thread.title }} · {{ pluralize(group.thread.briefCount, 'brief') }}
             </NuxtLink>
+            <EntityLinks :entities="block.entities" />
           </p>
         </template>
 
@@ -113,8 +115,9 @@ useSeoMeta({
             <p class="mb-1 text-[12.5px] text-ink3"><time>{{ block.dateLabel }}</time></p>
             <h4 class="font-serif text-[17px] leading-[1.42] font-semibold text-ink mb-[6px]">{{ block.title }}</h4>
             <div class="block-body font-serif text-[15px] leading-[1.8] text-ink2 md:text-[16px]" v-html="block.bodyHtml" />
-            <p class="mt-[6px] text-[12.5px] text-ink3">
-              <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
+            <p class="mt-[6px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
+              <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Brief {{ block.briefNumber }} →</NuxtLink>
+              <EntityLinks :entities="block.entities" />
             </p>
           </div>
           <p v-if="group.blockCount > group.blocks.length" class="mt-4 text-[12.5px] text-ink3">

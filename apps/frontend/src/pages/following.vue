@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { COUNTRIES, countryName } from '~/lib/briefMap';
 import { browserStorage, followKey, isNewSince, readLastVisit, writeLastVisit } from '~/lib/follows';
+import { entityHref } from '~/lib/entities';
 import type { FollowingResponse } from '~/shared/types';
 
-// Following 页：命中关注项（国家、线索）的简报块，最新的在前；上次打开本页之后新出的标 new。
+// Following 页：命中关注项（国家、线索、实体）的简报块，最新的在前；上次打开本页之后新出的标 new。
 // 关注项与上次访问的时刻只在浏览器里（localStorage），所以数据在浏览器里取，服务端只渲染外壳。
 const PAGE_SIZE = 20;
 const { follows, ready, toggle } = useFollows();
@@ -15,10 +16,12 @@ const previousVisit = ref<string | null>(null);
 
 const countries = computed(() => follows.value.flatMap(f => (f.kind === 'country' ? [f.code] : [])));
 const threads = computed(() => follows.value.flatMap(f => (f.kind === 'thread' ? [f.id] : [])));
+const entities = computed(() => follows.value.flatMap(f => (f.kind === 'entity' ? [f.key] : [])));
 
 const fetchPage = (offset: number) =>
   $fetch<FollowingResponse>('/api/following', {
-    query: { countries: countries.value.join(','), threads: threads.value.join(','), limit: PAGE_SIZE, offset },
+    // entities 是数组：一个实体一个参数（写法里可以有逗号）
+    query: { countries: countries.value.join(','), threads: threads.value.join(','), entities: entities.value, limit: PAGE_SIZE, offset },
   });
 
 /** 最新一次请求的序号：连着取消几个关注项时，只认最后一次的结果 */
@@ -28,12 +31,14 @@ async function load() {
   failed.value = false;
   if (follows.value.length === 0) {
     data.value = null;
+    recordVisit();
     return;
   }
   try {
     const page = await fetchPage(0);
     if (request !== latest) return;
     data.value = page;
+    recordVisit();
   } catch (err) {
     if (request !== latest) return;
     console.error('Failed to load the Following page', err);
@@ -41,12 +46,25 @@ async function load() {
   }
 }
 
-onMounted(() => {
-  const storage = browserStorage();
-  previousVisit.value = readLastVisit(storage);
-  // 打开即算一次访问：下次来，这之后出的期才标 new
-  writeLastVisit(storage, new Date().toISOString());
-});
+let visitRead = false;
+/** 上次访问的时刻只读一次，且一定在本次访问写进去之前 */
+function readPreviousVisit() {
+  if (visitRead) return;
+  visitRead = true;
+  previousVisit.value = readLastVisit(browserStorage());
+}
+let visitRecorded = false;
+/**
+ * 这次打开算一次访问：下次来，这之后出的期才标 new。块取回来了（或没有关注项、本来就没什么可看）才算；
+ * 取数失败的那次读者什么都没看到，不算，否则那些块下次就不再标 new 了
+ */
+function recordVisit() {
+  if (visitRecorded) return;
+  visitRecorded = true;
+  readPreviousVisit();
+  writeLastVisit(browserStorage(), new Date().toISOString());
+}
+onMounted(readPreviousVisit);
 // ready 之后才知道关注了什么；之后每次增减关注项都重新取
 watch([ready, follows], () => ready.value && load(), { immediate: true });
 
@@ -78,6 +96,7 @@ const followed = computed(() =>
       // 国家页只认展示表里有的代码
       return { follow, label: countryName(follow.code), href: follow.code in COUNTRIES ? `/countries/${follow.code}` : null };
     }
+    if (follow.kind === 'entity') return { follow, label: follow.name, href: entityHref(follow.key) };
     const title = data.value?.threads.find(t => t.id === follow.id)?.title ?? follow.title;
     return { follow, label: title || `Story thread ${follow.id}`, href: `/stories/${follow.id}` };
   })
@@ -88,7 +107,7 @@ const newCount = computed(() => data.value?.items.filter(isNew).length ?? 0);
 
 useSeoMeta({
   title: 'Following | Meridian',
-  description: 'New stories about the countries and story threads you follow.',
+  description: 'New stories about the countries, story threads, people and organizations you follow.',
   ogLocale: 'en_US',
   robots: 'noindex',
 });
@@ -105,8 +124,8 @@ useSeoMeta({
       <p class="text-[13px] leading-[1.7] text-ink3">
         Follow a country from its page (pick one on
         <NuxtLink to="/" class="border-rule hover:text-ink border-b transition-colors">today’s map</NuxtLink>) or a
-        <NuxtLink to="/stories" class="border-rule hover:text-ink border-b transition-colors">story thread</NuxtLink>, and new stories about
-        it will be listed here. What you follow is saved in this browser only.
+        <NuxtLink to="/stories" class="border-rule hover:text-ink border-b transition-colors">story thread</NuxtLink>, or a person or
+        organization from the links under a story, and new stories about it will be listed here. What you follow is saved in this browser only.
       </p>
     </div>
 
@@ -155,12 +174,13 @@ useSeoMeta({
           <!-- 正文 markdown 由 server 路由渲染（与阅读页同一来源），工具类挂不到段落上，段距见下方 scoped 样式 -->
           <div class="block-body font-serif text-[16px] leading-[1.85] tracking-[0.01em] text-ink2 md:text-[18px]" v-html="block.bodyHtml" />
           <p class="mt-[9px] flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ink3">
-            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Issue {{ block.briefNumber }} →</NuxtLink>
+            <NuxtLink :to="block.href" class="border-rule hover:text-ink border-b transition-colors">Brief {{ block.briefNumber }} →</NuxtLink>
             <span v-for="match in block.matches" :key="`${match.kind}:${match.label}`" data-test="match">
               <template v-if="match.involved">Involves </template>
               <NuxtLink v-if="match.href" :to="match.href" class="border-rule hover:text-ink border-b transition-colors">{{ match.label }}</NuxtLink>
               <template v-else>{{ match.label }}</template>
             </span>
+            <EntityLinks :entities="block.entities.filter(e => !block.matches.some(m => m.kind === 'entity' && m.href === e.href))" />
           </p>
         </article>
 

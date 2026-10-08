@@ -1636,7 +1636,12 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         }
       });
 
-      await observability.logStep('save_brief', 'completed', { reportId });
+      // 落库的块数与没落库的块数记进本步的指标：没落库的只打日志的话，这一期在运行详情里看不出少了块
+      await observability.logStep('save_brief', 'completed', {
+        reportId,
+        briefBlocks: blockDrafts.length,
+        briefBlocksDropped: tiered.length - blockDrafts.length,
+      });
 
       // 读者端「事件追踪」：把今天的 story 归并到跨期线索上。
       //

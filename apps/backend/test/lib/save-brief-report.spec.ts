@@ -193,6 +193,55 @@ describe('saveBriefReport', () => {
     ]);
   });
 
+  it('块的实体在落库时按成员文章算好：至少一半成员提到才算，写法只归一大小写与首尾空白，国家与媒体名不算', async () => {
+    const wf = uniq('wf-blocks-entities');
+    await db.insert($brief_runs).values({ workflow_id: wf });
+    const [source] = await db.insert($sources).values({ url: uniq('https://feeds.example.com/e'), name: 'E', category: 'news', scrape_frequency: 1 }).returning({ id: $sources.id });
+    const article = (entities: unknown) => ({ title: 'a', url: uniq('https://e.example.com/a'), sourceId: source.id, key_entities: entities });
+    const ids = (
+      await db
+        .insert($articles)
+        .values([
+          // 故事 A（4 篇）：Sam Altman 4/4（三种写法归成一个，显示用最多的那种）、OpenAI 2/4 算、Elon Musk 1/4 不算；
+          // Iran 是国家、Reuters 与 BBC 是媒体，都不算；同一篇里重复写只算一次
+          article(['Sam Altman', 'OpenAI', 'Iran', 'Reuters']),
+          article([' sam altman ', 'OpenAI', 'BBC', 'United States']),
+          article(['Sam Altman', 'Sam Altman', 'Elon Musk', '', 42]),
+          article(['SAM ALTMAN']),
+          // 故事 B（2 篇）：一篇的关键实体不是数组
+          article(null),
+          article(['Pope Leo XIV']),
+        ])
+        .returning({ id: $articles.id })
+    ).map((r) => r.id);
+    const rows = await db
+      .insert($brief_stories)
+      .values([
+        { workflow_id: wf, cluster_id: 0, article_ids: ids.slice(0, 4) },
+        { workflow_id: wf, cluster_id: 1, article_ids: ids.slice(4) },
+        { workflow_id: wf, cluster_id: 2, article_ids: null },
+      ])
+      .returning({ id: $brief_stories.id });
+
+    const id = await saveBriefReport(
+      db,
+      wf,
+      report(uniq('blocks-entities')),
+      rows.map((r, position) => ({ storyId: r.id, tier: 'more' as const, position, title: `T${position}`, body: 'B.' }))
+    );
+
+    const saved = await db
+      .select({ entities: $brief_blocks.entities, names: $brief_blocks.entity_names })
+      .from($brief_blocks)
+      .where(eq($brief_blocks.report_id, id))
+      .orderBy($brief_blocks.position);
+    expect(saved).toEqual([
+      { entities: ['sam altman', 'openai'], names: ['Sam Altman', 'OpenAI'] },
+      { entities: ['pope leo xiv'], names: ['Pope Leo XIV'] },
+      { entities: [], names: [] },
+    ]);
+  });
+
   it('块的标题与正文可按英文全文检索，词形不同也命中', async () => {
     const wf = uniq('wf-blocks-search');
     await db.insert($brief_runs).values({ workflow_id: wf });

@@ -31,7 +31,7 @@
    且不与下一名并列时连线。
    两张表各维护一份，由前端测试 `test/place-tables.test.ts` 锁住「backend 能产出的每个代码前端都有」。
    **2026-10-08 补**：落点规则（阈值与 `place()`）从前端挪到 `packages/contracts/src/placement.ts`，规则本身没改；
-   backend 写简报块时用同一份规则算块的落点国家与涉及国家（国家页按它查，见 ADR 0014）。国家名、坐标等展示表仍在前端。
+   backend 写简报块时用同一份规则算块的落点国家与涉及国家（国家页按它查，见 ADR 0015）。国家名、坐标等展示表仍在前端。
 5. **话题从 `topic_tags` 映射到 9 个**（security / tech / economy / justice / society / environment / culture / sports / politics）：
    一个故事要有至少 2/3 的成员文章带某话题的标签才算，最多 2 个；`politics` 只在别的都不沾时兜底
    （Politics / World Affairs 几乎每篇都有）。零散报道按篇计，一篇可计入多个话题。

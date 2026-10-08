@@ -20,10 +20,16 @@
     "RATELIMIT": 1
   },
   "evidence": {
-    "mode": "snapshot",
+    "mode": "rebuildable",
+    "rebuild": "node eval/_data/fetch-evidence.mjs scrape-quality-v1",
     "file": "content.jsonl",
+    "remote": {
+      "bucket": "meridian-eval-data",
+      "key": "scrape-quality-v1/content.jsonl",
+      "sha256": "bd231e6e48b06fcab0b3448095f4b8ecd96f67f567e76ce8c248b8e5d1c5bb35"
+    },
     "kind": "raw_source",
-    "note": "证据是抓取到的文章正文本身，与判定同批快照。判的是「这段正文是不是抓取失败」，参照系就是正文，不依赖任何系统中间产物。"
+    "note": "证据是抓取到的文章正文本身，与判定同批快照。判的是「这段正文是不是抓取失败」，参照系就是正文，不依赖任何系统中间产物。2026-10-08 起快照不入库（别家媒体的整篇正文不放公开仓库），存在私有 R2，内容与入库时逐字节相同。"
   },
   "provenance": {
     "labeledBy": "owner",

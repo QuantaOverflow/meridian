@@ -1,0 +1,4 @@
+# 别家媒体的整篇正文不入公开仓库：存在私有 R2 bucket，用 `node eval/_data/fetch-evidence.mjs` 取回到原位。
+# 位置与 sha256 在各自 manifest.json 的 evidence.remote。
+scrape-quality-v1/content.jsonl
+intel-grounding-v1/sources.jsonl

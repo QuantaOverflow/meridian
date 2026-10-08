@@ -1,7 +1,7 @@
 // Scrape-quality eval:验证生产的抓取/解析失败检测器(looksLikeExtractionFailure +
 // looksLikeNonArticleUrl)在开放编码金标上的 precision/recall,并对比 pipeline 的 content_quality 门。
 // 直接 import 生产真函数(单一真源、免副本漂移)。
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // 默认导入后解构，不用具名导入：apps/backend/package.json 没有 "type": "module"，
@@ -18,6 +18,10 @@ const readJsonl = (p: string) =>
   readFileSync(resolve(__dirname, p), 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 
 interface GoldRow { id: number; url: string; pipeline_q: string; gold_cat: string; is_extraction_failure: boolean; }
+if (!existsSync(resolve(__dirname, '../_data/scrape-quality-v1/content.jsonl'))) {
+  console.error('缺正文快照 content.jsonl（不入库）：先在仓库根跑 node eval/_data/fetch-evidence.mjs scrape-quality-v1');
+  process.exit(2);
+}
 const gold: GoldRow[] = readJsonl('../_data/scrape-quality-v1/labels.jsonl');
 const content: Record<number, string> = Object.fromEntries(readJsonl('../_data/scrape-quality-v1/content.jsonl').map((r: any) => [r.id, r.text]));
 

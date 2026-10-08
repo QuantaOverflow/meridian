@@ -48,6 +48,18 @@ node eval/_data/check.mjs
   - `retired_intermediate` —— 系统的中间产物，架构一变即废。**允许存在但必须自己标出来**，
     因为它决定了这份是资产还是消耗品（用完蒸馏读数，语料不必留）
 
+## 不入库的证据
+
+证据是别家媒体整篇正文的两份（`scrape-quality-v1` 的 `content.jsonl`、`intel-grounding-v1` 的 `sources.jsonl`）不放在公开仓库里，
+存在私有 R2 bucket `meridian-eval-data`。仓库里留标注、判据和取法；取回到原位：
+
+```
+node eval/_data/fetch-evidence.mjs
+```
+
+位置与 sha256 在各自 manifest 的 `evidence.remote`，取回后核对，对不上不落盘。manifest 里这两份的 `evidence.mode` 是 `rebuildable`。
+标题、摘要要点、链接这类短文本的证据照旧入库。新金标的证据若是整篇正文，照这个办法放。
+
 ## 现有金标
 
 | set | 考谁 | 条数 | 证据 | 备注 |

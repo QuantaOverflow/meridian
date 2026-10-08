@@ -13,11 +13,17 @@
     "contradicted": 8
   },
   "evidence": {
-    "mode": "snapshot",
+    "mode": "rebuildable",
+    "rebuild": "node eval/_data/fetch-evidence.mjs intel-grounding-v1",
     "file": "sources.jsonl",
+    "remote": {
+      "bucket": "meridian-eval-data",
+      "key": "intel-grounding-v1/sources.jsonl",
+      "sha256": "8d3f8ed09b2aeb0ce87e89634a5ec96a340aed307896453280ff1389aefe7fbf"
+    },
     "kind": "raw_source",
     "coverage": "39/39",
-    "note": "证据是原始 RSS 文章全文，不是系统的中间产物。换任何写作架构，「这句话在这簇原文里有没有支撑」这个判定都仍然成立。"
+    "note": "证据是原始 RSS 文章全文，不是系统的中间产物。换任何写作架构，「这句话在这簇原文里有没有支撑」这个判定都仍然成立。2026-10-08 起快照不入库（别家媒体的整篇正文不放公开仓库），存在私有 R2，内容与入库时逐字节相同。"
   },
   "companions": {
     "human-adjudicated.jsonl": "24 条人裁终裁，对应 rubric §7",

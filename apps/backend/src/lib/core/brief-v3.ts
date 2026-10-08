@@ -10,7 +10,7 @@
  * 目录锚点靠 `<strong>`，少了星号该条在目录里会消失。
  */
 
-import type { BriefTier } from '@meridian/contracts';
+import type { BriefBlockDraft, BriefTier } from '@meridian/contracts';
 
 /** 篇幅档 = 简报块 v6 端点的 tier（同一个联合，定义在 @meridian/contracts）。 */
 export type Tier = BriefTier;
@@ -71,4 +71,17 @@ export function renderBriefV3(blocks: RenderBlock[]): { content: string; section
     parts.push(`## ${SECTION_HEADINGS[tier]}\n\n${items.join('\n\n')}`);
   }
   return { content: parts.join('\n\n'), sections: parts.length };
+}
+
+/**
+ * 落库的简报块（brief_blocks）。传入与 renderBriefV3 同一份、同一顺序的块，标题与正文按它的口径取（只去首尾空白），
+ * 所以每块的正文就是读者页正文里的那一段。position = 在传入列表里的位置，与地图接口的 blockIndex 同口径。
+ * 对不上故事（storyId 为 null）与没有正文的块不落库，但仍占位。
+ */
+export function briefBlockDrafts(blocks: Array<RenderBlock & { storyId: number | null }>): BriefBlockDraft[] {
+  return blocks.flatMap((b, position) =>
+    b.storyId === null || !b.text.trim()
+      ? []
+      : [{ storyId: b.storyId, tier: b.tier, position, title: b.title.trim(), body: b.text.trim() }]
+  );
 }

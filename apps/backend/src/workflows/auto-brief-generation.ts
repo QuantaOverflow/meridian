@@ -20,7 +20,7 @@ import { createAIServices } from '../lib/services/ai-services';
 import { generateSearchText } from '../lib/core/utils';
 import { bodyFingerprint, checkQuality, dropSameSourceDuplicates, fetchBody, loadRunEmbeddings, runWindowWhere, type BodyStatus, type RunWindow } from '../lib/core/run-corpus';
 import { ARTICLE_JOURNEY_STAGES, StoryLedger } from '../lib/core/story-ledger';
-import { assignTiers, renderBriefV3, type Tier } from '../lib/core/brief-v3';
+import { assignTiers, briefBlockDrafts, renderBriefV3, type Tier } from '../lib/core/brief-v3';
 import type { Env } from '../index';
 import { Logger } from '../lib/core/logger';
 import { recordRunOpsSummary } from '../lib/ops/run-summary';
@@ -1476,6 +1476,18 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const rendered = renderBriefV3(
         tiered.map((b) => ({ title: displayTitle(b.blockTitle), text: b.text, tier: b.tier }))
       );
+      // 落库的简报块：与正文同一份、同一顺序，所属故事按账本取 brief_stories 主键（不按标题、不按 cluster_id）。
+      const blockDrafts = briefBlockDrafts(
+        tiered.map((b) => ({
+          storyId: ledger.rowIdOfSelected(b.idx) ?? null,
+          title: displayTitle(b.blockTitle),
+          text: b.text,
+          tier: b.tier,
+        }))
+      );
+      if (blockDrafts.length !== tiered.length) {
+        log.error(`[AutoBrief] ${tiered.length - blockDrafts.length} 个写出来的块对不上故事或没有正文，不落 brief_blocks（正文不受影响）`);
+      }
       const titled = await step.do('简报标题', briefAssembleStepConfig, async () => {
         const aiw = createAIServices(this.env, workflowId).aiWorker;
         const r = await aiw.briefTitle(rendered.content);
@@ -1607,16 +1619,16 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
             usedSources = usedSourcesResult[0]?.count || 0;
           }
           
-          // 插入 reports 与关联 brief_runs.report_id 在同一事务里（原因见 save-brief-report.ts）
+          // 插入 reports、关联 brief_runs.report_id、写简报块在同一事务里（原因见 save-brief-report.ts）
           const reportId = await saveBriefReport(db, workflowId, {
             title: briefResult.title,
             content: briefResult.content,
             usedArticles: briefResult.stats.used_articles,
             usedSources: usedSources,
             tldr_prose: briefResult.tldrProse,
-          });
+          }, blockDrafts);
 
-          log.info(`[AutoBrief] 简报已保存到数据库，ID: ${reportId}`);
+          log.info(`[AutoBrief] 简报已保存到数据库，ID: ${reportId}（简报块 ${blockDrafts.length}）`);
           return reportId;
         } catch (error) {
           log.error('[AutoBrief] 保存简报失败:', undefined, error);

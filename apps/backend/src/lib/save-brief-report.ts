@@ -9,13 +9,42 @@
 //
 // 发布：只有定时（cron）跑出的期写 published_at，读者才看得到；手动触发的期是调试用的，留空。
 // 触发方以本期 run 的 params.triggeredBy 为准（cron 入口写 'cron'，见 lib/scheduled/daily-brief.ts）。
-import { $brief_runs, $reports, eq } from '@meridian/database';
+//
+// 简报块：这一期写出来的每一块在同一个事务里写进 brief_blocks（为什么另存一张表见 ADR 0014）。
+// 期与块同时出现或同时不出现；上面的幂等也盖住它——重试时直接返回，不会再写一遍块。
+import type { BriefBlockDraft } from '@meridian/contracts';
+import { $brief_blocks, $brief_runs, $reports, eq } from '@meridian/database';
 import type { getDb } from './database';
 
+type Db = ReturnType<typeof getDb>;
+
+/**
+ * 把一期的块写进 brief_blocks。调用方给事务（或连接）：保存简报与往期回填（scripts/backfill-brief-blocks.ts）共用这一份写法。
+ * @internal 只为回填脚本导出
+ */
+export async function insertBriefBlocks(
+  tx: Pick<Db, 'insert'>,
+  reportId: number,
+  blocks: BriefBlockDraft[]
+): Promise<void> {
+  if (blocks.length === 0) return;
+  await tx.insert($brief_blocks).values(
+    blocks.map((b) => ({
+      report_id: reportId,
+      story_id: b.storyId,
+      tier: b.tier,
+      position: b.position,
+      title: b.title,
+      body: b.body,
+    }))
+  );
+}
+
 export async function saveBriefReport(
-  db: ReturnType<typeof getDb>,
+  db: Db,
   workflowId: string,
-  values: Omit<typeof $reports.$inferInsert, 'published_at'>
+  values: Omit<typeof $reports.$inferInsert, 'published_at'>,
+  blocks: BriefBlockDraft[]
 ): Promise<number> {
   return db.transaction(async (tx) => {
     // FOR UPDATE：锁住本期 run 行，并发的第二次执行会等第一次提交后读到已写的 report_id
@@ -44,6 +73,7 @@ export async function saveBriefReport(
     if (linked.length !== 1) {
       throw new Error(`关联 brief_runs.report_id 失败：workflow ${workflowId} 命中 ${linked.length} 行`);
     }
+    await insertBriefBlocks(tx, reportId, blocks);
     return reportId;
   });
 }

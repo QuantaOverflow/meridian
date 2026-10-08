@@ -53,6 +53,13 @@ function runThrough() {
 }
 
 describe('StoryLedger', () => {
+  it('选中下标 → 该故事的 brief_stories 主键（简报块落库用）', () => {
+    const { ledger } = runThrough();
+    // 选中顺序是 storyId 1、3、2
+    expect([0, 1, 2].map((idx) => ledger.rowIdOfSelected(idx))).toEqual([102, 104, 103]);
+    expect(ledger.rowIdOfSelected(3)).toBeUndefined();
+  });
+
   it('storyId = 候选下标，贯穿选择 → 分层 → 出块', () => {
     const { ledger, sel } = runThrough();
     expect(ledger.selectedStoryIds()).toEqual([1, 3, 2]);

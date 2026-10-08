@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLACE_CODES } from '../../backend/src/lib/reader/places';
+import { PLACE_CODES } from '../../backend/src/lib/core/places';
 import { COUNTRIES } from '../src/lib/briefMap';
 
 // backend 的地点归一化表与前端的国家展示表各维护一份（spec：展示表在前端）。backend 能产出、

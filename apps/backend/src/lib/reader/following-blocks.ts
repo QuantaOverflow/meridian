@@ -2,7 +2,7 @@ import type { FollowMatch, FollowingBlock, FollowingPage } from '@meridian/contr
 import { $brief_blocks, $brief_stories, $reports, and, desc, eq, inArray, sql } from '@meridian/database';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { entityKey } from './story-entities';
+import { entityKey } from '../core/block-entities';
 import { threadStatsByIds } from './story-threads';
 
 /**

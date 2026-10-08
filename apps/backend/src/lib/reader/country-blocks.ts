@@ -2,11 +2,11 @@ import type { CountryBlock, CountryBlocksPage, CountrySection } from '@meridian/
 import { $brief_blocks, $reports, and, desc, eq, sql } from '@meridian/database';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { PLACE_CODES } from './places';
+import { PLACE_CODES } from '../core/places';
 
 /**
  * 国家页的一节（响应形状见 @meridian/contracts 的 CountryBlocksPage）：落点在该国的块，或涉及该国的块。
- * 块对国家的归属是写块时算好存在块上的（lib/save-brief-report.ts），这里只按那两列过滤，不 join 成员文章。
+ * 块对国家的归属是写块时算好存在块上的（lib/core/brief-blocks.ts），这里只按那两列过滤，不 join 成员文章。
  * 只含已发布各期的块：可见性跟所属那一期走，靠 join reports 判。
  */
 

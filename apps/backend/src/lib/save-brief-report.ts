@@ -12,50 +12,13 @@
 //
 // 简报块：这一期写出来的每一块在同一个事务里写进 brief_blocks（为什么另存一张表见 ADR 0014）。
 // 期与块同时出现或同时不出现；上面的幂等也盖住它——重试时直接返回，不会再写一遍块。
-// 每块的落点国家、涉及国家与实体在这里按成员文章算好一并写入（国家页、实体页按它查，算法见 lib/reader/story-countries.ts）。
+// 块的写法（含每块的落点国家、涉及国家与实体怎么算）在 lib/core/brief-blocks.ts。
 import type { BriefBlockDraft } from '@meridian/contracts';
-import { $brief_blocks, $brief_runs, $reports, eq } from '@meridian/database';
+import { $brief_runs, $reports, eq } from '@meridian/database';
+import { writeBriefBlocks } from './core/brief-blocks';
 import type { getDb } from './database';
-import { loadBlockAttribution, type BlockAttribution } from './reader/story-countries';
 
 type Db = ReturnType<typeof getDb>;
-
-/**
- * 存在块上的归属那几列
- * @internal 只为回填脚本导出
- */
-export function attributionColumns(a: BlockAttribution | undefined) {
-  return {
-    placement_country: a?.countries.placement ?? null,
-    mention_countries: a?.countries.mentions ?? [],
-    entities: a?.entities.map((e) => e.key) ?? [],
-    entity_names: a?.entities.map((e) => e.name) ?? [],
-  };
-}
-
-/**
- * 把一期的块写进 brief_blocks。调用方给事务（或连接）：保存简报与往期回填（scripts/backfill-brief-blocks.ts）共用这一份写法。
- * @internal 只为回填脚本导出
- */
-export async function insertBriefBlocks(
-  tx: Pick<Db, 'insert' | 'select'>,
-  reportId: number,
-  blocks: BriefBlockDraft[]
-): Promise<void> {
-  if (blocks.length === 0) return;
-  const attribution = await loadBlockAttribution(tx, blocks.map((b) => b.storyId));
-  await tx.insert($brief_blocks).values(
-    blocks.map((b) => ({
-      report_id: reportId,
-      story_id: b.storyId,
-      tier: b.tier,
-      position: b.position,
-      title: b.title,
-      body: b.body,
-      ...attributionColumns(attribution.get(b.storyId)),
-    }))
-  );
-}
 
 export async function saveBriefReport(
   db: Db,
@@ -90,7 +53,7 @@ export async function saveBriefReport(
     if (linked.length !== 1) {
       throw new Error(`关联 brief_runs.report_id 失败：workflow ${workflowId} 命中 ${linked.length} 行`);
     }
-    await insertBriefBlocks(tx, reportId, blocks);
+    await writeBriefBlocks(tx, reportId, blocks);
     return reportId;
   });
 }

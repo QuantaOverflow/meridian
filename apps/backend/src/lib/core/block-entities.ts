@@ -3,7 +3,7 @@ import { countryOfEntity } from './places';
 
 /**
  * 一个故事的成员文章 → 这一块的实体（见 GLOSSARY.md「实体」）。只有这一份：写简报块时存在块上
- * （story-countries.ts 的 loadBlockAttribution），实体页与块下的实体链接都按存下的查。
+ * （brief-blocks.ts），实体页与块下的实体链接都按存下的查。
  * 写法只归一大小写与首尾空白，不合并别名（`Volodymyr Zelenskyy` 与 `Volodymyr Zelensky` 是两个实体，用户 2026-10-08 定）。
  */
 

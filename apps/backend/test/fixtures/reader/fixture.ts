@@ -21,11 +21,11 @@
  * brief_stories.cluster_id、wf-r8 的 params（时间窗放到 4 天，让第 -3 天的 Alpha 文章落进当期窗口），
  * 以及 R2 里 wf-r8 的 brief-v3 记录（putBrief8Record）。改这些不动其它 golden。
  *
- * 国家页（/reader/countries/:code/blocks）读简报块：第 6–9 期各有几块，经生产的写法（insertBriefBlocks）落库，
+ * 国家页（/reader/countries/:code/blocks）读简报块：第 6–9 期各有几块，经生产的写法（writeBriefBlocks）落库，
  * 落点国家与涉及国家由它按成员文章算。以色列：落点在该国的三块（第 8、7、6 期）、涉及该国的一块（第 7 期的 story 14，
  * 成员没有地点、关键实体里都提到 Israel 与 Iran）；未发布的第 9 期那块不该出现。
  *
- * 实体页（/reader/entities/blocks、/reader/block-entities）读块上的实体，同样由 insertBriefBlocks 按成员文章的 key_entities 算：
+ * 实体页（/reader/entities/blocks、/reader/block-entities）读块上的实体，同样由 writeBriefBlocks 按成员文章的 key_entities 算：
  * Benjamin Netanyahu 在已发布的 5 块里都有（恰好过门槛，有实体页）；Hamas 在已发布的 4 块加未发布的第 9 期那块里
  *（把未发布的算进去才够 5 块，不该有页）；Federal Reserve 只在 1 块；Reuters 是媒体名、Iran 与 Israel 是国家，都不是实体。
  * key_entities 只有这几处读，别的 golden 不读。
@@ -41,7 +41,7 @@ import {
   sql,
   type getDb,
 } from '@meridian/database';
-import { insertBriefBlocks } from '../../../src/lib/save-brief-report';
+import { writeBriefBlocks } from '../../../src/lib/core/brief-blocks';
 
 type Db = ReturnType<typeof getDb>;
 
@@ -365,7 +365,7 @@ export async function seedReaderFixture(db: Db, anchor: Date) {
   await db.insert($story_clusters).values(f.clusters);
   await db.insert($brief_stories).values(f.briefStories);
   for (const [reportId, blocks] of Object.entries(f.briefBlocks)) {
-    await insertBriefBlocks(db, Number(reportId), blocks.map((b, position) => ({ ...b, position })));
+    await writeBriefBlocks(db, Number(reportId), blocks.map((b, position) => ({ ...b, position })));
   }
   // 上面按固定 id 插入不会推进自增序列；不同步的话，之后别的测试（同一个库、同一个 worker）
   // 不带 id 插入会从 1 开始撞主键。

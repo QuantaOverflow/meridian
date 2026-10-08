@@ -1,5 +1,6 @@
 import type { BriefBlock, BriefTier, SearchGroup, SearchPage } from '@meridian/contracts';
 import { $brief_blocks, $brief_stories, $reports, sql } from '@meridian/database';
+import { isPublished } from './briefs';
 import { pgTimestamp, type Db } from './db';
 import { threadStatsByIds } from './story-threads';
 
@@ -53,7 +54,7 @@ export async function searchBlocks(db: Db, params: { q: string; limit: number; o
       JOIN ${$reports} ON ${$reports.id} = ${$brief_blocks.report_id}
       JOIN ${$brief_stories} ON ${$brief_stories.id} = ${$brief_blocks.story_id}
       CROSS JOIN websearch_to_tsquery('english', ${params.q}) AS query
-      WHERE ${$reports.published_at} IS NOT NULL
+      WHERE ${isPublished}
         AND ${$brief_blocks.search} @@ query
     ),
     groups AS (

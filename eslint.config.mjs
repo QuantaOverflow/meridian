@@ -33,6 +33,21 @@ const swallowed = {
   rules: { 'local/no-swallowed-catch': 'warn' },
 };
 
+// 下面几段各自给同一条规则加限制；同名规则后写的整条盖掉先写的，所以后面的段要把这两份一并带上。
+const llmImports = [{
+  group: ['**/workers-ai'],
+  importNames: ['chat'],
+  message: '直接调 chat() 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。确需绕开（如 eval 透传口）就加 eslint-disable 注释写明原因。',
+}, {
+  group: ['**/dashscope'],
+  importNames: ['dashScopeChat'],
+  message: '直接调 dashScopeChat() 不记 LLM 日志：改走 callLLM（provider 为 dashscope 的 phase）。',
+}];
+const llmSyntax = {
+  selector: "CallExpression[callee.property.name='run'][callee.object.property.name='AI']",
+  message: '直接调 env.AI.run 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。',
+};
+
 export default defineConfig(
   {
     ...swallowed,
@@ -63,20 +78,28 @@ export default defineConfig(
       'services/meridian-ai-worker/src/services/embed-texts.ts',
     ],
     rules: {
+      'no-restricted-imports': ['error', { patterns: llmImports }],
+      'no-restricted-syntax': ['error', llmSyntax],
+    },
+  },
+  {
+    // 写入路径（每天的简报流程、lib/core、保存简报）不依赖读者查询：读者查询随页面变，写入要稳。
+    // 两边共用的算法放 lib/core，由读者查询来引用（ADR 0014）。
+    files: ['apps/backend/src/workflows/**/*.ts', 'apps/backend/src/lib/core/**/*.ts', 'apps/backend/src/lib/save-brief-report.ts'],
+    rules: {
       'no-restricted-imports': ['error', {
-        patterns: [{
-          group: ['**/workers-ai'],
-          importNames: ['chat'],
-          message: '直接调 chat() 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。确需绕开（如 eval 透传口）就加 eslint-disable 注释写明原因。',
-        }, {
-          group: ['**/dashscope'],
-          importNames: ['dashScopeChat'],
-          message: '直接调 dashScopeChat() 不记 LLM 日志：改走 callLLM（provider 为 dashscope 的 phase）。',
-        }],
+        patterns: [...llmImports, { group: ['**/reader/*'], message: '写入路径不引用 lib/reader/：两边共用的算法放 lib/core/。' }],
       }],
-      'no-restricted-syntax': ['error', {
-        selector: "CallExpression[callee.property.name='run'][callee.object.property.name='AI']",
-        message: '直接调 env.AI.run 不记 LLM 日志：改走 callLLM（services/call-llm.ts）。',
+    },
+  },
+  {
+    // 「读者看得到哪些期」只有一个出口：briefs.ts 的 isPublished。裸写 published_at 的查询在规则变的时候会漏改。
+    files: ['apps/backend/src/lib/reader/**/*.ts'],
+    ignores: ['apps/backend/src/lib/reader/briefs.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', llmSyntax, {
+        selector: "MemberExpression[property.name='published_at']",
+        message: '读者查询里不直接写 published_at：用 briefs.ts 的 isPublished（原生 SQL 里写 ${isPublished}）。',
       }],
     },
   },

@@ -1,7 +1,7 @@
 /**
  * 落点规则（ADR 0009 决定 4）：一个故事标在哪个国家、与哪国连线。两侧共用这一份——
  * 前端地图首页按它画点与连线；backend 写简报块时按它算块的落点国家与涉及国家（`blockCountries`），国家页按那两列查。
- * 输入是 backend 给的占比（BriefMapEvent 的 places / mentions，算法在 backend lib/reader/story-countries.ts）。
+ * 输入是 backend 给的占比（BriefMapEvent 的 places / mentions，算法在 backend lib/core/block-attribution.ts）。
  */
 import type { BriefMapEvent } from './reader-map';
 

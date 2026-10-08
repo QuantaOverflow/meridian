@@ -2,7 +2,7 @@
 
 - 状态：已采纳，2026-10-08
 - 日期：2026-10-08
-- 相关：`apps/backend/src/lib/reader/story-entities.ts`（一块的实体怎么算、媒体名的表）、`apps/backend/src/lib/reader/entity-blocks.ts`（门槛与查询）、`packages/contracts/src/reader-entity.ts`、`apps/frontend/src/pages/entities/index.vue`；术语见 `GLOSSARY.md`「实体」
+- 相关：`apps/backend/src/lib/core/block-entities.ts`（一块的实体怎么算、媒体名的表）、`apps/backend/src/lib/reader/entity-blocks.ts`（门槛与查询）、`packages/contracts/src/reader-entity.ts`、`apps/frontend/src/pages/entities/index.vue`；术语见 `GLOSSARY.md`「实体」
 
 ## 背景
 
@@ -11,7 +11,7 @@
 ## 决定
 
 块多了两列：`entities`（实体归一后的写法，GIN 索引）与 `entity_names`（逐项对应的显示写法）。写块时按故事的成员文章的 `key_entities` 算好存下
-（`insertBriefBlocks` → `lib/reader/story-countries.ts` 的 `loadBlockAttribution` → `story-entities.ts`），保存简报与回填走同一份；回填脚本重跑即刷新。
+（`lib/core/brief-blocks.ts` 的 `writeBriefBlocks` → `block-entities.ts`），保存简报与回填走同一份；回填脚本重跑即刷新。
 接口三处（`lib/reader/entity-blocks.ts`、`following-blocks.ts`）：`GET /reader/entities/blocks?name&limit&offset`（实体页）、
 `GET /reader/block-entities?ids`（一批块各自的实体链接）、`GET /reader/following` 多一个 `entities` 参数。
 
@@ -21,7 +21,7 @@
   这个比例没有单独量过精度，是看分布定的。
 - **能归成国家的写法不是实体**（用户定）：写块时就不存，它的块在国家页（块上的落点与涉及）。查这种写法时接口回 `{ kind: 'country', country }`，页面 302 到国家页。
   判定用地点归一表（`places.ts` 的 `countryOfEntity`），所以美国的州名、`Gaza`、`United Nations` 也按表归到对应的国家页。
-- **媒体名不是实体**（用户定）：`story-entities.ts` 里一张写法表（生产近 30 天出现 6 篇以上的媒体写法加源池里的名字，约 80 个）。源表 `sources.name` 是 `BBC World News` 这种，对不上关键实体里的 `BBC`，所以没有用它。
+- **媒体名不是实体**（用户定）：`block-entities.ts` 里一张写法表（生产近 30 天出现 6 篇以上的媒体写法加源池里的名字，约 80 个）。源表 `sources.name` 是 `BBC World News` 这种，对不上关键实体里的 `BBC`，所以没有用它。
   代价：媒体自己是新闻主角的块也不挂它（staging 上 `CNN` 有 12 块过得了一半这条线，其中有「CNN 被拒绝随行采访」这种）。表是手写的，会漏。
 - **门槛：出现在至少 5 个已发布的简报块里才有实体页**（`ENTITY_PAGE_MIN_BLOCKS`）。staging 上 19 期 457 块（448 块挂着至少一个实体，写法共 924 种）的分布：
   ≥3 块 105 个、≥4 块 62 个、≥5 块 43 个、≥6 块 32 个、≥8 块 19 个、≥10 块 12 个。取 5：43 个逐个看过名字，没有媒体、没有国家、没有明显不是实体的；

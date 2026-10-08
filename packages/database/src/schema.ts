@@ -220,7 +220,7 @@ export const $brief_stories = pgTable(
 const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
 // 简报块：每个写出来的块一行（为什么另存一张表而不是每次从 reports.content 里切，见 ADR 0014）。
-// 保存简报时与 reports 行同事务写入（backend lib/save-brief-report.ts）；往期由 apps/backend/scripts/backfill-brief-blocks.ts 回填。
+// 保存简报时与 reports 行同事务写入（backend lib/save-brief-report.ts，写法在 lib/core/brief-blocks.ts）；往期由 apps/backend/scripts/backfill-brief-blocks.ts 回填。
 // 对读者可见与否跟所属那一期走（reports.published_at），靠 join 判，这里不另存状态。
 export const $brief_blocks = pgTable(
   'brief_blocks',
@@ -240,7 +240,7 @@ export const $brief_blocks = pgTable(
     // 与读者页上那一块一致：标题是写作层起的（不是 brief_stories.title），正文是 reports.content 里那一段
     title: text('title').notNull(),
     body: text('body').notNull(),
-    // 这一块对国家的归属，写块时按成员文章算好（规则在 @meridian/contracts 的 blockCountries，算法在 backend lib/reader/story-countries.ts）；
+    // 这一块对国家的归属，写块时按成员文章算好（规则在 @meridian/contracts 的 blockCountries，算法在 backend lib/core/block-attribution.ts）；
     // 国家页按这两列查。代码是 ISO 3166-1 alpha-2（联合国 UN）。回填脚本重跑即刷新
     placement_country: text('placement_country'),
     // 涉及的国家：不含落点国家
@@ -248,7 +248,7 @@ export const $brief_blocks = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    // 这一块的实体（见 GLOSSARY.md「实体」），写块时按成员文章算好（算法在 backend lib/reader/story-entities.ts）；实体页按它查。
+    // 这一块的实体（见 GLOSSARY.md「实体」），写块时按成员文章算好（算法在 backend lib/core/block-entities.ts）；实体页按它查。
     // entities 是归一后的写法（小写、去首尾空白），不含能归成国家的与媒体名；entity_names 是与它逐项对应的显示写法。回填脚本重跑即刷新
     entities: text('entities')
       .array()

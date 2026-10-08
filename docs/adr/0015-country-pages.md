@@ -2,7 +2,7 @@
 
 - 状态：已采纳，2026-10-08
 - 日期：2026-10-08
-- 相关：`packages/contracts/src/placement.ts`（落点规则）、`apps/backend/src/lib/reader/story-countries.ts`（写块时算归属）、`apps/backend/src/lib/reader/country-blocks.ts`（按国家查）、`apps/frontend/src/pages/countries/[code].vue`；表见 ADR 0014，落点规则的出处见 ADR 0009 决定 4
+- 相关：`packages/contracts/src/placement.ts`（落点规则）、`apps/backend/src/lib/core/brief-blocks.ts`（写块时算归属，算子在 `block-attribution.ts`）、`apps/backend/src/lib/reader/country-blocks.ts`（按国家查）、`apps/frontend/src/pages/countries/[code].vue`；表见 ADR 0014，落点规则的出处见 ADR 0009 决定 4
 
 ## 背景
 
@@ -11,7 +11,7 @@
 ## 决定
 
 块多了两列：`placement_country`（落点国家）与 `mention_countries`（涉及的国家，不含落点国家）。写块时按故事的成员文章算好存下
-（`insertBriefBlocks` → `lib/reader/story-countries.ts`），保存简报与回填走同一份；国家页 `GET /reader/countries/:code/blocks` 只按这两列过滤。
+（`lib/core/brief-blocks.ts` 的 `writeBriefBlocks`），保存简报与回填走同一份；国家页 `GET /reader/countries/:code/blocks` 只按这两列过滤。
 
 - **为什么存而不是读时算**：归属挂在成员文章上，读时算要把所有块的成员文章都 join 一遍；存下来是一次索引查找。代价是地点归一表补了新写法后旧块不会变，重跑回填脚本即刷新（跳过的期已有的块只重算这两列）。
 - **落点**用地图首页的同一份规则：规则从前端挪到 `packages/contracts/src/placement.ts`，没改（ADR 0009 决定 4）。

@@ -13,8 +13,8 @@ import { runWindowWhere, type RunWindow } from '../core/run-corpus';
 import type { BriefGenerationParams } from '../../workflows/auto-brief-generation';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { normalizePlace } from './places';
-import { entityNames, memberIds, mentionsOf, placesOf } from './story-countries';
+import { normalizePlace } from '../core/places';
+import { entityNames, memberIds, mentionsOf, placesOf } from '../core/block-attribution';
 import { threadStatsByIds } from './story-threads';
 import { articleTopics, assignTopics, normalizeTags } from './topics';
 

@@ -4,11 +4,11 @@
  *
  * 新出的一期在「保存简报」时就写块（src/lib/save-brief-report.ts）；这里补它上线之前的期。
  * 依据是每期的 brief-v3 记录（R2 `observability/brief-v3/<workflowId>.json`）：写出来的块按 clusterId 对回同一 run 的
- * brief_stories，标题与正文的取法、落库的写法都与保存简报共用（briefBlockDrafts / insertBriefBlocks）。
+ * brief_stories，标题与正文的取法、落库的写法都与保存简报共用（briefBlockDrafts / writeBriefBlocks）。
  *
  * 范围：--since（默认 2026-09-01）起已发布的期。整期回填或整期跳过，下面任一条不满足就跳过并报原因：
  *   这期有 run；有 brief-v3 记录；每个写出来的块都对得上恰好一个故事；每块都有正文；每块的标题与正文都出现在 reports.content 里。
- * 可重跑、幂等：每期在一个事务里先删后写。跳过的期不删不写（它已有的块是保存时写的）。
+ * 可重跑、幂等：每期在一个事务里先删后写（writeBriefBlocks 的写法）。跳过的期不删不写（它已有的块是保存时写的）。
  *
  * 块上的落点国家、涉及国家与实体（国家页、实体页按它查）在写块时按成员文章算，所以重跑即刷新；跳过的期已有的块只重算这几列。
  *
@@ -30,10 +30,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { briefV3RecordKey, type BriefV3Record, type BriefV3WrittenBlock } from '@meridian/contracts';
-import { $brief_blocks, eq, getDb, sql } from '@meridian/database';
+import { getDb, sql } from '@meridian/database';
+import { refreshBlockAttribution, writeBriefBlocks } from '../src/lib/core/brief-blocks';
 import { briefBlockDrafts } from '../src/lib/core/brief-v3';
-import { loadBlockAttribution } from '../src/lib/reader/story-countries';
-import { attributionColumns, insertBriefBlocks } from '../src/lib/save-brief-report';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -125,24 +124,6 @@ function storyOf(block: BriefV3WrittenBlock, stories: Story[]): number | null {
   return candidates.length === 1 ? candidates[0].id : null;
 }
 
-/** 跳过的期：已有的块（保存时写的）只重算落点国家、涉及国家与实体，返回块数 */
-async function refreshAttribution(db: ReturnType<typeof getDb>, reportId: number): Promise<number> {
-  const blocks = await db
-    .select({ id: $brief_blocks.id, storyId: $brief_blocks.story_id })
-    .from($brief_blocks)
-    .where(eq($brief_blocks.report_id, reportId));
-  const attribution = await loadBlockAttribution(db, blocks.map(b => b.storyId));
-  await db.transaction(async tx => {
-    for (const b of blocks) {
-      await tx
-        .update($brief_blocks)
-        .set(attributionColumns(attribution.get(b.storyId)))
-        .where(eq($brief_blocks.id, b.id));
-    }
-  });
-  return blocks.length;
-}
-
 async function main() {
   const db = getDb(DATABASE_URL!);
   try {
@@ -166,7 +147,7 @@ async function main() {
     for (const p of periods) {
       const label = `report ${p.id}（${p.day}）`;
       const skip = async (reason: string) => {
-        const refreshed = write ? await refreshAttribution(db, p.id) : 0;
+        const refreshed = write ? await refreshBlockAttribution(db, p.id) : 0;
         skipped.push(`${label}：${reason}`);
         console.log(`${label}  跳过：${reason}${refreshed > 0 ? ` · 已有的 ${refreshed} 块重算了国家与实体` : ''}`);
       };
@@ -204,10 +185,7 @@ async function main() {
 
       let note = '';
       if (write) {
-        await db.transaction(async tx => {
-          await tx.delete($brief_blocks).where(eq($brief_blocks.report_id, p.id));
-          await insertBriefBlocks(tx, p.id, drafts);
-        });
+        await db.transaction(tx => writeBriefBlocks(tx, p.id, drafts));
         // 写完从库里数一遍，与记录的成功块数对：两个数来自不同的地方
         const [{ n }] = (await db.execute(
           sql`SELECT count(*)::int AS n FROM brief_blocks WHERE report_id = ${p.id}`

@@ -2,12 +2,12 @@ import type { BlockEntitiesList, BlockEntity, BriefBlockEntities, CountryBlock, 
 import { $brief_blocks, $reports, and, desc, eq, inArray, sql } from '@meridian/database';
 import { isPublished } from './briefs';
 import type { Db } from './db';
-import { countryOfEntity } from './places';
-import { entityKey } from './story-entities';
+import { countryOfEntity } from '../core/places';
+import { entityKey } from '../core/block-entities';
 
 /**
  * 实体页与块下的实体链接（响应形状见 @meridian/contracts 的 EntityBlocksPage、BlockEntitiesList）。
- * 块的实体是写块时算好存在块上的（lib/save-brief-report.ts，算法在 story-entities.ts），这里只按那一列过滤，不 join 成员文章。
+ * 块的实体是写块时算好存在块上的（lib/core/brief-blocks.ts，算法在 block-entities.ts），这里只按那一列过滤，不 join 成员文章。
  * 只含已发布各期的块，门槛也只数已发布的：可见性跟所属那一期走，撤一期可能让一个实体掉到门槛以下。
  */
 
@@ -109,7 +109,7 @@ export async function listBlockEntities(db: Db, blockIds: number[]): Promise<Blo
     FROM ${$brief_blocks}
     JOIN ${$reports} ON ${$reports.id} = ${$brief_blocks.report_id}
     CROSS JOIN LATERAL unnest(${$brief_blocks.entities}, ${$brief_blocks.entity_names}) AS e(key, name)
-    WHERE ${$reports.published_at} IS NOT NULL
+    WHERE ${isPublished}
       AND ${$brief_blocks.entities} && ${list}
       AND e.key = ANY(${list})
     GROUP BY e.key
@@ -137,7 +137,7 @@ export async function listEntities(db: Db): Promise<EntityIndex> {
     FROM ${$brief_blocks}
     JOIN ${$reports} ON ${$reports.id} = ${$brief_blocks.report_id}
     CROSS JOIN LATERAL unnest(${$brief_blocks.entities}, ${$brief_blocks.entity_names}) AS e(key, name)
-    WHERE ${$reports.published_at} IS NOT NULL
+    WHERE ${isPublished}
     GROUP BY e.key
     HAVING count(*) >= ${ENTITY_PAGE_MIN_BLOCKS}
     ORDER BY blocks DESC, e.key

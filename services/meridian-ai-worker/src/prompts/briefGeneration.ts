@@ -18,6 +18,7 @@ Write the headline for this daily brief. It appears on the brief's page and in t
 - No colon anywhere. No "X: Y" shape.
 - Plain and specific. No hype words ("shakes", "stuns", "rocks"), no verdict about what it all means, no question.
 - Use only what the brief states, and keep the status of each claim: a demand is not an agreement, a proposal is not a decision, an arrest is not a conviction.
+- Keep the hedge on a number. If the brief says "at least 30", "about 250,000" or "up to 450,000", the headline says the same, or leaves the number out. Never turn a floor or an estimate into an exact count to save words.
 
 return exclusively a JSON object with the following format:
 \`\`\`json

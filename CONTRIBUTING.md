@@ -2,6 +2,10 @@
 
 Meridian is a one-person project that runs in production every day. Fixes and ideas are welcome; this page says how the repository works so a change can land without surprises.
 
+## Reporting a problem
+
+Open an [issue](https://github.com/QuantaOverflow/meridian/issues/new/choose): there is a form for bugs and one for a self-hosting step that failed. Security problems go through [`SECURITY.md`](SECURITY.md) instead.
+
 ## Branches
 
 - `meridian-dev` is where development happens. Open pull requests against it.

@@ -1,0 +1,49 @@
+name: Self-hosting problem
+description: A step in docs/self-hosting.md failed or was unclear
+labels: [self-hosting]
+body:
+  - type: markdown
+    attributes:
+      value: The guide has not been run end to end on a second account yet, so reports like this are how it gets fixed.
+  - type: dropdown
+    id: step
+    attributes:
+      label: Step that failed
+      options:
+        - 1. Clone and install
+        - 2. Database
+        - 3. Cloudflare resources
+        - 4. The four values to change
+        - 5. AI Worker
+        - 6. ML service
+        - 7. Backend
+        - 8. Sources
+        - 9. Reader
+        - 10. The first brief
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: The command you ran and what it printed. Remove tokens, connection strings and account IDs first.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `node -v`, `pnpm -v` and `pnpm exec wrangler --version`, and your operating system.
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Release tag or commit
+      placeholder: v1.0.0
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything you changed from the guide

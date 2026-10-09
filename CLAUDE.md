@@ -57,7 +57,7 @@
 - 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ `docs/agents/lights-off.md`（完成标准、开跑前要问清的、按活的形状选工具）
 - 开工前查旧尝试、一轮 spike / goal 结束做蒸馏 → `docs/agents/knowledge-distillation.md`
 - 新增任何文件前（放哪、入不入 git）→ `docs/agents/file-placement.md`
-- 链路总览、部署、观测/排错 → `docs/how-it-works.md`、`docs/deployment.md`、`docs/monitoring.md`；本地起服务、测试、接口参考 → `docs/development.md`（根 `README.md` 是给外部读者的门面，保持在 10KB 以内，细节不往里加）
+- 链路总览、部署、观测/排错 → `docs/how-it-works.md`、`docs/deployment.md`、`docs/monitoring.md`；本地起服务、测试、接口参考 → `docs/development.md`；别人从零部署一份 → `docs/self-hosting.md`（配置里加资源、必填 secret、账号专属字段时要同步写进去，`scripts/check-self-hosting.mjs` 在 typecheck 里拦）（根 `README.md` 是给外部读者的门面，保持在 10KB 以内，细节不往里加）
 - 改 backend / ai-worker 代码 → `.claude/rules/workers.md` 自动载入（本地验证、workflow、观测、LLM 调用的硬规矩）；编排以 `apps/backend/src/workflows/` 代码为准
 - 跨 service 调用 → 数据类型、R2 key、embedding 维度在 `packages/contracts/src/`（`@meridian/contracts`，两侧共用一份）；客户端在 `apps/backend/src/lib/services/ai-services.ts`（ai-worker）与 `ml-service.ts`（ML）
 - 改算法（聚类/切分/简报合成）→ `docs/adr/0003-cluster-as-brief-block.md`（现行链路与已证伪清单）

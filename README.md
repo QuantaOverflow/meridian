@@ -111,7 +111,7 @@ As of October 2026: 14 feeds, 51,000 articles processed, 48 briefs published sin
 
 ## Running it yourself
 
-You need Node 22, pnpm, Python 3.11 with [uv](https://github.com/astral-sh/uv), a Postgres with pgvector, and a Cloudflare account.
+You need Node 22, pnpm, a Postgres with pgvector, and a Cloudflare account.
 
 ```bash
 git clone https://github.com/QuantaOverflow/meridian.git
@@ -121,7 +121,7 @@ pnpm -F @meridian/database migrate   # needs DATABASE_URL
 pnpm -F @meridian/backend dev
 ```
 
-The rest of the local setup, the tests and each service's HTTP surface are in [`docs/development.md`](docs/development.md); deploying to your own Cloudflare account is in [`docs/deployment.md`](docs/deployment.md).
+More on local work is in [`docs/development.md`](docs/development.md). To deploy your own copy, follow [`docs/self-hosting.md`](docs/self-hosting.md): from an empty Cloudflare account to a first brief.
 
 ## Documentation
 
@@ -129,12 +129,13 @@ The rest of the local setup, the tests and each service's HTTP surface are in [`
 |---|---|
 | [`docs/how-it-works.md`](docs/how-it-works.md) | The pipeline, step by step |
 | [`docs/development.md`](docs/development.md) | Local setup, tests, API reference, configuration |
+| [`docs/self-hosting.md`](docs/self-hosting.md) | Standing up your own copy on a new Cloudflare account |
 | [`docs/deployment.md`](docs/deployment.md) | Deploy order, staging, how to tell a deploy worked |
 | [`docs/monitoring.md`](docs/monitoring.md) | Where data lands, the ops console, troubleshooting |
 | [`docs/adr/`](docs/adr) | Architecture decision records, including what was tried and dropped |
 | [`GLOSSARY.md`](GLOSSARY.md) | The project's vocabulary |
 
-The four guides above are in English. The decision records, the glossary and commit messages are in Chinese, the working language of this project; see [`docs/README.md`](docs/README.md) for a map.
+The guides above are in English. The decision records, the glossary and commit messages are in Chinese, the working language of this project; see [`docs/README.md`](docs/README.md) for a map.
 
 ## How this repository is developed
 

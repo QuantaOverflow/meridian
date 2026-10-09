@@ -1,5 +1,7 @@
 # Deployment
 
+This page is about deploying changes to an existing deployment. To set one up on a new Cloudflare account, start with [`self-hosting.md`](self-hosting.md).
+
 Four deployable units, each deployed from its own directory — **never deploy from the repo root**. Variables for each are documented in that directory's `.dev.vars.example`; production secrets are set with `wrangler secret put`.
 
 The three Workers are deployed with `scripts/deploy.sh`, run from the service directory. It wraps `wrangler deploy` (extra arguments are passed through) and records which commit is being deployed: the short hash, the commit title and whether the working tree is dirty go in as `--var GIT_COMMIT/GIT_TITLE/GIT_DIRTY`, the hash also as the version `--tag`; for the ML Service the same three values become Docker build args (a temporary `wrangler.deploy.jsonc` with `image_vars` filled in). Each service reports them — backend `GET /version`, AI Worker `GET /meridian/version`, ML Service `GET /health` — and the backend collects all three at `GET /observability/ops/services` for the ops console. The script refuses to run from the repo root; `scripts/deploy.sh --print` shows the command without running it. A plain `wrangler deploy` still works, but that service then reports no commit.
@@ -71,4 +73,4 @@ node scripts/staging-run.mjs            # --no-reset keeps the current data (deb
 - Don't reset while the production run is in progress (about 21:00–21:40 Beijing time): the reset copies its `RUNNING` row and the staging trigger answers 409 until production finishes and you reset again.
 - Not covered by staging: ML Service changes (clustering, embeddings) and changes to the backend ↔ ML Service interface.
 
-**CI**: none. Nothing deploys automatically; every step above is manual.
+**CI**: GitHub Actions runs the type-check, lint and every test suite on pushes and pull requests (`.github/workflows/ci.yml`). Nothing deploys automatically; every step above is manual.

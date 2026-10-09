@@ -11,6 +11,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 import { anchorFromDate, detokenizeDates, tokenizeDates } from '../../backend/test/fixtures/reader/dates';
 
 // 回放用的「今天」取一个固定日期：前端不再依赖当前时间（天数由 backend 算好）。
@@ -63,10 +64,9 @@ const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).p
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
 await setup({
-  rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  ...builtSite,
   // Following 页的关注项在浏览器的 localStorage 里，那一组要真浏览器
   browser: true,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     // 与生产（Cloudflare，UTC）一致
     TZ: 'UTC',

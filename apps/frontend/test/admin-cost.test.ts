@@ -3,9 +3,9 @@
  * backend 用本文件起的受控 HTTP 服务假冒（同 admin-sources.test.ts）。页面只渲染 backend 算好的 `OpsCost`。
  */
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPage, setup, url } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 import type { OpsCost } from '@meridian/contracts';
 
 const GLM = '@cf/zai-org/glm-4.7-flash';
@@ -82,9 +82,8 @@ const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).p
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
 await setup({
-  rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  ...builtSite,
   browser: true,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     NUXT_PUBLIC_WORKER_API: backendUrl,
     NUXT_WORKER_API_TOKEN: 'test-token',

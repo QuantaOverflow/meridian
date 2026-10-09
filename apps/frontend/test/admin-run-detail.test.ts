@@ -2,9 +2,9 @@
  * 运维台运行详情页的端到端测试：真实构建并启动 Nuxt 服务，backend 用本文件起的受控 HTTP 服务假冒，回放一份 fixture。
  */
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 const HTML_TEXT = '<script>window.__pwned = true</script> and <b>bold</b>';
@@ -140,9 +140,8 @@ await new Promise<void>(r => backend.listen(0, '127.0.0.1', () => r()));
 const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).port}`;
 
 await setup({
-  rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  ...builtSite,
   browser: true,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     NUXT_PUBLIC_WORKER_API: backendUrl,
     NUXT_WORKER_API_TOKEN: 'test-token',

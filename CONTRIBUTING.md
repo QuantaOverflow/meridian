@@ -9,7 +9,7 @@ Open an [issue](https://github.com/QuantaOverflow/meridian/issues/new/choose): t
 ## Branches
 
 - `meridian-dev` is where development happens. Open pull requests against it.
-- `main` is what is running in production. It only receives merges from `meridian-dev`, after the change has been verified, and production is deployed only from `main`.
+- `main` is what is running in production. It only receives pull requests from `meridian-dev`, after the change has been verified, and production is deployed only from `main`. Branch protection enforces this: no direct pushes, and CI has to pass before the merge.
 
 ## Setting up
 

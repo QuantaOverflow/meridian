@@ -6,7 +6,8 @@ export default defineConfig({
   resolve: { alias: { '~': fileURLToPath(new URL('./src', import.meta.url)) } },
   test: {
     include: ['test/**/*.test.ts'],
-    // e2e：每个文件先构建再起一个 Node 服务（@nuxt/test-utils），构建约一分钟
+    // e2e：先构建一次（test/built-site.ts），每个文件各起一个 Node 服务（@nuxt/test-utils）
+    globalSetup: ['test/built-site.ts'],
     testTimeout: 60_000,
     hookTimeout: 240_000,
     fileParallelism: false,

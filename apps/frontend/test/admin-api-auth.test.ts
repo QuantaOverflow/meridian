@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { fetch, setup } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const API_DIR = path.join(ROOT, 'src/server/api/admin');
@@ -37,8 +38,7 @@ const routes = routeFiles(API_DIR).map(toRoute);
 const guarded = routes.filter(r => r.path !== '/api/admin/login');
 
 await setup({
-  rootDir: ROOT,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
+  ...builtSite,
   env: {
     NUXT_PUBLIC_WORKER_API: 'http://127.0.0.1:9',
     NUXT_WORKER_API_TOKEN: 'test-token',

@@ -29,7 +29,7 @@
 - 本地 secrets 在每个 worker 的 `.dev.vars`（已 gitignored）
 
 ## 工作规则
-- 分支：`meridian-dev` 是开发主干，日常提交、叠 PR、staging 都在它上面；`main` 是线上跑的那一版，也是 GitHub 默认分支（外人看到的门面）。`main` 只接受从 `meridian-dev` 来的合并（`--no-ff`），不直接提交；生产只从 `main` 部署（`scripts/deploy.sh` 不在 `main` 上会拒绝；前端 `wrangler pages deploy --branch main`），小改动也一样，合并与 push `main` 要用户当场说了才做。开 PR 要显式 `--base meridian-dev`（默认基底是 `main`）。主会话的改动直接提交到当前分支；写代码的 subagent 用 `isolation: "worktree"`，由主会话合回。
+- 分支：`meridian-dev` 是开发主干，日常提交、叠 PR、staging 都在它上面；`main` 是线上跑的那一版，也是 GitHub 默认分支（外人看到的门面）。`main` 只接受从 `meridian-dev` 来的 PR（`gh pr create --base main --head meridian-dev`，CI 两组检查过了再 `gh pr merge <号> --merge`，不 squash、不加 `--delete-branch`；GitHub 的分支保护拦直接 push、没过 CI 的合并与强推，对管理员也生效），合并后本地 `git checkout main && git pull --ff-only` 再部署；生产只从 `main` 部署（`scripts/deploy.sh` 不在 `main` 上会拒绝；前端 `wrangler pages deploy --branch main`），小改动也一样，合并进 `main` 要用户当场说了才做。开 PR 要显式 `--base meridian-dev`（默认基底是 `main`）。主会话的改动直接提交到当前分支；写代码的 subagent 用 `isolation: "worktree"`，由主会话合回。
   `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit。叠起来的一串 PR 从底往上逐个合并（步骤见 `docs/agents/lights-off.md`「叠起来」下一条）
 - 不主动新建 eval harness。要建，先在真实输出上做过错误分析、拿到修了 prompt / 代码仍残留的失败类别，并经用户同意（为什么见 `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）。错误分析怎么做照 Hamel Husain 的方法：原文 https://hamel.dev/blog/posts/evals-faq/why-is-error-analysis-so-important-in-llm-evals-and-how-is-it-performed.html ，本仓落点 `docs/engineering-notes/eval-playbook.md` §1（仅本地）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit

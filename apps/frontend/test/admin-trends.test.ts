@@ -4,9 +4,9 @@
  * 默认范围 30 天回 `withData`（基线不足、有核查记录）；切到 7 天回 `cloudflareDown`（有中位数、Worker 报错读不到）。
  */
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPage, setup, url } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 import type { OpsRunRow, OpsTrends } from '@meridian/contracts';
 
 const run = (day: number, over: Partial<OpsRunRow> = {}): OpsRunRow => ({
@@ -81,9 +81,8 @@ const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).p
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
 await setup({
-  rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  ...builtSite,
   browser: true,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     NUXT_PUBLIC_WORKER_API: backendUrl,
     NUXT_WORKER_API_TOKEN: 'test-token',

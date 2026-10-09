@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, expect } from 'vitest';
 import { fetch, setup } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 import { anchorFromDate, detokenizeDates } from '../../backend/test/fixtures/reader/dates';
 
 const BACKEND_GOLDEN = fileURLToPath(new URL('../../backend/test/fixtures/reader/__golden__/', import.meta.url));
@@ -38,8 +39,7 @@ export async function startSite(environment: string | undefined) {
   const backendUrl = `http://127.0.0.1:${(backend.address() as { port: number }).port}`;
 
   await setup({
-    rootDir: fileURLToPath(new URL('..', import.meta.url)),
-    nuxtConfig: { nitro: { preset: 'node-server' } },
+    ...builtSite,
     env: {
       TZ: 'UTC',
       NUXT_PUBLIC_WORKER_API: backendUrl,

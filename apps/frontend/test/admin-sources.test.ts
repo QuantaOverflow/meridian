@@ -3,10 +3,10 @@
  * backend 用本文件起的受控 HTTP 服务假冒。前端不连数据库，页面读到的源列表 / 详情也来自这个假 backend。
  */
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { OpsSourceKind, OpsSources } from '@meridian/contracts';
 import { $fetch, createPage, fetch, setup, url } from '@nuxt/test-utils/e2e';
+import { builtSite } from './built-site';
 
 // ── 假 backend ─────────────────────────────────────────────────────────
 // 读（GET /observability/ops/sources、/admin/sources/:id/details）按内存里的源列表回答；
@@ -139,9 +139,8 @@ const EXISTING_URL = 'https://example.com/feed.xml';
 const ADMIN = { username: 'test-admin', password: 'test-pass' };
 
 await setup({
-  rootDir: fileURLToPath(new URL('..', import.meta.url)),
+  ...builtSite,
   browser: true,
-  nuxtConfig: { nitro: { preset: 'node-server' } },
   env: {
     NUXT_PUBLIC_WORKER_API: backendUrl,
     NUXT_WORKER_API_TOKEN: 'test-token',

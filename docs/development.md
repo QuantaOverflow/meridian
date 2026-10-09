@@ -34,7 +34,7 @@ pnpm -F @meridian/frontend dev       # frontend
 # ML_SERVICE binding; locally add `-c services/meridian-ml-service/dev-shim/wrangler.jsonc`
 ```
 
-Sources created via `POST /admin/sources` start their scraper Durable Object right away. Sources inserted straight into the DB (e.g. the seed script) need a one-time backfill:
+Sources created via `POST /admin/sources` start their scraper Durable Object right away. Sources inserted straight into the DB (e.g. `pnpm -F @meridian/database seed`, which adds a single feed for local work) need a one-time backfill:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $API_TOKEN" \

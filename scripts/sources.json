@@ -1,0 +1,16 @@
+[
+  { "name": "BBC World News", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "category": "news", "scrape_frequency": 1 },
+  { "name": "Guardian World", "url": "https://www.theguardian.com/world/rss", "category": "news", "scrape_frequency": 1 },
+  { "name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "category": "news", "scrape_frequency": 1 },
+  { "name": "NPR World", "url": "https://feeds.npr.org/1004/rss.xml", "category": "news", "scrape_frequency": 1 },
+  { "name": "France24 English", "url": "https://www.france24.com/en/rss", "category": "news", "scrape_frequency": 1 },
+  { "name": "AP via ABC News International", "url": "https://abcnews.go.com/abcnews/internationalheadlines", "category": "news", "scrape_frequency": 1 },
+  { "name": "Euronews", "url": "https://www.euronews.com/rss?level=theme&name=news", "category": "news", "scrape_frequency": 1 },
+  { "name": "Times of India World", "url": "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms", "category": "news", "scrape_frequency": 1 },
+  { "name": "South China Morning Post World", "url": "https://www.scmp.com/rss/91/feed/", "category": "news", "scrape_frequency": 1 },
+  { "name": "The Independent World", "url": "https://www.independent.co.uk/news/world/rss", "category": "news", "scrape_frequency": 1 },
+  { "name": "CBS News World", "url": "https://www.cbsnews.com/latest/rss/world", "category": "news", "scrape_frequency": 1 },
+  { "name": "The Diplomat", "url": "https://thediplomat.com/feed", "category": "news", "scrape_frequency": 1 },
+  { "name": "端傳媒", "url": "https://theinitium.com/rss", "category": "news", "scrape_frequency": 1 },
+  { "name": "Hacker news", "url": "https://hnrss.org/frontpage", "category": "tech", "scrape_frequency": 1 }
+]

@@ -6,7 +6,8 @@
 |---|---|
 | [`how-it-works.md`](how-it-works.md) | The pipeline from RSS feed to published brief, and the stack |
 | [`development.md`](development.md) | Local setup, tests, each service's HTTP surface, configuration |
-| [`deployment.md`](deployment.md) | Deploy order, the staging environment, how to tell a deploy worked |
+| [`self-hosting.md`](self-hosting.md) | Standing up your own copy on a new Cloudflare account, from nothing to a first brief |
+| [`deployment.md`](deployment.md) | Day-to-day deploys of this deployment: order, the staging environment, how to tell a deploy worked |
 | [`monitoring.md`](monitoring.md) | Where logs and run records land, the ops console, troubleshooting |
 
 Each service also has its own README: [`apps/backend`](../apps/backend), [`apps/frontend`](../apps/frontend), [`services/meridian-ai-worker`](../services/meridian-ai-worker), [`services/meridian-ml-service`](../services/meridian-ml-service).

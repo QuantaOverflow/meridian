@@ -2,7 +2,7 @@
 
 How to stand up a copy of Meridian on your own Cloudflare account, starting from nothing. It takes about an hour, most of it waiting for the first container image.
 
-This guide has not been executed end to end on a new account. Each step was checked against the Cloudflare documentation and against the repository's configuration, and the parts that can be simulated locally were (see [What was verified](#what-was-verified)). If a step fails for you, please open a pull request.
+This guide has not been executed end to end on a new account. Each step was checked against the Cloudflare documentation and against the repository's configuration, and the parts that can be simulated locally were (see [What was verified](#what-was-verified)). If a step fails for you, please [open an issue](https://github.com/QuantaOverflow/meridian/issues/new/choose).
 
 ## What you need
 

@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in the pipeline, the reader or the ops console behaves wrongly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The steps, the request or the page. For a problem in a published brief, link the brief and quote the sentence.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - The live site (meridian-reader.pages.dev)
+        - My own deployment
+        - Local development
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag or commit hash. Not needed for the live site.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The shortest output that shows the failure (`wrangler tail`, the browser console, a test run). Remove tokens and connection strings first.
+      render: text

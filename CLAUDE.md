@@ -6,7 +6,7 @@
 - Monorepo: **pnpm + turbo**, Node ≥22, pnpm 10.9.0
 - `apps/backend` — CF Worker (Durable Objects + Workflows + Queue + Hyperdrive)
 - `apps/frontend` — Nuxt 3
-- `services/meridian-ai-worker` — CF Worker，LLM 走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`；唯一的例外是逐句核查配成 `one_call` 时走 DashScope 的 `qwen3.8-flash`（ADR 0012）。2026-10-12 起线上按 demo 跑（用户定，先省钱不管质量）：块的写作用 `glm-4.7-flash`、逐句核查关掉，开关是 ai-worker `wrangler.toml` 的 `BRIEF_WRITER_MODEL` / `BRIEF_CHECK_EPOCHS`，高质量那版在 tag `quality-baseline-2026-10-12`
+- `services/meridian-ai-worker` — CF Worker，LLM 走 Workers AI（`env.AI` binding）：简报链路 `glm-4.7-flash`，文章分析 `qwen3-30b` → `glm-4.7-flash`；唯一的例外是逐句核查配成 `one_call` 时走 DashScope 的 `qwen3.8-flash`（ADR 0012）。2026-10-12 起为省钱，块的写作从 `deepseek-v4-pro` 换成 `glm-4.7-flash`、逐句核查照旧（用户定；当天盲评 34 块：关掉核查走样句 2 → 19，所以核查不能关），开关是 ai-worker `wrangler.toml` 的 `BRIEF_WRITER_MODEL`，原来那版在 tag `quality-baseline-2026-10-12`
 - `services/meridian-ml-service` — Python/FastAPI on CF Container（e5-small embedding + 余弦凝聚聚类）
 - `packages/database` — Drizzle ORM + Neon Postgres
 - `packages/contracts` — 跨 service 约定（ai-worker 路由类型、R2 key、EMBEDDING_DIM），只放约定不放实现（例外：两侧必须算出同一结果的落点规则 `placement.ts`，见 ADR 0015）

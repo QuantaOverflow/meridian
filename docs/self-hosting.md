@@ -67,7 +67,7 @@ Durable Objects, Workflows, the Workers AI binding and the Browser Run binding n
 
 Your `workers.dev` subdomain is shown in the Cloudflare dashboard under Workers & Pages; the backend's URL is also printed when you deploy it in step 7, so you can fill the last one in then.
 
-**About the writer and the sentence check.** The repository ships with the cheap demo configuration: `BRIEF_WRITER_MODEL = "glm-4.7-flash"` and `BRIEF_CHECK_EPOCHS = "0"` (no sentence check), which needs nothing beyond Workers AI. For the full writer–checker loop set them to `"deepseek-v4-pro"` and `"1"`; `BRIEF_CHECK_MODE` below only matters once the check is on.
+**About the writer.** `BRIEF_WRITER_MODEL` picks the model that writes and revises the blocks: `"glm-4.7-flash"` (the repository's setting, cheap) or `"deepseek-v4-pro"` (about 16 times the price). Keep the sentence check on (`BRIEF_CHECK_EPOCHS = "1"`) with the cheap writer: without it about one sentence in eight comes out distorted.
 
 **About `BRIEF_CHECK_MODE`.** The sentence check has two modes. `agent` runs entirely on Workers AI and needs nothing else. `one_call`, the repository's default, sends the check to DashScope through a Cloudflare AI Gateway, and `DASHSCOPE_BASE_URL` in that file points at the author's gateway. Start with `agent`. To use `one_call` later, create your own AI Gateway with a custom provider for DashScope, point `DASHSCOPE_BASE_URL` at it, and add the `DASHSCOPE_API_KEY` secret ([ADR 0012](adr/0012-one-call-sentence-check.md)).
 

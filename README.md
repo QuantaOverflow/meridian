@@ -78,13 +78,11 @@ The checker began as a small agent with three retrieval tools over the cluster. 
 | Group articles into events | Code: `multilingual-e5-small` embeddings, cosine agglomerative clustering |
 | Is this cluster one event, and what is it | `glm-4.7-flash`, one call per cluster |
 | Which events matter most | `glm-4.7-flash`, three shuffled rounds combined by Borda count |
-| Write a block | `deepseek-v4-pro` |
+| Write a block | `glm-4.7-flash` (`deepseek-v4-pro` until 2026-10-12) |
 | Check each sentence | `qwen3.8-flash` on an evidence pack built by code; fallback: a `qwen3.8-27b` agent with search, timeline and read tools |
 | Tiers, order, citations, the final document | Code |
 
 A typical run turns about 500 articles into 25 blocks in 10 to 30 minutes, for roughly 30,000 Workers AI neurons (about $0.33 at list price, not counting per-article analysis).
-
-The public site currently runs a cheaper demo configuration (`glm-4.7-flash` writes, sentence check off); the loop above is two settings away, see [`docs/how-it-works.md`](docs/how-it-works.md).
 
 ## Built to run unattended
 

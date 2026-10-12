@@ -40,18 +40,18 @@ function run(day: number, over: Partial<BriefRunRecord> & { minutes?: number; ne
 }
 
 const NOW = new Date('2026-10-20T00:00:00Z');
-const fiveBaselineRuns = [5, 6, 7, 8, 9].map(d => run(d));
+const fiveBaselineRuns = [12, 13, 14, 15, 16].map(d => run(d));
 
 describe('基线', () => {
   it(`基线内不足 ${BASELINE_MIN_RUNS} 次：没有中位数，不判慢也不判贵`, () => {
     const earlier = fiveBaselineRuns.slice(0, BASELINE_MIN_RUNS - 1);
     const baseline = baselineFrom(earlier);
     expect(baseline).toEqual({ runs: BASELINE_MIN_RUNS - 1, medianDurationMs: null, medianNeurons: null });
-    expect(toRunRow(run(10, { minutes: 300, neurons: 9_000_000 }), baseline, NOW)).toMatchObject({ level: 'ok', flags: [] });
+    expect(toRunRow(run(17, { minutes: 300, neurons: 9_000_000 }), baseline, NOW)).toMatchObject({ level: 'ok', flags: [] });
   });
 
   it('基线开始日之前的运行不进中位数', () => {
-    const old = [1, 2, 3, 4].map(d => run(d, { minutes: 5, neurons: 2_000 }));
+    const old = [8, 9, 10, 11].map(d => run(d, { minutes: 5, neurons: 2_000 }));
     expect(baselineFrom([...old, ...fiveBaselineRuns])).toEqual({
       runs: 5,
       medianDurationMs: 30 * 60_000,
@@ -60,8 +60,8 @@ describe('基线', () => {
   });
 
   it('没跑完的、没记汇总的运行：前者不算基线，后者不进成本中位数', () => {
-    const failed = run(10, { status: 'FAILED' });
-    const noSummary = run(11, { neurons: null, minutes: 40 });
+    const failed = run(17, { status: 'FAILED' });
+    const noSummary = run(18, { neurons: null, minutes: 40 });
     const baseline = baselineFrom([...fiveBaselineRuns, failed, noSummary]);
     expect(baseline.runs).toBe(6);
     expect(baseline.medianNeurons).toBe(80_000);
@@ -72,27 +72,27 @@ describe('判灯', () => {
   const baseline = baselineFrom(fiveBaselineRuns);
 
   it('耗时恰好 1.5 倍不算慢，超过才算；成本同理', () => {
-    expect(toRunRow(run(10, { minutes: 45 }), baseline, NOW).flags).toEqual([]);
-    expect(toRunRow(run(10, { minutes: 46 }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['slow'] });
-    expect(toRunRow(run(10, { neurons: 120_000 }), baseline, NOW).flags).toEqual([]);
-    expect(toRunRow(run(10, { neurons: 120_001 }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['costly'] });
+    expect(toRunRow(run(17, { minutes: 45 }), baseline, NOW).flags).toEqual([]);
+    expect(toRunRow(run(17, { minutes: 46 }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['slow'] });
+    expect(toRunRow(run(17, { neurons: 120_000 }), baseline, NOW).flags).toEqual([]);
+    expect(toRunRow(run(17, { neurons: 120_001 }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['costly'] });
   });
 
   it('DEGRADED 黄；FAILED、没选出新闻红', () => {
-    expect(toRunRow(run(10, { status: 'DEGRADED' }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['degraded'] });
-    expect(toRunRow(run(10, { status: 'FAILED', finished_at: null }), baseline, NOW)).toMatchObject({ level: 'red', flags: ['failed'] });
-    expect(toRunRow(run(10, { status: 'TERMINATED_NO_STORIES' }), baseline, NOW)).toMatchObject({ level: 'red', flags: ['no_stories'] });
+    expect(toRunRow(run(17, { status: 'DEGRADED' }), baseline, NOW)).toMatchObject({ level: 'yellow', flags: ['degraded'] });
+    expect(toRunRow(run(17, { status: 'FAILED', finished_at: null }), baseline, NOW)).toMatchObject({ level: 'red', flags: ['failed'] });
+    expect(toRunRow(run(17, { status: 'TERMINATED_NO_STORIES' }), baseline, NOW)).toMatchObject({ level: 'red', flags: ['no_stories'] });
   });
 
   it('还在跑：北京时间 22:00 前不亮灯，到 22:00 还没完红', () => {
-    const running = run(10, { status: 'RUNNING', finished_at: null });
-    expect(toRunRow(running, baseline, new Date('2026-10-10T13:59:59Z'))).toMatchObject({ level: 'ok', flags: [] });
-    expect(toRunRow(running, baseline, new Date('2026-10-10T14:00:00Z'))).toMatchObject({ level: 'red', flags: ['late'] });
+    const running = run(17, { status: 'RUNNING', finished_at: null });
+    expect(toRunRow(running, baseline, new Date('2026-10-17T13:59:59Z'))).toMatchObject({ level: 'ok', flags: [] });
+    expect(toRunRow(running, baseline, new Date('2026-10-17T14:00:00Z'))).toMatchObject({ level: 'red', flags: ['late'] });
   });
 
   it('成本按牌价算；没记汇总时调用数、neurons、成本都是 null', () => {
-    expect(toRunRow(run(10, { neurons: 100_000 }), baseline, NOW)).toMatchObject({ calls: 10, neurons: 100_000, usd: 1.1 });
-    expect(toRunRow(run(10, { neurons: null }), baseline, NOW)).toMatchObject({ calls: null, neurons: null, usd: null, blocks: 25 });
+    expect(toRunRow(run(17, { neurons: 100_000 }), baseline, NOW)).toMatchObject({ calls: 10, neurons: 100_000, usd: 1.1 });
+    expect(toRunRow(run(17, { neurons: null }), baseline, NOW)).toMatchObject({ calls: null, neurons: null, usd: null, blocks: 25 });
   });
 });
 

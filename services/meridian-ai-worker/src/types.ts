@@ -75,6 +75,11 @@ export type CloudflareEnv = {
    */
   BRIEF_CHECK_EPOCHS?: string
   /**
+   * 简报块写作与改写用的模型（wrangler.toml 的 [vars]）："deepseek-v4-pro"（ADR 0010）或 "glm-4.7-flash"（便宜约 16 倍，走样约多一倍）。
+   * 缺省 = "deepseek-v4-pro"；其他任何值也按它做并打 warn——写错了不会悄悄换成差的模型。
+   */
+  BRIEF_WRITER_MODEL?: string
+  /**
    * 逐句核查怎么做（ADR 0012；wrangler.toml 的 [vars]）："one_call" = 代码取证据 + DashScope 一次调用，失败的句子回退到 agent；
    * "agent" = 逐句 agent（ADR 0010 的做法，请求与改动前逐字相同）。缺省或其他任何值 = "agent"（并打 warn）——
    * 写错了不会悄悄不核查，也不会悄悄去调一个没配好的厂商。

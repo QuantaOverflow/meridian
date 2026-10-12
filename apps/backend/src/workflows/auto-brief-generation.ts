@@ -1497,8 +1497,8 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
       const assembled = {
         title: titled.title,
         content: rendered.content,
-        // 标重点仍是 glm-4.7-flash；写作 / 改写与逐句核查见 ADR 0010
-        model_used: 'deepseek-v4-pro writer + qwen3.8 check (brief-block-v6)',
+        // 写作模型与核查开没开由 ai-worker 的 vars 定（BRIEF_WRITER_MODEL / BRIEF_CHECK_EPOCHS），这里不知道，只记是哪条链路
+        model_used: 'brief-block-v6',
       };
 
       // 每期一份 v3 记录：分层、每块的正文/出处与成本。管理页读它，验收（accept.ts M3）也读它。

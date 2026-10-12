@@ -14,8 +14,9 @@ export const PRODUCTION_RUN_ID_PREFIX = 'cron-brief-';
  * 判「慢 / 贵」只跟这一天之后的运行比。2026-10-05 写作–核查循环上线，一期从约 17 分钟、两三千 neurons
  * 变成约 30 分钟、八万多 neurons；拿上线前的运行当基线，之后每期都会被标黄，真变慢时也分不出来。
  * 以后再有让正常耗时或成本整体换档的改动，把这个日期往后挪。
+ * 2026-10-12 挪过一次：写作从 deepseek-v4-pro 换成 glm-4.7-flash（核查照旧），一期从约三万 neurons 降到一万出头。
  */
-const BASELINE_START = new Date('2026-10-05T00:00:00Z');
+const BASELINE_START = new Date('2026-10-12T00:00:00Z');
 /** 基线内不足这么多次已完成的运行时，不判慢 / 贵 */
 export const BASELINE_MIN_RUNS = 5;
 /** 中位数取被判那次之前的最多这么多次 */

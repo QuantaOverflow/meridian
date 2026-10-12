@@ -13,7 +13,7 @@
  *              BRIEF_CHECK_MODE=one_call 时逐句核查改成代码取证据 + DashScope 一次调用，
  *              失败的句子回退到上面的 agent（ADR 0012；services/one-call-check.ts）
  *
- * 标重点用 glm-4.7-flash，写作与改写用 deepseek-v4-pro（ADR 0010）。
+ * 标重点用 glm-4.7-flash，写作与改写缺省用 deepseek-v4-pro（ADR 0010），BRIEF_WRITER_MODEL 可改成 glm-4.7-flash。
  *
  * 移植自原型 `eval/cluster-to-brief/arms/direct-raw/direct-raw.mjs`，取
  * `WRITE_AT_END=1 / WRITE_TIER=exec / WRITE_SUPPORT=1 / WRITE_REPAIR=mech` 这一条路径。
@@ -73,8 +73,16 @@ const logger = new Logger({ component: 'brief-block-v6' });
 
 /** 标重点（窗口步）。 */
 const ANCHOR_MODEL = '@cf/zai-org/glm-4.7-flash';
-/** 写作与改写（写作–核查循环，ADR 0010）：一次写成的走样比 glm-4.7-flash 少一半，标重点仍用 glm。 */
-const WRITER_MODEL = '@cf/deepseek-ai/deepseek-v4-pro-0813';
+/**
+ * 写作与改写的模型，由 BRIEF_WRITER_MODEL 选（wrangler.toml 的 [vars]）。
+ * deepseek-v4-pro（ADR 0010）：一次写成的走样比 glm-4.7-flash 少一半，一期的写作约 $0.23。
+ * glm-4.7-flash：2026-10-05 之前的写法，便宜约 16 倍。
+ */
+const WRITER_MODELS: Record<string, string> = {
+  'deepseek-v4-pro': '@cf/deepseek-ai/deepseek-v4-pro-0813',
+  'glm-4.7-flash': ANCHOR_MODEL,
+};
+const DEFAULT_WRITER = 'deepseek-v4-pro';
 /** 同时在飞的窗口调用数（原型 DIRECT_RAW_CONCURRENCY 默认值）。 */
 const CONCURRENCY = 2;
 /** 原型 chatJson 的重试策略：三次、温度依次这三个值、退避 3s → 8s。 */
@@ -119,6 +127,8 @@ const sentencesText = (x: any): string =>
 
 /** BRIEF_CHECK_EPOCHS："0" = 关；正整数 = 几次；缺省或其他任何值 = 1（缺变量不会悄悄关掉核查）。 */
 const checkEpochsOf = (raw: string | undefined): number => (raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : 1);
+/** BRIEF_WRITER_MODEL：只认 WRITER_MODELS 里的名字；缺省 = deepseek-v4-pro；其他任何值 = null，由调用方按缺省做并打 warn。 */
+const writerModelOf = (raw: string | undefined): string | null => WRITER_MODELS[raw ?? DEFAULT_WRITER] ?? null;
 /** BRIEF_CHECK_MODE：只认 "one_call" 与 "agent"；缺省或其他任何值 = null，由调用方按 agent 做并打 warn。 */
 const checkModeOf = (raw: string | undefined): BriefBlockV6CheckMode | null => (raw === 'one_call' || raw === 'agent' ? raw : null);
 
@@ -185,7 +195,14 @@ export class BriefBlockV6Service {
   private neurons = 0;
   private windowFailures = 0;
   private writeRejects: string[] = [];
-  constructor(private env: CloudflareEnv, private ai: Ai, private traceContext: TraceContext = {}) {}
+  private writerModel: string;
+  constructor(private env: CloudflareEnv, private ai: Ai, private traceContext: TraceContext = {}) {
+    const configured = writerModelOf(env.BRIEF_WRITER_MODEL);
+    if (!configured) {
+      logger.warn('[BriefBlockV6] BRIEF_WRITER_MODEL 不认识，写作按 deepseek-v4-pro 做', { block: traceContext.callIndex ?? 0, value: env.BRIEF_WRITER_MODEL });
+    }
+    this.writerModel = configured ?? WRITER_MODELS[DEFAULT_WRITER];
+  }
 
   /**
    * 原型 `chatJson` 的移植：最多三次，温度 [0.1, 0.3, 0.3]，退避 [3s, 8s]。
@@ -352,7 +369,7 @@ export class BriefBlockV6Service {
       },
       sentencesText,
       {
-        model: WRITER_MODEL,
+        model: this.writerModel,
         rejects: this.writeRejects,
         // no_sentences 的重试提示要报这次调用实际用的 tier 的句数（bug B5），
         // 不能用 REASON_HINTS 里 tier 无关的默认文案。
@@ -602,7 +619,7 @@ export class BriefBlockV6Service {
     };
     try {
       const r = await this.chatJson(`revise${round}`, findings, getWriteSchema(o.tier) as unknown as Record<string, unknown>, ok, sentencesText, {
-        model: WRITER_MODEL,
+        model: this.writerModel,
         attemptRejects: rejects,
         hints,
         history: o.history,

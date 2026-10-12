@@ -151,23 +151,23 @@ describe('生产运行与基线', () => {
     expect(body.runs.map(r => r.workflowId)).toEqual(['cron-brief-a', 'cron-brief-b']);
   });
 
-  it('基线从 2026-10-05 起算：之前的运行不判灯；满 5 次后慢和贵的运行被标黄，中位数给出', async () => {
-    await insertRun('cron-brief-old', '2026-10-03', { minutes: 600, neurons: 9_000_000 });
-    for (const d of [5, 6, 7, 8, 9]) await insertRun(`cron-brief-${d}`, `2026-10-0${d}`);
-    await insertRun('cron-brief-slow', '2026-10-10', { minutes: 100, neurons: 400_000 });
+  it('基线从 2026-10-12 起算：之前的运行不判灯；满 5 次后慢和贵的运行被标黄，中位数给出', async () => {
+    await insertRun('cron-brief-old', '2026-10-10', { minutes: 600, neurons: 9_000_000 });
+    for (const d of [12, 13, 14, 15, 16]) await insertRun(`cron-brief-${d}`, `2026-10-${d}`);
+    await insertRun('cron-brief-slow', '2026-10-17', { minutes: 100, neurons: 400_000 });
 
     const { body } = await getTrends('?days=30');
     const row = (id: string) => body.runs.find(r => r.workflowId === id)!;
     expect(row('cron-brief-old')).toMatchObject({ level: 'ok', flags: [] });
-    expect(row('cron-brief-9')).toMatchObject({ level: 'ok', flags: [] });
+    expect(row('cron-brief-16')).toMatchObject({ level: 'ok', flags: [] });
     expect(row('cron-brief-slow')).toMatchObject({ level: 'yellow', flags: ['slow', 'costly'] });
     expect(body.medianDurationMs).toBe(30 * 60_000);
     expect(body.medianUsd).toBeCloseTo((80_000 * 0.011) / 1000, 6);
   });
 
   it('基线内不足 5 次：中位数是 null，不判慢也不判贵', async () => {
-    for (const d of [5, 6, 7]) await insertRun(`cron-brief-${d}`, `2026-10-0${d}`);
-    await insertRun('cron-brief-slow', '2026-10-10', { minutes: 100, neurons: 400_000 });
+    for (const d of [12, 13, 14]) await insertRun(`cron-brief-${d}`, `2026-10-${d}`);
+    await insertRun('cron-brief-slow', '2026-10-17', { minutes: 100, neurons: 400_000 });
     const { body } = await getTrends('?days=30');
     expect(body.medianDurationMs).toBeNull();
     expect(body.medianUsd).toBeNull();

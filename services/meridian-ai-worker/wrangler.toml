@@ -42,8 +42,14 @@ head_sampling_rate = 1
 
 # BRIEF_CHECK_MODE 是 agent 时不需要 secret；切到 one_call 要先放 DASHSCOPE_API_KEY（网关开了鉴权再加 AI_GATEWAY_TOKEN）。
 [vars]
+# 2026-10-12 起为省钱，写作从 deepseek-v4-pro 换成 glm-4.7-flash，逐句核查照旧（用户定）。一期约 $0.33 → $0.14。
+# 当天在 10-09 至 10-11 三期的 34 块上盲评过（各约 150 句）：v4-pro + 核查 4 句走样，glm + 核查 2 句，glm 不核查 19 句
+# ——所以核查不能关。要回到原来的配置：BRIEF_WRITER_MODEL 改成 "deepseek-v4-pro" 再部署，不用改代码
+# （那一版的整套代码与配置在 tag quality-baseline-2026-10-12）。
+# 写作与改写的模型："deepseek-v4-pro"（ADR 0010，缺省）或 "glm-4.7-flash"（便宜约 16 倍，走样约多一倍）。
+BRIEF_WRITER_MODEL = "glm-4.7-flash"
 # 逐句核查的 epoch 数（写作–核查循环，ADR 0010）：每句独立核查几次，任一次判有问题就改写。
-# "0" = 不核查、不改写，只留 v4-pro 写作（回滚开关）；缺省或非法值按 1。改它不用改代码。
+# "0" = 不核查、不改写，只留写作；缺省或非法值按 1。
 BRIEF_CHECK_EPOCHS = "1"
 # 逐句核查怎么做（ADR 0012）："agent" = 逐句 agent（ADR 0010）；"one_call" = 代码取证据 + DashScope 一次调用，失败的句子回退到 agent。
 # 缺省或写错按 agent 并打 warn。2026-10-06 满负荷干跑通过后切到 "one_call"；要退回原来的做法改成 "agent" 再部署，不用回滚代码。
@@ -70,6 +76,8 @@ binding = "ARTICLES_BUCKET"
 bucket_name = "meridian-articles-staging"
 
 [env.staging.vars]
+# 与生产同一套（见顶层 [vars] 的说明）
+BRIEF_WRITER_MODEL = "glm-4.7-flash"
 BRIEF_CHECK_EPOCHS = "1"
 BRIEF_CHECK_MODE = "one_call"
 # staging 走 meridian-ai 网关（本机开发用的那个），不进生产的 meridian-gateway，生产的日志与用量不被搅进来

@@ -130,6 +130,8 @@ interface CheckQuery {
 }
 interface Script {
   epochs?: string
+  /** BRIEF_WRITER_MODEL 的值；不给就不设这个变量 */
+  writer?: string
   /** 标重点的回复；给数组就按调用先后逐个用 */
   anchors?: Reply | Reply[]
   write: Reply[]
@@ -171,7 +173,12 @@ function fakeEnv(script: Script) {
     }),
   } as unknown as Ai
   const ARTICLES_BUCKET = { put: vi.fn(async (key: string) => { puts.push(key) }) } as unknown as R2Bucket
-  const env = { AI, ARTICLES_BUCKET, ...(script.epochs === undefined ? {} : { BRIEF_CHECK_EPOCHS: script.epochs }) }
+  const env = {
+    AI,
+    ARTICLES_BUCKET,
+    ...(script.epochs === undefined ? {} : { BRIEF_CHECK_EPOCHS: script.epochs }),
+    ...(script.writer === undefined ? {} : { BRIEF_WRITER_MODEL: script.writer }),
+  }
   return { env, seen, puts, unscripted }
 }
 
@@ -210,6 +217,29 @@ describe('写作–核查循环：块接口', () => {
     })
     expect(r.trace).toMatchObject({ llmCalls: 2, neurons: 11 })
     expect(f.unscripted).toEqual([])
+  })
+
+  it('BRIEF_WRITER_MODEL=glm-4.7-flash：写作改用 glm，epochs 0 时整块只调 glm', async () => {
+    // glm 的回复按调用先后给：先标重点，再写作
+    const f = fakeEnv({ epochs: '0', writer: 'glm-4.7-flash', anchors: [ANCHORS, DRAFT_REPLY], write: [] })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(f.seen.map(s => s.model)).toEqual([GLM, GLM])
+    expect(r.verdict).toBe('written')
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    expect(r.trace).toMatchObject({ llmCalls: 2, neurons: 2 })
+    expect(f.unscripted).toEqual([])
+  })
+
+  it('BRIEF_WRITER_MODEL 写了不认识的值：仍用 v4-pro 写，并打一行 warn', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    const f = fakeEnv({ epochs: '0', writer: 'glm', write: [DRAFT_REPLY] })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(f.seen.map(s => s.model)).toEqual([GLM, V4PRO])
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    const lines = warn.mock.calls.map(c => JSON.parse(String(c[0]))).filter(l => l.component === 'brief-block-v6' && l.value === 'glm')
+    expect(lines).toEqual([expect.objectContaining({ level: 'warn' })])
   })
 
   it('写作三次都回 not_a_single_event：收下最后一次（块不出），没有句子可核，不进循环，trace 里没有 check', async () => {

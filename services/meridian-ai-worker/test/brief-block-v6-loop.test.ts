@@ -278,6 +278,54 @@ Do not repeat the rejected wording; write the item again from the material above
     expect(f.unscripted).toEqual([])
   })
 
+  it('写作的标题写了正文没有的数（dozens）：不收，下一次带上列出那个数的提示；改好再写就照常进循环', async () => {
+    // 10-13 那期头条：标题 "kill dozens"、正文 "at least 14"，核查只核正文，标题照发
+    const f = fakeEnv({ write: [reply('Storm kills dozens in Freedonia', DRAFT), DRAFT_REPLY], check: () => OK })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(r.block).toEqual(DRAFT_BLOCK)
+    expect(r.trace.writeRejects).toEqual(['#1 title_figure_not_in_text'])
+    expect(r.trace.check).toMatchObject({ outcome: 'clean' })
+    const writes = f.seen.filter(s => s.model === V4PRO).map(s => s.inputs.messages[0].content as string)
+    expect(writes[1]).toBe(`${writes[0]}
+
+Your previous answer was rejected by a mechanical check. Fix these and answer again in full:
+- the title says "dozens", which no sentence of the item says; give a figure in the title only as the sentences give it, or leave the figure out of the title.
+Do not repeat the rejected wording; write the item again from the material above.`)
+    expect(f.unscripted).toEqual([])
+  })
+
+  it('写作三次标题都带正文没有的数：最后一次照收（不为标题丢块），打一行 warn', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    const bad = reply('Storm kills 40 in Freedonia', DRAFT)
+    const f = fakeEnv({ write: [bad, bad, bad], check: () => OK })
+    const r = await settle(service(f, 3).generate(INPUT))
+
+    expect(r.block).toEqual(blockOf('Storm kills 40 in Freedonia', DRAFT))
+    expect(r.trace.writeRejects).toEqual(['#1 title_figure_not_in_text', '#2 title_figure_not_in_text'])
+    const lines = warn.mock.calls.map(c => JSON.parse(String(c[0]))).filter(l => l.component === 'brief-block-v6' && l.step === 'write')
+    expect(lines).toEqual([expect.objectContaining({ level: 'warn', block: 3 })])
+    expect(lines[0].reason).toContain('"40"')
+  })
+
+  it('改写把正文的数改了、标题还是旧数：这次改写不收，带提示重写；标题跟上了才收', async () => {
+    // 草稿标题 12 与正文一致；改写把正文改成 15，标题留着 12
+    const stale = reply('Storm kills 12 in Freedonia', R1)
+    const f = fakeEnv({
+      write: [DRAFT_REPLY],
+      revise: [stale, R1_REPLY],
+      check: q => (q.text === S1 ? flagS1Steps(q.step) : OK),
+    })
+    const r = await settle(service(f).generate(INPUT))
+
+    expect(r.block).toEqual(R1_BLOCK)
+    expect(r.trace.check).toMatchObject({ outcome: 'fixed', revisions: 1 })
+    expect(r.trace.check!.rounds[0].revise).toEqual({ accepted: true, attempts: 2, rejects: ['#1 title_figure_not_in_text'] })
+    const revises = f.seen.filter(s => s.model === V4PRO && s.inputs.messages.length > 1)
+    expect(revises[1].inputs.messages.at(-1).content).toContain('- the title says "12", which no sentence of the item says;')
+    expect(f.unscripted).toEqual([])
+  })
+
   it.each([undefined, '1', 'two', '-1'])('clean（BRIEF_CHECK_EPOCHS=%s 按 1 次）：草稿没有句子被标出 → 照发草稿', async epochs => {
     const f = fakeEnv({ epochs, write: [DRAFT_REPLY], check: () => OK })
     const r = await settle(service(f).generate(INPUT))
@@ -450,7 +498,7 @@ It cites:
 
   it('revise_failed（第 2 次改写）：留第 1 次改写，草稿仍记在 draft 里', async () => {
     const v2 = versionWith(S1_V2)
-    const repeated = reply('Storm kills 15 in Freedonia', [[S2, [[102, 3]]], [S2, [[102, 3]]], [S2, [[102, 3]]]])
+    const repeated = reply('Storm hits Freedonia', [[S2, [[102, 3]]], [S2, [[102, 3]]], [S2, [[102, 3]]]])
     const f = fakeEnv({
       write: [DRAFT_REPLY],
       revise: [

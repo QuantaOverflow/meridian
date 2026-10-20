@@ -12,6 +12,7 @@ import { getWritePrompt, getWriteSchema, noSentencesHint } from '../src/prompts/
 import {
   cleanWrite,
   retryInstruction,
+  titleCheck,
   writeOk,
   type SentenceTable,
   type V6Anchor,
@@ -287,5 +288,50 @@ describe('brief-block-v6 writeOk：句尾直单引号与 400 字符上限', () =
     expect(instruction).toContain('400');
     expect(instruction).toContain('shorter');
     expect(instruction).not.toContain('mental');
+  });
+});
+
+/**
+ * 标题的数字检查（titleCheck）。样本是 2026-10-04 至 10-20 共 17 期生产块里标题带数字的那些：
+ * 383 块里 51 块标题带数字，下面三块的数正文没有；另几块是写法不同（11 与 eleven、Q3），不该报。
+ */
+describe('brief-block-v6 titleCheck：标题里的数字要在正文里', () => {
+  const item = (title: string, ...texts: string[]) => ({ title, sentences: texts.map(text => ({ text })) });
+
+  it('正文没有的约数与数字报 title_figure_not_in_text，提示列出缺的那几个', () => {
+    // 10-13 头条：正文是 at least 14，简报总标题又抄了 "kill dozens"
+    const dozens = titleCheck(item(
+      'Houthi missile strikes on Riyadh airport kill dozens, prompting diplomatic outreach',
+      'Iran-backed Houthi rebels launched a series of missile and drone attacks on Riyadh’s King Khalid International Airport over the weekend, killing at least 14 people and wounding more than 300.'
+    ));
+    expect(dozens.reasons).toEqual(['title_figure_not_in_text']);
+    expect(dozens.hints.title_figure_not_in_text).toContain('"dozens"');
+    // 10-20：160+ 正文哪句都没说
+    expect(titleCheck(item(
+      'Drone strikes kill 80 in Sudan market, 160+ civilians in recent days',
+      'A drone strike near a market in southern Sudan killed 80 people, mostly commuters catching rides home, a medical source and a witness told AFP on Monday.'
+    )).hints.title_figure_not_in_text).toContain('"160"');
+    // 10-16：正文是 34 children and a teacher，标题自己加成 35
+    expect(titleCheck(item(
+      'Pakistan school collapse kills at least 35',
+      'Police arrested Mohammad Khan, the owner of Al-Khair school, after the collapse of a mud and brick roof killed at least 34 children and a teacher.'
+    )).reasons).toEqual(['title_figure_not_in_text']);
+  });
+
+  it('正文把数写成词（eleven）、标题写数字（11）算同一个数；贴在字母后的 Q3 是名称；金额后缀不碍事', () => {
+    expect(titleCheck(item(
+      'Tour bus crash kills 11 in western Turkiye',
+      'At least eleven people have been killed and 27 injured after a tour bus collided with a truck near a motorway entrance in Manisa.'
+    )).reasons).toEqual([]);
+    expect(titleCheck(item(
+      "China's Q3 GDP Growth and Trade Tensions",
+      'China’s economy grew 4.5% in the July-September quarter from a year ago.'
+    )).reasons).toEqual([]);
+    expect(titleCheck(item('Elon Musk spends $276m on Republican campaigns', 'Elon Musk has donated more than US$276 million to Republican-connected fundraising groups and his own GOP-backing super PAC since July.')).reasons).toEqual([]);
+    expect(titleCheck(item('Storm kills dozens in Freedonia', 'Dozens of people were killed by the storm.')).reasons).toEqual([]);
+  });
+
+  it('标题不带数字的不报', () => {
+    expect(titleCheck(item('Storm hits Freedonia', 'A storm killed 12 people.')).reasons).toEqual([]);
   });
 });

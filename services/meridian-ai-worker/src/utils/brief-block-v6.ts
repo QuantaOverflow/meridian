@@ -240,6 +240,9 @@ const REASON_HINTS: Record<string, string> = {
   // 改写的数字检查（numberCheck）。它会按句给一条列出缺的数字的提示，这条只是兜底
   number_not_in_sources:
     'a figure in it appears in no source sentence it cites; write each figure as a source sentence gives it, without adding up or converting numbers, and cite that sentence.',
+  // 标题的数字检查（titleCheck）。它会给一条列出缺的数字的提示，这条只是兜底
+  title_figure_not_in_text:
+    'the title gives a figure that no sentence of the item gives; give a figure in the title only as the sentences give it, or leave it out.',
   no_sources: 'the sources array was empty; cite the source sentences that support this sentence.',
   bad_source: 'a cited [articleId:sentence] coordinate is not in the material above; cite only sentences shown there.',
 };
@@ -365,6 +368,42 @@ export function numberCheck(
       'without adding up or converting numbers, and cite that sentence.';
   });
   return { reasons, hints };
+}
+
+/** 正文常把小数目写成词（eleven），标题写成数字（11）：两种写法算同一个数 */
+const NUMBER_WORDS = ('zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen ' +
+  'sixteen seventeen eighteen nineteen twenty').split(' ');
+/** 不带数字的约数：标题写 dozens，正文得也这么说 */
+const QUANTITY_WORDS = /\b(?:dozens|scores|hundreds|thousands|millions|billions)\b/gi;
+
+/**
+ * 标题的数字检查（写作与改写都过）：标题里的每个数字（numbersIn 的口径）与约数词（dozens、hundreds…）
+ * 都要在这一块的正文里出现，否则 `title_figure_not_in_text`。逐句核查只核正文，标题从不过核查；
+ * 10-13 那期头条标题写 "kill dozens"、正文是 "at least 14"，简报总标题又照抄了标题。
+ * 贴在字母后面的数字是名称（Q3、G7），不算。调用方先 cleanWrite。
+ */
+export function titleCheck(x: { title?: unknown; sentences?: Array<{ text?: unknown }> }): { reasons: string[]; hints: Record<string, string> } {
+  const title = String(x.title ?? '');
+  const body = (x.sentences ?? []).map(s => String(s?.text ?? '')).join(' ');
+  const have = numbersIn(body);
+  for (const w of body.toLowerCase().match(/[a-z]+/g) ?? []) {
+    const n = NUMBER_WORDS.indexOf(w);
+    if (n !== -1) have.add(String(n));
+  }
+  const missing = [
+    ...[...numbersIn(title.replace(/\p{L}\d[\d,.]*/gu, ' '))].filter(n => !have.has(n)),
+    ...[...new Set((title.match(QUANTITY_WORDS) ?? []).map(w => w.toLowerCase()))].filter(w => !new RegExp(`\\b${w}\\b`, 'i').test(body)),
+  ];
+  if (!missing.length) return { reasons: [], hints: {} };
+  const reason = 'title_figure_not_in_text';
+  return {
+    reasons: [reason],
+    hints: {
+      [reason]:
+        `the title says ${missing.map(m => `"${m}"`).join(', ')}, which no sentence of the item says; ` +
+        'give a figure in the title only as the sentences give it, or leave the figure out of the title.',
+    },
+  };
 }
 
 /**

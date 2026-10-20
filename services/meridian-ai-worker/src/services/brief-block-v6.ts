@@ -58,6 +58,7 @@ import {
   normalizeTier,
   repairCitations,
   retryInstruction,
+  titleCheck,
   writeOk,
   type SentenceTable,
   type V6Anchor,
@@ -294,6 +295,25 @@ export class BriefBlockV6Service {
     }
   }
 
+  /**
+   * 标题的数字检查（titleCheck）放在写作 / 改写的校验里：不过就带着列出缺数字的提示重写。
+   * 最后一次尝试只打 warn 照收——为一个标题丢掉整块或这一轮改写，比标题写错更糟。
+   * hints 是这次 chatJson 的提示表，提示并进去，下一次的诊断按原因码取。
+   */
+  private titleGate(x: any, attempt: number, hints: Record<string, string>, tag: string): string[] {
+    if (x?.verdict !== 'written') return [];
+    const t = titleCheck(cleanWrite(x));
+    if (!t.reasons.length) return [];
+    if (attempt >= TEMPERATURES.length - 1) {
+      logger.warn('[BriefBlockV6] 标题里的数字正文没有，最后一次尝试照收', {
+        block: this.traceContext.callIndex ?? 0, step: tag, reason: Object.values(t.hints).join(' '),
+      });
+      return [];
+    }
+    Object.assign(hints, t.hints);
+    return t.reasons;
+  }
+
   async generate(input: BriefBlockV6Input): Promise<BriefBlockV6Result> {
     // 时间升序、同期按 id 升序：窗口切分依赖这个顺序（原型 loadClusterFrom 就是这个序）
     const articles: V6Article[] = input.articles
@@ -350,6 +370,9 @@ export class BriefBlockV6Service {
     );
     const cited = new Set(citePool.map(s => `${s.articleId}:${s.sentence}`));
 
+    // no_sentences 的重试提示要报这次调用实际用的 tier 的句数（bug B5），
+    // 不能用 REASON_HINTS 里 tier 无关的默认文案。标题的数字检查把它的提示并进来。
+    const writeHints: Record<string, string> = { no_sentences: noSentencesHint(tier) };
     const write = await this.chatJson(
       'write',
       getWritePrompt(anchors, sentences, tier),
@@ -358,7 +381,10 @@ export class BriefBlockV6Service {
       // ADR 0010 决定 7：v4-pro 会把通讯社稿里大段大选背景当成「杂烩」，拒写一件明明是一件事的新闻
       // （10-03 期第 14 块不带提示 5/5 拒写、带提示 3/3 写出正事）；glm 近 13 期 316 块一次没拒过。
       (x, attempt) => {
-        if (x?.verdict !== 'not_a_single_event' || attempt >= TEMPERATURES.length - 1) return writeOk(x, cited);
+        if (x?.verdict !== 'not_a_single_event' || attempt >= TEMPERATURES.length - 1) {
+          const bad = writeOk(x, cited);
+          return bad.length ? bad : this.titleGate(x, attempt, writeHints, 'write');
+        }
         // 模型给的理由只进日志、不回喂模型（重试只带 not_written 那句提示）；块记录里是 writeRejects 的 `#n not_written`
         logger.warn('[BriefBlockV6] 写作回 not_a_single_event，带「同一件新闻」的提示再写', {
           block: this.traceContext.callIndex ?? 0,
@@ -371,9 +397,7 @@ export class BriefBlockV6Service {
       {
         model: this.writerModel,
         rejects: this.writeRejects,
-        // no_sentences 的重试提示要报这次调用实际用的 tier 的句数（bug B5），
-        // 不能用 REASON_HINTS 里 tier 无关的默认文案。
-        hints: { no_sentences: noSentencesHint(tier) },
+        hints: writeHints,
       }
     );
     const written = cleanWrite(write.value);
@@ -583,7 +607,7 @@ export class BriefBlockV6Service {
   /**
    * 一次改写：意见接在写作的对话之后发回 v4-pro，整块重写（同一 schema、三次尝试、温度与退避同写作）。
    * 通过 = verdict 仍是 written + writeOk（可引的句子加上证据句）+ 不复读 + 数字检查（在材料池加证据句上
-   * 补完出处之后，改过的句子里每个数字都在它引的原句里）。被拒的尝试只把诊断接在意见后面，从不回传被拒的原文。
+   * 补完出处之后，改过的句子里每个数字都在它引的原句里）+ 标题的数字检查（titleGate）。被拒的尝试只把诊断接在意见后面，从不回传被拒的原文。
    * 三次都不过不抛错：accepted=false，由循环留上一版。
    */
   private async revise(
@@ -608,14 +632,14 @@ export class BriefBlockV6Service {
     const rejects: string[] = [];
     // 数字检查按句给的提示（列出缺的数字）每次尝试后并进来，下一次的诊断按整条原因取
     const hints: Record<string, string> = { no_sentences: noSentencesHint(o.tier), ...REVISE_HINTS };
-    const ok = (x: any): string[] => {
+    const ok = (x: any, attempt: number): string[] => {
       if (x?.verdict !== 'written') return ['revise_not_written'];
       const bad = writeOk(x, o.allowed);
       if (bad.length) return bad;
       const repaired = repairCitations(cleanWrite(x).sentences as V6Sentence[], o.citePool, o.table).sentences;
       const numbers = numberCheck(repaired, o.table, o.unchanged);
       Object.assign(hints, numbers.hints);
-      return numbers.reasons;
+      return [...numbers.reasons, ...this.titleGate(x, attempt, hints, `revise${round}`)];
     };
     try {
       const r = await this.chatJson(`revise${round}`, findings, getWriteSchema(o.tier) as unknown as Record<string, unknown>, ok, sentencesText, {

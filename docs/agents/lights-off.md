@@ -22,7 +22,7 @@ HumanLayer《Why Software Factories Fail》的结论是这条路走不通。本�
 
 ## 机制（2026-10-23 做成 skill 时定的）
 
-- **一个会话两段**：白天问清、写 spec；用户 `/clear` 后切到 bypass 或 auto、再敲 `/lights-off` 开跑（别的模式 hook 会拒绝开跑：夜里会卡在第一个确认弹窗上）。夜里的会话只看 spec，不被白天的讨论带偏（Anthropic 的 Claude Code best practices 也这样建议）。
+- **一个会话两段**：白天问清、写 spec；用户 `/clear` 后切到 bypass、再敲 `/lights-off` 开跑（别的模式 hook 会拒绝开跑：夜里会卡在确认弹窗上。auto 也不行，分类器连续拒 3 次或累计 20 次就转为弹窗等人，用户 10-23 定只用 bypass）。夜里的会话只看 spec，不被白天的讨论带偏（Anthropic 的 Claude Code best practices 也这样建议）。
 - **bypass + 禁止清单**：用户选 bypass（「出了问题后续再改 harness」）。实测 bypass 下 `permissions.deny` 与 PreToolUse hook 仍生效，所以防线是 `.claude/lights-off.json` 的 deny 与 limits，由用户级 hook `gate.mjs` 执行。它按命令写法匹配，换写法能绕过：挡的是顺手犯的错，漏的在审计与复盘里补。
 - **收工由机器判**：主 agent 声明做完（`gate.mjs done`）后收工时，hook 跑全量检查，没过就拦回去；过了再拦一次，要它把审计（新增的 `eslint-disable`、跳过或删掉的测试、被拦的命令）贴进 PR。
   出处：Ralph 那次 6 小时的运行是 agent 自称做完才停的，产出很糟；HumanLayer、Mistele、StrongDM 都见过 agent 关 lint、改测试来过检查。

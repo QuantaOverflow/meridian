@@ -26,6 +26,7 @@ HumanLayer《Why Software Factories Fail》的结论是这条路走不通。本�
 - **bypass + 禁止清单**：用户选 bypass（「出了问题后续再改 harness」）。实测 bypass 下 `permissions.deny` 与 PreToolUse hook 仍生效，所以防线是 `.claude/lights-off.json` 的 deny 与 limits，由用户级 hook `gate.mjs` 执行。它按命令写法匹配，换写法能绕过：挡的是顺手犯的错，漏的在审计与复盘里补。
 - **收工由机器判**：主 agent 声明做完（`gate.mjs done`）后收工时，hook 跑全量检查，没过就拦回去；过了再拦一次，要它把审计（新增的 `eslint-disable`、跳过或删掉的测试、被拦的命令）贴进 PR。
   出处：Ralph 那次 6 小时的运行是 agent 自称做完才停的，产出很糟；HumanLayer、Mistele、StrongDM 都见过 agent 关 lint、改测试来过检查。
+- **监工不许被关**（职责分离）：在跑时 hook 拦下 agent 清状态、改状态文件、项目配置、Claude 设置与 skill 本身，规则写死在 `gate.mjs` 里。夜里没收尾时只有用户能清（输入框里 `!` 开头的命令不经过 hook）。按写法匹配，故意绕路的由早上复盘读夜里的会话记录兜。
 - **子 agent 没提交就收工会被拦**：提交时 pre-commit 会跑，相当于每个子 agent 都过了快检查。
 - **被拦后要重交完整汇报**：实测被 hook 拦过一次的 agent，最后一条消息会被「我修好了」顶掉，收件人只看得到那一条。
 - **状态放在 `.git/lights-off.json`**：每个仓库都有、不会被提交、worktree 里的 agent 也读得到；不在跑时 hook 约 70ms 放行。

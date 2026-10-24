@@ -22,11 +22,14 @@ HumanLayer《Why Software Factories Fail》的结论是这条路走不通。本�
 
 ## 机制（2026-10-23 做成 skill 时定的）
 
-- **一个会话两段**：白天问清、写 spec；用户 `/clear` 后切到 bypass、再敲 `/lights-off` 开跑（别的模式 hook 会拒绝开跑：夜里会卡在确认弹窗上。auto 也不行，分类器连续拒 3 次或累计 20 次就转为弹窗等人，用户 10-23 定只用 bypass）。夜里的会话只看 spec，不被白天的讨论带偏（Anthropic 的 Claude Code best practices 也这样建议）。
+- **白天的会话拉起夜里的会话**（10-24 改）：白天问清、写 spec，`gate.mjs ready` 用 `claude --bg --permission-mode bypassPermissions` 起一个后台会话跑夜里那段，用户不用动手。原先要用户 `/clear`、切 bypass、再敲 `/lights-off`，deepresearch 用的时候漏切过 bypass，`G start` 被拒、状态停在 ready，第二天白天一敲 `/lights-off` 就会开跑。
+  夜里的会话是干净的上下文，只看 spec，不被白天的讨论带偏（Anthropic 的 Claude Code best practices 也这样建议）。只用 bypass：别的模式会停在确认弹窗上，auto 被拒 3 次也会转为弹窗等人（用户 10-23 定）。
+  同时开 `caffeinate` 防睡眠，跟着夜里会话的进程，收工时结束（合盖且没接电源时仍会睡）。
+- **hook 只管夜里那个会话**：`ready` 记下后台会话的 id，hook 只对这个 session_id 生效（它派的子 agent 与 workflow agent 的 session_id 相同，10-24 实测）。别的会话开不了跑；夜里同一仓库的其他会话也不被禁止清单拦，停下时也不触发收工验收。
 - **bypass + 禁止清单**：用户选 bypass（「出了问题后续再改 harness」）。实测 bypass 下 `permissions.deny` 与 PreToolUse hook 仍生效，所以防线是 `.claude/lights-off.json` 的 deny 与 limits，由用户级 hook `gate.mjs` 执行。它按命令写法匹配，换写法能绕过：挡的是顺手犯的错，漏的在审计与复盘里补。
-- **收工由机器判**：主 agent 声明做完（`gate.mjs done`）后收工时，hook 跑全量检查，没过就拦回去；过了再拦一次，要它把审计（新增的 `eslint-disable`、跳过或删掉的测试、被拦的命令）贴进 PR。
+- **收工由机器判**：主 agent 声明做完（`gate.mjs done`）后收工时，hook 跑全量检查（最长 60 分钟；`~/.claude/settings.json` 里这个 hook 的 timeout 要更长，hook 先被杀等于放行），没过就拦回去；过了再拦一次，要它把审计（新增的 `eslint-disable`、跳过或删掉的测试、被拦的命令）贴进 PR。
   出处：Ralph 那次 6 小时的运行是 agent 自称做完才停的，产出很糟；HumanLayer、Mistele、StrongDM 都见过 agent 关 lint、改测试来过检查。
-- **监工不许被关**（职责分离）：在跑时 hook 拦下 agent 清状态、改状态文件、项目配置、Claude 设置与 skill 本身，规则写死在 `gate.mjs` 里。夜里没收尾时只有用户能清（输入框里 `!` 开头的命令不经过 hook）。按写法匹配，故意绕路的由早上复盘读夜里的会话记录兜。
+- **监工不许被关**（职责分离）：在跑时 hook 拦下 agent 清状态、改状态文件、项目配置、Claude 设置与 skill 本身，规则写死在 `gate.mjs` 里。夜里没收尾时只有用户能清（另开一个会话，或在输入框里用 `!` 开头的命令，都不受拦）。按写法匹配，故意绕路的由早上复盘读夜里的会话记录兜。
 - **在自己 worktree 里干活的子 agent 没提交就收工会被拦**：提交时 pre-commit 会跑，相当于每个子 agent 都过了快检查。主工作区里的不查（那里的改动多半是主 agent 正在写的，只读的审查员也会被误拦），由主 agent 收工时的全量检查兜底。
 - **审计只看夜里的提交**：开跑之后提交到本地分支的，不按分支比（别的分支的旧改动会混进来）。
 - **被拦后要重交完整汇报**：实测被 hook 拦过一次的 agent，最后一条消息会被「我修好了」顶掉，收件人只看得到那一条。

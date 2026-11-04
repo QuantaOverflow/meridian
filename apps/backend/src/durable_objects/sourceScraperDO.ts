@@ -31,6 +31,15 @@ const tierIntervals = {
   4: 24 * 60 * 60 * 1000, // Tier 4: Check every 24 hours
 };
 const DEFAULT_INTERVAL = tierIntervals[2]; // Default to 4 hours if tier is invalid
+// 各源的 alarm 都对齐到间隔的整点边界（UTC），再按源 id 在这么长的窗口里错开，免得同一秒一起连库。
+// 为什么对齐：各源错开抓时 Neon 每几分钟被唤醒一次（一天约 90 次，空闲 5 分钟才挂起），
+// 免费计划的计算额度 2026-10-27 用光，生产停了 5 天；对齐后库每小时只醒一次
+const ALARM_SPREAD_MS = 2 * 60 * 1000;
+
+/** 下一次 alarm：now 之后的第一个间隔边界，加上本源固定的错开量 */
+function nextAlarmAt(now: number, interval: number, sourceId: number): number {
+  return (Math.floor(now / interval) + 1) * interval + ((sourceId * 1000) % ALARM_SPREAD_MS);
+}
 
 // --- Retry Configuration ---
 const MAX_STEP_RETRIES = 3; // Max retries for *each* step (fetch, parse, insert)
@@ -218,7 +227,7 @@ export class SourceScraperDO extends DurableObject<Env> {
 
       // 先排下一次、再做任何可能抛错的事（查库、抓取）：本次 alarm 已被消费，下面一抛错就被外层
       // catch 吞掉，没排上的话这个 DO 永久停抓。下面源已删/已暂停的分支由 destroy() 取消这次排的 alarm
-      const nextScheduledAlarmTime = Date.now() + interval;
+      const nextScheduledAlarmTime = nextAlarmAt(now, interval, sourceId);
       await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
       alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
 

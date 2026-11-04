@@ -1,0 +1,18 @@
+{
+  "fullCheck": "printf 'refs/heads/x %s refs/heads/x 0000000000000000000000000000000000000000\\n' \"$(git rev-parse HEAD)\" | sh .githooks/pre-push",
+  "deny": [
+    { "command": "deploy\\.sh(?![^;&|]*--env[ =]staging)", "reason": "部署生产（只许 --env staging）" },
+    { "command": "wrangler\\b(?![^;&|]*\\bpages\\b)[^;&|]*\\bdeploy\\b(?![^;&|]*--env[ =]staging)", "reason": "部署生产（只许 --env staging）" },
+    { "command": "wrangler\\b[^;&|]*\\bpages\\s+deploy\\b(?![^;&|]*--branch[ =]staging)", "reason": "部署生产前端（只许 --branch staging）" },
+    { "command": "wrangler\\b[^;&|]*\\bsecret\\b", "reason": "改 secret" },
+    { "command": "wrangler\\b[^;&|]*\\br2\\s+object\\s+(put|delete)\\b[^;&|]*meridian-articles-prod", "reason": "写生产 bucket" },
+    { "command": "git\\s+push\\b[^;&|]*(\\bmain\\b|--force(?!-with-lease)\\b|\\s-f\\b)", "reason": "推 main 或强推" },
+    { "command": "gh\\s+pr\\s+merge\\b", "reason": "合并 PR" },
+    { "command": "^(?![\\s\\S]*\\bknip\\b)[\\s\\S]*--production\\b", "reason": "对生产库跑脚本" },
+    { "command": "apps/frontend/\\.env\\b|NUXT_DATABASE_URL", "reason": "读生产库连接串" },
+    { "tool": "^mcp__Neon__", "reason": "碰 Neon（staging 运行自己连库，用不到 MCP）" }
+  ],
+  "limits": [
+    { "command": "scripts/staging-run\\.mjs", "max": 5, "reason": "Staging 运行一晚最多 5 次，约 $0.4 一次" }
+  ]
+}

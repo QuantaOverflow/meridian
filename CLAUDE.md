@@ -30,7 +30,7 @@
 
 ## 工作规则
 - 分支：`meridian-dev` 是开发主干，日常提交、叠 PR、staging 都在它上面；`main` 是线上跑的那一版，也是 GitHub 默认分支（外人看到的门面）。`main` 只接受从 `meridian-dev` 来的 PR（`gh pr create --base main --head meridian-dev`，CI 两组检查过了再 `gh pr merge <号> --merge`，不 squash、不加 `--delete-branch`；GitHub 的分支保护拦直接 push、没过 CI 的合并与强推，对管理员也生效），合并后本地 `git checkout main && git pull --ff-only` 再部署；生产只从 `main` 部署（`scripts/deploy.sh` 不在 `main` 上会拒绝；前端 `wrangler pages deploy --branch main`），小改动也一样，合并进 `main` 要用户当场说了才做。开 PR 要显式 `--base meridian-dev`（默认基底是 `main`）。主会话的改动直接提交到当前分支；写代码的 subagent 用 `isolation: "worktree"`，由主会话合回。
-  `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit。叠起来的一串 PR 从底往上逐个合并（步骤见 `docs/agents/lights-off.md`「叠起来」下一条）
+  `.claude/settings.json` 设了 `worktree.baseRef: "head"`，工作树从本地 HEAD 建（默认从 `origin` 建，看不到没 push 的提交）；未提交的改动不会带过去，派之前先 commit。叠起来的一串 PR 从底往上逐个合并（步骤见 `docs/agents/lights-off.md`「第二天合并叠起来的 PR」）
 - 不主动新建 eval harness。要建，先在真实输出上做过错误分析、拿到修了 prompt / 代码仍残留的失败类别，并经用户同意（为什么见 `docs/adr/0006-eval-bootstrap-and-ruler-recalibration.md`）。错误分析怎么做照 Hamel Husain 的方法：原文 https://hamel.dev/blog/posts/evals-faq/why-is-error-analysis-so-important-in-llm-evals-and-how-is-it-performed.html ，本仓落点 `docs/engineering-notes/eval-playbook.md` §1（仅本地）
 - 改 DB schema：编辑 `packages/database/src/schema.ts` → `drizzle-kit generate` → review SQL → 一并 commit
 - commit 由 agent 做、push 由用户定：做完一个有意义的工作块（能单独验证、能说清改了什么）就 commit，只提交自己的路径（`git commit -m "…" -- <paths>`，`-m` 要在 `--` 前），不要等用户开口；push 只在用户要求时做。
@@ -54,7 +54,7 @@
 
 ## 何时读哪份 docs
 - 开发功能、选流程（matt skills、wayfinder）→ `docs/agents/dev-workflow.md`
-- 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ `docs/agents/lights-off.md`（完成标准、开跑前要问清的、按活的形状选工具）
+- 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ 用户级 skill `lights-off`（`/lights-off`）；本仓的禁止清单与全量检查在 `.claude/lights-off.json`，为什么这样设计见 `docs/agents/lights-off.md`
 - 开工前查旧尝试、一轮 spike / goal 结束做蒸馏 → `docs/agents/knowledge-distillation.md`
 - 新增任何文件前（放哪、入不入 git）→ `docs/agents/file-placement.md`
 - 链路总览、部署、观测/排错 → `docs/how-it-works.md`、`docs/deployment.md`、`docs/monitoring.md`；本地起服务、测试、接口参考 → `docs/development.md`；别人从零部署一份 → `docs/self-hosting.md`（配置里加资源、必填 secret、账号专属字段时要同步写进去，`scripts/check-self-hosting.mjs` 在 typecheck 里拦）（根 `README.md` 是给外部读者的门面，保持在 10KB 以内，细节不往里加）

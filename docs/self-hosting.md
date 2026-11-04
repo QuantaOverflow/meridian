@@ -9,7 +9,7 @@ This guide has not been executed end to end on a new account. Each step was chec
 | | Why |
 |---|---|
 | A Cloudflare account on the **Workers Paid** plan ($5/month) | Containers, which the ML service runs on, are not available on the free plan |
-| A Postgres database with the `vector` extension | [Neon](https://neon.tech) works on its free tier; the first migration runs `CREATE EXTENSION vector` |
+| A Postgres database with the `vector` extension | [Neon](https://neon.tech) works on its free tier (its monthly compute quota is the limit to watch: when it runs out the database stays down until the 1st); the first migration runs `CREATE EXTENSION vector` |
 | Node 22, pnpm 10, Python 3.11 with [uv](https://github.com/astral-sh/uv) | Build and deploy tooling |
 | Docker, running | `wrangler deploy` builds the ML service image on your machine |
 | About 1 GB of disk | 470 MB of model files, plus the image |

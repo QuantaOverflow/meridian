@@ -42,4 +42,30 @@ describe('SourceScraperDO.alarm', () => {
       await instance.destroy();
     });
   });
+
+  // 各源对齐到同一个整点、只在两分钟里错开：库每小时只被唤醒一次（错开抓时 Neon 免费额度 10-27 用光）
+  it('下一次 alarm 排在下一个整点之后、按源 id 错开的两分钟窗口里', async () => {
+    const url = 'https://example.com/aligned-feed.xml';
+    const stub = env.SOURCE_SCRAPER.get(env.SOURCE_SCRAPER.idFromName(url));
+    const hour = 60 * 60 * 1000;
+
+    await runInDurableObject(stub, async (instance: SourceScraperDO, state) => {
+      await state.storage.put('state', { sourceId: 7, url, scrapeFrequencyTier: 1, lastChecked: null });
+      const self = instance as unknown as { env: Env };
+      const downHyperdrive = {
+        get connectionString(): string {
+          throw new Error('database unavailable');
+        },
+      } as unknown as Hyperdrive;
+      self.env = { ...self.env, HYPERDRIVE: downHyperdrive };
+      const before = Date.now();
+      await instance.alarm();
+      const after = Date.now();
+      const alarm = await state.storage.getAlarm();
+      // 测试跨过整点时两边都算对
+      const expected = [before, after].map(t => (Math.floor(t / hour) + 1) * hour + 7_000);
+      expect(expected).toContain(alarm);
+      await instance.destroy();
+    });
+  });
 });

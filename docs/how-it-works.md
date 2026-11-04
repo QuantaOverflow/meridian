@@ -29,7 +29,7 @@ Frontend (Nuxt 3 on Cloudflare Pages) ◄── Postgres (Neon via Hyperdrive) +
 
 ### 1. Scraping
 - RSS sources live in the `sources` table and are managed via `POST /admin/sources` / `PUT /admin/sources/:id`
-- Each source gets its own Durable Object (`SourceScraperDO`) that fetches on its frequency tier and deduplicates via DB constraints
+- Each source gets its own Durable Object (`SourceScraperDO`) that fetches on its frequency tier and deduplicates via DB constraints. All sources fire on the same UTC hour boundaries, spread over two minutes, so the database wakes about once an hour (staggered alarms woke Neon about 90 times a day and used up its free compute quota in October 2026)
 - New article ids are queued for processing
 
 ### 2. Article processing (`ProcessArticles` workflow, per queued batch)

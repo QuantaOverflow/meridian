@@ -13,7 +13,9 @@ concurrency:
 jobs:
   workers:
     name: typecheck, lint, tests
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04 (2026-11), where Playwright has no chromium-headless-shell
+    # and uv finds no torch 2.7.0+cpu wheel. Last green run was on 24.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -56,7 +58,7 @@ jobs:
 
   ml-service:
     name: ml-service
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # see the workers job
     timeout-minutes: 20
     defaults:
       run:

@@ -1,5 +1,6 @@
 {
   "fullCheck": "printf 'refs/heads/x %s refs/heads/x 0000000000000000000000000000000000000000\\n' \"$(git rev-parse HEAD)\" | sh .githooks/pre-push",
+  "smoke": ". .githooks/lib.sh && psql \"$BACKEND_TEST_DATABASE_URL\" -tAc \"select 1\"",
   "deny": [
     { "command": "deploy\\.sh(?![^;&|]*--env[ =]staging)", "reason": "部署生产（只许 --env staging）" },
     { "command": "wrangler\\b(?![^;&|]*\\bpages\\b)[^;&|]*\\bdeploy\\b(?![^;&|]*--env[ =]staging)", "reason": "部署生产（只许 --env staging）" },

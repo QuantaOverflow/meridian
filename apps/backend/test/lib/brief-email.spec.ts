@@ -184,6 +184,14 @@ describe('POST /admin/briefs/:id/email', () => {
     expect(html).not.toMatch(/<style\b/i);
   });
 
+  it('每个 style 属性都完整：值里没有把属性提前截断的双引号', async () => {
+    const id = await insertReport(true);
+    await resend(id);
+    const attrs = [...sent[0].html!.matchAll(/style="[^"]*"(.)/g)];
+    expect(attrs.length).toBeGreaterThan(0);
+    for (const [attr, next] of attrs) expect(next, attr).toMatch(/[\s>/]/);
+  });
+
   it('没发布的一期（published_at 为空）：404，不寄', async () => {
     const id = await insertReport(false);
     expect((await resend(id)).status).toBe(404);

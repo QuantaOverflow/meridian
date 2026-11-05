@@ -12,6 +12,7 @@ import {
   validateDateRange
 } from '../lib/api/utils';
 import { runDailyBriefCron } from '../lib/scheduled/daily-brief';
+import { sendBriefEmail } from '../lib/brief-email';
 import { Logger } from '../lib/core/logger';
 import { BRIEF_CLUSTERING_OPTIONS, CRON_BRIEF_PARAMS } from '../lib/core/constants';
 import type { Env } from '../index';
@@ -178,6 +179,15 @@ app.post('/briefs/run-scheduled', async (c) => {
     return c.json({ ...createErrorResponse('已有简报运行在飞'), blockingWorkflowId: result.blockingWorkflowId }, 409);
   }
   return c.json(createErrorResponse(result.error), 500 as any);
+});
+
+// 简报邮件补发：寄失败的那期重寄一次，也是 staging 上不等 cron 就能验邮件的入口。
+// 只寄已发布的期（手动调试期与不存在的期 404）；只试一次，失败回 502 带原因（lib/brief-email.ts）
+app.post('/briefs/:id/email', zValidator('param', idParamSchema), async (c) => {
+  const result = await sendBriefEmail(c.env, c.req.valid('param').id);
+  if (result.status === 'not_found') return c.json(createErrorResponse('没有这一期，或这一期没有发布'), 404);
+  if (result.status === 'failed') return c.json({ ...createErrorResponse(result.error), data: result }, 502);
+  return c.json(createSuccessResponse(result));
 });
 
 // ========== 工作流手动触发 ==========

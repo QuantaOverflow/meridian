@@ -21,7 +21,13 @@
     "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
     // 跑在哪个环境："production"（顶层）或 "staging"（env.staging）。两边取值由 scripts/check-staging-isolation.mjs 断言
     "ENVIRONMENT": "production",
+    // 简报邮件（src/lib/brief-email.ts）：发件人要在 Email Service 上线过的域名下；收件人是可选 secret BRIEF_EMAIL_TO
+    "BRIEF_EMAIL_FROM": "brief@pathsoflight.org",
+    // 邮件里「回站上读」的链接拼在这个地址上
+    "READER_BASE_URL": "https://meridian-reader.pages.dev",
   },
+  // 简报邮件经 Cloudflare Email Service 发出（不要 API key）。本地 wrangler dev 是模拟的，不真寄
+  "send_email": [{ "name": "EMAIL" }],
   "migrations": [
     {
       "new_sqlite_classes": ["SourceScraperDO"],
@@ -161,7 +167,10 @@
         "CF_ACCOUNT_ID": "c8317cfcb330d45b37b00ccd7e8a9936",
         "CF_API_BASE_URL": "https://api.cloudflare.com/client/v4",
         "ENVIRONMENT": "staging",
+        "BRIEF_EMAIL_FROM": "brief@pathsoflight.org",
+        "READER_BASE_URL": "https://staging.meridian-reader.pages.dev",
       },
+      "send_email": [{ "name": "EMAIL" }],
       // staging 不定时触发：只由 scripts/staging-run.mjs（或手动运行入口）起
       "triggers": { "crons": [] },
       "durable_objects": {

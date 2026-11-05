@@ -233,7 +233,10 @@ describe('POST /admin/briefs/:id/email', () => {
   it('库连不上：非 2xx、带上原因，不寄', async () => {
     const id = await insertReport(true);
     const realHyperdrive = (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE;
-    (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE = { connectionString: 'postgresql://nobody:x@127.0.0.1:1/none' };
+    // 连得上、但库名不存在：Postgres 回 3D000 拒绝。连不存在的端口会在 workerd 里留下未处理的 socket rejection
+    const url = new URL((realHyperdrive as { connectionString: string }).connectionString);
+    url.pathname = '/no_such_database';
+    (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE = { connectionString: url.toString() };
     try {
       const res = await resend(id);
       expect(res.status).toBeGreaterThanOrEqual(400);

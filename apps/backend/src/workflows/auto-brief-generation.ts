@@ -3,6 +3,7 @@ import { getDb } from '../lib/database';
 import { $articles, $sources, $brief_runs, $brief_stories, isNull, and, eq, desc, sql, inArray } from '@meridian/database';
 import { assignStoryClustersForWorkflow } from '../lib/story-clusters';
 import { saveBriefReport } from '../lib/save-brief-report';
+import { sendBriefEmail } from '../lib/brief-email';
 import { DEFAULT_ARTICLE_CAP, pickSpreadArticles } from '../lib/core/story-dedup';
 import {
   assembleBlocks,
@@ -123,6 +124,12 @@ const dbStepConfig: WorkflowStepConfig = {
 };
 
 // run 汇总：一期上千条调用记录、每批 50 条地读，正常几十秒；它自己不抛错，重试只为平台抖动留一次
+// 简报邮件只寄一次：不重试（见「notify:brief_email」处）
+const briefEmailStepConfig: WorkflowStepConfig = {
+  retries: { limit: 0, delay: '1 second', backoff: 'constant' },
+  timeout: '1 minute',
+};
+
 const opsSummaryStepConfig: WorkflowStepConfig = {
   retries: { limit: 1, delay: '5 seconds', backoff: 'constant' },
   timeout: '5 minutes',
@@ -1642,6 +1649,17 @@ export class AutoBriefGenerationWorkflow extends WorkflowEntrypoint<Env, BriefGe
         briefBlocks: blockDrafts.length,
         briefBlocksDropped: tiered.length - blockDrafts.length,
       });
+
+      // 简报邮件：这一期发布了（只有 cron 跑出的期写 published_at）就寄给站主，手动调试期在这里是 not_found、不寄。
+      // 只试一次（retries 0）：寄出后 step 才失败的话重试会寄第二封；寄失败了用补发路由
+      // POST /admin/briefs/:id/email 重寄。邮件失败不拖累简报：sendBriefEmail 自己不抛，外面再兜一层平台级失败。
+      try {
+        const email = await step.do('notify:brief_email', briefEmailStepConfig, () => sendBriefEmail(this.env, reportId));
+        if (email.status === 'not_found') log.info('[AutoBrief] 简报邮件不寄：这一期没有发布（手动触发的调试期）', { report_id: reportId });
+        await observability.logStep('brief_email', email.status === 'failed' ? 'failed' : 'completed', email);
+      } catch (error) {
+        log.error('[AutoBrief] 简报邮件 step 失败（不阻断工作流）', { report_id: reportId }, error);
+      }
 
       // 读者端「事件追踪」：把今天的 story 归并到跨期线索上。
       //

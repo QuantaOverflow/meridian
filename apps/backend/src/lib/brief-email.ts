@@ -1,4 +1,4 @@
-// 简报邮件：一期已发布的简报寄给站主（只有站主，不是订阅）。
+// 简报邮件：一期已发布的简报寄给站主（只有站主，不是订阅；为什么这样做见 docs/adr/0019-brief-email.md）。
 //
 // 两个入口共用 sendBriefEmail：
 //   - workflow 在「保存简报」之后调一次（只有 cron 跑出的期有 published_at，手动调试期在这里就是 not_found，不寄）；

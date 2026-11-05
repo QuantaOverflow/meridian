@@ -51,6 +51,7 @@ Retired (code deleted, do not look for these): the story-validation layer, candi
 ### 4. Delivery
 - Nuxt 3 reader: today's brief, archive (`/briefs`), cross-day story threads (`/stories`)
 - OpenGraph images via `GET /openGraph/default`
+- Email to the owner: right after a scheduled brief is saved (and so published), the workflow step `notify:brief_email` sends the whole brief to `BRIEF_EMAIL_TO` through Cloudflare Email Service. One attempt; a failure is logged at error level and never fails the run. `POST /admin/briefs/:id/email` resends one (ADR 0019)
 
 ## Technology Stack
 

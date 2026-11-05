@@ -16,6 +16,9 @@ export type Env = Omit<Cloudflare.Env, 'ARTICLE_PROCESSING_QUEUE'> & {
   GIT_COMMIT?: string;
   GIT_TITLE?: string;
   GIT_DIRTY?: string;
+  // 简报邮件的收件人（逗号分隔）。可选 secret：地址是私人的、仓库是公开的，所以不进 vars；
+  // 不在 wrangler.jsonc 的 secrets.required 里，wrangler types 生成不出来。没配 = 不寄（lib/brief-email.ts）
+  BRIEF_EMAIL_TO?: string;
 };
 
 // Create a base logger for the queue handler

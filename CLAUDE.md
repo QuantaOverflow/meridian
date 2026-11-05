@@ -54,7 +54,7 @@
 
 ## 何时读哪份 docs
 - 开发功能、选流程（matt skills、wayfinder）→ `docs/agents/dev-workflow.md`
-- 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ 用户级 skill `lights-off`（`/lights-off`）；本仓的禁止清单与全量检查在 `.claude/lights-off.json`，为什么这样设计见 `docs/agents/lights-off.md`
+- 用户要 lights-off 地做一件事（睡前启动、第二天看 PR）→ plugin `lights-off-workflows` 里的 skill `lights-off`（`/lights-off`）；本仓的禁止清单与全量检查在 `.claude/lights-off.json`，为什么这样设计见 `docs/agents/lights-off.md`
 - 开工前查旧尝试、一轮 spike / goal 结束做蒸馏 → `docs/agents/knowledge-distillation.md`
 - 新增任何文件前（放哪、入不入 git）→ `docs/agents/file-placement.md`
 - 链路总览、部署、观测/排错 → `docs/how-it-works.md`、`docs/deployment.md`、`docs/monitoring.md`；本地起服务、测试、接口参考 → `docs/development.md`；别人从零部署一份 → `docs/self-hosting.md`（配置里加资源、必填 secret、账号专属字段时要同步写进去，`scripts/check-self-hosting.mjs` 在 typecheck 里拦）（根 `README.md` 是给外部读者的门面，保持在 10KB 以内，细节不往里加）

@@ -6,7 +6,7 @@
   "author": "QuantaOverflow",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "vitest run && pnpm -s test:replay",
+    "test": "pnpm -s test:replay && vitest run",
     "test:replay": "node --test test/replay/replay-server.test.mjs",
     "replay": "node test/replay/replay.mjs",
     "cf-typegen": "wrangler types",

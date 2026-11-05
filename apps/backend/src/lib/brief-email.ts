@@ -41,6 +41,20 @@ function recipientsFrom(env: Env): string[] {
 
 export async function sendBriefEmail(env: Env, reportId: number): Promise<BriefEmailResult> {
   const log = logger.child({ report_id: reportId });
+  // 取数、渲染、发送任何一步抛错（库连不上、Email Service 拒收）都一样：记 error、交回 failed 与原因
+  try {
+    return await attemptSend(env, reportId, log);
+  } catch (err) {
+    // Email Service 的错误带 code（如 E_SENDER_NOT_VERIFIED），一并带上
+    const code = (err as { code?: unknown })?.code;
+    const message = err instanceof Error ? err.message : String(err);
+    const error = typeof code === 'string' && code !== '' ? `${code}: ${message}` : message;
+    log.error('简报邮件失败', { error_message: error }, err);
+    return { status: 'failed', reportId, error };
+  }
+}
+
+async function attemptSend(env: Env, reportId: number, log: Logger): Promise<BriefEmailResult> {
   const db = getDb(env.HYPERDRIVE);
   const brief = await db.query.$reports.findFirst({
     where: and(eq($reports.id, reportId), isPublished),
@@ -55,33 +69,22 @@ export async function sendBriefEmail(env: Env, reportId: number): Promise<BriefE
   }
   // 配了收件人却缺发件 binding / 发件人：是配置错了，不是「没开邮件」，按失败报
   if (!env.EMAIL || !env.BRIEF_EMAIL_FROM) {
-    const error = `email not configured: ${!env.EMAIL ? 'send_email binding EMAIL' : 'BRIEF_EMAIL_FROM'} is missing`;
-    log.error('简报邮件失败', { error_message: error });
-    return { status: 'failed', reportId, error };
+    throw new Error(`email not configured: ${!env.EMAIL ? 'send_email binding EMAIL' : 'BRIEF_EMAIL_FROM'} is missing`);
   }
 
   const email = renderBriefEmail(
     { id: brief.id, title: brief.title, content: brief.content, tldrProse: brief.tldr_prose, createdAt: brief.createdAt },
     briefUrl(env, brief.id)
   );
-  try {
-    const result = await env.EMAIL.send({
-      from: { name: 'Meridian', email: env.BRIEF_EMAIL_FROM },
-      to,
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-    });
-    log.info('简报邮件已寄出', { recipients: to.length, message_id: result?.messageId });
-    return { status: 'sent', reportId, recipients: to.length, messageId: result?.messageId ?? null };
-  } catch (err) {
-    // Email Service 的错误带 code（如 E_SENDER_NOT_VERIFIED），一并带上
-    const code = (err as { code?: unknown })?.code;
-    const message = err instanceof Error ? err.message : String(err);
-    const error = typeof code === 'string' && code !== '' ? `${code}: ${message}` : message;
-    log.error('简报邮件失败', { error_message: error }, err);
-    return { status: 'failed', reportId, error };
-  }
+  const result = await env.EMAIL.send({
+    from: { name: 'Meridian', email: env.BRIEF_EMAIL_FROM },
+    to,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  });
+  log.info('简报邮件已寄出', { recipients: to.length, message_id: result?.messageId });
+  return { status: 'sent', reportId, recipients: to.length, messageId: result?.messageId ?? null };
 }
 
 function briefUrl(env: Env, id: number): string {
@@ -164,7 +167,7 @@ function parseSections(content: string): Section[] {
       section.lead = section.lead === '' ? text : `${section.lead}\n\n${text}`;
     }
   };
-  for (const line of content.split('\n')) {
+  for (const line of stripPromptArtifacts(content).split('\n')) {
     const sectionMatch = line.match(SECTION_RE);
     if (sectionMatch !== null) {
       flush();
@@ -188,6 +191,11 @@ function parseSections(content: string): Section[] {
   }
   flush();
   return sections.filter(s => s.lead !== '' || s.stories.length > 0);
+}
+
+/** 读者页对正文做的同一件事（briefContent.ts 的 stripPromptArtifacts）：历史期里漏进正文的 prompt 容器名，换成读者能懂的说法 */
+function stripPromptArtifacts(text: string): string {
+  return text.replace(/<\/?curated_news_data>/g, 'data').replace(/<\/?final_brief>/g, '');
 }
 
 /** 读者页对摘要做的同一件事（briefContent.ts 的 stripInlineMarkdown）：摘要按纯文本显示 */

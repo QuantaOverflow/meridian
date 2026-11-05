@@ -230,6 +230,39 @@ describe('POST /admin/briefs/:id/email', () => {
     expect(sent).toHaveLength(1);
   });
 
+  it('库连不上：非 2xx、带上原因，不寄', async () => {
+    const id = await insertReport(true);
+    const realHyperdrive = (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE;
+    (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE = { connectionString: 'postgresql://nobody:x@127.0.0.1:1/none' };
+    try {
+      const res = await resend(id);
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      const body = (await res.json()) as { success: boolean; error?: string };
+      expect(body.success).toBe(false);
+      expect(body.error ?? '').not.toBe('');
+    } finally {
+      (env as unknown as { HYPERDRIVE: unknown }).HYPERDRIVE = realHyperdrive;
+    }
+    expect(sent).toHaveLength(0);
+  });
+
+  it('历史期漏进正文的 prompt 容器名：同读者页一样换掉，不按字面显示', async () => {
+    const [row] = await db
+      .insert($reports)
+      .values({
+        title: 'Old brief',
+        content: '## world\n\n<u>**Quiet day**</u>\nThere are no clusters about this region in the provided <curated_news_data>.',
+        usedArticles: 1,
+        usedSources: 1,
+        published_at: new Date(),
+      })
+      .returning({ id: $reports.id });
+    await resend(row.id);
+    expect(sent[0].text).not.toContain('curated_news_data');
+    expect(sent[0].html).not.toContain('curated_news_data');
+    expect(sent[0].text).toContain('in the provided data.');
+  });
+
   it('不带 token：401，不寄', async () => {
     const id = await insertReport(true);
     expect((await resend(id, null)).status).toBe(401);
